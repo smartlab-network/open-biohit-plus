@@ -1,13 +1,6 @@
 from tempfile import TemporaryDirectory
-import clr
 
-dll_path: str=r'E:\Labhub\Repos\biohit\biohit-pipettor-python\src\biohit_pipettor\include\instrumentLib.dll'
-clr.AddReference(dll_path)
-
-from InstrumentLib import InstrumentCls
-clr_instrumentcls = InstrumentCls
-
-#from biohit_pipettor import clr_instrumentcls
+from biohit_pipettor import clr_instrumentcls
 from biohit_pipettor.clr_wrapping.clr_wrappers import ClrObject
 
 

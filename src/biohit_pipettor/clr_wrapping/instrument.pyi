@@ -144,6 +144,19 @@ class ControlCls:
         :return: If wait was True: returning True if command was accepted.
             It wait was False: returning True if command was executed successfully.
         """
+    def PollPickUpForce(self) -> int:
+        """
+        Polls the tip pickup force, or -1 on error
+
+        :return:
+        """
+    def SetPickUpForce(self, force: int) -> bool:
+        """
+        Sets the tip pickup force
+
+        :param force: Value between 8 and 26 (default: 10)
+        :return: True on success, False otherwise
+        """
     def DriveHome(self, address: MovementActuatorAddress, wait: bool = False) -> bool:
         """
         Drives the given actuator to its home position. To home all actuators, use Initialize() instead.

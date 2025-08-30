@@ -1,0 +1,33 @@
+[build-system]
+requires = [
+    "setuptools>=42",
+    "wheel",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 120
+
+[tool.flake8]
+max-line-length = 120
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[[tool.mypy.overrides]]
+module = [
+    "setuptools",
+    "clr",
+    "InstrumentLib",
+    "System",
+    "matplotlib.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "error",
+    # ignore libmono warnings on Linux
+    "ignore:builtin type GC Offset Base has no __module__ attribute:DeprecationWarning",
+]
