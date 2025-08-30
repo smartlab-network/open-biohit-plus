@@ -1,0 +1,1597 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>InstrumentLib</name>
+    </assembly>
+    <members>
+        <member name="T:InstrumentLib.InstrumentCls">
+            <summary>
+            Instrument level:
+            -Is still being developed
+            Control level:
+            -beta testing
+            Control.Comm level: 
+            -beta testing
+            </summary>
+        </member>
+        <member name="F:InstrumentLib.InstrumentCls.Control">
+            <summary>
+            ControlCls class instance
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.#ctor">
+            <summary>
+             Constructor
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.#ctor(System.String)">
+            <summary>
+            Constructor with systemPath Parameter
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.Dispose">
+            <summary>
+             Disposes, aborts threading
+             Stops datalogging
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.Dispose(System.Boolean)">
+            <summary>
+             Disposes, aborts threading
+             Stops datalogging
+            </summary>
+            
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.VirtualMachine">
+            <summary>
+            Returns if Virtual machine is on/off
+            same as Control.Comm.VirtualMachine
+            </summary>
+            <returns>bool, true:on false:off</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.SetVirtualMachine(System.Boolean)">
+            <summary>
+            Sets Virtual machine is on/off
+            same as Control.Comm.VirtualMachine
+            </summary>
+            <returns>bool, true:on false:off</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.IsConnected">
+            <summary>
+            If Robots USB is connected or not
+            same as Control.Comm.IsConnected()
+            </summary>
+            <returns>bool, true:connected false:not connected</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.SendMessage(System.String)">
+            <summary>
+            Sends message to Intrument
+            same as Control.Comm.SendMessage
+            </summary>
+            <returns>String, message</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.LogOnOff(System.Boolean)">
+            <summary>
+            LogOnOff Enable/Disable data logging
+            onOff==true, logger on
+            onOff==false, logger off
+            </summary>
+            <returns>True</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.InitializeInstrument">
+            <summary>
+            Initialize instrument
+            Reset error
+            RefreshSlave
+            Control.Initialize, X,Y,Z,P
+            Polls position
+            </summary>
+            <returns>True</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.ResetIndicators">
+            <summary>
+            Resets indicators
+            same as Control.ResetIndicators()
+            </summary>
+            <returns>bool,true if success</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.SetBrightness(System.Int32)">
+            <summary>
+            Sets Brightness
+            same as Control.SetBrightness(bright)
+            </summary>
+            <returns>bool,true if success</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.MoveHome">
+            <summary>
+            Not supported 
+            </summary>
+            <returns>bool,true if success</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.MoveZ(System.Single)">
+            <summary>
+            Moves z-axel
+            Same as Control.Move("Z", fZ, false, wait)
+            </summary>
+            <returns>bool,true if success</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.MoveZ(System.Single,System.Boolean)">
+            <summary>
+            Moves z-axel
+            Same as Control.Move("Z", fZ, false, wait)
+            </summary>
+            <returns>bool,true if success</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.MoveToZ(System.Single)">
+            <summary>
+            Not supported 
+            </summary>
+            <returns>bool,true if success</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.MoveToZ(System.Single,System.Single)">
+            <summary>
+            Not supported 
+            </summary>
+            <returns>bool,true if success</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.MoveToClear(System.Single,System.Single)">
+            <summary>
+            Not supported 
+            </summary>
+            <returns>bool,true if success</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.MoveXY(System.Single,System.Single)">
+            <summary>
+            Moves to XY position
+            </summary>
+            <returns>bool,true if success</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.MoveXY(System.Single,System.Single,System.Boolean)">
+            <summary>
+            Moves to XY position
+            </summary>
+            <returns>bool,true if success</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.MoveToXY(System.Single,System.Single)">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+            <returns>bool,true if success</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.MoveToXY(System.Single,System.Single,System.Single)">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+            <returns>bool,true if success</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.MoveToSurface(System.Single,System.Single)">
+            <summary>
+            Set depth Control.SetDepth(fDepth)
+            Moves to surface  Control.MoveToSurface(fBottom, true)
+            Updates Z position
+            </summary>
+            <returns>bool,true if success</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.Mix(System.Single,System.Int32,System.Int32)">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+            <returns>True</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.DispenseAll">
+            <summary>
+            If pipet is not busy
+            Dispense all
+            Same as Control.DispenseAll(true)
+            When dispense done update position
+            </summary>
+            <returns>True</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.MovePistonToPosition(System.Int32)">
+            <summary>
+            If pipet is not busy
+            Move piston to position
+            Same as Control.Move("P", position, true, true)
+            When move done update position
+            </summary>
+            <returns>True</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.Aspirate(System.Single)">
+            <summary>
+            If pipet is not busy
+            Aspirate volume
+            Same as Control.Aspirate(fVol, false, true)
+            When aspirate is done update position
+            </summary>
+            <returns>True</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.Aspirate(System.Single,System.Boolean)">
+            <summary>
+            If pipet is not busy
+            Aspirate volume
+            Same as Control.Aspirate(fVol, false, wait)
+            (Fvol==volume,false==uL,wait== wait or not)
+            When aspirate is done update position
+            </summary>
+            <returns>True</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.Dispense(System.Single)">
+            <summary>
+            If pipet is not busy
+            Dispense volume
+            Same as Control.Aspirate(fVol, false,true)
+            (Fvol==volume,false==uL,wait== wait or not)
+            When aspirate is done update position
+            </summary>
+            <returns>True</returns>
+            
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.Dispense(System.Single,System.Boolean)">
+            <summary>
+            If pipet is not busy
+            Dispense volume
+            Same as Control.Aspirate(fVol, false, wait)
+            (Fvol==volume,false==uL,wait== wait or not)
+            When aspirate is done update position
+            </summary>
+            <returns>True</returns>
+            
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.resetActuatorIfResetOn(System.String)">
+            <summary>
+            Intialize actuartor if RESET erro
+            Same as Control.DriveHome(address, wait)
+            </summary>
+            <returns>True</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.ResetActuator(System.String,System.Boolean)">
+            <summary>
+            NOT SUPPORTED
+            Same as Control.DriveHome(address, wait)
+            </summary>
+            <returns>True</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.SetAspirateSpeed(System.Int32)">
+            <summary>
+            Set aspirate speed
+            Same as Control.SetSpeed("P", nSpd, true)
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.SetDispenseSpeed(System.Int32)">
+            <summary>
+            Set dispense speed
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.SetActuatorSpeed(System.String,System.Int32)">
+            <summary>
+            Set actuator speed
+            Same as SetActuatorSpeed(string address, int speed)
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.SetPickUpForce(System.Int32)">
+            <summary>
+            Set pick up force
+            Same as Control.SetPickUpForce(force)
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.SetPickUpDistance(System.Int32)">
+            <summary>
+            Set pick up distance
+            same as Control.SetPickUpDistance(distance)
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.GetPickUpDistance">
+            <summary>
+            Get pick up distance
+            same as Control.PollPickUpDistance()
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.SetSensorReference(System.Int32)">
+            <summary>
+            Sets sensor reference
+            Same as Control.SetSensorReference(reference)
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.IsDoorInUse">
+            <summary>
+            Gets if door is in use
+            Same as Control.IsDoorInUse()
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.SetDoor(System.Boolean)">
+            <summary>
+            Set door to use/not use
+            Same as Control.SetDoor(use)
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.WriteCalibration(System.String,System.Single)">
+            <summary>
+            Write calibration to robots master card
+            Same as Control.WriteCalibration(address, mCalibration)
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.AutoCalibrate(System.Single,System.Single,System.Single,System.Single@,System.Single@,System.Single@)">
+            <summary>
+            Method for automatomatic calibration.
+            Pipette has to have conductive cone and levelsensor
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.PickTip(System.Single)">
+            <summary>
+            Pick tip
+            Same as Control.PickTip(limit, false, true)
+            Updates Z-axel position
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.EjectTip">
+            <summary>
+            Eject tip
+            Same as Control.PickTip(limit, false, true)
+            Updates Pipets position
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.DisposeTip">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.PollPosition(System.String)">
+            <summary>
+            PollPositon
+            Same as Control.PollPosition(address, false)
+            </summary>
+            <returns>float, Position of address</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.PollTrayPositionInSteps(System.String)">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.GetCurrentZInMM">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.PollPistonPosition">
+            <summary>
+            Pollsposition of Pipet
+            Gets pistion position in [ul]
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.PollMasterStatus">
+            <summary>
+            Polls master status register
+            If status in valid, then loops
+            120 times with 500ms interval
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.XTrayToSystem(System.Single)">
+            <summary>
+            Converts X-distance (in mm from tray 0-position) to actuator parameter
+            </summary>
+            <param name="fValue"></param>
+            <returns></returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.YTrayToSystem(System.Single)">
+            <summary>
+            Converts Y-distance (in mm from tray 0-position) to actuator parameter
+            </summary>
+            <param name="fValue"></param>
+            <returns></returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.ZTrayToSystem(System.Single)">
+            <summary>
+            Converts Z-distance (in mm from tray base) to actuator parameter
+            </summary>
+            <param name="fValue"></param>
+            <returns></returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.GetScrewPitch(System.String)">
+            <summary>
+            Instument screw pitch values; steps in mm
+            </summary>
+            <param name="address">Address of the actuator; "X", "Y", "Z"</param>
+            <returns>Screw pitch as steps as float</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.RefreshState">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+            <returns>if status ok returns true else falset</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.UpdatePresent">
+            <summary>
+            Updates present register return true
+            Same as Control.PollPresent()
+            </summary>
+            <returns>if status ok returns true else false</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.getSequenceTable">
+            <summary>
+            Returns sequence DataTable of sequence machine
+            </summary>
+            <returns>DataTable of sequence</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.setSequenceTable(System.Data.DataTable)">
+            <summary>
+            Sets sequence DataTable for sequence
+            </summary>
+            <returns>true if ok</returns>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.upDatePosition">
+            <summary>
+            Updates(x,y,z,p) position
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.upDateStatus">
+            <summary>
+            Updates(m,x,y,z,p) status registers
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.upDateAllErrors">
+            <summary>
+             Updates all error registers
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.upDateError">
+            <summary>
+             Updates if there is error
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.pauseSequence">
+            <summary>
+            Pause sequence
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.continueSequence">
+            <summary>
+            After pause continue sequence
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.stopSequence">
+            <summary>
+            Stop sequence
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.InstrumentCls.startSequence">
+            <summary>
+            Start sequence
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.DataLogOnOff">
+            <summary>
+            Is datalog on/off.
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.TheException">
+            <summary>
+            Last exception.
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.TheError">
+            <summary>
+            Last Error.
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.X_position">
+            <summary>
+            Position of X-axel
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.Y_position">
+            <summary>
+            Position of Y-axel
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.Z_position">
+            <summary>
+            Position of Z-axel
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.P_position">
+            <summary>
+            Position of pipette
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.Position">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.Action">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.XOffset">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.YOffset">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.ZOffset">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.PBlowOut">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.DBlowOut">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.PipettorMaxVolume">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.AirBubble">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.GetStatus">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.GetPresent">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.GetError">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.GetError_X">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.GetError_Y">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.GetError_Z">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.GetError_P">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.InstrumentCls.GetError_Comm">
+            <summary>
+            NOT SUPPORTED
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.VirtualCls.SendVirtual(System.String)">
+            <summary>
+            Virtual machine message processing
+            </summary>
+            <param name="zMsg"></param>
+            <returns>String send back by the Virtual Instrument</returns>
+        </member>
+        <member name="M:InstrumentLib.VirtualCls.DisplayMessages">
+            <summary>
+            Display messages
+            </summary>
+            <param></param>
+            <returns></returns>
+        </member>
+        <member name="M:InstrumentLib.VirtualCls.RunMessages">
+            <summary>
+            Run messages
+            </summary>
+            <param></param>
+            <returns></returns>
+        </member>
+        <member name="M:InstrumentLib.VirtualCls.SetMessages">
+            <summary>
+            Run messages
+            </summary>
+            <param></param>
+            <returns></returns>
+        </member>
+        <member name="M:InstrumentLib.VirtualCls._VirtualPosition(System.String,System.String)">
+            <summary>
+            Actuator positions
+            </summary>
+            <param name="machine">Machine address</param>
+            <param name="address">Module address</param>
+            <returns>Message string with position information</returns>
+        </member>
+        <member name="M:InstrumentLib.VirtualCls._VirtualRun(System.String,System.String)">
+            <summary>
+            Actuator Run
+            </summary>
+            <param name="machine">Machine address</param>
+            <param name="address">Module address</param>
+            <returns>Message returned</returns>
+        </member>
+        <member name="M:InstrumentLib.VirtualCls.CalculateLRC(System.String)">
+            <summary>
+            Calculates Longitudinal Redundancy Check (LRC)
+            </summary>
+            <param name="data"></param>
+            <returns>byte</returns>
+        </member>
+        <member name="T:InstrumentLib.CommunicationCls">
+            <summary>
+            USB communication control of the PC and the instrument.
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.CommunicationCls.#ctor">
+            <summary>
+            Constructor Logger to defaul path
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.CommunicationCls.#ctor(System.String)">
+            <summary>
+            Constructor Logger to SystemPath, parameter
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.CommunicationCls.Dispose">
+            <summary>
+            Dispose
+            Stops threading
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.CommunicationCls.Dispose(System.Boolean)">
+            <summary>
+            Dispose
+            Stops threading
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.CommunicationCls.IsConnected">
+            <summary>
+            Tests is Usb open or not 
+            </summary>
+            <returns>True, if usb Connection is open</returns>
+        </member>
+        <member name="M:InstrumentLib.CommunicationCls.LogOnOff(System.Boolean)">
+            <summary>
+            LogOnOff Enable/Disable data logging
+            <param name="onOff">boolean if datalog on==true of off==false</param>
+            </summary>
+            <returns>True if datalog is ON, else False</returns>
+        </member>
+        <member name="M:InstrumentLib.CommunicationCls.SendMessage(System.String)">
+            <summary>
+            Send message string to the real or virtual instrument
+            </summary>
+            <param name="message">Data string to be send</param>
+            <returns>String received from real or virtual instrument</returns>
+        </member>
+        <member name="M:InstrumentLib.CommunicationCls.WatchDog">
+            <summary>
+            Wachdog for Threading use
+            Send every 1s "1MDS" if no other communication
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.CommunicationCls.AutoConnectToUsb">
+            <summary>
+            automatically connects and disconnects the communication
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.CommunicationCls.TryToSend(System.String)">
+            <summary>
+            Tries to send data to the serial port, for three times, if necessary
+            </summary>
+            <param name="message">Data string to be send</param>
+            <returns>String received from real or virtual instrument</returns>
+        </member>
+        <member name="M:InstrumentLib.CommunicationCls.SendUsbData(System.String)">
+            <summary>
+            Sends framed data via the USB
+            </summary>
+            <param name="message">Data string to be send</param>
+            <returns>String received from real or virtual instrument. Sets .errorCode.</returns>
+        </member>
+        <member name="M:InstrumentLib.CommunicationCls.testConnection(System.String)">
+            <summary>
+            Sends framed data via the USB, FOR TEST USE
+            </summary>
+            <param name="testMessage">Data string to be send</param>
+            <returns>String received from real or virtual instrument. Sets .errorCode.</returns>
+        </member>
+        <member name="M:InstrumentLib.CommunicationCls.CalculateLRC(System.String)">
+            <summary>
+            Calculates Longitudinal Redundancy Check (LRC)
+            </summary>
+            <param name="data"></param>
+            <returns>byte</returns>
+        </member>
+        <member name="M:InstrumentLib.CommunicationCls.GetNextTag">
+            <summary>
+            Next tag for the message
+            </summary>
+            <returns>Tag as string</returns>
+        </member>
+        <member name="E:InstrumentLib.CommunicationCls.onUsbConnect">
+            <summary>
+            Fires when usb is connected
+            usbConnect==1 then connection OK
+            </summary>
+        </member>
+        <member name="E:InstrumentLib.CommunicationCls.onUsbDisconnect">
+            <summary>
+            Fires when usb is not connected
+            usbConnect==0 then connection OK
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.CommunicationCls.usbConnected">
+            <summary>
+            If usb is connected
+            1 == connected
+            0 == not connected
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.CommunicationCls.ErrorCode">
+            <summary>
+            Communication error codes:
+            1 = Port initialization (open) failed
+            2 = Failed EOF, TimeOut
+            3 = LRC missmatch
+            4 = Busy
+            9 = Unable to close port
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.CommunicationCls.ErrorReceived">
+            <summary>
+            Received error codes:
+            1 = Message
+            2 = Data
+            3 = Chksum
+            4 = DriveOn
+            5 = OperationStopped
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.CommunicationCls.MsgOut">
+            <summary>
+            Data sent
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.CommunicationCls.MsgIn">
+            <summary>
+            Data received
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.CommunicationCls.VirtualMachine">
+            <summary>
+            Control (enable/disable) of the Virtual Machine.
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.CommunicationCls.DataLogOnOff">
+            <summary>
+            Is datalog on/off.
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.CommunicationCls.ClearToReceive">
+            <summary>
+            Clear to receive.
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.CommunicationCls.TheException">
+            <summary>
+            Exception string
+            </summary>
+        </member>
+        <member name="T:InstrumentLib.CommunicationCls.changeEventHandlerOnConnect">
+            <summary>
+            EventHandler for USB is connected
+            </summary>
+        </member>
+        <member name="T:InstrumentLib.CommunicationCls.changeEventHandlerOnDisconnect">
+            <summary>
+            EventHandler for USB is not connected
+            </summary>
+        </member>
+        <member name="T:InstrumentLib.ControlCls">
+            <summary>
+            Instrument control
+            </summary>
+        </member>
+        <member name="F:InstrumentLib.ControlCls.Comm">
+            <summary>
+            CommunicationCls class instance
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.#ctor">
+            <summary>
+            Constructor
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.#ctor(System.String)">
+            <summary>
+            Constructor with systemPath Parameter
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.Dispose">
+            <summary>
+            Dispose
+            Stops threading
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.Dispose(System.Boolean)">
+            <summary>
+            Dispose
+            Stops threading
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.WriteCalibration(System.String,System.Single)">
+            <summary>
+            WriteCalibration(string address, float mCalibration)
+            Parameter1, Valid address X,Y,Z
+            Parameter2, mCalibration, write value to Control master unit
+            Returns success[true] or not[false]
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollCalibration(System.String)">
+            <summary>
+            PollCalibration(string address)
+            Parameter Valid address X,Y,Z
+            Returns cablibration [mm] of (X,Y,Z)
+            </summary>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.SendInstrumentMessage(System.String)">
+            <summary>
+            Send message with instrument id = 1
+            </summary>
+            <param name="message"></param>
+            <returns></returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.IsDoorInUse">
+            <summary>
+            Checks if door is in use
+            </summary>
+            <returns>1=in use, 0=not in use, -1=unknown</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollCurrent(System.Boolean)">
+            <summary>
+            Polls current reading
+            </summary>
+            <returns>Current reading (>0,valid) or -1 (invalid)</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollCycles(System.String)">
+            <summary>
+            Returns number of actuator cycles (acceleration-run-deceleration)
+            </summary>
+            <param name="address">Address of the actuator; 'X','Y','Z' or 'P'</param>
+            <returns>Returns operations, or -1</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollDepth">
+            <summary>
+            Polls maximum distance used for tip pick up
+            </summary>
+            <returns>Maximum distance, or -1</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollDoorState">
+            <summary>
+            Returns Door state (open, close, unknown)
+            </summary>
+            <returns>1 = open, 0 = close, -1 (unknown)</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollDriveFlag(System.String)">
+            <summary>
+            Polls drive flag
+            </summary>
+            <param name="address">Address of the module; X, Y, Z or P</param>
+            <returns>True, if drive flag set</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollEdgePosition(System.String)">
+            <summary>
+            Edge position of the actuator
+            </summary>
+            <param name="address">Address of the module</param>
+            <returns>Returns position, or -32768 as invalid</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollError(System.String)">
+            <summary>
+            Error register value
+            </summary>
+            <param name="address">Address of the module</param>
+            <returns>Returns error data; 0-255 (valid) or -1 (invalid)</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollInstrument(System.Int32)">
+            <summary>
+            Polls instrument data
+            </summary>
+            <param name="dataIndex">Data parameter; 0=address, 1=serial, 2=type</param>
+            <returns>Data of the instrument, else -1</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollMemory(System.Int32)">
+            <summary>
+            Poll content of memory location
+            </summary>
+            <param name="location">memory location</param>
+            <returns>data in the memory</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollPickUpDistance">
+            <summary>
+            Polls maximum distance used for tip pick up
+            </summary>
+            <returns>Maximum distance</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollPickUpForce">
+            <summary>
+            Polls force used for tip pick up
+            </summary>
+            <returns>Force parameter</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollPosition(System.String)">
+            <summary>
+            Position of the actuator
+            </summary>
+            <param name="address">Address of the module</param>
+            <returns>Returns position, or -32768</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollPosition(System.String,System.Boolean)">
+            <summary>
+            Position of the actuator
+            </summary>
+            <param name="address">Address of the module</param>
+            <param name="steps">Unit of the position</param>
+            <returns>Returns position, or -32768</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls._PollPosition(System.String,System.Boolean)">
+            <summary>
+            Position of the actuator
+            </summary>
+            <param name="address">Address of the module</param>
+            <param name="steps">Unit of the position</param>
+            <returns>Returns position, or -32768</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls._PollPositionInSteps(System.String)">
+            <summary>
+            Position in steps
+            </summary>
+            <param name="address">Address of the module</param>
+            <returns>Returns position in steps, or -Int16</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollPresent">
+            <summary>
+            Returns master present register information
+            </summary>
+            <returns>Returns present data; 0-255 (valid) or -1 (invalid)</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollSensorReading">
+            <summary>
+            Polls sensor reading; either from Master or Pipettor
+            </summary>
+            <returns>Sensor value</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollSensorReading(System.String)">
+            <summary>
+            Polls sensor reading; either from Master or Pipettor
+            </summary>
+            <returns>Sensor value</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls._PollSensorReading(System.String)">
+            <summary>
+            Polls sensor reading; either from Master or Pipettor
+            </summary>
+            <returns>Sensor value, or -1 (invalid)</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollSensorReference">
+            <summary>
+            Polls sensor reference setting
+            </summary>
+            <returns>Sensor reference (>0,valid) or -1 (invalid)</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollSpeed(System.String)">
+            <summary>
+            Polls speed
+            </summary>
+            <param name="address">Module address</param>
+            <returns>Speed (>0 valid) or -1 (invalid)</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollSpeed(System.String,System.Boolean)">
+            <summary>
+            Polls speed
+            </summary>
+            <param name="address">Module address</param>
+            <param name="inwards">Direction: True=Inwards, False=outwards</param>
+            <returns>Speed (>0 valid) or -1 (invalid)</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls._PollSpeed(System.String,System.Boolean)">
+            <summary>
+            Polls speed
+            </summary>
+            <param name="address">Module address</param>
+            <param name="inwards">Direction: True=Inwards, False=outwards</param>
+            <returns>Speed (>0 valid) or -1 (invalid)</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollStatus(System.String)">
+            <summary>
+            Status register value
+            </summary>
+            <param name="address">Address of the module</param>
+            <returns>Returns status; >= 0 (valid), -1 (invalid)</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollVersion(System.String)">
+            <summary>
+            Version information
+            </summary>
+            <param name="address">Address of the module</param>
+            <returns>Returns version</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.LogOnOff(System.Boolean)">
+            <summary>
+            LogOnOff Enable/Disable data logging
+            onOff==true, logger on
+            onOff==false, logger off
+            </summary>
+            <returns>True</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.RefreshSlaves">
+            <summary>
+            Refresh slaves; poll presence
+            </summary>
+            <returns>True, if message processed</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.ResetIndicators">
+            <summary>
+            Resets indicators; enable to run the instrument
+            </summary>
+            <returns>True, if message processed</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.ResetRegisters">
+            <summary>
+            Resets registers
+            </summary>
+            <returns>True, if message processed</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.SampleCurrent">
+            <summary>
+            Take sample (100 ms) of current consumption
+            </summary>
+            <returns>True, if successful</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.SetBrightness(System.Int32)">
+            <summary>
+            Sets brightness of the ligth panel
+            </summary>
+            <param name="brightness">Brightness (0-100%)</param>
+            <returns>True, if message processed</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.SetConnectionWatchDog(System.Boolean)">
+            <summary>
+            Sets connection Wachdog on/off, Usb Attach/Detach
+            </summary>
+            <param name="On">Enable connection wachdog</param>
+            <returns>True, if message processed</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.SetCurrentMeasurement(System.Boolean)">
+            <summary>
+            Starts / stops the master current measurement
+            </summary>
+            <param name="on">On/Off</param>
+            <returns>True, if successful</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.SetDepth(System.Single)">
+            <summary>
+            Sets distance from surface in millimeters
+            </summary>
+            <param name="distance">Distance from surface</param>
+            <returns>True, if message processed</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.SetDoor(System.Boolean)">
+            <summary>
+            Sets door for use or not
+            </summary>
+            <param name="use">Door status; in use (true), not in use (false)</param>
+            <returns>True, if message processed, else false</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.SetInstrumentAddress(System.Int32)">
+            <summary>
+            Sets Instrument address
+            </summary>
+            <param name="address">Instrument address; from 1 to 9</param>
+            <returns>True, if set</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.SetLRC(System.Boolean)">
+            <summary>
+            Set the LRC testing in use or not
+            </summary>
+            <param name="on">LRC testing; in use (true), not in use (false)</param>
+            <returns>True, if message processed, else false</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.SetPickUpForce(System.Int32)">
+            <summary>
+            Sets pick up force
+            </summary>
+            <param name="force">Pick up force</param>
+            <returns>True, if message processed</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.SetPickUpDistance(System.Single)">
+            <summary>
+            Sets distance limit [mm] related parameter for tip pick up
+            </summary>
+            <param name="distance">Distance value</param>
+            <returns>True, if message processed</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.SetSensorReference(System.Single)">
+            <summary>
+            Set sensor triggering reference
+            </summary>
+            <param name="trigger">Reference parameter; (1-12)</param>
+            <returns>True, if set</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.SetSpeed(System.String,System.Int32,System.Boolean)">
+            <summary>
+            Set speeds for modules X, Y, Z, P
+            </summary>
+            <param name="address">Address of the module ("X", "Y", "Z" or "P")</param>
+            <param name="speed">Speed value; valid range is dependent on module - X|Y|Z (1-9), P (1-6)</param>
+            <param name="inwards">True = inwards, false = outwards</param>
+            <returns>True if set, else false</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.Initialize">
+            <summary>
+            Initializes actuators to hardware origin
+            </summary>
+            <returns>True if and when done</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.Initialize(System.String)">
+            <summary>
+            Initializes actuator to hardware origin
+            </summary>
+            <param name="address">Address of the module</param>
+            <returns>True if and when done</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.Initialize(System.String,System.Boolean)">
+            <summary>
+            Initializes actuator to hardware origin
+            </summary>
+            <param name="address">Address of the module</param>
+            <param name="wait">Wait (true) until operation completed</param>
+            <returns>True if and when done</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls._Initialize(System.String,System.Boolean)">
+            <summary>
+            Initializes actuator to hardware origin
+            </summary>
+            <param name="address">Address of the module</param>
+            <param name="wait">Wait (true) until operation completed</param>
+            <returns>True if and when done</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.DriveHome(System.String,System.Boolean)">
+            <summary>
+            Initializes actuator
+            </summary>
+            <param name="address">Address of the module</param>
+            <param name="wait">Wait (true) until operation completed</param>
+            <returns>True, if message processed</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.DriveEdge(System.String,System.Boolean)">
+            <summary>
+            Initializes actuator
+            </summary>
+            <param name="address">Address of the module</param>
+            <param name="wait">Wait (true) until operation completed</param>
+            <returns>True, if message processed</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.Move(System.String,System.Single)">
+            <summary>
+            Drives actuator
+            </summary>
+            <param name="address">Address of the module</param>
+            <param name="position">Position of the actuator</param>
+            <returns></returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.Move(System.String,System.Single,System.Boolean)">
+            <summary>
+            Drives actuator
+            </summary>
+            <param name="address">Address of the module</param>
+            <param name="position">Position of the actuator</param>
+            <param name="steps">Unit of the position</param>
+            <returns></returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.Move(System.String,System.Single,System.Boolean,System.Boolean)">
+            <summary>
+            Drives actuator
+            </summary>
+            <param name="address">Address of the module</param>
+            <param name="position">Position of the actuator</param>
+            <param name="steps">Unit of the position</param>
+            <param name="wait">Wait (true) until operation completed</param>
+            <returns></returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls._Move(System.String,System.Single,System.Boolean,System.Boolean)">
+            <summary>
+            Drives actuator
+            </summary>
+            <param name="address">Address of the module</param>
+            <param name="position">Position of the actuator</param>
+            <param name="steps">Unit of the position</param>
+            <param name="wait">Wait (true) until operation completed</param>
+            <returns></returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.MoveSteps(System.String,System.Int32,System.Boolean)">
+            <summary>
+            
+            </summary>
+            <param name="address">Address of the module</param>
+            <param name="position">Position of the actuator</param>
+            <param name="wait"></param>
+            <returns></returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.Stop">
+            <summary>
+            Stops the motion
+            </summary>
+            <returns>True/false</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.Stop(System.String)">
+            <summary>
+            Stops the motion
+            </summary>
+            <param name="address">Address of the module</param>
+            <returns>True/false</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls._Stop">
+            <summary>
+            Stops the motion
+            </summary>
+            <param name="address">Address (X,Y,Z) of the module</param>
+            <returns>True/false</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.MoveToSurface(System.Single)">
+            <summary>
+            Moves to liquid surface
+            </summary>
+            <param name="limit">Extreme position</param>
+            <returns>True, if processed</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.MoveToSurface(System.Single,System.Boolean)">
+            <summary>
+            Moves to liquid surface
+            </summary>
+            <param name="limit">Extreme position</param>
+            <param name="wait">Wait (true) until surface found</param>
+            <returns>True, if processed</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls._MoveToSurface(System.Single,System.Boolean)">
+            <summary>
+            Moves to liquid surface
+            </summary>
+            <param name="limit">Extreme position in millimeters</param>
+            <param name="wait">Wait (true) until surface found</param>
+            <returns>True, if processed</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.IsDriveOn(System.String)">
+            <summary>
+            Tests if drive is on
+            </summary>
+            <param name="address">Module address; X, Y, Z, P</param>
+            <returns>True, if drive on</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.IsDriveOff(System.String)">
+            <summary>
+            Tests if drive is off
+            </summary>
+            <param name="address">Module address; X, Y, Z, P</param>
+            <returns>True if drive off</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.WaitDriveOver(System.String)">
+            <summary>
+            Polls drive flag
+            </summary>
+            <param name="address">Address of the module</param>
+            <returns>True, if busy state changed to idle, false if TimeOut</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.WaitPistonToStop">
+            <summary>
+            Waits until pipettor piston motion is over
+            </summary>
+            <returns>True, when stopped, false if error</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.WaitArmToStop">
+            <summary>
+            Waits until arm motion (X and Y and Z) is over
+            </summary>
+            <returns>True, when stopped, false if error</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.WaitArmToStop(System.String)">
+            <summary>
+            Waits until actuatir motion (X or Y or Z) is over
+            </summary>
+            <param name="address"></param>
+            <returns>True, when stopped, false if error</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls._WaitArmToStop(System.String)">
+            <summary>
+            Waits until arm motion is over
+            </summary>
+            <returns>True, when stopped, false if error</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.Aspirate(System.Single)">
+            <summary>
+            Aspirate
+            </summary>
+            <param name="volume">Volume to be aspirated in ul</param>
+            <returns>True, if command processed</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.Aspirate(System.Single,System.Boolean)">
+            <summary>
+            Aspirate
+            </summary>
+            <param name="volume">Volume to be aspirated</param>
+            <param name="steps">Unit of the 'volume'; false = ul, true = steps</param>
+            <returns>True, if command processed</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.Aspirate(System.Single,System.Boolean,System.Boolean)">
+            <summary>
+            Aspirate
+            </summary>
+            <param name="volume">Volume to be aspirated</param>
+            <param name="steps">Unit of the 'volume'; false = ul, true = steps</param>
+            <param name="wait">defines return from the function; if TRUE, the return will take place as soon as the aspiration is fully completed, if FALSE the return takes place as soon as the command has been sent to the instrument.</param>
+            <returns>True, if command processed</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls._Aspirate(System.Single,System.Boolean,System.Boolean)">
+            <summary>
+            Aspirate
+            </summary>
+            <param name="volume">Volume to be aspirated</param>
+            <param name="steps">Unit of the 'volume'; false = ul, true = steps</param>
+            <param name="wait">defines return from the function; if TRUE, the return will take place as soon as the aspiration is fully completed, if FALSE the return takes place as soon as the command has been sent to the instrument.</param>
+            <returns>True, if command processed</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.Dispense(System.Single)">
+            <summary>
+            Dispense
+            </summary>
+            <param name="volume">Unit of the volume in ul</param>
+            <returns></returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.Dispense(System.Single,System.Boolean)">
+            <summary>
+            Dispense
+            </summary>
+            <param name="volume">Unit of the volume in ul</param>
+            <param name="steps">Unit of the 'volume'; false = ul, true = steps</param>
+            <returns></returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.Dispense(System.Single,System.Boolean,System.Boolean)">
+            <summary>
+            Dispense
+            </summary>
+            <param name="volume">Volume to be dispensed</param>
+            <param name="steps">Unit of the 'volume'; false = ul, true = steps</param>
+            <param name="wait">defines return from the function; if TRUE, then return will take place as soon as the dispense is completed, if FALSE the return takes place when the command has been sent to the instrument.</param>
+            <returns></returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls._Dispense(System.Single,System.Boolean,System.Boolean)">
+            <summary>
+            Dispense
+            </summary>
+            <param name="volume">Volume to be dispensed</param>
+            <param name="steps">Unit of the 'volume'; false = ul, true = steps</param>
+            <param name="wait">defines return from the function; if TRUE, then return will take place as soon as the dispense is completed, if FALSE the return takes place when the command has been sent to the instrument.</param>
+            <returns></returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.DispenseAll">
+            <summary>
+            Dispense all (with BlowOut, if any)
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.DispenseAll(System.Boolean)">
+            <summary>
+            Dispense all (with BlowOut, if any)
+            </summary>
+            <param name="wait">Wait (=True) until completed</param>
+            <returns></returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls._DispenseAll(System.Boolean)">
+            <summary>
+            Dispense all (with BlowOut, if any)
+            </summary>
+            <param name="wait">Wait (=True) until completed</param>
+            <returns></returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.EjectTip">
+            <summary>
+            Ejects tip
+            </summary>
+            <returns>True if execution successful</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.EjectTip(System.Boolean)">
+            <summary>
+            Ejects tip
+            </summary>
+            <param name="wait">Wait (true) until operation completed</param>
+            <returns>True if execution successful</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls._EjectTip(System.Boolean)">
+            <summary>
+            Ejects tip
+            </summary>
+            <param name="wait">Wait (true) until operation completed</param>
+            <returns>True if execution successful</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PickTip(System.Single)">
+            <summary>
+            Picks up tip
+            </summary>
+            <param name="limit">Extreme position to travel</param>
+            <returns>True if execution successfull</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PickTip(System.Single,System.Boolean)">
+            <summary>
+            Picks up tip
+            </summary>
+            <param name="limit">Extreme position to travel</param>
+            <param name="steps">Limit given as steps (true) or millimeters (false)</param>
+            <returns>True if execution successfull</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PickTip(System.Single,System.Boolean,System.Boolean)">
+            <summary>
+            Picks up tip
+            </summary>
+            <param name="limit">Extreme position to travel</param>
+            <param name="steps">Limit given as steps (true) or millimeters (false)</param>
+            <param name="wait">Wait (true) until operation completed</param>
+            <returns>True if execution successful</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls._PickTip(System.Single,System.Boolean,System.Boolean)">
+            <summary>
+            Picks up tip
+            </summary>
+            <param name="limit">Extreme position to travel</param>
+            <param name="steps">Limit given as steps (true) or millimeters (false)</param>
+            <param name="wait">Wait (true) until operation completed</param>
+            <returns>True if execution successfull</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.IsAddressValid(System.String,System.String)">
+            <summary>
+            Checks valid address
+            </summary>
+            <param name="address">String of valid address</param>
+            <param name="addresses">String of valid addresses</param>
+            <returns>True, if address is valid</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.PollMessageData(System.String)">
+            <summary>
+            Instrument returned data part of a message sent
+            </summary>
+            <param name="message">Message string sent to the instrument</param>
+            <returns>Data as integer</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.ExtractFirstInteger(System.String)">
+            <summary>
+            Returns first integer in a string
+            </summary>
+            <param name="str">String to be processed</param>
+            <returns>First integer found, or Int16.MinValue</returns>
+        </member>
+        <member name="M:InstrumentLib.ControlCls.ValidateOK(System.String)">
+            <summary>
+            Checks for string to contain 'ok'
+            Sets errorCode-parameter as well
+            </summary>
+            <param name="received">String to be validated</param>
+            <returns>True, if containd 'ok', else false</returns>
+        </member>
+        <member name="E:InstrumentLib.ControlCls.changePositionEvent">
+            <summary>
+             Position on change Event
+            </summary>
+        </member>
+        <member name="E:InstrumentLib.ControlCls.changeStatusEvent">
+            <summary>
+             Status change Event
+            </summary>
+        </member>
+        <member name="E:InstrumentLib.ControlCls.changeSensorEvent">
+            <summary>
+             Sensor change Event
+            </summary>
+        </member>
+        <member name="E:InstrumentLib.ControlCls.changeErrorEvent">
+            <summary>
+             Error change Event
+            </summary>
+        </member>
+        <member name="E:InstrumentLib.ControlCls.changePresentEvent">
+            <summary>
+             Present change Event
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.ControlCls.TheException">
+            <summary>
+            Exception string
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.ControlCls.DataLogOnOff">
+            <summary>
+            Is datalog on/off.
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.ControlCls.ErrorCode">
+            <summary>
+            Error code information
+            1 - Invalid address X, Y, Z, P, M
+            2 - Parameter out of range
+            3 - Invalid / missing data
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.ControlCls.PipetType">
+            <summary>
+            Set pipet type 1=200ul,2=1000ul
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.ControlCls.screwX">
+            <summary>
+            X-actuator parameter
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.ControlCls.screwY">
+            <summary>
+            Y-actuator parameter
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.ControlCls.screwZ">
+            <summary>
+            Z-actuator parameter
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.ControlCls.Xcalibration">
+            <summary>
+            X-axel calibration off set between tray and robot
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.ControlCls.Ycalibration">
+            <summary>
+            Y-axel calibration off set between tray and robot
+            </summary>
+        </member>
+        <member name="P:InstrumentLib.ControlCls.Zcalibration">
+            <summary>
+            Z-axel calibration off set between tray and robot
+            </summary>
+        </member>
+        <member name="T:InstrumentLib.ControlCls.changePositionEventHandler">
+            <summary>
+             Position on change EventHandler
+            </summary>
+        </member>
+        <member name="T:InstrumentLib.ControlCls.changeStatusEventHandler">
+            <summary>
+             Status change EventHandler
+            </summary>
+        </member>
+        <member name="T:InstrumentLib.ControlCls.changeSensorEventHandler">
+            <summary>
+             Sensor change EventHandler
+            </summary>
+        </member>
+        <member name="T:InstrumentLib.ControlCls.changeErrorEventHandler">
+            <summary>
+             Error change EventHandler
+            </summary>
+        </member>
+        <member name="T:InstrumentLib.ControlCls.changePresentEventHandler">
+            <summary>
+             Present change EventHandler
+            </summary>
+        </member>
+    </members>
+</doc>
