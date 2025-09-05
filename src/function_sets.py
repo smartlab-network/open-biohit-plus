@@ -24,19 +24,19 @@ class EHMPlatePos:
 
 class Reservoirs:
     def __init__(self, x_corner, y_corner):
-        self.well1_x = x_corner + 6 * 18 + 3
-        self.medium_x = x_corner + 5 * 18 + 3
-        self.waste_x = x_corner + 4 * 18 + 3
-        self.well4_x = x_corner + 3 * 18 + 3
-        self.well5_x = x_corner + 2 * 18 + 3
-        self.well6_x = x_corner + 1 * 18 + 3
-        self.well7_x = x_corner  + 3
+        self.well1_x  = x_corner + 6 * 18 + 3    #1
+        self.medium_x = x_corner + 5 * 18 + 3    #2
+        self.waste_x  = x_corner + 4 * 18 + 3    #3
+        self.well4_x  = x_corner + 3 * 18 + 3    #4
+        self.well5_x  = x_corner + 2 * 18 + 3
+        self.well6_x  = x_corner + 1 * 18 + 3
+        self.well7_x  = x_corner  + 3
         self.y_corner = y_corner + 40
-        self.add_height = 70
-        self.remove_height = 80
+        self.add_height = 65
+        self.remove_height = 90
 
 
-class RoundContainers:  # TODO: adjust to 6-well setup once that´s printed
+class RoundContainers:  # TODO: adjust to 6-well setup once thatï¿½s printed
     def __init__(self, x_corner, y_corner):
         self.medium_x = x_corner + 104.5
         self.waste_x = x_corner + 62.5

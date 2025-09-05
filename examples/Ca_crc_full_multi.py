@@ -6,18 +6,21 @@ print("test")
 import sys
 import os
 
-sys.path.append(r"C:\labhub\Repos\biohit-pipettor-python\src")
+sys.path.append(r"C:\labhub\Repos\smartlab-network\open-biohit-plus\src")
 
 
 from function_sets import EHMPlatePos, Reservoirs, PipetteTips, TipDropzone, dilute_multi, \
     remove_multi, fill_multi, discard_tips, home, pick_multi_tips, return_multi_tips
 
 # on bottom plate with thin wells towards back, top right corner of each lot
-A1 = (130.5, 0)
-B1 = (130.5, 42)
-B2 = (0, 42)
+A1 = (130.5,   0)
+A1 = (0    ,   0)
+B1 = (130.5,  42)
+B2 = (0    ,  42)
 C1 = (130.5, 140)
-C2 = (0, 140)
+C2 = (0    , 140)
+
+
 
 p= Pipettor(tip_volume=1000, multichannel=True)
 
@@ -38,22 +41,19 @@ pipette_tips.change_tips=0    #as default keep tips
 
 containers = Reservoirs(C2[0], C2[1])
 
-tip_dropzone = TipDropzone(C1[0], C1[1])
 
-incubation_time = 300
-platename = '20250101x'
+incubation_time = 300     #seconds
+platename       = '20250101x'
 
-bChangeTips=0
-bDoFoc = 0
-
-p.move_z(10)
-
+incubation_time = 3
+bDoFoc = 1
 
 print("Starting Ca-force curve measurement")
 print("Starting with 1.8mM default")
 
 if bDoFoc:
     subprocess.call([r'C:\labhub\Import\FOC48.bat', platename]) # 0.2mM
+
 print("Initial measurement completed")
 
 
@@ -65,18 +65,19 @@ if pipette_tips.change_tips==0:
     pick_multi_tips(p, pipette_tips)
     
 
-
-
-#save height, will remain 250µl
-
-remove_height=38
-add_height   =30
-
 #remove calcium
 # remove down to 250µl
-remove_multi(p, ehm_plate, containers, pipette_tips, 6, 600)
-fill_multi(p, ehm_plate, containers, pipette_tips, containers.well5_x, 6, 450)  # 1.973mM
 
+calcium_0_mM = containers.well4_x
+calcium_18_mM = containers.well5_x
+calcium_10_mM = containers.well6_x
+
+
+remove_multi(p, ehm_plate, containers, pipette_tips, 6, 600)
+fill_multi(p, ehm_plate, containers, pipette_tips, calcium_0mM, 6, 450)  # 1.973mM
+
+remove_multi(p, ehm_plate, containers, pipette_tips, 6, 600)
+fill_multi(p, ehm_plate, containers, pipette_tips, calcium_0mM, 6, 450)  # 1.973mM
 
 
     
@@ -86,7 +87,8 @@ fill_multi(p, ehm_plate, containers, pipette_tips, containers.well5_x, 6, 450)  
     
 for volume in [50, 60, 100, 120]:  # 0.2- 2mM    
     remove_multi(p, ehm_plate, containers, pipette_tips, 6, volume)
-    fill_multi(p, ehm_plate, containers, pipette_tips, containers.well5_x, 6, volume)  # 1.973mM    
+    fill_multi(p, ehm_plate, containers, pipette_tips, containers.well5_x, 6, volume)  # 1.973mM
+
     print(f"Filled well with {volume} medium")
     if bDoFoc:
         p.move_xy(0, 0)
@@ -101,7 +103,7 @@ print("Fill cycle to 1mM complete")
 #discard_tips(p, containers, tip_dropzone)
 for volume in [30, 30, 40, 50, 100]:  # 2- 10mM
     remove_multi(p, ehm_plate, containers, pipette_tips, 6, volume)
-    fill_multi(p, ehm_plate, containers, pipette_tips, containers.well5_x, 6, volume)  # 1.973mM    
+    fill_multi(p, ehm_plate, containers, pipette_tips, calcium_18_mM, 6, volume)  # 1.973mM
     print(f"Replaced {volume} ul medium")
     if bDoFoc:
         p.move_xy(0, 0)
@@ -113,6 +115,30 @@ for volume in [30, 30, 40, 50, 100]:  # 2- 10mM
 
 
 print("Fill cycle to 4mM complete")
+
+for volume in [30, 30, 40, 50, 100]:  # 2- 10mM
+    remove_multi(p, ehm_plate, containers, pipette_tips, 6, volume)
+    fill_multi(p, ehm_plate, containers, pipette_tips, calcium_10_mM, 6, volume)  # 1.973mM
+    print(f"Replaced {volume} ul medium")
+    if bDoFoc:
+        p.move_xy(0, 0)
+        time.sleep(incubation_time)
+        print(f"Incubation time {incubation_time/60} minutes. Turn measurement ON")
+        subprocess.call([r'C:\labhub\Import\FOC48.bat', platename])
+        print(f"Completed measurement")
+        p.move_z(0)
+
+
+#Return from 10 to 1.8mM
+
+remove_multi(p, ehm_plate, containers, pipette_tips, 6, 600)
+fill_multi(p, ehm_plate, containers, pipette_tips, calcium_0mM, 6, 450)  # 1.973mM
+
+remove_multi(p, ehm_plate, containers, pipette_tips, 6, 600)
+fill_multi(p, ehm_plate, containers, pipette_tips, calcium_0mM, 6, 450)  # 1.973mM
+
+
+
     
 if pipette_tips.change_tips==0:
     return_multi_tips(p, pipette_tips)
