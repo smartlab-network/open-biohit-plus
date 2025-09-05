@@ -3,6 +3,7 @@ Classes and functions to be used with biohit_pipettor
 p = Pipettor() in all cases
 """
 import time
+from typing import List
 
 from biohit_pipettor import Pipettor
 from biohit_pipettor.errors import CommandFailed
@@ -20,6 +21,7 @@ class EHMPlatePos:
         self.y_corner_multi = y_corner + 43
         self.add_height = 30
         self.remove_height = 38
+        self.cols = 6
 
 
 class Reservoirs:
@@ -389,7 +391,7 @@ def dilute_multi(p: Pipettor, ehm_plate, containers, pipette_tips, tip_dropzone,
 
 #fill_multi(p, ehm_plate, containers, pipette_tips, tip_dropzone, containers.well5_x, 6, 
 #            volume, 48, None, None, bChangeTips)  # 1.973mM
-def fill_multi(p: Pipettor, ehm_plate: EHMPlatePos, containers: Reservoirs, pipette_tips, stock_x, total_row: float, volume: float):
+def fill_multi(p: Pipettor, ehm_plate: EHMPlatePos, containers: Reservoirs, pipette_tips, stock_x, cols: List[float], volume: float):
     """
     Using multichannel ,fills specified amount of volume into specified columns at desired height
     :param p: Pipettor, multichannel
@@ -403,13 +405,11 @@ def fill_multi(p: Pipettor, ehm_plate: EHMPlatePos, containers: Reservoirs, pipe
     :return:
     """
     tip_content = 0
-    row = 0
-    start_x = ehm_plate.x_corner
-    start_y = ehm_plate.y_corner_multi
+
     if pipette_tips.change_tips :
         pick_multi_tips(p, pipette_tips)
         
-    while row < total_row:
+    for col in cols:
         if tip_content < volume:
             p.move_x(stock_x)
             p.move_y(containers.y_corner)
@@ -417,9 +417,9 @@ def fill_multi(p: Pipettor, ehm_plate: EHMPlatePos, containers: Reservoirs, pipe
             tip_content = 1000
         else:
             pass
-        p.move_xy(start_x + row * ehm_plate.x_step, start_y)
+        x_pos = ehm_plate.x_corner + (ehm_plate.cols - col) * ehm_plate.x_step
+        p.move_xy(x_pos, ehm_plate.y_corner_multi)
         spit(p, volume, ehm_plate.add_height)
-        row = row + 1
         tip_content = tip_content - volume
     p.move_z(0)
     p.move_xy(stock_x, containers.y_corner)
@@ -429,7 +429,7 @@ def fill_multi(p: Pipettor, ehm_plate: EHMPlatePos, containers: Reservoirs, pipe
     p.move_z(0)
 
 
-def remove_multi(p: Pipettor, ehm_plate: EHMPlatePos, containers: Reservoirs, pipette_tips,  total_row: float, volume: float):
+def remove_multi(p: Pipettor, ehm_plate: EHMPlatePos, containers: Reservoirs, pipette_tips,  cols: List[float] , volume: float):
     """Removes medium from whole 48well plate
     Adjustments possible by altering total number of columns and rows
     :param total_row: total length of a row (in wells)
@@ -440,26 +440,37 @@ def remove_multi(p: Pipettor, ehm_plate: EHMPlatePos, containers: Reservoirs, pi
     :param start_y: default = ehm_plate_y.corner, skip columns to start of fill
     :param bChangeTips: default = TRUE, Keep Tips or not
     """
-    
-    row = 0
+    print(f"x corner {ehm_plate.x_corner} and step {ehm_plate.x_step}")
+
+    for col in cols:
+        print(f"do col {col}")
+        x_col = ehm_plate.cols - col
+        x_pos = ehm_plate.x_corner + (x_col * ehm_plate.x_step)
+        print(f"move to col {x_col} of {ehm_plate.cols} mm {x_pos} and y_mm{ehm_plate.y_corner_multi}")
+
+
+
     tip_content = 0
-    start_x = ehm_plate.x_corner
-    start_y = ehm_plate.y_corner_multi
-    
+
     if pipette_tips.change_tips:
         pick_multi_tips(p, pipette_tips)
     
-    while row < total_row:
+    for col in cols:
         if 1000 - tip_content < volume:
             p.move_xy(containers.waste_x, containers.y_corner)
             spit(p, tip_content, containers.add_height)
             tip_content = 0
         else:
             pass
-        p.move_xy(start_x + row * ehm_plate.x_step, start_y)
+        p.move_z(0)
+        x_col =ehm_plate.cols - col
+        x_pos =ehm_plate.x_corner + (x_col * ehm_plate.x_step)
+        print(f"move to col {x_col} of {ehm_plate.cols} mm {x_pos} and y_mm{ehm_plate.y_corner_multi}")
+        p.move_xy(x_pos, ehm_plate.y_corner_multi)
         suck(p, volume, ehm_plate.remove_height)
-        row = row + 1
         tip_content = tip_content + volume
+
+    p.move_z(0)
     p.move_xy(containers.waste_x, containers.y_corner)
     spit(p, tip_content, containers.add_height)    
     print(f"Removed {volume} ul medium from plate")
