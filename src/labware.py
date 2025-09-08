@@ -1,53 +1,36 @@
-import json
-import os
-import os.path
-from envs import env
-from pathlib import Path
-from biohit_pipettor.baseclass import Baseclass
+class Labware:
+    """Labware Base Class"""
+    def __init__(self, size_x: float, size_y: float, size_z: float):
+        self.size_x = size_x
+        self.size_y = size_y
+        self.size_z = size_z
 
-class Labware(Baseclass):
-    """
-    Loads the Labware Libraries
-    :param initialize: 
-    """
-    _labware_folder = Path(r"C:\Labhub\Import\Labware")
-    _labware_env: str = 'LABWARE_DIR'
-    _JSON_SUFFIXES = [".json"]
-    
-    def __init__(self):    
-        self._loadLibrary()       
+    def to_dict(self) -> dict:
+        return {
+            "size_x": self.size_x,
+            "size_y": self.size_y,
+            "size_z": self.size_z
+        }
 
+    @classmethod
+    def from_dict(cls, data: dict) -> "Labware":
+        return cls(
+            size_x=data["size_x"],
+            size_y=data["size_y"],
+            size_z=data["size_z"]
+        )
 
-        
-    @property
-    def tipPosition(self) -> str:
-        """True if the device is connected, False otherwise"""
-        return self._tipPosition
+class Trash(Labware):
+    def __init__(self):
+        pass
 
-    @tipPosition.setter
-    def tipPosition(self, sPosition):
-        self.self_tipPosition=sPosition
+class Plate(Labware):
+    def __init__(self, size_x, size_y, size_z, wells_x, wells_y, first_well_xy:tuple[float, float]):
+        super.__init__(size_x = size_x, size_y = size_y, size_z = size_z)
+        self.wells_x = wells_x
+        self.wells_y = wells_y
+        self.first_well_xy = first_well_xy
 
-    def _tipCoordinates(self) ->str:
-        return self.deckPosition[self.tipPosition]
-    
-    def _loadLibrary(self) ->bool:
-        #
-        filelist = []
-        #
-        if env(self._labware_env) is not None:
-            self._labware_folder = Path(env(self._labware_env))        
-        
-        if self._labware_folder.is_dir():           
-            for f in self._labware_folder.iterdir():
-                if f.suffix in self._JSON_SUFFIXES:
-                    filelist.append(f)            
-        
-        print("filelist contains %d .json files", filelist.count() )
-        #
-        for f in filelist:                
-            data = json.load(f)
-            
-            
-
-        return bOk
+class PipetteHolder(Labware):
+    def __init__(self):
+        pass

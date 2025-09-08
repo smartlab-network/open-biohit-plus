@@ -18,7 +18,7 @@ try:
 finally:
     sys.path.remove(firmware_path)
 
-from .pipettor import Pipettor  # noqa: E402 cannot be imported earlier, depends on this file
+from .pipettor_plus import Pipettor  # noqa: E402 cannot be imported earlier, depends on this file
 
 __version__ = metadata.version(__name__)
 
