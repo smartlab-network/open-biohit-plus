@@ -411,8 +411,9 @@ def fill_multi(p: Pipettor, ehm_plate: EHMPlatePos, containers: Reservoirs, pipe
         
     for col in cols:
         if tip_content < volume:
-            p.move_x(stock_x)
-            p.move_y(containers.y_corner)
+            p.move_xy(stock_x, containers.y_corner)
+            #p.move_x(stock_x)
+            #p.move_y(containers.y_corner)
             suck(p, 1000, containers.remove_height)
             tip_content = 1000
         else:

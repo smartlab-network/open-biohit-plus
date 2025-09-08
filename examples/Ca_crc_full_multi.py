@@ -48,9 +48,9 @@ incubation_time = 3
 
 
 #
-# Turn on/off FOC MEasurement
+# Turn on/off FOC Measurement
 #
-bDoFoc = 0
+bDoFoc = 1
 
 print("Starting Ca-force curve measurement")
 print("Starting with 1.8mM default")
@@ -90,9 +90,9 @@ fill_multi(p, ehm_plate, containers, pipette_tips, calcium_0_mM, cols, 450)  # 1
 #            volume: float, height: float, start_x=None, start_y=None,bChangeTips=1):
 
     
-for volume in [50]:  # 0.2- 1mM
-    remove_multi(p, ehm_plate, containers, pipette_tips, 6, volume)
-    fill_multi(p, ehm_plate, containers, pipette_tips, containers.well5_x, 6, volume)  # 1.973mM
+for volume in [50, 80, 100, 120, 150, 400]:  # 0.2- 2mM steps of 0.1
+    remove_multi(p, ehm_plate, containers, pipette_tips, cols, volume)
+    fill_multi(p, ehm_plate, containers, pipette_tips, containers.well5_x, cols, volume)  # 1.973mM
 
     print(f"Filled well with {volume} medium")
     if bDoFoc:
@@ -108,7 +108,7 @@ print("Fill cycle to 1mM complete")
 
 for volume in [30]:  # 2- 10mM
     remove_multi(p, ehm_plate, containers, pipette_tips, cols, volume)
-    fill_multi(p, ehm_plate, containers, pipette_tips, calcium_18_mM, cols, volume)  # 1.973mM
+    fill_multi(p, ehm_plate, containers, pipette_tips, calcium_10_mM, cols, volume)  # 1.973mM
     print(f"Replaced {volume} ul medium")
     if bDoFoc:
         p.move_xy(0, 0)
@@ -117,6 +117,7 @@ for volume in [30]:  # 2- 10mM
         subprocess.call([r'C:\labhub\Import\FOC48.bat', platename])
         print(f"Completed measurement")
         p.move_z(0)
+
 
 
 print("Fill cycle to 4mM complete")
