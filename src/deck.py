@@ -1,22 +1,29 @@
 from .slot import Slot
 from .labware import Labware
+from .serializable import Serializable, register_class
 
-class Deck:
-    def __init__(self, range_x: tuple[int, int], range_y: tuple[int, int]):
+@register_class
+class Deck(Serializable):
+    """
+    Represent the Deck of Pipettor. Can contain slots which can contain Labware.
+    """
+    def __init__(self, range_x: tuple[int, int], range_y: tuple[int, int], deck_id: str):
+        self.deck_id = deck_id
         self.range_x = range_x #(min, max)
         self.range_y = range_y #(min, max)
 
         self.used_pos_x: list[tuple] = [range_x]
         self.used_pos_y: list[tuple] = [range_y]
 
-        self.__slots: dict[Slot] = {}
-        self.__labware: dict[Labware] = {}
+        self.slots: dict[Slot] = {}
+        self.labware: dict[Labware] = {}
 
-    def add_slot(self, slot: Slot, slot_id: str):
+    def add_slot(self, slot: Slot):
         """
         Adds a slot to the Deck. Checks if the area of the new slot is free to use and inside the
         range of the Deck.
         """
+        slot_id = slot.slot_id
         if slot_id in self.slots:
             raise ValueError(f"Slot-ID '{slot_id}' does already exist in this Deck.")
 
@@ -41,7 +48,7 @@ class Deck:
         if slot_id not in self.slots:
             raise ValueError(f"Slot '{slot_id}' does not exist.")
 
-        slot: Slot = self.__slots[slot_id]
+        slot: Slot = self.slots[slot_id]
 
         if slot.labware is not None:
             raise ValueError(f"'{slot_id}' allready has an assigned labwear: {slot.labware}.")
@@ -51,7 +58,7 @@ class Deck:
 
         slot.labware = labware
 
-    def _is_within_range(self, slot, Slot):
+    def _is_within_range(self, slot: Slot):
         """checks if the slot is within the range of the deck"""
         return (
                 self.range_x[0] <= slot.range_x[0]
@@ -71,16 +78,24 @@ class Deck:
         )
 
     def to_dict(self):
+        """Format Deck as dictionary for JSON export"""
         return {
+            "class": self.__class__.__name__,
+            "deck_id": self.deck_id,
             "range_x": list(self.range_x),
             "range_y": list(self.range_y),
-            "slots": [slot.to_dict() for slot in self.slots],
-            "labware": [lw.to_dict() for lw in self.labware]
+            "slots": {sid: slot.to_dict() for sid, slot in self.slots.items()},
+            "labware": {lid: lw.to_dict() for lid, lw in self.labware.items()},
         }
 
     @classmethod
-    def from_dict(cls, data: dict):
-        deck = cls(tuple(data["range_x"]), tuple(data["range_y"]))
-        deck.slots = [Slot.from_dict(s) for s in data.get("slots", [])]
-        deck.labware = [Labware.from_dict(lw) for lw in data.get("labware", [])]
+    def _from_dict(cls, data: dict) -> "Deck":
+        deck = cls(tuple(data["range_x"]), tuple(data["range_y"]), deck_id=data["deck_id"])
+
+        for sid, sdata in data.get("slots", {}).items():
+            deck.slots[sid] = Serializable.from_dict(sdata)
+
+        for lid, lwdata in data.get("labware", {}).items():
+            deck.labware[lid] = Serializable.from_dict(lwdata)
+
         return deck

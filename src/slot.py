@@ -1,6 +1,8 @@
 from .labware import Labware
+from .serializable import Serializable, register_class
 
-class Slot:
+@register_class
+class Slot(Serializable):
     def __init__(self, range_x: tuple[float, float], range_y: tuple[float, float],slot_id: str, labware: Labware = None):
         self.range_x = range_x #(min, max)
         self.range_y = range_y #(min, max)
@@ -22,6 +24,7 @@ class Slot:
 
     def to_dict(self):
         return {
+            "class": self.__class__.__name__,  # <--- hinzufügen
             "slot_id": self.slot_id,
             "range_x": list(self.range_x),
             "range_y": list(self.range_y),
@@ -29,8 +32,11 @@ class Slot:
         }
 
     @classmethod
-    def from_dict(cls, data: dict):
-        slot = cls(data["slot_id"], tuple(data["range_x"]), tuple(data["range_y"]))
-        if data.get("labware"):
-            slot.labware = Labware.from_dict(data["labware"])
-        return slot
+    def _from_dict(cls, data: dict) -> "Slot":
+        labware = Serializable.from_dict(data["labware"]) if data.get("labware") else None
+        return cls(
+            range_x=tuple(data["range_x"]),
+            range_y=tuple(data["range_y"]),
+            slot_id=data["slot_id"],
+            labware=labware
+        )
