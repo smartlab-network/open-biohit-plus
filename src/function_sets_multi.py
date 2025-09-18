@@ -47,8 +47,9 @@ class Reservoirs:
         self.remove_height = 103
 
         """
-        set 30000ul is the default well capacity. Reservoir class has parameter to input variable capacities as per use case  
-        but remember to edit dimension in ReservoirGeometry accordingly to adjust height calculations .
+        set 30000ul is the default well capacity which is also set to be current volume for all but waste. 
+        Reservoir class has parameter to input variable capacities if needed. 
+        Remember to edit dimension in ReservoirGeometry if changing wells to adjust height calculations. #Store wells geometry in class maybe
         """
         default_capacities = {
             1: 30000,  # 1 Waste
@@ -95,7 +96,7 @@ class Reservoirs:
     # The following two functions keep track of reservoir volume when dispensing and aspirating  liquid, raising error if necessary
     def add_volume(self, well: int, volume: float):
         """Add liquid to a well if capacity allows."""
-        if self.current_volume[well] + volume > self.capacities[well] + 5000:  # +5ml coz overflow only possible if volume added is highly above limit
+        if self.current_volume[well] + volume > self.capacities[well]:  # +5ml coz overflow only possible if volume added is highly above limit
             raise ValueError(f"Reservoir {well} overflow! Capacity: {self.capacities[well]} µl")
         self.current_volume[well] += volume
 
@@ -147,50 +148,76 @@ class TipDropzone:
 
 class ReservoirGeometry:
     """
-    this is hardcoded for 30ml reservoir. measurements are rough estimate based.
     .top signifies the cuboidal part.
     .lower signifies the triangular part
     """
-    def __init__(self):
-        self.top_w = 1.2
-        self.top_l = 9.0
-        self.top_h = 0.85
-        self.lower_h = 3.25
 
-        #volume of triangular prism - volume = 0.5 * b * h * length,
-        #volume of cuboidal = b * h * length
-        self.top_vol_ul = int(round(self.top_h * self.top_l * self.top_w * 1000))        # *1000 coz we use ul across the code and not ml                                       #volume in the cuboidal region. around 10000ul for the 30ml container.
-        self.lower_vol_ul = int(round((self.top_l * self.top_w * self.lower_h/2 * 1000)))
-        self.total_vol_ul = self.top_vol_ul + self.lower_vol_ul #about 30ml
+    class Geometry30ml:
+        """Hardcoded geometry for 30 mL reservoir"""
+        top_w = 1.2
+        top_l = 9.0
+        top_h = 0.85
+        lower_h = 3.25
 
+        # volume of triangular prism - volume = 0.5 * b * h * length,
+        # volume of cuboidal = b * h * length
+        top_vol_ul = int(round(top_h * top_l * top_w * 1000))        # *1000 coz we use ul across the code and not ml
+        lower_vol_ul = int(round((top_l * top_w * lower_h / 2 * 1000)))
+        total_vol_ul = top_vol_ul + lower_vol_ul
+
+    def __init__(self, total_volume_ml: int = 30):
+        # Ensure parameter is integer
+        if not isinstance(total_volume_ml, int):
+            raise ValueError("total_volume_ml must be an integer (mL)")
+
+        self.total_volume_ml = total_volume_ml
+        self.default_height = 98.0 # safe height
+        # Assign geometry if predefined, else None
+        if total_volume_ml == 30:
+            self.geometry = self.Geometry30ml
+        else:
+            self.geometry = None
 
     def calc_height(self, vol_ul: float) -> float:
+        """
+        Returns pipette aspiration height (mm) based on current liquid volume.
+        - Uses predefined geometry if available
+        - Else returns default safe height
+        """
+        if self.geometry is None:
+            print(
+                f"No predefined geometry for {self.total_volume_ml} mL, using default height {self.default_height} mm")
+            return self.default_height
+
+        if vol_ul <= 0:
+            print("Volume <= 0, returning height 0.0 mm")
+            return 0.0
+
+        g = self.geometry
+
         """
            Returns pipette aspiration height (mm) based on current liquid volume.
            - If volume exceeds lower triangular part → calculate height in top cuboid.
            - Else → calculate height within triangular bottom by using the unfilled volume to determine unused & actual height .
            - Final pipette height is clamped between 98–103 mm for safety especially against measurement errors.
        """
-        if vol_ul <= 0:
-            print("Volume <= 0, returning height 0.0 mm")
-            return 0.0
 
-        if vol_ul > self.lower_vol_ul:
-            # Volume is in the top part of the reservoir
-            vol_top = vol_ul - self.lower_vol_ul
-            h_top = round(vol_top / (self.top_l * self.top_w * 1000), 2)
-            liquid_h = self.lower_h + min(h_top, self.top_h)
+        if vol_ul > g.lower_vol_ul:
+            # Top cuboidal region
+            vol_top = vol_ul - g.lower_vol_ul
+            h_top = round(vol_top / (g.top_l * g.top_w * 1000), 2)
+            liquid_h = g.lower_h + min(h_top, g.top_h)
         else:
-            # Volume is in the bottom part (triangular prism)
-            vol_bottom = vol_ul
-            remaining_volume = self.lower_vol_ul - vol_bottom
-            remaining_height = round(remaining_volume / (self.top_h * self.top_w *1000/2), 2)
-            liquid_h = self.lower_h - remaining_height
+            # Bottom triangular prism. found by finding height of unfilled well and subtracting from total.
+            remaining_volume = g.lower_vol_ul - vol_ul
+            remaining_height = round(2 * remaining_volume / (g.top_w * g.top_l * 1000), 2)
+            liquid_h = g.lower_h - remaining_height
 
-        #Calculate final pipette height
+        # Clamp height
         max_pip_height = 103
         min_pip_height = 98
         pip_height = max(min_pip_height, min(max_pip_height, max_pip_height - liquid_h))
+
         print(f"Calculated pipette height: {pip_height} mm")
         return pip_height
 
@@ -377,7 +404,7 @@ def suck(p: Pipettor, volume: float, height: float, reservoirs: Reservoirs = Non
     steps_done = 0
 
     if reservoirs and well is not None:
-        geom = ReservoirGeometry()                  # geometry helper to calculate heights
+        geom = ReservoirGeometry(total_volume_ml=30)                  # geometry helper to calculate heights
         reservoirs.remove_volume(well, volume * 6)  # raises value error if remove volume is more than current.
 
     while steps_done < total_steps_required:
@@ -390,7 +417,6 @@ def suck(p: Pipettor, volume: float, height: float, reservoirs: Reservoirs = Non
         vol = min(max_vol_per_go, (volume - (steps_done * max_vol_per_go)))
         p.aspirate(vol)
         steps_done += 1
-
     p.move_z(0)
 
 
@@ -410,7 +436,6 @@ def spit(p: Pipettor, volume: float, height: float, reservoirs: Reservoirs = Non
     p.move_z(height)
     p.dispense(volume)
     p.move_z(0)
-    home(p) #allows for foc measurement
 
 
 def spit_all(p: Pipettor,height: float, volume: float = None, reservoirs: Reservoirs = None, well: int = None):
@@ -427,7 +452,6 @@ def spit_all(p: Pipettor,height: float, volume: float = None, reservoirs: Reserv
     p.move_z(height)
     p.dispense_all()
     p.move_z(0)
-    home(p) #allows for foc measurement
 
 
 def calc_concentration(prep_table, initial_conc, initial_vol):
@@ -449,4 +473,3 @@ def home(p: Pipettor):
     p.move_z(0)
     p.move_xy(0, 0)
     print("Device in startup position")
-
