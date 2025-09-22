@@ -3,7 +3,7 @@ import subprocess
 import time
 
 import sys
-sys.path.append(r"C:\labhub\Repos\smartlab-network\open-biohit-plus\src")
+sys.path.append(r"/src/biohit_pipettor_plus")
 
 
 from function_sets import EHMPlatePos, Reservoirs, PipetteTips, TipDropzone, dilute_multi, \

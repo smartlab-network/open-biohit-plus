@@ -40,7 +40,9 @@ class Deck(Serializable):
         self.slots[slot_id] = slot
 
     def add_labware(self, labware: Labware, slot_id: str):
-        """adds labware to specific slot"""
+        """
+        adds labware to specific slot, but should be added before in Slot
+        """
 
         if not isinstance(labware, Labware):
             raise TypeError(f"Object {labware} is not a Labwear.")

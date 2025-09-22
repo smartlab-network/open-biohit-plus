@@ -1,9 +1,9 @@
-from ..deck import Deck
-from ..slot import Slot
-from ..labware import Plate
-from ..serializable import Serializable
+from ..biohit_pipettor_plus.deck import Deck
+from ..biohit_pipettor_plus.slot import Slot
+from ..biohit_pipettor_plus.labware import Plate
+from ..biohit_pipettor_plus.serializable import Serializable
 import json
-from ..control_json import read_json, write_json
+from ..biohit_pipettor_plus.control_json import read_json, write_json
 
 plate1 = Plate(200, 100, 50, 7, 8, (30, 50), labware_id="plate1")
 slot1 = Slot((100, 300), (50, 100), "slot1", plate1)

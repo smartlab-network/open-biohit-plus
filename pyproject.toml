@@ -1,33 +1,18 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel",
-]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
-[tool.black]
-line-length = 120
+[tool.poetry]
+name = "open-biohit-plus"
+version = "0.0.1"
+description = "Extention for open-biohit"
+authors = ["Thiago Meyer <>"]
+license = "MIT"
+readme = "README.md"
+packages = [{ include = "src/biohit_pipettor_plus" }]
+repository = "https://github.com/deinuser/mein_projekt"
 
-[tool.flake8]
-max-line-length = 120
+[tool.poetry.dependencies]
+python = "^3.9"
+open-biohit = "^0.0.2"
 
-[tool.isort]
-profile = "black"
-line_length = 120
-
-[[tool.mypy.overrides]]
-module = [
-    "setuptools",
-    "clr",
-    "InstrumentLib",
-    "System",
-    "matplotlib.*",
-]
-ignore_missing_imports = true
-
-[tool.pytest.ini_options]
-filterwarnings = [
-    "error",
-    # ignore libmono warnings on Linux
-    "ignore:builtin type GC Offset Base has no __module__ attribute:DeprecationWarning",
-]

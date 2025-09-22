@@ -11,3 +11,4 @@ class PipettorPlus(Pipettor):
                 :param initialize: If True, the device will be initialized
                 """
         super().__init__(tip_volume=tip_volume, multichannel=multichannel, initialize=initialize)
+
