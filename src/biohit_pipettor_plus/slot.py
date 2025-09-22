@@ -1,42 +1,135 @@
+from typing import Dict, Tuple, List
 from .labware import Labware
 from .serializable import Serializable, register_class
 
 @register_class
 class Slot(Serializable):
-    def __init__(self, range_x: tuple[float, float], range_y: tuple[float, float],slot_id: str, labware: Labware = None):
-        self.range_x = range_x #(min, max)
-        self.range_y = range_y #(min, max)
+    """
+    Represents a single slot on a Deck. A slot can hold multiple Labware objects stacked
+    vertically with specified Z-ranges.
+
+    Attributes
+    ----------
+    range_x : tuple[float, float]
+        Minimum and maximum x coordinates of the slot.
+    range_y : tuple[float, float]
+        Minimum and maximum y coordinates of the slot.
+    range_z : float
+        Maximum height of the slot.
+    slot_id : str
+        Unique identifier for the slot.
+    labware_stack : dict[str, list[Labware, tuple[float, float]]]
+        Dictionary mapping Labware IDs to a list containing the Labware object and its Z-range
+        (min_z, max_z) within the slot.
+    """
+
+    def __init__(self, range_x: tuple[float, float], range_y: tuple[float, float],
+                 range_z: float, slot_id: str):
+        self.range_x = range_x
+        self.range_y = range_y
+        self.range_z = range_z
         self.slot_id = slot_id
 
-        self.labware: Labware = labware
+        # Dictionary storing stacked labware: {labware_id: [Labware, (min_z, max_z)]}
+        self.labware_stack: Dict[str, List] = {}
 
-    def place_labware(self, lw: Labware):
-        if self.labware is not None:
-            raise ValueError(f"Slot {self.slot_id} ist bereits mit {self.labware.name} belegt!")
-        self.labware = lw
+    def place_labware(self, lw: Labware, min_z: float):
+        """
+        Add a Labware object to the slot at a specific Z-range.
 
-    def remove_labware(self):
-        self.labware = None
+        Parameters
+        ----------
+        lw : Labware
+            Labware object to place.
+        min_z : float
+            Minimum Z coordinate within the slot for this Labware.
 
-    def is_compatible_labware(self, labware: Labware):
-        return (abs(self.range_x[0]- self.range_x[1]) >= labware.size_x
-            and abs(self.range_y[0] - self.range_y[1]) >= labware.size_x)
+        Raises
+        ------
+        ValueError
+            If the Labware exceeds the slot's Z range.
+        """
+        max_z = min_z + lw.size_z
+        if max_z > self.range_z:
+            raise ValueError(f"Cannot place labware {lw.labware_id}: exceeds slot height.")
+        self.labware_stack[lw.labware_id] = [lw, (min_z, max_z)]
 
-    def to_dict(self):
+    def remove_labware(self, labware_id: str):
+        """
+        Remove a specific Labware from the stack.
+
+        Parameters
+        ----------
+        labware_id : str
+            ID of the Labware to remove.
+        """
+        if labware_id in self.labware_stack:
+            del self.labware_stack[labware_id]
+
+    def is_compatible_labware(self, lw: Labware, min_z: float) -> bool:
+        """
+        Check if a Labware object fits within X, Y, and Z dimensions of the slot.
+
+        Parameters
+        ----------
+        lw : Labware
+            Labware object to check.
+        min_z : float
+            Minimum Z position where the Labware would be placed.
+
+        Returns
+        -------
+        bool
+            True if the labware fits, False otherwise.
+        """
+        fits_xy = (abs(self.range_x[1] - self.range_x[0]) >= lw.size_x
+                   and abs(self.range_y[1] - self.range_y[0]) >= lw.size_y)
+        fits_z = min_z + lw.size_z <= self.range_z
+        return fits_xy and fits_z
+
+    def to_dict(self) -> dict:
+        """
+        Serialize the Slot instance to a dictionary, including stacked labware and their Z-ranges.
+
+        Returns
+        -------
+        dict
+            Dictionary representation of the slot.
+        """
         return {
-            "class": self.__class__.__name__,  # <--- hinzufügen
+            "class": self.__class__.__name__,
             "slot_id": self.slot_id,
             "range_x": list(self.range_x),
             "range_y": list(self.range_y),
-            "labware": self.labware.to_dict() if self.labware else None
+            "range_z": self.range_z,
+            "labware_stack": {
+                lw_id: [lw.to_dict(), zr] for lw_id, (lw, zr) in self.labware_stack.items()
+            }
         }
 
     @classmethod
     def _from_dict(cls, data: dict) -> "Slot":
-        labware = Serializable.from_dict(data["labware"]) if data.get("labware") else None
-        return cls(
+        """
+        Deserialize a Slot instance from a dictionary, restoring stacked Labware with Z-ranges.
+
+        Parameters
+        ----------
+        data : dict
+            Dictionary containing slot attributes and labware stack.
+
+        Returns
+        -------
+        Slot
+            Reconstructed Slot instance.
+        """
+        slot = cls(
             range_x=tuple(data["range_x"]),
             range_y=tuple(data["range_y"]),
-            slot_id=data["slot_id"],
-            labware=labware
+            range_z=data["range_z"],
+            slot_id=data["slot_id"]
         )
+
+        for lw_id, (lw_data, zr) in data.get("labware_stack", {}).items():
+            slot.labware_stack[lw_id] = [Serializable.from_dict(lw_data), tuple(zr)]
+
+        return slot
