@@ -88,6 +88,18 @@ class Labware(Serializable):
 
 
 @register_class
+class Well(Labware):
+    def __init__(self, size_x: float, size_y: float, size_z: float, labware_id: str = "None"):
+        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, labware_id=labware_id)
+
+    def to_dict(self) -> dict:
+        pass
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "Well":
+        pass
+
+@register_class
 class Plate(Labware):
     """
     Represents a Plate labware with wells.
@@ -102,7 +114,7 @@ class Plate(Labware):
         Coordinates of the first well.
     """
 
-    def __init__(self, size_x, size_y, size_z, wells_x, wells_y, first_well_xy, labware_id: str = None):
+    def __init__(self, size_x, size_y, size_z, wells_x, wells_y, first_well_xy, well: Well = None,wells: dict[str, Well] = None, labware_id: str = None):
         """
         Initialize a Plate instance.
 
@@ -128,6 +140,37 @@ class Plate(Labware):
         self.wells_y = wells_y
         self.first_well_xy = first_well_xy
 
+        self.__wells: dict[str, Well or None] = {}
+        self.well = well
+
+        if well:
+            if wells_x * well.size_x > size_x or wells_y * well.size_y > size_y:
+                raise ValueError("Well is to big for this Plate")
+            else:
+                self.place_wells()
+        else:
+            for x in range(self.wells_x):
+                for y in range(self.wells_y):
+                    self.__wells[f'{x}:{y}'] = None
+
+    def get_wells(self):
+        return self.__wells
+
+    def place_wells(self):
+        for x in range(self.wells_x):
+            for y in range(self.wells_y):
+                well = self.well
+                well.labware_id = f'{x}:{y}'
+                self.__wells[well.labware_id] = well
+
+
+    def place_unique_well(self, well_placement: str, well: Well):
+        if well_placement not in self.__wells.keys():
+            raise ValueError(f"{well_placement} is not a valid well placement")
+
+        well.labware_id = well_placement
+        self.__wells[well.labware_id] = well
+
     def to_dict(self):
         """
         Serialize the Plate instance to a dictionary including wells information.
@@ -142,7 +185,9 @@ class Plate(Labware):
             "wells_x": self.wells_x,
             "wells_y": self.wells_y,
             "first_well_xy": list(self.first_well_xy),
+            "wells": self.__wells
         })
+
         return base
 
     @classmethod
@@ -160,15 +205,23 @@ class Plate(Labware):
         Plate
             Reconstructed Plate instance.
         """
-        return cls(
+        plate = cls(
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
             labware_id=data["labware_id"],
             wells_x=data["wells_x"],
             wells_y=data["wells_y"],
-            first_well_xy=tuple(data["first_well_xy"]),
-        )
+            first_well_xy=tuple(data["first_well_xy"]))
+
+        wells_data = data.get("wells", {})
+        for wid, wdata in wells_data.items():
+            if wdata is None:
+                plate._Plate__wells[wid] = None
+            else:
+                plate._Plate__wells[wid] = Serializable.from_dict(wdata)
+
+        return plate
 
 @register_class
 class PipetteHolder(Labware):
@@ -293,6 +346,10 @@ class TipDropzone(Labware):
             drop_height_relative=data["drop_height_relative"]
         )
 
+class Reservoirs(Labware):
+    def __init__(self, size_x: float,
+                 size_y: float,
+                 size_z: float,
+                 labware_id: str = None):
 
-class Well:
-    pass
+        super().__init__(size_x = size_x, size_y = size_y,size_z = size_z, labware_id = labware_id)
