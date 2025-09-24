@@ -89,15 +89,110 @@ class Labware(Serializable):
 
 @register_class
 class Well(Labware):
-    def __init__(self, size_x: float, size_y: float, size_z: float, labware_id: str = "None"):
+    """
+    Represents a single Well, extending Labware with additional parameters
+    for liquid handling.
+
+    Attributes
+    ----------
+    media : str or None
+        Optional description of the media (e.g. "water", "buffer").
+    add_height : float
+        Height above the well bottom used when adding liquid (in mm).
+    remove_height : float
+        Height above the well bottom used when removing liquid (in mm).
+    suck_offset_xy : tuple[float, float]
+        XY offset inside the well for pipetting (in mm).
+    """
+
+    def __init__(
+        self,
+        size_x: float,
+        size_y: float,
+        size_z: float,
+        labware_id: str = None,
+        media: str = None,
+        add_height: float = 5,
+        remove_height: float = 5,
+        suck_offset_xy: tuple[float, float] = (2, 2),
+    ):
+        """
+        Initialize a Well instance.
+
+        Parameters
+        ----------
+        size_x : float
+            Width of the well in mm.
+        size_y : float
+            Depth of the well in mm.
+        size_z : float
+            Height of the well in mm.
+        labware_id : str, optional
+            Unique identifier for this well. If None, a UUID will be generated.
+        media : str, optional
+            Name/type of media contained in the well.
+        add_height : float, optional
+            Pipette dispensing height above bottom of the well (default = 5 mm).
+        remove_height : float, optional
+            Pipette aspiration height above bottom of the well (default = 5 mm).
+        suck_offset_xy : tuple[float, float], optional
+            XY offset from the well center for aspiration/dispense (default = (2, 2)).
+        """
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, labware_id=labware_id)
 
+        self.media = media
+        self.add_height = add_height
+        self.remove_height = remove_height
+        self.suck_offset_xy = suck_offset_xy
+
     def to_dict(self) -> dict:
-        pass
+        """
+        Serialize the Well to a dictionary for JSON export.
+
+        Returns
+        -------
+        dict
+            Dictionary containing all well attributes.
+        """
+        base = super().to_dict()
+        base.update(
+            {
+                "media": self.media,
+                "add_height": self.add_height,
+                "remove_height": self.remove_height,
+                "suck_offset_xy": list(self.suck_offset_xy),
+            }
+        )
+        return base
 
     @classmethod
     def _from_dict(cls, data: dict) -> "Well":
-        pass
+        """
+        Deserialize a Well instance from a dictionary.
+
+        Parameters
+        ----------
+        data : dict
+            Dictionary with Well attributes.
+
+        Returns
+        -------
+        Well
+            Reconstructed Well instance.
+        """
+        base_obj = super()._from_dict(data)  # Labware attributes
+        # overwrite base_obj with correct class instantiation
+        obj = cls(
+            size_x=base_obj.size_x,
+            size_y=base_obj.size_y,
+            size_z=base_obj.size_z,
+            labware_id=base_obj.labware_id,
+            media=data.get("media"),
+            add_height=data.get("add_height", 5),
+            remove_height=data.get("remove_height", 5),
+            suck_offset_xy=tuple(data.get("suck_offset_xy", (2, 2))),
+        )
+        return obj
 
 @register_class
 class Plate(Labware):
@@ -114,7 +209,7 @@ class Plate(Labware):
         Coordinates of the first well.
     """
 
-    def __init__(self, size_x, size_y, size_z, wells_x, wells_y, first_well_xy, well: Well = None,wells: dict[str, Well] = None, labware_id: str = None):
+    def __init__(self, size_x, size_y, size_z, wells_x, wells_y, first_well_xy, well: Well = None, labware_id: str = None):
         """
         Initialize a Plate instance.
 
@@ -185,7 +280,7 @@ class Plate(Labware):
             "wells_x": self.wells_x,
             "wells_y": self.wells_y,
             "first_well_xy": list(self.first_well_xy),
-            "wells": self.__wells
+             "wells": {wid: well.to_dict() if well else None for wid, well in self.__wells.items()}
         })
 
         return base
@@ -229,7 +324,7 @@ class PipetteHolder(Labware):
     Represents a Pipette Holder labware.
     """
 
-    def __init__(self, labware_id: str = None):
+    def __init__(self, labware_id: str = None, size_x: float  = 20, size_y: float = 20, size_z : float = 50):
         """
         Initialize a PipetteHolder instance.
 
@@ -238,7 +333,7 @@ class PipetteHolder(Labware):
         labware_id : str, optional
             Unique ID for the pipette holder.
         """
-        super().__init__(size_x=20, size_y=20, size_z=50, labware_id=labware_id)
+        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, labware_id=labware_id)
 
     @classmethod
     def _from_dict(cls, data: dict) -> "PipetteHolder":
