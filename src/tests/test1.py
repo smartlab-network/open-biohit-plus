@@ -1,6 +1,6 @@
 from ..biohit_pipettor_plus.deck import Deck
 from ..biohit_pipettor_plus.slot import Slot
-from ..biohit_pipettor_plus.labware import Plate
+from ..biohit_pipettor_plus.labware import Plate, Reservoir, Reservoirs
 from ..biohit_pipettor_plus.serializable import Serializable
 import json
 from ..biohit_pipettor_plus.control_json import read_json, write_json
@@ -23,3 +23,33 @@ restored_deck = read_json("deck1")
 print(type(restored_deck))
 print(restored_deck.slots)
 print(restored_deck.labware)
+
+"""
+# Create a Reservoirs object with custom fill levels
+reservoirs = Reservoirs(
+    x_corner=10.0,
+    y_corner=20.0,
+    well_ids=[1, 2, 3, 4, 5, 6, 7],
+    capacities={3: 50000, 4: 50000},
+    filled_till={2: 10000, 3: 20000, 4: 15000, 5: 25000, 6: 10000},  # Custom initial volumes
+    disabled_wells={7},
+    equivalent_groups={
+        2: [2, 6], 6: [2, 6],  # 0 mM wells
+        1: [1, 7], 7: [1, 7],  # Waste wells
+        3: [3], 4: [4], 5: [5]
+    }
+)
+
+# Check initial volumes
+print(reservoirs.current_volume)
+# Output: {1: 0, 2: 10000, 3: 20000, 4: 15000, 5: 25000, 6: 10000, 7: 0}
+
+# Add volume
+reservoirs.add_volume(2, 5000)  # Add 5000 µl to well 2
+print(reservoirs.current_volume[2])  # Output: 15000
+
+# Serialize and deserialize
+data = reservoirs.to_dict()
+new_reservoirs = Reservoirs.from_dict(data, x_corner=10.0, y_corner=20.0)
+print(new_reservoirs.current_volume)  # Same as above
+"""
