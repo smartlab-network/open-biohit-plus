@@ -38,7 +38,7 @@ class Deck(Serializable):
         self.slots: dict[str, Slot] = {}           # store Slot objects
         self.labware: dict[str, Labware] = {}     # global access to Labware objects
 
-    def add_slot(self, slot: Slot):
+    def add_slots(self, slots: list[Slot]):
         """
         Add a Slot to the Deck after validating range and overlap.
 
@@ -46,30 +46,32 @@ class Deck(Serializable):
         ----------
         slot : Slot
             The slot to add to the deck.
-
         Raises
         ------
         ValueError
             If slot ID already exists, is out of deck range, or overlaps an existing slot.
         """
-        slot_id = slot.slot_id
 
-        if slot_id in self.slots:
-            raise ValueError(f"Slot-ID '{slot_id}' already exists in this Deck.")
+        for slot in slots:
+            if not isinstance(slot, Slot):
+                raise TypeError(f"Object {slot} is not a Slot instance.")
+            slot_id = slot.slot_id
 
-        if not self._is_within_range(slot):
-            raise ValueError(
-                f"Slot '{slot_id}' is outside the deck range "
-                f"x={self.range_x}, y={self.range_y}"
-            )
+            if slot_id in self.slots:
+                raise ValueError(f"Slot-ID '{slot_id}' already exists in this Deck.")
 
-        for existing_id, existing_slot in self.slots.items():
-            if self._overlaps(slot, existing_slot):
+            if not self._is_within_range(slot):
                 raise ValueError(
-                    f"Slot '{slot_id}' overlaps with existing slot: '{existing_id}'."
+                    f"Slot '{slot_id}' is outside the deck range "
+                    f"x={self.range_x}, y={self.range_y}"
                 )
 
-        self.slots[slot_id] = slot
+            for existing_id, existing_slot in self.slots.items():
+                if self._overlaps(slot, existing_slot):
+                    raise ValueError(
+                        f"Slot '{slot_id}' overlaps with existing slot: '{existing_id}'."
+                    )
+            self.slots[slot_id] = slot
 
     def add_labware(self, labware: Labware, slot_id: str, min_z: float):
         """
