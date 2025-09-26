@@ -1,7 +1,10 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import uuid
 from .serializable import Serializable, register_class
 import copy
-
+from typing import Optional
 
 @register_class
 class Labware(Serializable):
@@ -55,7 +58,7 @@ class Labware(Serializable):
         Returns
         -------
         dict
-            Dictionary representation of the labware.
+            dictionary representation of the labware.
         """
         return {
             "class": self.__class__.__name__,
@@ -73,7 +76,7 @@ class Labware(Serializable):
         Parameters
         ----------
         data : dict
-            Dictionary containing labware attributes.
+            dictionary containing labware attributes.
 
         Returns
         -------
@@ -153,7 +156,7 @@ class Well(Labware):
         Returns
         -------
         dict
-            Dictionary containing all well attributes.
+            dictionary containing all well attributes.
         """
         base = super().to_dict()
         base.update(
@@ -174,7 +177,7 @@ class Well(Labware):
         Parameters
         ----------
         data : dict
-            Dictionary with Well attributes.
+            dictionary with Well attributes.
 
         Returns
         -------
@@ -273,7 +276,7 @@ class Plate(Labware):
         Returns
         -------
         dict
-            Dictionary representation of the plate.
+            dictionary representation of the plate.
         """
         base = super().to_dict()
         base.update({
@@ -293,7 +296,7 @@ class Plate(Labware):
         Parameters
         ----------
         data : dict
-            Dictionary containing plate attributes.
+            dictionary containing plate attributes.
 
         Returns
         -------
@@ -343,7 +346,7 @@ class PipetteHolder(Labware):
         Parameters
         ----------
         data : dict
-            Dictionary containing labware attributes.
+            dictionary containing labware attributes.
 
         Returns
         -------
@@ -406,7 +409,7 @@ class TipDropzone(Labware):
         Returns
         -------
         dict
-            Dictionary representation of the tip dropzone.
+            dictionary representation of the tip dropzone.
         """
         base_dict = super().to_dict()
         base_dict.update({
@@ -424,7 +427,7 @@ class TipDropzone(Labware):
         Parameters
         ----------
         data : dict
-            Dictionary containing tip dropzone attributes.
+            dictionary containing tip dropzone attributes.
 
         Returns
         -------
@@ -457,8 +460,11 @@ class Reservoir(Labware):
         Volume of the reservoir.
     """
 
-    def __init__(self, x_corner: float, y_corner: float, volume: float):
-        super().__init__()
+    def __init__(self, size_x : float, size_y : float, size_z: float, x_corner: float, y_corner: float, volume: float, labware_id: str = None,):
+        super().__init__( size_x = size_x, size_y = size_y, size_z = size_z, labware_id = labware_id)
+        self.size_x = size_x
+        self.size_y = size_y
+        self.size_z = size_z
         self.x_corner = x_corner
         self.y_corner = y_corner
         self.volume = volume
@@ -467,6 +473,9 @@ class Reservoir(Labware):
     def from_dict(cls, data: dict):
         """Deserialize a Reservoir from a dictionary."""
         return cls(
+            size_x = data["size_x"],
+            size_y = data["size_y"],
+            size_z = data["size_z"],
             x_corner=data["x_corner"],
             y_corner=data["y_corner"],
             volume=data["volume"]
@@ -475,6 +484,9 @@ class Reservoir(Labware):
     def to_dict(self) -> dict:
         """Serialize the Reservoir to a dictionary."""
         return {
+            "size_x" :  self.size_x,
+            "size_y" : self.size_y,
+            "size_z" : self.size_z,
             "x_corner": self.x_corner,
             "y_corner": self.y_corner,
             "volume": self.volume
@@ -486,16 +498,16 @@ class Reservoirs:
 
     Attributes
     ----------
-    containers : Dict[int, Reservoir]
-        Dictionary mapping container IDs to Reservoir objects.
-    capacities : Dict[int, float]
-        Dictionary mapping container IDs to their capacities (in µl).
-    current_volume : Dict[int, float]
-        Dictionary mapping container IDs to their current volumes (in µl).
-    disabled_containers : Set[int]
-        Set of container IDs that are disabled (treated as non-existent).
-    equivalent_groups : Dict[int, List[int]]
-        Dictionary mapping container IDs to lists of equivalent containers IDs (e.g., containers with the same solution).
+    containers : dict[int, Reservoir]
+        dictionary mapping container IDs to Reservoir objects.
+    capacities : dict[int, float]
+        dictionary mapping container IDs to their capacities (in µl).
+    current_volume : dict[int, float]
+        dictionary mapping container IDs to their current volumes (in µl).
+    disabled_containers : set[int]
+        set of container IDs that are disabled (treated as non-existent).
+    equivalent_groups : dict[int, list[int]]
+        dictionary mapping container IDs to lists of equivalent containers IDs (e.g., containers with the same solution).
     """
     default_capacity = 30000  # Default container capacity in µl
     container_spacing = 18  # Spacing between containers in mm
@@ -505,8 +517,8 @@ class Reservoirs:
     remove_height = 103  # Height for removing liquid
     underflow_buffer = 3000  # Buffer to prevent complete liquid removal
 
-    def __init__(self, x_corner: float, y_corner: float, container_ids: List[int], capacities: Optional[Dict[int, float]] = None,
-                 disabled_containers: Optional[Set[int]] = None, filled_vol: Optional[Dict[int, float]] = None,equivalent_groups: Optional[Dict[int, List[int]]] = None):
+    def __init__(self, size_x : float, size_y : float, size_z: float, x_corner: float, y_corner: float, container_ids: list[int], capacities: Optional[dict[int, float]] = None,
+                 disabled_containers: Optional[set[int]] = None, waste_containers: Optional[set[int]] = None, filled_vol: Optional[dict[int, float]] = None,equivalent_groups: Optional[dict[int, list[int]]] = None):
         """
         Initialize a Reservoirs object.
 
@@ -516,21 +528,28 @@ class Reservoirs:
             X coordinate of the reservoir's start point.
         y_corner : float
             Y coordinate of the reservoir's start point.
-        container_ids : List[int]
-            List of container IDs to initialize. For 7 container, pass a list of 7 Ids.
-        capacities : Optional[Dict[int, float]]
-            Dictionary of container IDs to their capacities (in µl). If None, uses default capacity.
-        disabled_containers : Optional[Set[int]]
-            Set of container IDs to disable. If None, no containers are disabled.
-        equivalent_groups : Optional[Dict[int, List[int]]]
-            Dictionary mapping container IDs to lists of equivalent container IDs. If None, each container is its own group.
-        filled_vol : Optional[Dict[int, float]]
-            Dictionary of well IDs to their initial fill volumes (in µl). If None, uses capacities or default fill.
+        container_ids : list[int]
+            list of container IDs to initialize. For 7 container, pass a list of 7 Ids.
+        capacities : Optional[dict[int, float]]
+            dictionary of container IDs to their capacities (in µl). If None, uses default capacity.
+        disabled_containers : Optional[set[int]]
+            set of container IDs to disable. If None, no containers are disabled.
+        waste_containers : set[int]
+            Set of container IDs designated as waste containers.
+        equivalent_groups : Optional[dict[int, list[int]]]
+            dictionary mapping container IDs to lists of equivalent container IDs. If None, each container is its own group.
+        filled_vol : Optional[dict[int, float]]
+            dictionary of well IDs to their initial fill volumes (in µl). If None, uses capacities or default fill.
         """
         self.containers = {}
         self.capacities = {}
         self.current_volume = {}
         self.disabled_containers = set(disabled_containers) if disabled_containers is not None else set()
+        self.waste_containers = (
+            set(waste_containers) if waste_containers is not None and waste_containers.issubset(set(container_ids))
+            else {1} if 1 in container_ids
+            else set()
+        )
         self.equivalent_groups = equivalent_groups if equivalent_groups is not None else {cid: [cid] for cid in container_ids}
 
         # Initialize container positions and capacities
@@ -541,33 +560,29 @@ class Reservoirs:
             container_y = y_corner + self.y_offset
 
             # Create Reservoir object for each container
-            self.containers[cid] = Reservoir(x_corner=container_x, y_corner=container_y, volume=0)
-            # Set capacity
+            self.containers[cid] = Reservoir(size_x, size_y, size_z, x_corner =container_x, y_corner=container_y, volume=0)
+            # set capacity
             self.capacities[cid] = 0 if cid in self.disabled_containers else (
                 capacities.get(cid, self.default_capacity) if capacities is not None else self.default_capacity
             )
-            # Set initial volume: full for non-waste/disabled containers, 0 for waste/disabled
-            if cid in self.disabled_containers or cid in self.get_waste_containers():
+            # set initial volume: full for non-waste/disabled containers, 0 for disabled. 0 for waste if not stated otherwise
+            if cid in self.disabled_containers:
                 self.current_volume[cid] = 0
             else:
                 initial_volume = (
-                    filled_vol.get(cid, self.capacities[cid]) if filled_vol is not None else self.capacities[cid]
+                    filled_vol.get(cid, 0 if cid in self.waste_containers else self.capacities[cid])
+                    if filled_vol is not None else
+                    (0 if cid in self.waste_containers else self.capacities[cid])
                 )
                 if initial_volume > self.capacities[cid]:
                     raise ValueError(
-                        f"Initial volume {initial_volume} µl for well {cid} exceeds capacity {self.capacities[cid]} µl")
+                        f"Initial volume {initial_volume} µl for container {cid} exceeds capacity {self.capacities[cid]} µl")
                 self.current_volume[cid] = initial_volume
-            self.containers[cid].volume = self.current_volume[cid]            
+            self.containers[cid].volume = self.current_volume[cid]
 
-    def get_waste_containers(self) -> List[int]:
+    def get_waste_containers(self) -> list[int]:
         """Return a list of container IDs designated as waste containers."""
-        # Assuming waste containers are defined in equivalent_groups or can be identified by a rule
-        # For simplicity, assume containers explicitly marked as waste in equivalent_groups
-        waste_containers = []
-        for cid, group in self.equivalent_groups.items():
-            if "waste" in str(cid).lower() or any("waste" in str(w) for w in group):
-                waste_containers.extend(group)
-        return list(set(waste_containers) - self.disabled_containers)
+        return list(self.waste_containers - self.disabled_containers)
 
     def add_volume(self, container: int, volume: float) -> None:
         """Add liquid to a container if capacity allows."""
@@ -591,7 +606,7 @@ class Reservoirs:
         self.current_volume[container] -= volume
         self.containers[container].volume = self.current_volume[container]
 
-    def get_equivalent_group(self, container: int) -> List[int]:
+    def get_equivalent_group(self, container: int) -> list[int]:
         """Return the list of equivalent containers for a given container, excluding disabled containers."""
         if container not in self.containers:
             return []
@@ -603,28 +618,34 @@ class Reservoirs:
             "containers": {str(cid): container.to_dict() for cid, container in self.containers.items()},
             "capacities": self.capacities,
             "current_volume": self.current_volume,
+            "waste_containers": list(self.waste_containers),
             "disabled_containers": list(self.disabled_containers),
             "equivalent_groups": self.equivalent_groups
         }
 
     @classmethod
-    def from_dict(cls, data: dict, x_corner: float, y_corner: float) -> 'Reservoirs':
+    def from_dict(cls, data: dict, size_x: float, size_y : float, size_z : float, x_corner: float, y_corner: float) -> 'Reservoirs':
         """Deserialize a Reservoirs object from a dictionary."""
         container_ids = [int(cid) for cid in data.get("containers", {}).keys()]
         containers_data = data.get("containers", {})
         capacities = data.get("capacities", {})
         filled_vol = data.get("current_volume", {})
         disabled_containers = set(data.get("disabled_containers", []))
+        waste_containers = set(data.get("waste_containers", []))
         equivalent_groups = data.get("equivalent_groups", None)
 
         # Create Reservoirs instance
         reservoirs = cls(
+            size_x= size_x,
+            size_y= size_y,
+            size_z= size_z,
             x_corner=x_corner,
             y_corner=y_corner,
             container_ids=container_ids,
             capacities=capacities,
             filled_vol=filled_vol,
             disabled_containers=disabled_containers,
+            waste_containers=waste_containers,
             equivalent_groups=equivalent_groups
         )
 
