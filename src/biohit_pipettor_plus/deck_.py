@@ -38,9 +38,4 @@ class Deck:
 
         def tipCoordinates(self):
             return self._deckPosition[self._tipPosition]
-
-        @property
-        def tipPosition(self) -> str:
-            """True if the device is connected, False otherwise"""
-            return self._tipPosition
      #   pass
