@@ -10,6 +10,7 @@ from biohit_pipettor.errors import CommandFailed
 from math import ceil
 
 
+"""
 class EHMPlatePos:
     def __init__(self, x_corner, y_corner):
         self.x_corner = x_corner + 13.5
@@ -23,7 +24,6 @@ class EHMPlatePos:
         self.add_height = 30
         self.remove_height = 38
         self.cols = 6
-
 
 
 class Reservoirs:
@@ -46,11 +46,11 @@ class Reservoirs:
         self.add_height = 65
         self.remove_height = 103
 
-        """
+        
         set 30000ul is the default well capacity which is also set to be current volume for all but waste. 
         Reservoir class has parameter to input variable capacities if needed. 
         Remember to edit dimension in ReservoirGeometry if changing wells to adjust height calculations. #Store wells geometry in class maybe
-        """
+        
         default_capacities = {
             1: 30000,  # 1 Waste
             2: 30000,  # 2 0mM
@@ -69,12 +69,12 @@ class Reservoirs:
             self.capacities = default_capacities
 
 
-        """ 
+        
         Disabled wells: Some reservoirs may no longer be usable. Instead of rewriting all pipetting
         logic, a list of disabled wells is kept. Any well added here is treated as "non-existent":
           - Its capacity & current volume is set to 0
           - It is automatically skipped in suck/spit operations and get_equivalent_group() lookups.
-          """
+        
 
         if disabled_wells is None:
             disabled_wells = set()
@@ -85,9 +85,9 @@ class Reservoirs:
             self.capacities[well] = 0
 
 
-        """assumes every reservoir is filled to the capacity expect for waste and disabled.
+        assumes every reservoir is filled to the capacity expect for waste and disabled.
         Errors are calculated by current volume, capacity and aspiration/dispense volume  
-        """
+        
         self.current_volume = {k: 0 if k in (1, 7) else (self.capacities[k] if k not in disabled_wells else 0) for k in
                                self.capacities.keys()}
 
@@ -95,13 +95,13 @@ class Reservoirs:
 
     # The following two functions keep track of reservoir volume when dispensing and aspirating  liquid, raising error if necessary
     def add_volume(self, well: int, volume: float):
-        """Add liquid to a well if capacity allows."""
+        #Add liquid to a well if capacity allows
         if self.current_volume[well] + volume > self.capacities[well]:  # +5ml coz overflow only possible if volume added is highly above limit
             raise ValueError(f"Reservoir {well} overflow! Capacity: {self.capacities[well]} µl")
         self.current_volume[well] += volume
 
     def remove_volume(self, well: int, volume: float):
-        """Remove liquid from a well if enough is available."""
+        #Remove liquid from a well if enough is available
         if self.current_volume[well] - 5000 < volume:  # -5ml coz its way difficult to reach the bottom and take all liquid out
             raise ValueError(f"Reservoir {well} underflow! Only {self.current_volume[well]} µl available.")
         self.current_volume[well] -= volume
@@ -115,7 +115,7 @@ class Reservoirs:
         if well in self.disabled_wells:
             return []
         return [well]
-
+"""
 
 class RoundContainers:  # to_do adjust to 6-well setup once that�s printed
     def __init__(self, x_corner, y_corner):
@@ -125,6 +125,7 @@ class RoundContainers:  # to_do adjust to 6-well setup once that�s printed
         self.y_corner = y_corner + 15
 
 
+"""
 class PipetteTips:
     def __init__(self, x_corner, y_corner, x_drop, y_drop):
         self.x_corner = x_corner + 105
@@ -138,22 +139,20 @@ class PipetteTips:
         self.x_drop = x_drop + 50
         self.y_drop = y_drop + 50
 
-
 class TipDropzone:
     def __init__(self, x_corner, y_corner):
         self.x_corner = x_corner + 50
         self.y_corner = y_corner + 40
 
+"""
 
-
-class ReservoirGeometry:
-    """
+"""class ReservoirGeometry:
+    
     .top signifies the cuboidal part.
     .lower signifies the triangular part
-    """
 
     class Geometry30ml:
-        """Hardcoded geometry for 30 mL reservoir"""
+        Hardcoded geometry for 30 mL reservoir
         top_w = 1.2
         top_l = 9.0
         top_h = 0.85
@@ -179,11 +178,11 @@ class ReservoirGeometry:
             self.geometry = None
 
     def calc_height(self, vol_ul: float) -> float:
-        """
+        
         Returns pipette aspiration height (mm) based on current liquid volume.
         - Uses predefined geometry if available
         - Else returns default safe height
-        """
+        
         if self.geometry is None:
             print(
                 f"No predefined geometry for {self.total_volume_ml} mL, using default height {self.default_height} mm")
@@ -195,12 +194,10 @@ class ReservoirGeometry:
 
         g = self.geometry
 
-        """
            Returns pipette aspiration height (mm) based on current liquid volume.
            - If volume exceeds lower triangular part → calculate height in top cuboid.
            - Else → calculate height within triangular bottom by using the unfilled volume to determine unused & actual height .
            - Final pipette height is clamped between 98–103 mm for safety especially against measurement errors.
-       """
 
         if vol_ul > g.lower_vol_ul:
             # Top cuboidal region
@@ -220,8 +217,11 @@ class ReservoirGeometry:
 
         print(f"Calculated pipette height: {pip_height} mm")
         return pip_height
+        
+"""
 
 """Functions"""
+
 
 def pick_multi_tips(p: Pipettor, pipette_tips):
     """
@@ -468,8 +468,8 @@ def calc_concentration(prep_table, initial_conc, initial_vol):
         # initial_vol remains unchanged
     return prep_table
 
-
 def home(p: Pipettor):
     p.move_z(0)
     p.move_xy(0, 0)
     print("Device in startup position")
+
