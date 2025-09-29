@@ -1,6 +1,7 @@
 from .slot import Slot
 from .labware import Labware
 from .serializable import Serializable, register_class
+from typing import Optional
 
 
 @register_class
@@ -174,3 +175,23 @@ class Deck(Serializable):
             deck.labware[lid] = Serializable.from_dict(lwdata)
 
         return deck
+
+    def get_slot_for_labware(self, labware_id: str) -> Optional[str]:
+            """
+            Find the slot ID containing the given labware_id.
+            Parameters
+            ----------
+            deck : Deck
+                The Deck instance to search.
+            labware_id : str
+                The ID of the labware to locate.
+
+            Returns
+            -------
+            Optional[str]
+                The slot ID if found, else None.
+            """
+            for slot_id, slot in self.slots.items():
+                if labware_id in slot.labware_stack:
+                    return slot_id
+            return None

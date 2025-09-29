@@ -44,13 +44,13 @@ print(restored_deck.labware)
 
 reservoirs_data = {
     1: {"size_x": 20, "size_y": 20, "size_z": 10, "capacity": 30000,
-        "filled_volume": 15000, "content": "PBS"},
+         "content": "PBS", "hook_id" : 3},
 
     2: {"size_x": 20, "size_y": 20, "size_z": 12, "capacity": 50000,
         "filled_volume": 45000, "content": "DMEM"},
 
     3: {"size_x": 25, "size_y": 20, "size_z": 15, "capacity": 50000,
-        "filled_volume": 100, "content": "Water"},
+         "content": "Water"},
 }
 
 reservoirs = Reservoirs(
@@ -70,8 +70,6 @@ reservoirs.place_reservoirs(reservoir_4)
 print(reservoirs.get_occupied_hooks())
 print(reservoirs.get_available_hooks())
 print(reservoirs.get_reservoirs())
-reservoirs.add_volume(3, 5000)
-reservoirs.remove_volume(3, 500)
 print(reservoirs.get_waste_containers())
 print(reservoirs.get_equivalent_containers("Water"))
 print(reservoirs.get_reservoir_by_content("PBS"))

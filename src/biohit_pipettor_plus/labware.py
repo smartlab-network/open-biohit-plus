@@ -449,7 +449,7 @@ Default_Reservoir_Capacity = 30000
 @register_class
 class Reservoir(Labware):
     def __init__(self, size_x: float, size_y: float, size_z: float,
-                 capacity: float = Default_Reservoir_Capacity, filled_volume: float = 0,
+                 capacity: float = Default_Reservoir_Capacity, filled_volume: float = None,
                  content: str = None, hook_id: int = None, labware_id: str = None):
 
         """
@@ -462,7 +462,7 @@ class Reservoir(Labware):
         super().__init__(size_x, size_y, size_z, labware_id)
         self.hook_id = hook_id
         self.capacity = capacity
-        self.current_volume = filled_volume
+        self.current_volume = filled_volume if filled_volume is not None else capacity
         self.content = content
 
         #validate inputs
@@ -479,6 +479,8 @@ class Reservoir(Labware):
         Volume to add in µL.
         ValueError if adding volume would exceed capacity."""
 
+        if volume < 0:
+            raise ValueError("Volume to add must be positive")
         if self.current_volume + volume > self.capacity:
             raise ValueError(f"Overflow! Capacity: {self.capacity} µl")
         self.current_volume += volume
@@ -488,6 +490,8 @@ class Reservoir(Labware):
        Removes volume from the reservoir.
        Volume to remove in µL.
        ValueError if remove volume exceed current volume."""
+        if volume < 0:
+            raise ValueError("Volume to add must be positive")
         if self.current_volume < volume:
             raise ValueError(f"Underflow! Available: {self.current_volume} µl")
         self.current_volume -= volume
@@ -517,7 +521,7 @@ class Reservoir(Labware):
             labware_id=data["labware_id"],
             hook_id=data.get("hook_id"),
             capacity=data.get("capacity", Default_Reservoir_Capacity),
-            filled_volume=data.get("filled_volume", 0),
+            filled_volume=data.get("filled_volume"),
             content=data.get("content"),
         )
 
@@ -568,16 +572,31 @@ class Reservoirs(Labware):
         """
         # Check if hook_id is valid
         if hook_id not in self.__reservoirs:
-            raise ValueError(f"Hook ID {hook_id} is invalid. Must be between 0 and {self.hook_count - 1}")
+            raise ValueError(f"Hook ID {hook_id} is invalid. Must be between 1 and {self.hook_count}")
 
         # Check if hook is available
         if self.__reservoirs[hook_id] is not None:
             raise ValueError(f"Hook {hook_id} is already occupied")
 
         # Check dimensional compatibility
-        if reservoir.size_x > self.size_x or reservoir.size_y > self.size_y or reservoir.size_z > self.size_z:
+        max_width_per_hook = self.size_x / self.hook_count
+
+        # Check dimensional compatibility
+        if reservoir.size_x > max_width_per_hook:
             raise ValueError(
-                f" One or more reservoir dimensions are bigger than reservoirs dimensions")
+                f"Reservoir width ({reservoir.size_x} mm) exceeds "
+                f"maximum width per hook ({max_width_per_hook:.2f} mm = {self.size_x} mm / {self.hook_count} hooks)"
+            )
+        if reservoir.size_y > self.size_y:
+            raise ValueError(
+                f"Reservoir depth ({reservoir.size_y} mm) exceeds "
+                f"Reservoirs depth ({self.size_y} mm)"
+            )
+        if reservoir.size_z > self.size_z:
+            raise ValueError(
+                f"Reservoir height ({reservoir.size_z} mm) exceeds "
+                f"Reservoirs height ({self.size_z} mm)"
+            )
 
         # Assign hook_id and place reservoir
         reservoir.hook_id = hook_id
@@ -618,13 +637,12 @@ class Reservoirs(Labware):
                 specified_hook = available_hooks[0]  # pick the first free hook
 
             # Create Reservoir instance from parameters
-            # This will validate filled_volume vs capacity
             reservoir = Reservoir(
                 size_x=params["size_x"],
                 size_y=params["size_y"],
                 size_z=params["size_z"],
                 capacity=params.get("capacity", Default_Reservoir_Capacity),
-                filled_volume=params.get("filled_volume", 0),
+                filled_volume=params.get("filled_volume"),
                 content=params.get("content"),
                 labware_id=params.get("labware_id"),
                 hook_id=specified_hook,
