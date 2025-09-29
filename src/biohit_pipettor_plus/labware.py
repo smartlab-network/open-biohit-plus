@@ -111,6 +111,8 @@ class Well(Labware):
         size_y: float,
         size_z: float,
         labware_id: str = None,
+        row: int = None,
+        column: int = None,
         media: str = None,
         add_height: float = 5,
         remove_height: float = 5,
@@ -129,6 +131,10 @@ class Well(Labware):
             Height of the well in mm.
         labware_id : str, optional
             Unique identifier for this well. If None, a UUID will be generated.
+        row: int, optional.
+            row inside of plate
+        column: int, optional
+            column inside of plate
         media : str, optional
             Name/type of media contained in the well.
         add_height : float, optional
@@ -136,7 +142,7 @@ class Well(Labware):
         remove_height : float, optional
             Pipette aspiration height above bottom of the well (default = 5 mm).
         suck_offset_xy : tuple[float, float], optional
-            XY offset from the well center for aspiration/dispense (default = (2, 2)).
+            XY offset from the well corner for aspiration/dispense (default = (2, 2)).
         """
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, labware_id=labware_id)
 
@@ -144,6 +150,8 @@ class Well(Labware):
         self.add_height = add_height
         self.remove_height = remove_height
         self.suck_offset_xy = suck_offset_xy
+        self.row = row
+        self.column = column
 
     def to_dict(self) -> dict:
         """
@@ -157,6 +165,8 @@ class Well(Labware):
         base = super().to_dict()
         base.update(
             {
+                "row": self.row,
+                "column": self.column,
                 "media": self.media,
                 "add_height": self.add_height,
                 "remove_height": self.remove_height,
@@ -191,6 +201,8 @@ class Well(Labware):
             add_height=data.get("add_height", 5),
             remove_height=data.get("remove_height", 5),
             suck_offset_xy=tuple(data.get("suck_offset_xy", (2, 2))),
+            row= data.get("row"),
+            column=data.get("column")
         )
         return obj
 
@@ -255,15 +267,20 @@ class Plate(Labware):
         for x in range(self.wells_x):
             for y in range(self.wells_y):
                 well = self.well
+                well.column = x
+                well.row = y
                 well.labware_id = f'{x}:{y}'
                 self.__wells[well.labware_id] = well
 
 
-    def place_unique_well(self, well_placement: str, well: Well):
+    def place_unique_well(self, row, column, well: Well):
+        well_placement = f"{column}:{row}"
         if well_placement not in self.__wells.keys():
             raise ValueError(f"{well_placement} is not a valid well placement")
 
         well.labware_id = well_placement
+        well.row = row
+        well.column = column
         self.__wells[well.labware_id] = well
 
     def to_dict(self):
