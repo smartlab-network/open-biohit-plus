@@ -38,7 +38,7 @@ class Labware(Serializable):
         Parameters
         ----------
         size_x : float
-            cidth of the labware.
+            width of the labware.
         size_y : float
             Depth of the labware.
         size_z : float
@@ -261,7 +261,6 @@ class Plate(Labware):
                 well.labware_id = f'{x}:{y}'
                 self.__containers[well.labware_id] = well
 
-
     def place_unique_well(self, well_placement: str, well: Well):
         if well_placement not in self.__containers.keys():
             raise ValueError(f"{well_placement} is not a valid well placement")
@@ -444,213 +443,257 @@ class TipDropzone(Labware):
             drop_height_relative=data["drop_height_relative"]
         )
 
+Default_Reservoir_Capacity = 30000
+
 
 @register_class
 class Reservoir(Labware):
-    """
-    Represents a Reservoir from which medium will be aspirated and dispensed.
+    def __init__(self, size_x: float, size_y: float, size_z: float,
+                 capacity: float = Default_Reservoir_Capacity, filled_volume: float = 0,
+                 content: str = None, hook_id: int = None, labware_id: str = None):
 
-    Attributes
-    ----------
-    x_corner : float
-        X coordinate of the reservoir's start point.
-    y_corner : float
-        Y coordinate of the reservoir's start point.
-    volume : float
-        Volume of the reservoir.
-    """
+        """
+        Initialize a Reservoir instance. These are containers that store the medium to be filled in and removed from well
+        size_x, size_y, size_z are dimensions of the Reservoir labware
+        capacity is maximum amount of liquid that well can hold. if not provided, it is equal to Default_Reservoir_Capacity
+        filled_volume is the initial volume at the time of defining the reservoir. Default is 0 for waste and capacity for rest
+        hook_id is location on Reservoirs where this reservoir is going to be placed.
+        """
+        super().__init__(size_x, size_y, size_z, labware_id)
+        self.hook_id = hook_id
+        self.capacity = capacity
+        self.current_volume = filled_volume
+        self.content = content
 
-    def __init__(self, size_x : float, size_y : float, size_z: float, x_corner: float, y_corner: float, volume: float, labware_id: str = None,):
-        super().__init__( size_x = size_x, size_y = size_y, size_z = size_z, labware_id = labware_id)
-        self.size_x = size_x
-        self.size_y = size_y
-        self.size_z = size_z
-        self.x_corner = x_corner
-        self.y_corner = y_corner
-        self.volume = volume
+        #validate inputs
+        if self.current_volume > self.capacity:
+            raise ValueError(f"Filled volume ({self.current_volume}) cannot exceed capacity ({capacity})")
+        if self.current_volume < 0:
+            raise ValueError("Filled volume cannot be negative")
+        if self.capacity < 0:
+            raise ValueError("Capacity cannot be negative")
 
-    @classmethod
-    def from_dict(cls, data: dict):
-        """Deserialize a Reservoir from a dictionary."""
-        return cls(
-            size_x = data["size_x"],
-            size_y = data["size_y"],
-            size_z = data["size_z"],
-            x_corner=data["x_corner"],
-            y_corner=data["y_corner"],
-            volume=data["volume"]
-        )
+    def add_volume(self, volume: float) -> None:
+        """
+        Add volume to the reservoir.
+        Volume to add in µL.
+        ValueError if adding volume would exceed capacity."""
+
+        if self.current_volume + volume > self.capacity:
+            raise ValueError(f"Overflow! Capacity: {self.capacity} µl")
+        self.current_volume += volume
+
+    def remove_volume(self, volume: float) -> None:
+        """
+       Removes volume from the reservoir.
+       Volume to remove in µL.
+       ValueError if remove volume exceed current volume."""
+        if self.current_volume < volume:
+            raise ValueError(f"Underflow! Available: {self.current_volume} µl")
+        self.current_volume -= volume
+
+    def get_available_volume(self) -> float:
+        """Return the current available volume in µL."""
+        return self.current_volume
 
     def to_dict(self) -> dict:
         """Serialize the Reservoir to a dictionary."""
-        return {
-            "size_x" :  self.size_x,
-            "size_y" : self.size_y,
-            "size_z" : self.size_z,
-            "x_corner": self.x_corner,
-            "y_corner": self.y_corner,
-            "volume": self.volume
+        base = super().to_dict()
+        base.update({
+            "hook_id": self.hook_id,
+            "capacity": self.capacity,
+            "filled_volume": self.current_volume,
+            "content": self.content,
+        })
+        return base
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "Reservoir":
+        """Deserialize a Reservoir instance from a dictionary."""
+        return cls(
+            size_x=data["size_x"],
+            size_y=data["size_y"],
+            size_z=data["size_z"],
+            labware_id=data["labware_id"],
+            hook_id=data.get("hook_id"),
+            capacity=data.get("capacity", Default_Reservoir_Capacity),
+            filled_volume=data.get("filled_volume", 0),
+            content=data.get("content"),
+        )
+
+
+@register_class
+class Reservoirs(Labware):
+    def __init__(self, size_x: float, size_y: float, size_z: float, hook_count: int, reservoir_dict: dict[int, dict] = None, labware_id: str = None):
+        """ Initialize a Reservoirs instance that can hold multiple reservoirs.
+
+        size_x, size_y, size_z are dimensions of the reservoirs labware
+        hook_count = no of hooks. This determines the no of individual reservoir that can be placed
+        reservoir_dict is an optional variable that defines the individual reservoir and its attribute.
+        """
+        super().__init__(size_x, size_y, size_z, labware_id)
+        self.hook_count = hook_count
+
+        # Initialize empty hooks
+        self.__reservoirs: dict[int, Optional[Reservoir]] = {
+            i: None for i in range(1,hook_count + 1)
         }
 
-class Reservoirs:
-    """
-    Manages a collection of containers in a reservoir, tracking their capacities, volumes, and equivalent groups.
+        # Place reservoirs if provided
+        if reservoir_dict:
+            self.place_reservoirs(reservoir_dict)
 
-    Attributes
-    ----------
-    containers : dict[int, Reservoir]
-        dictionary mapping container IDs to Reservoir objects.
-    capacities : dict[int, float]
-        dictionary mapping container IDs to their capacities (in µl).
-    current_volume : dict[int, float]
-        dictionary mapping container IDs to their current volumes (in µl).
-    disabled_containers : set[int]
-        set of container IDs that are disabled (treated as non-existent).
-    equivalent_groups : dict[int, list[int]]
-        dictionary mapping container IDs to lists of equivalent containers IDs (e.g., containers with the same solution).
-    """
-    default_capacity = 30000  # Default container capacity in µl
-    container_spacing = 18  # Spacing between containers in mm
-    x_offset = 3  # X offset for container positioning
-    y_offset = 40  # Y offset for container positioning
-    add_height = 65  # Height for adding liquid
-    remove_height = 103  # Height for removing liquid
-    underflow_buffer = 3000  # Buffer to prevent complete liquid removal
+    def get_reservoirs(self) -> dict[int, Optional[Reservoir]]:
+        """Return the dictionary of all reservoirs."""
+        return self.__reservoirs
 
-    def __init__(self, size_x : float, size_y : float, size_z: float, x_corner: float, y_corner: float, container_ids: list[int], capacities: Optional[dict[int, float]] = None,
-                 disabled_containers: Optional[set[int]] = None, waste_containers: Optional[set[int]] = None, filled_vol: Optional[dict[int, float]] = None,equivalent_groups: Optional[dict[int, list[int]]] = None):
+    def get_available_hooks(self) -> list[int]:
+        """Return list of available (empty) hook IDs."""
+        return [hook_id for hook_id, res in self.__reservoirs.items() if res is None]
+
+    def get_occupied_hooks(self) -> list[int]:
+        """Return list of occupied hook IDs."""
+        return [hook_id for hook_id, res in self.__reservoirs.items() if res is not None]
+
+    def place_reservoir(self, hook_id: int, reservoir: Reservoir) -> None:
+        """ Place a single reservoir on a specific hook.
+
+        Parameters:
+            hook_id : int
+                Hook position to place the reservoir.
+            reservoir : Reservoir
+                Reservoir instance to place.
+
+        Raises ValueError If hook_id is invalid, already occupied, or reservoir dimensions incompatible.
         """
-        Initialize a Reservoirs object.
+        # Check if hook_id is valid
+        if hook_id not in self.__reservoirs:
+            raise ValueError(f"Hook ID {hook_id} is invalid. Must be between 0 and {self.hook_count - 1}")
+
+        # Check if hook is available
+        if self.__reservoirs[hook_id] is not None:
+            raise ValueError(f"Hook {hook_id} is already occupied")
+
+        # Check dimensional compatibility
+        if reservoir.size_x > self.size_x or reservoir.size_y > self.size_y or reservoir.size_z > self.size_z:
+            raise ValueError(
+                f" One or more reservoir dimensions are bigger than reservoirs dimensions")
+
+        # Assign hook_id and place reservoir
+        reservoir.hook_id = hook_id
+        self.__reservoirs[hook_id] = reservoir
+
+    def place_reservoirs(self, reservoir_dict: dict[int, dict]) -> None:
+        """
+        Place multiple reservoirs from a dictionary.
 
         Parameters
         ----------
-        x_corner : float
-            X coordinate of the reservoir's start point.
-        y_corner : float
-            Y coordinate of the reservoir's start point.
-        container_ids : list[int]
-            list of container IDs to initialize. For 7 container, pass a list of 7 Ids.
-        capacities : Optional[dict[int, float]]
-            dictionary of container IDs to their capacities (in µl). If None, uses default capacity.
-        disabled_containers : Optional[set[int]]
-            set of container IDs to disable. If None, no containers are disabled.
-        waste_containers : set[int]
-            Set of container IDs designated as waste containers.
-        equivalent_groups : Optional[dict[int, list[int]]]
-            dictionary mapping container IDs to lists of equivalent container IDs. If None, each container is its own group.
-        filled_vol : Optional[dict[int, float]]
-            dictionary of well IDs to their initial fill volumes (in µl). If None, uses capacities or default fill.
+        reservoir_dict : dict[int, dict]
+            Dictionary where keys are ignored. Each value should contain:
+            - Required: size_x, size_y, size_z
+            - Optional: capacity, filled_volume, content, labware_id, hook_id
+
+            If hook_id is specified in params, the reservoir will be placed there.
+            Otherwise, the next available hook will be used.
+
+        Raises ValueError If a specified hook_id is occupied, all hooks are full, or
+            reservoir parameters are invalid.
         """
-        self.containers = {}
-        self.capacities = {}
-        self.current_volume = {}
-        self.disabled_containers = set(disabled_containers) if disabled_containers is not None else set()
-        self.waste_containers = (
-            set(waste_containers) if waste_containers is not None and waste_containers.issubset(set(container_ids))
-            else {1} if 1 in container_ids
-            else set()
-        )
-        self.equivalent_groups = equivalent_groups if equivalent_groups is not None else {cid: [cid] for cid in container_ids}
+        for params in reservoir_dict.values():
 
-        # Initialize container positions and capacities
-        for cid in container_ids:
-
-            # Calculate X & Y position: containers are spaced from right to left
-            container_x = x_corner + (max(container_ids) - cid) * self.container_spacing + self.x_offset
-            container_y = y_corner + self.y_offset
-
-            # Create Reservoir object for each container
-            self.containers[cid] = Reservoir(size_x, size_y, size_z, x_corner =container_x, y_corner=container_y, volume=0)
-            # set capacity
-            self.capacities[cid] = 0 if cid in self.disabled_containers else (
-                capacities.get(cid, self.default_capacity) if capacities is not None else self.default_capacity
-            )
-            # set initial volume: full for non-waste/disabled containers, 0 for disabled. 0 for waste if not stated otherwise
-            if cid in self.disabled_containers:
-                self.current_volume[cid] = 0
+            specified_hook = params.get("hook_id")
+            if specified_hook is not None:
+                # Check if hook_id is valid
+                if specified_hook not in self.__reservoirs:
+                    raise ValueError(f"Hook ID {specified_hook} is invalid. Must be between 0 and {self.hook_count - 1}")
+                # Check if hook is free
+                if self.__reservoirs[specified_hook] is not None:
+                    raise ValueError(f"Hook {specified_hook} is already occupied")
             else:
-                initial_volume = (
-                    filled_vol.get(cid, 0 if cid in self.waste_containers else self.capacities[cid])
-                    if filled_vol is not None else
-                    (0 if cid in self.waste_containers else self.capacities[cid])
-                )
-                if initial_volume > self.capacities[cid]:
-                    raise ValueError(
-                        f"Initial volume {initial_volume} µl for container {cid} exceeds capacity {self.capacities[cid]} µl")
-                self.current_volume[cid] = initial_volume
-            self.containers[cid].volume = self.current_volume[cid]
+                # If no hook specified, ensure at least one is free
+                available_hooks = self.get_available_hooks()
+                if not available_hooks:
+                    raise ValueError("All hooks are occupied. Cannot place reservoir.")
+                specified_hook = available_hooks[0]  # pick the first free hook
 
-    def get_waste_containers(self) -> list[int]:
-        """Return a list of container IDs designated as waste containers."""
-        return list(self.waste_containers - self.disabled_containers)
+            # Create Reservoir instance from parameters
+            # This will validate filled_volume vs capacity
+            reservoir = Reservoir(
+                size_x=params["size_x"],
+                size_y=params["size_y"],
+                size_z=params["size_z"],
+                capacity=params.get("capacity", Default_Reservoir_Capacity),
+                filled_volume=params.get("filled_volume", 0),
+                content=params.get("content"),
+                labware_id=params.get("labware_id"),
+                hook_id=specified_hook,
+            )
 
-    def add_volume(self, container: int, volume: float) -> None:
-        """Add liquid to a container if capacity allows."""
-        if container not in self.containers:
-            raise ValueError(f"container {container} does not exist.")
-        if container in self.disabled_containers:
-            raise ValueError(f"container {container} is disabled.")
-        if self.current_volume[container] + volume > self.capacities[container]:
-            raise ValueError(f"Reservoir {container} overflow! Capacity: {self.capacities[container]} µl")
-        self.current_volume[container] += volume
-        self.containers[container].volume = self.current_volume[container]
+            self.place_reservoir(specified_hook, reservoir)
 
-    def remove_volume(self, container: int, volume: float) -> None:
-        """Remove liquid from a container if enough is available."""
-        if container not in self.containers:
-            raise ValueError(f"container {container} does not exist.")
-        if container in self.disabled_containers:
-            raise ValueError(f"container {container} is disabled.")
-        if self.current_volume[container] - self.remove_height < volume:
-            raise ValueError(f"Reservoir {container} underflow! Only {self.current_volume[container]} µl available.")
-        self.current_volume[container] -= volume
-        self.containers[container].volume = self.current_volume[container]
+    def add_volume(self, hook_id: int, volume: float) -> None:
+        """Add volume to a reservoir at a specific hook."""
+        if hook_id not in self.__reservoirs or self.__reservoirs[hook_id] is None:
+            raise ValueError(f"No reservoir at hook {hook_id}")
+        self.__reservoirs[hook_id].add_volume(volume)
 
-    def get_equivalent_group(self, container: int) -> list[int]:
-        """Return the list of equivalent containers for a given container, excluding disabled containers."""
-        if container not in self.containers:
-            return []
-        return [w for w in self.equivalent_groups.get(container, [container]) if w not in self.disabled_containers]
+    def remove_volume(self, hook_id: int, volume: float) -> None:
+        """ Remove volume from a reservoir at a specific hook."""
+        if hook_id not in self.__reservoirs or self.__reservoirs[hook_id] is None:
+            raise ValueError(f"No reservoir at hook {hook_id}")
+        self.__reservoirs[hook_id].remove_volume(volume)
+
+    def get_waste_containers(self) -> list[Reservoir]:
+        """ Get all reservoirs labeled as waste."""
+        return [
+            res for res in self.__reservoirs.values()
+            if res is not None and res.content and "waste" in res.content.lower()
+        ]
+
+    def get_equivalent_containers(self, content: str) -> list[Reservoir]:
+        """ Get all reservoirs with the same content. """
+        return [
+            res for res in self.__reservoirs.values()
+            if res is not None and res.content and res.content.lower() == content.lower()
+        ]
+
+    def get_reservoir_by_content(self, content: str) -> Optional[Reservoir]:
+        """ Get the first matching reservoir with the specified content."""
+        for res in self.__reservoirs.values():
+            if res is not None and res.content and res.content.lower() == content.lower():
+                return res
+        return None
 
     def to_dict(self) -> dict:
-        """Serialize the Reservoirs object to a dictionary."""
-        return {
-            "containers": {str(cid): container.to_dict() for cid, container in self.containers.items()},
-            "capacities": self.capacities,
-            "current_volume": self.current_volume,
-            "waste_containers": list(self.waste_containers),
-            "disabled_containers": list(self.disabled_containers),
-            "equivalent_groups": self.equivalent_groups
-        }
+        """Serialize the Reservoirs instance to a dictionary."""
+        base = super().to_dict()
+        base.update({
+            "hook_count": self.hook_count,
+            "reservoirs": {
+                hook_id: res.to_dict() if res else None
+                for hook_id, res in self.__reservoirs.items()
+            },
+        })
+        return base
 
     @classmethod
-    def from_dict(cls, data: dict, size_x: float, size_y : float, size_z : float, x_corner: float, y_corner: float) -> 'Reservoirs':
-        """Deserialize a Reservoirs object from a dictionary."""
-        container_ids = [int(cid) for cid in data.get("containers", {}).keys()]
-        containers_data = data.get("containers", {})
-        capacities = data.get("capacities", {})
-        filled_vol = data.get("current_volume", {})
-        disabled_containers = set(data.get("disabled_containers", []))
-        waste_containers = set(data.get("waste_containers", []))
-        equivalent_groups = data.get("equivalent_groups", None)
-
-        # Create Reservoirs instance
+    def _from_dict(cls, data: dict) -> "Reservoirs":
+        """Deserialize a Reservoirs instance from a dictionary."""
         reservoirs = cls(
-            size_x= size_x,
-            size_y= size_y,
-            size_z= size_z,
-            x_corner=x_corner,
-            y_corner=y_corner,
-            container_ids=container_ids,
-            capacities=capacities,
-            filled_vol=filled_vol,
-            disabled_containers=disabled_containers,
-            waste_containers=waste_containers,
-            equivalent_groups=equivalent_groups
+            size_x=data["size_x"],
+            size_y=data["size_y"],
+            size_z=data["size_z"],
+            hook_count=data["hook_count"],
+            labware_id=data["labware_id"],
         )
 
-        # Override container objects with deserialized data
-        for cid, wdata in containers_data.items():
-            reservoirs.containers[int(cid)] = Reservoir.from_dict(wdata)
+        # Restore reservoirs
+        reservoirs_data = data.get("reservoirs", {})
+        for hook_id_str, res_data in reservoirs_data.items():
+            hook_id = int(hook_id_str)
+            if res_data is not None:
+                reservoir = Serializable.from_dict(res_data)
+                reservoirs._Reservoirs__reservoirs[hook_id] = reservoir
 
         return reservoirs
