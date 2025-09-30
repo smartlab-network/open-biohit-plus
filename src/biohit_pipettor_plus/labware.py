@@ -85,12 +85,13 @@ class Labware(Serializable):
         Labware
             Reconstructed Labware instance.
         """
+        position = tuple(data["position"]) if data.get("position") else None
         return cls(
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
             labware_id=data["labware_id"],
-            position=position,
+            position= position
         )
 
 
@@ -119,6 +120,7 @@ class Well(Labware):
         size_z: float,
         labware_id: str = None,
         media: str = None,
+        position: tuple[float, float] = None,
         add_height: float = 5,
         remove_height: float = 5,
         suck_offset_xy: tuple[float, float] = (2, 2),
@@ -145,7 +147,7 @@ class Well(Labware):
         suck_offset_xy : tuple[float, float], optional
             XY offset from the well center for aspiration/dispense (default = (2, 2)).
         """
-        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, labware_id=labware_id)
+        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, labware_id=labware_id, position=position)
 
         self.media = media
         self.add_height = add_height
@@ -187,12 +189,15 @@ class Well(Labware):
         Well
             Reconstructed Well instance.
         """
+
+        position = tuple(data["position"]) if data.get("position") else None
         base_obj = super()._from_dict(data)  # Labware attributes
         # overwrite base_obj with correct class instantiation
         obj = cls(
             size_x=base_obj.size_x,
             size_y=base_obj.size_y,
             size_z=base_obj.size_z,
+            position = position,
             labware_id=base_obj.labware_id,
             media=data.get("media"),
             add_height=data.get("add_height", 5),
@@ -215,7 +220,7 @@ class Plate(Labware):
         Coordinates of the first well.
     """
 
-    def __init__(self, size_x, size_y, size_z, containers_x, containers_y, first_well_xy, well: Well = None, labware_id: str = None):
+    def __init__(self, size_x, size_y, size_z, containers_x, containers_y, first_well_xy, well: Well = None, position: tuple[float, float] = None, labware_id: str = None):
         """
         Initialize a Plate instance.
 
@@ -236,7 +241,7 @@ class Plate(Labware):
         labware_id : str, optional
             Unique ID for the plate.
         """
-        super().__init__(size_x, size_y, size_z, labware_id)
+        super().__init__(size_x, size_y, size_z, position, labware_id)
         self.containers_x = containers_x
         self.containers_y = containers_y
         self.first_well_xy = first_well_xy
@@ -305,6 +310,7 @@ class Plate(Labware):
         Plate
             Reconstructed Plate instance.
         """
+        position = tuple(data["position"]) if data.get("position") else None
         plate = cls(
             size_x=data["size_x"],
             size_y=data["size_y"],
@@ -312,7 +318,8 @@ class Plate(Labware):
             labware_id=data["labware_id"],
             containers_x=data["containers_x"],
             containers_y=data["containers_y"],
-            first_well_xy=tuple(data["first_well_xy"]))
+            position = position,
+            first_well_xy = tuple(data["first_well_xy"]))
 
         containers_data = data.get("containers", {})
         for cid, wdata in containers_data.items():
@@ -329,7 +336,11 @@ class PipetteHolder(Labware):
     Represents a Pipette Holder labware.
     """
 
-    def __init__(self, labware_id: str = None):
+    def __init__(self, size_x: float,
+                 size_y: float,
+                 size_z: float,
+                 position: tuple[float, float] = None,
+                 labware_id: str = None):
         """
         Initialize a PipetteHolder instance.
 
@@ -338,7 +349,7 @@ class PipetteHolder(Labware):
         labware_id : str, optional
             Unique ID for the pipette holder.
         """
-        super().__init__(size_x=20, size_y=20, size_z=50, labware_id=labware_id)
+        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, position = position, labware_id=labware_id)
 
     @classmethod
     def _from_dict(cls, data: dict) -> "PipetteHolder":
@@ -355,7 +366,15 @@ class PipetteHolder(Labware):
         PipetteHolder
             Reconstructed PipetteHolder instance.
         """
-        return super().from_dict(data)
+        position = tuple(data["position"]) if data.get("position") else None
+        return cls(
+            size_x= data["size_x"],
+            size_y= data["size_y"],
+            size_z= data["size_z"],
+            labware_id= data["labware_id"],
+            position = position
+        )
+
 
 @register_class
 class TipDropzone(Labware):
@@ -378,7 +397,9 @@ class TipDropzone(Labware):
                  drop_x: float,
                  drop_y: float,
                  labware_id: str = None,
-                 drop_height_relative: float = 20):
+                 drop_height_relative: float = 20,
+                 position: tuple[float, float] = None
+                 ):
         """
         Initialize a TipDropzone instance.
 
@@ -399,7 +420,7 @@ class TipDropzone(Labware):
         drop_height_relative : float, optional
             Height from which tips are dropped relative to the labware. Default is 20.
         """
-        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, labware_id=labware_id)
+        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, position = position, labware_id=labware_id)
         self.drop_x = drop_x
         self.drop_y = drop_y
         self.drop_height_relative = drop_height_relative
@@ -436,6 +457,7 @@ class TipDropzone(Labware):
         TipDropzone
             Reconstructed TipDropzone instance.
         """
+        position = tuple(data["position"]) if data.get("position") else None
         return cls(
             size_x=data["size_x"],
             size_y=data["size_y"],
@@ -443,7 +465,9 @@ class TipDropzone(Labware):
             labware_id=data["labware_id"],
             drop_x=data["drop_x"],
             drop_y=data["drop_y"],
-            drop_height_relative=data["drop_height_relative"]
+            drop_height_relative=data["drop_height_relative"],
+            position = position
+
         )
 
 

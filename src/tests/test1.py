@@ -45,31 +45,18 @@ reservoirs_data = {
 
     2: {"size_x": 10, "size_y": 20, "size_z": 12, "capacity": 30000,
         "filled_volume": 30000, "content": "0 conc"},
-
-    3: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
-        "filled_volume": 100, "content": "1.8 conc"},
-
-    4: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
-        "filled_volume": 30000, "content": "5 conc"},
-
-    5: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
-        "filled_volume": 100, "content": "15 conc"},
-
-    6: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
-        "filled_volume": 100, "content": "0 conc"},
-
-    7: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
-        "filled_volume": 100, "content": "waste"},
 }
 
 reservoirs = ReservoirHolder(
-    size_x= 200,
-    size_y= 200,
-    size_z= 200,
+    size_x= 80,
+    size_y= 50,
+    size_z= 20,
     hook_count = 7,
     hook_across_y=3,
     reservoir_dict = reservoirs_data,
 )
+
+deck1.add_labware(reservoirs, slot_id="slot3", min_z=2)
 
 print(reservoirs.hook_id_to_position(8))
 print(reservoirs.position_to_hook_id(2,2))
@@ -81,7 +68,7 @@ print(reservoirs.get_waste_containers())
 print(f"water: {reservoirs.get_equivalent_containers("water")}")
 print(reservoirs.get_reservoir_by_content("15 conc"))
 reservoirs.add_volume(1,20000)
-reservoirs.remove_volume(4,1000)
+#reservoirs.remove_volume(4,1000)
 data = reservoirs.to_dict()
 print(data)
 new_reservoir = ReservoirHolder.from_dict(data)
@@ -90,7 +77,7 @@ print(new_reservoir.to_dict())
 
 
 #TODO define pipette pick up and drop zone
-pipette_holder = PipetteHolder(labware_id="pipette_holder_1")
+pipette_holder = PipetteHolder(labware_id="pipette_holder_1", size_x = 10, size_y = 20, size_z=20)
 
 
 #TODO understand drop zone and see how to implement it.
