@@ -13,7 +13,6 @@ deck1.add_slot(slot1)
 slot2 = Slot(range_x=(300, 400), range_y=(100,200), slot_id="slot2")
 write_json(slot2)
 # Serialisierung
-
 write_json(deck1)
 print(deck1.to_dict())
 
@@ -23,3 +22,4 @@ restored_deck = read_json("deck1")
 print(type(restored_deck))
 print(restored_deck.slots)
 print(restored_deck.labware)
+

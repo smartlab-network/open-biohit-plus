@@ -31,7 +31,7 @@ class Slot(Serializable):
         self.slot_id = slot_id
 
         # Dictionary storing stacked labware: {labware_id: [Labware, (min_z, max_z)]}
-        self.labware_stack: Dict[str, List] = {}
+        self.labware_stack: Dict[str, List[Labware, tuple[float, float]]] = {}
 
     def place_labware(self, lw: Labware, min_z: float):
         """

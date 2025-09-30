@@ -1,7 +1,7 @@
-from ..biohit_pipettor_plus.labware import Well, Plate, PipetteHolder, TipDropzone
-from ..biohit_pipettor_plus.slot import Slot
-from ..biohit_pipettor_plus.deck import Deck
-from ..biohit_pipettor_plus.control_json import write_json, create_json_file
+from src.biohit_pipettor_plus.labware import Well, Plate, PipetteHolder, TipDropzone
+from src.biohit_pipettor_plus.slot import Slot
+from src.biohit_pipettor_plus.deck import Deck
+from src.biohit_pipettor_plus.control_json import write_json, create_json_file
 
 
 def main():

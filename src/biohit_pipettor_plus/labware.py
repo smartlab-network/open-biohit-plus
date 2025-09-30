@@ -1,4 +1,6 @@
 import uuid
+from threading import activeCount
+
 from .serializable import Serializable, register_class
 
 
@@ -117,6 +119,7 @@ class Well(Labware):
         add_height: float = 5,
         remove_height: float = 5,
         suck_offset_xy: tuple[float, float] = (2, 2),
+        active: bool = True
     ):
         """
         Initialize a Well instance.
@@ -143,6 +146,9 @@ class Well(Labware):
             Pipette aspiration height above bottom of the well (default = 5 mm).
         suck_offset_xy : tuple[float, float], optional
             XY offset from the well corner for aspiration/dispense (default = (2, 2)).
+        active : bool
+            bool to set if this Well is used. To have multiple Wells on the same koordinates for different experiments.
+
         """
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, labware_id=labware_id)
 
@@ -152,6 +158,7 @@ class Well(Labware):
         self.suck_offset_xy = suck_offset_xy
         self.row = row
         self.column = column
+        self.active = active
 
     def to_dict(self) -> dict:
         """
@@ -171,6 +178,7 @@ class Well(Labware):
                 "add_height": self.add_height,
                 "remove_height": self.remove_height,
                 "suck_offset_xy": list(self.suck_offset_xy),
+                "active": self.active
             }
         )
         return base
@@ -202,7 +210,8 @@ class Well(Labware):
             remove_height=data.get("remove_height", 5),
             suck_offset_xy=tuple(data.get("suck_offset_xy", (2, 2))),
             row= data.get("row"),
-            column=data.get("column")
+            column=data.get("column"),
+            active=data.get("active")
         )
         return obj
 
