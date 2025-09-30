@@ -1,8 +1,6 @@
-from cffi.cffi_opcode import PRIM_FLOAT
-
 from ..biohit_pipettor_plus.deck import Deck
 from ..biohit_pipettor_plus.slot import Slot
-from ..biohit_pipettor_plus.labware import Plate, PipetteHolder, TipDropzone, Reservoirs, Reservoir
+from ..biohit_pipettor_plus.labware import Plate, PipetteHolder, TipDropzone, ReservoirHolder
 from ..biohit_pipettor_plus.labware import Well
 from ..biohit_pipettor_plus.serializable import Serializable
 import json
@@ -22,7 +20,7 @@ deck1.add_slots([slot1, slot2, slot3])
 
 example_well = Well(size_x=2, size_y=1, size_z=5, media="water")
 plate1 = Plate(20, 10, 50, 7, 8, (30, 50), well = example_well)
-print(plate1.get_containers)
+#print(plate1.get_containers)
 
 deck1.add_labware(plate1, slot_id="slot1", min_z=2)
 #print(deck1.slots)
@@ -43,21 +41,22 @@ print(restored_deck.labware)
 """
 
 reservoirs_data = {
-    1: {"size_x": 20, "size_y": 20, "size_z": 10, "capacity": 30000,
-         "content": "PBS", "hook_id" : 3},
+    1: {"size_x": 50, "size_y": 20, "size_z": 10, "capacity": 30000,
+         "content": "PBS", "hook_ids" : [1,2]},
 
-    2: {"size_x": 20, "size_y": 20, "size_z": 12, "capacity": 50000,
-        "filled_volume": 45000, "content": "DMEM"},
+    2: {"size_x": 50, "size_y": 20, "size_z": 12, "capacity": 50000,
+        "filled_volume": 45000, "content": "Waste"},
 
     3: {"size_x": 25, "size_y": 20, "size_z": 15, "capacity": 50000,
          "content": "Water"},
 }
 
-reservoirs = Reservoirs(
+reservoirs = ReservoirHolder(
     size_x= 200,
     size_y= 200,
     size_z= 200,
     hook_count = 7,
+    hook_across_y=3,
     reservoir_dict = reservoirs_data,
 )
 
@@ -65,20 +64,21 @@ reservoir_4 = {5: {"size_x": 25, "size_y": 20, "size_z": 15, "capacity": 50000,
         "filled_volume": 10000, "content": "Water"},}
 
 reservoirs.place_reservoirs(reservoir_4)
-
-
+reservoirs.hook_id_to_position(20)
 print(reservoirs.get_occupied_hooks())
 print(reservoirs.get_available_hooks())
-print(reservoirs.get_reservoirs())
+print(len(reservoirs.get_reservoirs()))
 print(reservoirs.get_waste_containers())
+print(reservoirs.get_hook_to_reservoir_map())
 print(reservoirs.get_equivalent_containers("Water"))
 print(reservoirs.get_reservoir_by_content("PBS"))
 
 #checking if resrevoirs to_dict and from_dict works
 data = reservoirs.to_dict()
-print(f"data{data}")
-new_reservoir = Reservoirs.from_dict(data)
-print(new_reservoir.to_dict())
+#print(f"data{data}")
+new_reservoir = ReservoirHolder.from_dict(data)
+#print(new_reservoir.to_dict())
+
 
 
 #TODO define pipette pick up and drop zone
