@@ -24,7 +24,6 @@ plate1 = Plate(20, 10, 50, 7, 8, (30, 50), well = example_well)
 
 deck1.add_labware(plate1, slot_id="slot1", min_z=2)
 #print(deck1.slots)
-#print(slot1.labware_stack)
 
 """write_json(slot2)
 # Serialisierung

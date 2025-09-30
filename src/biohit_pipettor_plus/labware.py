@@ -129,7 +129,7 @@ class Well(Labware):
         Parameters
         ----------
         size_x : float
-            cidth of the well in mm.
+            width of the well in mm.
         size_y : float
             Depth of the well in mm.
         size_z : float
