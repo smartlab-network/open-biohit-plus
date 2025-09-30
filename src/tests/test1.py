@@ -41,14 +41,26 @@ print(restored_deck.labware)
 """
 
 reservoirs_data = {
-    1: {"size_x": 50, "size_y": 20, "size_z": 10, "capacity": 30000,
-         "content": "PBS", "hook_ids" : [1,2]},
+    1: {"size_x": 10, "size_y": 20, "size_z": 10, "capacity": 30000,
+        "filled_volume": 0, "content": "waste"},
 
-    2: {"size_x": 50, "size_y": 20, "size_z": 12, "capacity": 50000,
-        "filled_volume": 45000, "content": "Waste"},
+    2: {"size_x": 10, "size_y": 20, "size_z": 12, "capacity": 30000,
+        "filled_volume": 30000, "content": "0 conc"},
 
-    3: {"size_x": 25, "size_y": 20, "size_z": 15, "capacity": 50000,
-         "content": "Water"},
+    3: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
+        "filled_volume": 100, "content": "1.8 conc"},
+
+    4: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
+        "filled_volume": 30000, "content": "5 conc"},
+
+    5: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
+        "filled_volume": 100, "content": "15 conc"},
+
+    6: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
+        "filled_volume": 100, "content": "0 conc"},
+
+    7: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
+        "filled_volume": 100, "content": "waste"},
 }
 
 reservoirs = ReservoirHolder(
@@ -60,24 +72,21 @@ reservoirs = ReservoirHolder(
     reservoir_dict = reservoirs_data,
 )
 
-reservoir_4 = {5: {"size_x": 25, "size_y": 20, "size_z": 15, "capacity": 50000,
-        "filled_volume": 10000, "content": "Water"},}
-
-reservoirs.place_reservoirs(reservoir_4)
-reservoirs.hook_id_to_position(20)
+print(reservoirs.hook_id_to_position(8))
+print(reservoirs.position_to_hook_id(2,2))
+print((reservoirs.get_reservoirs()))
+print(f"get_hook_to_reservoir_map: {reservoirs.get_hook_to_reservoir_map()}")
 print(reservoirs.get_occupied_hooks())
 print(reservoirs.get_available_hooks())
-print(len(reservoirs.get_reservoirs()))
 print(reservoirs.get_waste_containers())
-print(reservoirs.get_hook_to_reservoir_map())
-print(reservoirs.get_equivalent_containers("Water"))
-print(reservoirs.get_reservoir_by_content("PBS"))
-
-#checking if resrevoirs to_dict and from_dict works
+print(f"water: {reservoirs.get_equivalent_containers("water")}")
+print(reservoirs.get_reservoir_by_content("15 conc"))
+reservoirs.add_volume(1,20000)
+reservoirs.remove_volume(4,1000)
 data = reservoirs.to_dict()
-#print(f"data{data}")
+print(data)
 new_reservoir = ReservoirHolder.from_dict(data)
-#print(new_reservoir.to_dict())
+print(new_reservoir.to_dict())
 
 
 

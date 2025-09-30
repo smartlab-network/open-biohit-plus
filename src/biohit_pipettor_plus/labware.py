@@ -612,7 +612,6 @@ class ReservoirHolder(Labware):
         idx = hook_id - 1
         row = idx // self.hook_count
         col = idx % self.hook_count
-        print(hook_id,col, row)
         return (col, row)
 
     def position_to_hook_id(self, col: int, row: int) -> int:
@@ -631,7 +630,6 @@ class ReservoirHolder(Labware):
         int
             hook_id (1-indexed)
         """
-        print(f"{col}, {row}")
         if col < 0 or col >= self.hook_count:
             raise ValueError(f"col {col} out of range (0 to {self.hook_count - 1})")
         if row < 0 or row >= self.hook_across_y:
@@ -674,10 +672,10 @@ class ReservoirHolder(Labware):
         if not hook_ids:
             return False, 0, 0
 
-        # Convert all hook_ids to (col, row) positions
-        positions = [self.hook_id_to_position(hid) for hid in hook_ids]
-        cols = [pos[0] for pos in positions]
-        rows = [pos[1] for pos in positions]
+        # Convert all hook_ids to (col, row) location
+        location = [self.hook_id_to_position(hid) for hid in hook_ids]
+        cols = [pos[0] for pos in location]
+        rows = [pos[1] for pos in location]
 
         min_col, max_col = min(cols), max(cols)
         min_row, max_row = min(rows), max(rows)
@@ -685,14 +683,14 @@ class ReservoirHolder(Labware):
         width = max_col - min_col + 1
         height = max_row - min_row + 1
 
-        # Check if all positions in the rectangle are present
-        expected_positions = {
+        # Check if all location in the rectangle are present
+        expected_location = {
             (c, r) for c in range(min_col, max_col + 1)
             for r in range(min_row, max_row + 1)
         }
-        actual_positions = set(positions)
+        actual_location = set(location)
 
-        is_valid = expected_positions == actual_positions
+        is_valid = expected_location == actual_location
         return is_valid, width, height
 
     def place_reservoir(self, hook_ids: list[int], reservoir: Reservoir) -> None:
@@ -702,7 +700,7 @@ class ReservoirHolder(Labware):
         Parameters
         ----------
         hook_ids : list[int] or int
-            List of hook positions to place the reservoir (must form a rectangle).
+            List of hook location to place the reservoir (must form a rectangle).
         reservoir : Reservoir
             Reservoir instance to place.
 

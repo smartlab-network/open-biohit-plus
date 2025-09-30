@@ -3,20 +3,21 @@
 
 from ..biohit_pipettor_plus.deck import Deck
 from ..biohit_pipettor_plus.slot import Slot
-from ..biohit_pipettor_plus.labware import Plate, PipetteHolder, TipDropzone, Reservoirs
+from ..biohit_pipettor_plus.labware import Plate, PipetteHolder, TipDropzone, ReservoirHolder
 from ..biohit_pipettor_plus.labware import Well
 from ..biohit_pipettor_plus.position import PositionCalculator
 from ..biohit_pipettor_plus.serializable import Serializable
 import json
+from ..biohit_pipettor_plus.position import Position
 from ..biohit_pipettor_plus.control_json import read_json, write_json
 
 deck1 = Deck((0,500), (0,500), "deck1")
 
 
-#Todo find range_z. See the manual for more precise locations of slot.
-
-slot1 = Slot((100, 300), (50, 100), 500, "slot1") #Slot 1 and 2 are not fully accessible via multipipette.
-slot2 = Slot((100, 300), (50, 100), 500, "slot2")
+# Todo find range_z. See the manual for more precise locations of slot.
+#Slot 1 and 2 are not fully accessible via multipipette. Their range y needs to be updated.
+slot1 = Slot((100, 300), (0, 10), 500, "slot1")
+slot2 = Slot((100, 300), (0, 10), 500, "slot2")
 slot3 = Slot((0, 119), (10, 95), 500, "slot3")
 slot4 = Slot((129, 248), (10, 95), 500, "slot4")
 slot5 = Slot((0, 119), (105,190), 500, "slot5")
@@ -28,7 +29,7 @@ deck1.add_slots([slot3, slot4, slot5, slot6])
 #TODO 48 well plate dimension and wells, maps
 example_well = Well(size_x=2, size_y=1, size_z=5)
 plate1 = Plate(20, 10, 50, 7, 8, (30, 50), well = example_well)
-#deck1.add_labware(plate1, slot_id="slot3", min_z=2)
+deck1.add_labware(plate1, slot_id="slot3", min_z=2)
 
 #TODO add reservoirs dimensions
 reservoirs_data = {
@@ -55,7 +56,7 @@ reservoirs_data = {
 
 }
 
-reservoirs = Reservoirs(
+reservoirs = ReservoirHolder(
     size_x= 119,
     size_y= 70,
     size_z= 200,
@@ -114,9 +115,9 @@ pos_calc = PositionCalculator(x_corner=20, y_corner=50)
 
 # Compute positions for 8 reservoirs in a row,
 # each 22 mm apart (example spacing), first reservoir shifted by (5, 10)
-"""positions = pos_calc.position_multi(
-    count=len(reservoirs.containers),
-    step_x=22.0,
-    offset=(5.0, 10.0)
-)"""
+#positions = pos_calc.position_multi(
+ #   count=len(reservoirs.containers),
+  #  step_x=22.0,
+   # offset=(5.0, 10.0)
+
 
