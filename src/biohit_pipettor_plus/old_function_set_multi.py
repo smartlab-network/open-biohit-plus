@@ -10,217 +10,6 @@ from biohit_pipettor.errors import CommandFailed
 from math import ceil
 
 
-"""
-class EHMPlatePos:
-    def __init__(self, x_corner, y_corner):
-        self.x_corner = x_corner + 13.5
-        self.y_corner = y_corner + 9.5
-        self.x_step = 18
-        self.y_step = 9
-        self.x_tight = x_corner + 11
-        self.y_tight = y_corner + 8
-        self.x_corner_multi = x_corner + 12
-        self.y_corner_multi = y_corner + 43
-        self.add_height = 30
-        self.remove_height = 38
-        self.cols = 6
-
-
-class Reservoirs:
-    def __init__(self, x_corner, y_corner, capacities=None, disabled_wells=None):
-
-        #position of wells'''
-        self.well1_x = x_corner + 6 * 18 + 3
-        self.well2_x = x_corner + 5 * 18 + 3
-        self.well3_x = x_corner + 4 * 18 + 3  # 3 1.8mM
-        self.well4_x = x_corner + 3 * 18 + 3  # 4 5mM
-        self.well5_x = x_corner + 2 * 18 + 3  # 5 15mM
-        self.well6_x = x_corner + 1 * 18 + 3
-        self.well7_x = x_corner + 3
-
-        #wells containing same solution can be listed together. see get_equivalent_group & stock_well in fill_multi and remove_multi
-        self.conc0_wells = [2, 6]  # 0 mM equivalents
-        self.waste_wells = [1, 7]  # waste equivalents
-
-        self.y_corner = y_corner + 40
-        self.add_height = 65
-        self.remove_height = 103
-
-        
-        set 30000ul is the default well capacity which is also set to be current volume for all but waste. 
-        Reservoir class has parameter to input variable capacities if needed. 
-        Remember to edit dimension in ReservoirGeometry if changing wells to adjust height calculations. #Store wells geometry in class maybe
-        
-        default_capacities = {
-            1: 30000,  # 1 Waste
-            2: 30000,  # 2 0mM
-            3: 30000,  # 3 1.8mM
-            4: 30000,  # 4 5 mM
-            5: 30000,  # 5 15mM
-            6: 30000,  # 6 0mM
-            7: 30000,  # 7 Waste
-        }
-
-        if capacities is not None:
-            merged_capacities = default_capacities.copy()
-            merged_capacities.update(capacities)
-            self.capacities = merged_capacities
-        else:
-            self.capacities = default_capacities
-
-
-        
-        Disabled wells: Some reservoirs may no longer be usable. Instead of rewriting all pipetting
-        logic, a list of disabled wells is kept. Any well added here is treated as "non-existent":
-          - Its capacity & current volume is set to 0
-          - It is automatically skipped in suck/spit operations and get_equivalent_group() lookups.
-        
-
-        if disabled_wells is None:
-            disabled_wells = set()
-        else:
-            disabled_wells = set(disabled_wells)
-
-        for well in disabled_wells:
-            self.capacities[well] = 0
-
-
-        assumes every reservoir is filled to the capacity expect for waste and disabled.
-        Errors are calculated by current volume, capacity and aspiration/dispense volume  
-        
-        self.current_volume = {k: 0 if k in (1, 7) else (self.capacities[k] if k not in disabled_wells else 0) for k in
-                               self.capacities.keys()}
-
-        self.disabled_wells = disabled_wells
-
-    # The following two functions keep track of reservoir volume when dispensing and aspirating  liquid, raising error if necessary
-    def add_volume(self, well: int, volume: float):
-        #Add liquid to a well if capacity allows
-        if self.current_volume[well] + volume > self.capacities[well]:  # +5ml coz overflow only possible if volume added is highly above limit
-            raise ValueError(f"Reservoir {well} overflow! Capacity: {self.capacities[well]} µl")
-        self.current_volume[well] += volume
-
-    def remove_volume(self, well: int, volume: float):
-        #Remove liquid from a well if enough is available
-        if self.current_volume[well] - 5000 < volume:  # -5ml coz its way difficult to reach the bottom and take all liquid out
-            raise ValueError(f"Reservoir {well} underflow! Only {self.current_volume[well]} µl available.")
-        self.current_volume[well] -= volume
-
-    # This is done to loop through suck/spit function for equivalent wells containing same solution. hence avoiding error and handling more volume.
-    def get_equivalent_group(self, well: int):
-        if well in self.conc0_wells:
-            return [w for w in self.conc0_wells if w not in self.disabled_wells]
-        if well in self.waste_wells:
-            return [w for w in self.waste_wells if w not in self.disabled_wells]
-        if well in self.disabled_wells:
-            return []
-        return [well]
-"""
-
-class RoundContainers:  # to_do adjust to 6-well setup once that�s printed
-    def __init__(self, x_corner, y_corner):
-        self.medium_x = x_corner + 104.5
-        self.waste_x = x_corner + 62.5
-        self.well3_x = x_corner + 20.5
-        self.y_corner = y_corner + 15
-
-
-"""
-class PipetteTips:
-    def __init__(self, x_corner, y_corner, x_drop, y_drop):
-        self.x_corner = x_corner + 105
-        self.y_corner = y_corner + 10.5
-        self.x_corner_multi = x_corner + 105
-        self.y_corner_multi = y_corner + 42
-        self.x_step = 9
-        self.change_tips = 1
-        self.return_height = 85
-        self.pick_height = 75
-        self.x_drop = x_drop + 50
-        self.y_drop = y_drop + 50
-
-class TipDropzone:
-    def __init__(self, x_corner, y_corner):
-        self.x_corner = x_corner + 50
-        self.y_corner = y_corner + 40
-
-"""
-
-"""class ReservoirGeometry:
-    
-    .top signifies the cuboidal part.
-    .lower signifies the triangular part
-
-    class Geometry30ml:
-        Hardcoded geometry for 30 mL reservoir
-        top_w = 1.2
-        top_l = 9.0
-        top_h = 0.85
-        lower_h = 3.25
-
-        # volume of triangular prism - volume = 0.5 * b * h * length,
-        # volume of cuboidal = b * h * length
-        top_vol_ul = int(round(top_h * top_l * top_w * 1000))        # *1000 coz we use ul across the code and not ml
-        lower_vol_ul = int(round((top_l * top_w * lower_h / 2 * 1000)))
-        total_vol_ul = top_vol_ul + lower_vol_ul
-
-    def __init__(self, total_volume_ml: int = 30):
-        # Ensure parameter is integer
-        if not isinstance(total_volume_ml, int):
-            raise ValueError("total_volume_ml must be an integer (mL)")
-
-        self.total_volume_ml = total_volume_ml
-        self.default_height = 98.0 # safe height
-        # Assign geometry if predefined, else None
-        if total_volume_ml == 30:
-            self.geometry = self.Geometry30ml
-        else:
-            self.geometry = None
-
-    def calc_height(self, vol_ul: float) -> float:
-        
-        Returns pipette aspiration height (mm) based on current liquid volume.
-        - Uses predefined geometry if available
-        - Else returns default safe height
-        
-        if self.geometry is None:
-            print(
-                f"No predefined geometry for {self.total_volume_ml} mL, using default height {self.default_height} mm")
-            return self.default_height
-
-        if vol_ul <= 0:
-            print("Volume <= 0, returning height 0.0 mm")
-            return 0.0
-
-        g = self.geometry
-
-           Returns pipette aspiration height (mm) based on current liquid volume.
-           - If volume exceeds lower triangular part → calculate height in top cuboid.
-           - Else → calculate height within triangular bottom by using the unfilled volume to determine unused & actual height .
-           - Final pipette height is clamped between 98–103 mm for safety especially against measurement errors.
-
-        if vol_ul > g.lower_vol_ul:
-            # Top cuboidal region
-            vol_top = vol_ul - g.lower_vol_ul
-            h_top = round(vol_top / (g.top_l * g.top_w * 1000), 2)
-            liquid_h = g.lower_h + min(h_top, g.top_h)
-        else:
-            # Bottom triangular prism. found by finding height of unfilled well and subtracting from total.
-            remaining_volume = g.lower_vol_ul - vol_ul
-            remaining_height = round(2 * remaining_volume / (g.top_w * g.top_l * 1000), 2)
-            liquid_h = g.lower_h - remaining_height
-
-        # Clamp height
-        max_pip_height = 103
-        min_pip_height = 98
-        pip_height = max(min_pip_height, min(max_pip_height, max_pip_height - liquid_h))
-
-        print(f"Calculated pipette height: {pip_height} mm")
-        return pip_height
-        
-"""
-
-"""Functions"""
 
 
 def pick_multi_tips(p: Pipettor, pipette_tips):
@@ -230,6 +19,7 @@ def pick_multi_tips(p: Pipettor, pipette_tips):
     :param pipette_tips:
     """
     print("pick_multi_tips: start")
+    #todo nothing like this exisit
     p.move_xy(pipette_tips.x_corner_multi, pipette_tips.y_corner_multi)
     for i in range(1, 13, 1):
         try:
@@ -465,11 +255,13 @@ def calc_concentration(prep_table, initial_conc, initial_vol):
         final_conc = round(total_moles / initial_vol, 2)
         row["final_conc"] = final_conc
         initial_conc = final_conc
-        # initial_vol remains unchanged
+        initial_vol remains unchanged
     return prep_table
 
 def home(p: Pipettor):
     p.move_z(0)
     p.move_xy(0, 0)
     print("Device in startup position")
+
+
 

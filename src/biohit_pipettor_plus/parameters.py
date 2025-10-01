@@ -16,8 +16,8 @@ deck1 = Deck((0,500), (0,500), "deck1")
 
 # Todo find range_z. See the manual for more precise locations of slot.
 #Slot 1 and 2 are not fully accessible via multipipette. Their range y needs to be updated.
-slot1 = Slot((100, 300), (0, 10), 500, "slot1")
-slot2 = Slot((100, 300), (0, 10), 500, "slot2")
+slot1 = Slot((0, 1), (0, 10), 500, "slot1")
+slot2 = Slot((0, 1), (0, 10), 500, "slot2")
 slot3 = Slot((0, 119), (10, 95), 500, "slot3")
 slot4 = Slot((129, 248), (10, 95), 500, "slot4")
 slot5 = Slot((0, 119), (105,190), 500, "slot5")
