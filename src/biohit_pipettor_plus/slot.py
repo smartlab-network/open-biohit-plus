@@ -1,6 +1,8 @@
 from typing import Dict, Tuple, List
-from .labware import Labware
+from .labware import Labware, ReservoirHolder, PipetteHolder, Plate
 from .serializable import Serializable, register_class
+#TODO get this right
+from .position import Position_allocator
 
 @register_class
 class Slot(Serializable):
@@ -66,6 +68,43 @@ class Slot(Serializable):
         if labware_id in self.labware_stack:
             del self.labware_stack[labware_id]
 
+    def allocate_position(
+            self,
+            lw: Labware,
+            offset: tuple[float, float] = (0.0,0.0),
+            x_spacing: float = 0,
+            y_spacing: float = 0,
+            obj_across_x: float = None,
+            obj_across_y: float = None
+    ):
+        """
+        if labware is placed in slot, x & y coordinates of the labware is slot 
+        """
+        if lw.labware_id not in self.labware_stack:
+            raise ValueError("Labware not in labware stack")
+
+        x_corner = min(self.range_x[0], self.range_x[1]) 
+        y_corner = min(self.range_y[0], self.range_y[1]) 
+
+        lw.position = (x_corner, y_corner)
+
+        #if not none, then labware contains labware within them. Like ReservoirHolder - reservoirs, Plate - wells, pipetteHolder -Zone
+        if not None in (obj_across_x, obj_across_y):
+            if not isinstance(lw, (Plate, ReservoirHolder, PipetteHolder)):
+                raise ValueError("Only (plate, reservoir, pipetteHolder) conatin labware within them (wells, reservoirs, zone)")
+            else:
+                position_allocator = Position_allocator()
+                positions = position_allocator.calculate_multi(
+                    lw,
+                    x_corner,
+                    y_corner,
+                    offset,
+                    x_spacing,
+                    y_spacing,
+                    obj_across_x,
+                    obj_across_y
+                )
+
     def is_compatible_labware(self, lw: Labware, min_z: float) -> bool:
         """
         Check if a Labware object fits within X, Y, and Z dimensions of the slot.
@@ -123,13 +162,12 @@ class Slot(Serializable):
             Reconstructed Slot instance.
         """
         slot = cls(
-            range_x=tuple(data["range_x"]),
-            range_y=tuple(data["range_y"]),
+            range_x= tuple(data["range_x"]),
+            range_y= tuple(data["range_y"]),
             range_z=data["range_z"],
             slot_id=data["slot_id"]
         )
 
         for lw_id, (lw_data, zr) in data.get("labware_stack", {}).items():
             slot.labware_stack[lw_id] = [Serializable.from_dict(lw_data), tuple(zr)]
-
         return slot
