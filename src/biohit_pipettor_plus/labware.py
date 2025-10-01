@@ -33,7 +33,7 @@ class Labware(Serializable):
         super().__init_subclass__(**kwargs)
         Labware.registry[cls.__name__] = cls
 
-    def __init__(self, size_x: float, size_y: float, size_z: float,position: tuple[float, float] = None, labware_id: str = None):
+    def __init__(self, size_x: float, size_y: float, size_z: float, labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a Labware instance.
 
@@ -50,7 +50,7 @@ class Labware(Serializable):
         position : tuple[float, float], optional
             (x, y) position coordinates of the labware in millimeters.
             If None, position is not set.
-        """
+    """
         self.size_x = size_x
         self.size_y = size_y
         self.size_z = size_z
@@ -91,17 +91,10 @@ class Labware(Serializable):
         Labware
             Reconstructed Labware instance.
         """
+
         # Safely handle position deserialization
-        position = None
-        if data.get("position") is not None:
-            try:
-                pos_data = data["position"]
-                if isinstance(pos_data, (list, tuple)) and len(pos_data) == 2:
-                    position = tuple(float(coord) for coord in pos_data)
-                else:
-                    raise ValueError(f"Invalid position format: {pos_data}")
-            except (ValueError, TypeError) as e:
-                raise ValueError(f"Failed to deserialize position: {e}")
+        position = tuple(data["position"]) if data.get("position") else None
+
         return cls(
             size_x=data["size_x"],
             size_y=data["size_y"],
@@ -220,17 +213,10 @@ class Well(Labware):
         """
 
         # Safely handle position deserialization
-        position = None
-        if data.get("position") is not None:
-            try:
-                pos_data = data["position"]
-                if isinstance(pos_data, (list, tuple)) and len(pos_data) == 2:
-                    position = tuple(float(coord) for coord in pos_data)
-                else:
-                    raise ValueError(f"Invalid position format: {pos_data}")
-            except (ValueError, TypeError) as e:
-                raise ValueError(f"Failed to deserialize position: {e}")
+        position = tuple(data["position"]) if data.get("position") else None
+
         base_obj = super()._from_dict(data)  # Labware attributes
+
         # overwrite base_obj with correct class instantiation
         obj = cls(
             size_x=base_obj.size_x,
@@ -246,6 +232,7 @@ class Well(Labware):
             column=data.get("column")
         )
         return obj
+
 
 @register_class
 class Plate(Labware):
@@ -312,6 +299,7 @@ class Plate(Labware):
                 well.labware_id = f'well_{x}:{y}'
                 self.__wells[well.labware_id] = well
 
+    # TODO question existence   
     def place_unique_well(self, row, column, well: Well):
         well_placement = f"{column}:{row}"
         if well_placement not in self.__wells.keys():
@@ -356,16 +344,8 @@ class Plate(Labware):
             Reconstructed Plate instance.
         """
         # Safely handle position deserialization
-        position = None
-        if data.get("position") is not None:
-            try:
-                pos_data = data["position"]
-                if isinstance(pos_data, (list, tuple)) and len(pos_data) == 2:
-                    position = tuple(float(coord) for coord in pos_data)
-                else:
-                    raise ValueError(f"Invalid position format: {pos_data}")
-            except (ValueError, TypeError) as e:
-                raise ValueError(f"Failed to deserialize position: {e}")
+        position = tuple(data["position"]) if data.get("position") else None
+
         plate = cls(
             size_x=data["size_x"],
             size_y=data["size_y"],
@@ -373,7 +353,7 @@ class Plate(Labware):
             labware_id=data["labware_id"],
             wells_x=data["wells_x"],
             wells_y=data["wells_y"],
-            first_well_xy=tuple(data["first_well_xy"]),
+            first_well_xy = tuple(data["first_well_xy"]),
             position=position,)
 
         wells_data = data.get("wells", {})
@@ -386,14 +366,152 @@ class Plate(Labware):
 
 
 @register_class
+class IndividualPipetteHolder(Labware):
+    """
+    Represents an individual pipette holder position within a PipetteHolder.
+    Tracks occupancy status and pipette type.
+
+    Attributes
+    ----------
+    is_occupied : bool
+        Whether this holder position currently contains a pipette.
+    pipette_type : str or None
+        Type/model of pipette that can be stored here (e.g., "P1000", "P200").
+    """
+
+    def __init__(
+            self,
+            size_x: float,
+            size_y: float,
+            size_z: float ,
+            pipette_type: str = "P1000",
+            is_occupied: bool = False,
+            labware_id: str = None,
+            position: tuple[float, float] = None
+    ):
+        """
+        Initialize an IndividualPipetteHolder instance.
+
+        Parameters
+        ----------
+        size_x : float
+            Width of the individual holder position in millimeters.
+        size_y : float
+            Depth of the individual holder position in millimeters.
+        size_z : float
+            Height of the individual holder position in millimeters.
+        pipette_type : str, optional
+            Type of pipette this holder is designed for (e.g., "P1000", "P200").
+        is_occupied : bool, optional
+            Whether a pipette is currently stored here. Default is False.
+        labware_id : str, optional
+            Unique identifier for this holder position. If None, a UUID will be generated.
+        position : tuple[float, float], optional
+            (x, y) absolute position coordinates in millimeters.
+            If None, position is not set.
+        """
+        super().__init__(
+            size_x=size_x,
+            size_y=size_y,
+            size_z=size_z,
+            labware_id=labware_id,
+            position=position
+        )
+
+        self.pipette_type = pipette_type
+        self.is_occupied = is_occupied
+
+    def place_pipette(self) -> None:
+        """
+        Mark this holder position as occupied (pipette placed).
+        Raises ValueError If the holder position is already occupied.
+        """
+        if self.is_occupied:
+            raise ValueError(
+                f"Holder position {self.labware_id} is already occupied"
+            )
+
+        self.is_occupied = True
+
+    def remove_pipette(self) -> None:
+        """
+        Mark this holder position as available (pipette removed).
+
+        Raises
+        ------
+        ValueError
+            If the holder position is already empty.
+        """
+        if not self.is_occupied:
+            raise ValueError(f"Holder position {self.labware_id} is already empty")
+
+        self.is_occupied = False
+
+    def is_available(self) -> bool:
+        """
+        Check if this holder position is available for placing a pipette.
+        Returns bool.True if available (not occupied), False otherwise.
+        """
+        return not self.is_occupied
+
+    def to_dict(self) -> dict:
+        """
+        Serialize the IndividualPipetteHolder to a dictionary.
+        Returns dict
+            Dictionary containing all holder attributes.
+        """
+        base = super().to_dict()
+        base.update({
+            "pipette_type": self.pipette_type,
+            "is_occupied": self.is_occupied,
+        })
+        return base
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "IndividualPipetteHolder":
+        """
+        Deserialize an IndividualPipetteHolder instance from a dictionary.
+
+        Parameters
+        data : dict
+            Dictionary with IndividualPipetteHolder attributes.
+
+        Returns IndividualPipetteHolder
+            Reconstructed IndividualPipetteHolder instance.
+        """
+        # Safely handle position deserialization
+        position = tuple(data["position"]) if data.get("position") else None
+
+        return cls(
+            size_x=data["size_x"],
+            size_y=data["size_y"],
+            size_z=data["size_z"],
+            labware_id=data["labware_id"],
+            position=position,
+            pipette_type=data.get("pipette_type"),
+            is_occupied=data.get("is_occupied", False),
+        )
+
+
+@register_class
 class PipetteHolder(Labware):
     """
-    Represents a Pipette Holder labware.
+    Represents a Pipette Holder labware that contains multiple individual holder positions.
+
+    Attributes
+    ----------
+    holders_across_x : int
+        Number of individual holder positions across X-axis.
+    holders_across_y : int
+        Number of individual holder positions across Y-axis.
     """
 
     def __init__(self, size_x: float,
                  size_y: float,
                  size_z: float,
+                 holders_across_x: int,
+                 holders_across_y: int,
+                 individual_holder: IndividualPipetteHolder = None,
                  labware_id: str = None,
                  position: tuple[float, float] = None):
         """
@@ -407,6 +525,13 @@ class PipetteHolder(Labware):
             Depth of the pipette holder in millimeters.
         size_z : float
             Height of the pipette holder in millimeters.
+        holders_across_x : int
+            Number of individual holder positions across X-axis.
+        holders_across_y : int
+            Number of individual holder positions across Y-axis.
+        individual_holder : IndividualPipetteHolder, optional
+            Template for individual holder positions. If provided, copies will be created
+            for each position in the grid.
         labware_id : str, optional
             Unique ID for the pipette holder.
         position : tuple[float, float], optional
@@ -414,16 +539,260 @@ class PipetteHolder(Labware):
             If None, position is not set.
         """
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, labware_id=labware_id, position=position)
+        self.holders_across_x = holders_across_x
+        self.holders_across_y = holders_across_y
+
+        self.__individual_holders: dict[str, IndividualPipetteHolder] = {}
+        self.individual_holder = individual_holder
+
+        if individual_holder:
+            # Validate that individual holder fits
+            if holders_across_x * individual_holder.size_x > size_x or holders_across_y * individual_holder.size_y > size_y:
+                raise ValueError("Individual holder is too big for this PipetteHolder")
+            else:
+                self.place_individual_holders()
+        else:
+            # Create empty positions
+            for x in range(self.holders_across_x):
+                for y in range(self.holders_across_y):
+                    self.__individual_holders[f'{x}:{y}'] = None
+
+    def place_individual_holders(self):
+        """Create individual holder positions across the grid."""
+        for x in range(self.holders_across_x):
+            for y in range(self.holders_across_y):
+                holder = copy.deepcopy(self.individual_holder)
+                holder.labware_id = f'holder_{x}:{y}'
+                self.__individual_holders[holder.labware_id] = holder
+
+    def get_individual_holders(self) -> dict[str, IndividualPipetteHolder]:
+        """
+        Get all individual holder positions.
+        Returns dict[str, IndividualPipetteHolder]
+            Dictionary mapping position IDs to IndividualPipetteHolder instances.
+        """
+        return self.__individual_holders
+
+
+    def get_available_holders(self) -> list[IndividualPipetteHolder]:
+        """
+        Get all available (unoccupied) holder positions.
+
+        Returns
+        -------
+        list[IndividualPipetteHolder]
+            List of available holders.
+        """
+        return [holder for holder in self.__individual_holders.values()
+                if holder and holder.is_available()]
+
+    def get_occupied_holders(self) -> list[IndividualPipetteHolder]:
+        """
+        Get all occupied holder positions.
+
+        Returns
+        -------
+        list[IndividualPipetteHolder]
+            List of occupied holders.
+        """
+        return [holder for holder in self.__individual_holders.values()
+                if holder and holder.is_occupied]
+
+    def place_pipettes_in_columns(self, columns: list[int]) -> None:
+        """
+        Place pipettes in all positions within specified columns.
+
+        Parameters
+        ----------
+        columns : list[int]
+            List of column indices (0-indexed) where pipettes should be placed.
+
+        Raises
+        ------
+        ValueError
+            If any column index is out of range or if any position in the
+            specified columns is already occupied.
+        """
+        # Validate column indices
+        for col in columns:
+            if col < 0 or col >= self.holders_across_x:
+                raise ValueError(
+                    f"Column index {col} is out of range. "
+                    f"Valid range is 0 to {self.holders_across_x - 1}"
+                )
+
+        # Check if all positions are available before placing
+        for col in columns:
+            for row in range(self.holders_across_y):
+                holder_id = f'holder_{col}:{row}'
+                individual_holder = self.__individual_holders.get(holder_id)
+
+                if individual_holder is None:
+                    raise ValueError(
+                        f"No individual holder found at position {col}:{row}"
+                    )
+
+                if individual_holder.is_occupied:
+                    raise ValueError(
+                        f"Holder at position {col}:{row} is already occupied"
+                    )
+
+        # Place pipettes in all positions
+        for col in columns:
+            for row in range(self.holders_across_y):
+                holder_id = f'holder_{col}:{row}'
+                self.__individual_holders[holder_id].place_pipette()
+
+    def remove_pipettes_from_columns(self, columns: list[int]) -> None:
+        """
+        Remove pipettes from all positions within specified columns.
+
+        Parameters
+        ----------
+        columns : list[int]
+            List of column indices (0-indexed) where pipettes should be removed.
+
+        Raises
+        ------
+        ValueError
+            If any column index is out of range or if any position in the
+            specified columns is already empty.
+        """
+        # Validate column indices
+        for col in columns:
+            if col < 0 or col >= self.holders_across_x:
+                raise ValueError(
+                    f"Column index {col} is out of range. "
+                    f"Valid range is 0 to {self.holders_across_x - 1}"
+                )
+
+        # Check if all positions have pipettes before removing
+        for col in columns:
+            for row in range(self.holders_across_y):
+                holder_id = f'holder_{col}:{row}'
+                individual_holder = self.__individual_holders.get(holder_id)
+
+                if individual_holder is None:
+                    raise ValueError(
+                        f"No individual holder found at position {col}:{row}"
+                    )
+
+                if not individual_holder.is_occupied:
+                    raise ValueError(
+                        f"Holder at position {col}:{row} is already empty"
+                    )
+
+        # Remove pipettes from all positions
+        for col in columns:
+            for row in range(self.holders_across_y):
+                holder_id = f'holder_{col}:{row}'
+                self.__individual_holders[holder_id].remove_pipette()
+
+    def place_pipette_at(self, column: int, row: int) -> None:
+        """
+        Place a pipette at a specific position.
+
+        Parameters
+        ----------
+        column : int
+            Column index (0-indexed).
+        row : int
+            Row index (0-indexed).
+
+        Raises
+        ------
+        ValueError
+            If position is out of range, no holder exists, or position is occupied.
+        """
+        if column < 0 or column >= self.holders_across_x:
+            raise ValueError(
+                f"Column index {column} is out of range. "
+                f"Valid range is 0 to {self.holders_across_x - 1}"
+            )
+
+        if row < 0 or row >= self.holders_across_y:
+            raise ValueError(
+                f"Row index {row} is out of range. "
+                f"Valid range is 0 to {self.holders_across_y - 1}"
+            )
+
+        holder_id = f'holder_{column}:{row}'
+        individual_holder = self.__individual_holders.get(holder_id)
+
+        if individual_holder is None:
+            raise ValueError(
+                f"No individual holder found at position {column}:{row}"
+            )
+
+        individual_holder.place_pipette()
+
+    def remove_pipette_at(self, column: int, row: int) -> None:
+        """
+        Remove a pipette from a specific position.
+
+        Parameters
+        ----------
+        column : int
+            Column index (0-indexed).
+        row : int
+            Row index (0-indexed).
+
+        Raises
+        ------
+        ValueError
+            If position is out of range, no holder exists, or position is empty.
+        """
+        if column < 0 or column >= self.holders_across_x:
+            raise ValueError(
+                f"Column index {column} is out of range. "
+                f"Valid range is 0 to {self.holders_across_x - 1}"
+            )
+
+        if row < 0 or row >= self.holders_across_y:
+            raise ValueError(
+                f"Row index {row} is out of range. "
+                f"Valid range is 0 to {self.holders_across_y - 1}"
+            )
+
+        holder_id = f'holder_{column}:{row}'
+        individual_holder = self.__individual_holders.get(holder_id)
+
+        if individual_holder is None:
+            raise ValueError(
+                f"No individual holder found at position {column}:{row}"
+            )
+
+        individual_holder.remove_pipette()
+
+    def to_dict(self) -> dict:
+        """
+        Serialize the PipetteHolder instance to a dictionary.
+
+        Returns
+        -------
+        dict
+            Dictionary representation of the pipette holder.
+        """
+        base = super().to_dict()
+        base.update({
+            "holders_across_x": self.holders_across_x,
+            "holders_across_y": self.holders_across_y,
+            "individual_holders": {
+                hid: holder.to_dict() if holder else None
+                for hid, holder in self.__individual_holders.items()
+            }
+        })
+        return base
 
     @classmethod
     def _from_dict(cls, data: dict) -> "PipetteHolder":
         """
-        Deserialize a PipetteHolder instance from a dictionary using the base Labware _from_dict.
+        Deserialize a PipetteHolder instance from a dictionary.
 
         Parameters
         ----------
         data : dict
-            dictionary containing labware attributes.
+            Dictionary containing pipette holder attributes.
 
         Returns
         -------
@@ -431,25 +800,29 @@ class PipetteHolder(Labware):
             Reconstructed PipetteHolder instance.
         """
         # Safely handle position deserialization
-        position = None
-        if data.get("position") is not None:
-            try:
-                pos_data = data["position"]
-                if isinstance(pos_data, (list, tuple)) and len(pos_data) == 2:
-                    position = tuple(float(coord) for coord in pos_data)
-                else:
-                    raise ValueError(f"Invalid position format: {pos_data}")
-            except (ValueError, TypeError) as e:
-                raise ValueError(f"Failed to deserialize position: {e}")
-        return cls(
+        position = tuple(data["position"]) if data.get("position") else None
+
+        holder = cls(
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
             labware_id=data["labware_id"],
-            position=position
+            holders_across_x=data["holders_across_x"],
+            holders_across_y=data["holders_across_y"],
+            position=position,
         )
 
+        # Restore individual holders
+        holders_data = data.get("individual_holders", {})
+        for hid, hdata in holders_data.items():
+            if hdata is None:
+                holder._PipetteHolder__individual_holders[hid] = None
+            else:
+                holder._PipetteHolder__individual_holders[hid] = Serializable.from_dict(hdata)
 
+        return holder
+
+#TODO question existence
 @register_class
 class TipDropzone(Labware):
     """
@@ -535,16 +908,9 @@ class TipDropzone(Labware):
             Reconstructed TipDropzone instance.
         """
         # Safely handle position deserialization
-        position = None
-        if data.get("position") is not None:
-            try:
-                pos_data = data["position"]
-                if isinstance(pos_data, (list, tuple)) and len(pos_data) == 2:
-                    position = tuple(float(coord) for coord in pos_data)
-                else:
-                    raise ValueError(f"Invalid position format: {pos_data}")
-            except (ValueError, TypeError) as e:
-                raise ValueError(f"Failed to deserialize position: {e}")
+        # Safely handle position deserialization
+        position = tuple(data["position"]) if data.get("position") else None
+
         return cls(
             size_x=data["size_x"],
             size_y=data["size_y"],
@@ -656,17 +1022,13 @@ class Reservoir(Labware):
     @classmethod
     def _from_dict(cls, data: dict) -> "Reservoir":
         """Deserialize a Reservoir instance from a dictionary."""
+
         # Safely handle position deserialization
         position = None
+
         if data.get("position") is not None:
-            try:
-                pos_data = data["position"]
-                if isinstance(pos_data, (list, tuple)) and len(pos_data) == 2:
-                    position = tuple(float(coord) for coord in pos_data)
-                else:
-                    raise ValueError(f"Invalid position format: {pos_data}")
-            except (ValueError, TypeError) as e:
-                raise ValueError(f"Failed to deserialize position: {e}")
+            position = tuple(data["position"])
+
         return cls(
             size_x=data["size_x"],
             size_y=data["size_y"],
@@ -1058,16 +1420,8 @@ class ReservoirHolder(Labware):
     def _from_dict(cls, data: dict) -> "ReservoirHolder":
         """Deserialize a ReservoirHolder instance from a dictionary."""
         # Safely handle position deserialization
-        position = None
-        if data.get("position") is not None:
-            try:
-                pos_data = data["position"]
-                if isinstance(pos_data, (list, tuple)) and len(pos_data) == 2:
-                    position = tuple(float(coord) for coord in pos_data)
-                else:
-                    raise ValueError(f"Invalid position format: {pos_data}")
-            except (ValueError, TypeError) as e:
-                raise ValueError(f"Failed to deserialize position: {e}")
+        position = tuple(data["position"]) if data.get("position") else None
+
         reservoir_holder = cls(
             size_x=data["size_x"],
             size_y=data["size_y"],

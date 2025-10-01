@@ -1,5 +1,5 @@
 from typing import Tuple, List, Dict
-from .labware import Labware, ReservoirHolder, Reservoir, Plate
+from .labware import Labware, ReservoirHolder, Reservoir, Plate, PipetteHolder
 from .serializable import Serializable, register_class
 
 @register_class
@@ -56,6 +56,8 @@ class Position_allocator:
         if isinstance(lw, Plate):
             self.update_plate_positions(lw, positions)
 
+        if isinstance(lw, PipetteHolder):
+            self.update_PipetteHolder_positions(lw, positions)
     def update_reservoir_positions(
             self,
             holder: ReservoirHolder,
@@ -134,3 +136,38 @@ class Position_allocator:
 
                     # Add the first_well_xy offset to get the actual well center
                     well.position = (x_base + first_well_offset_x, y_base + first_well_offset_y)
+
+    def update_PipetteHolder_positions(
+            self,
+            holder: PipetteHolder,
+            positions: list[tuple[float, float, str]]  # positions from calculate_multi
+    ) -> None:
+        """
+        Update the position of individual pipette holders based on their grid layout.
+
+        Parameters
+        ----------
+        holder : PipetteHolder
+            The PipetteHolder object containing individual holder positions.
+        positions : list[tuple[float, float, str]]
+            List of all holder positions as (x, y, location_id).
+            location_id format is "col,row" (e.g., "0,0", "1,2").
+        """
+        # Get the individual holders from the PipetteHolder
+        individual_holders = holder.get_individual_holders()  # dict[str, IndividualPipetteHolder or None]
+
+        for holder_id, individual_holder in individual_holders.items():
+            if individual_holder is not None:
+                # Parse holder_id which is in format "holder_col:row" (e.g., "holder_0:0", "holder_1:2")
+                try:
+                    col, row = map(int, holder_id.replace("holder_", "").split(":"))
+                except (ValueError, AttributeError):
+                    continue  # Skip invalid holder IDs
+
+                # Calculate position index in the grid
+                # The positions list is organized by rows then columns
+                idx = row * holder.holders_across_x + col
+
+                if idx < len(positions):
+                    x_pos, y_pos, _ = positions[idx]
+                    individual_holder.position = (x_pos, y_pos)
