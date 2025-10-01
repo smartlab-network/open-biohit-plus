@@ -18,8 +18,9 @@ slot6 = Slot((100, 300), (50, 100), 500, "slot6")
 
 deck1.add_slots([slot1, slot2, slot3, slot4, slot5])
 
+#plate & well creating and checking
 example_well = Well(size_x=2, size_y=1, size_z=5, media="water")
-plate1 = Plate(20, 10, 50, 7, 8, (30, 50), well=example_well)
+plate1 = Plate(20, 10, 50, 6, 8, (30, 50), well=example_well)
 deck1.add_labware(plate1, slot_id="slot1", min_z=2)
 slot1.allocate_position(plate1, (5,5), 1.25,2.5, plate1.wells_x, plate1.wells_y)
 print(plate1.to_dict())
@@ -48,8 +49,8 @@ reservoirs_data = {
     3: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
         "filled_volume": 100, "content": "1.8 conc"},
 
-    4: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
-        "filled_volume": 100, "content": "5 conc"},
+    4: {"size_x": 35, "size_y": 20, "size_z": 15, "capacity": 30000,
+        "filled_volume": 100, "content": "5 conc", "hook_ids": [4,5]},
 
     5: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
         "filled_volume": 100, "content": "15 conc"},
@@ -63,10 +64,10 @@ reservoirs_data = {
 }
 
 reservoirHolder = ReservoirHolder(
-    size_x= 80,
+    size_x= 100,
     size_y= 50,
     size_z= 20,
-    hooks_across_x = 4,
+    hooks_across_x = 5,
     hooks_across_y=2,
     reservoir_dict = reservoirs_data,
 )
@@ -83,7 +84,7 @@ slot3.allocate_position(
 
 data = reservoirHolder.to_dict()
 print(data)
-"""
+
 print(reservoirHolder.position)
 print(reservoirHolder.hook_id_to_position(6))
 print(reservoirHolder.position_to_hook_id(1,1))
@@ -91,11 +92,11 @@ print((reservoirHolder.get_reservoirs()))
 print(f"get_hook_to_reservoir_map: {reservoirHolder.get_hook_to_reservoir_map()}")
 print(reservoirHolder.get_occupied_hooks())
 print(reservoirHolder.get_available_hooks())
-print(reservoirHolder.get_waste_containers())
-print(f"water: {reservoirHolder.get_equivalent_containers("water")}")
+print(reservoirHolder.get_waste_reservoirs())
+print(f"water: {reservoirHolder.get_equivalent_reservoirs("water")}")
 print(reservoirHolder.get_reservoir_by_content("15 conc"))
 reservoirHolder.add_volume(1,20000)
-reservoirHolder.remove_volume(4,1000)"""
+reservoirHolder.remove_volume(4,100)
 new_reservoir = ReservoirHolder.from_dict(data)
 print(new_reservoir.to_dict())
 
