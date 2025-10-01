@@ -1,5 +1,5 @@
 from typing import Tuple, List, Dict
-from .labware import Labware, ReservoirHolder, Reservoir
+from .labware import Labware, ReservoirHolder, Reservoir, Plate
 from .serializable import Serializable, register_class
 
 @register_class
@@ -53,6 +53,9 @@ class Position_allocator:
         if isinstance(lw, ReservoirHolder):
             self.update_reservoir_positions(lw, positions)
 
+        if isinstance(lw, Plate):
+            self.update_plate_positions(lw, positions)
+
     def update_reservoir_positions(
             self,
             holder: ReservoirHolder,
@@ -70,7 +73,6 @@ class Position_allocator:
             location_id is optional metadata.
         """
         hook_to_res = holder.get_hook_to_reservoir_map()  # dict[int, Optional[Reservoir]]
-
         # Build a mapping: reservoir -> list of hook positions
         reservoir_positions: dict[Reservoir, list[tuple[float, float]]] = {}
 
@@ -93,3 +95,42 @@ class Position_allocator:
                 center_x = sum(xs) / len(xs)
                 center_y = sum(ys) / len(ys)
                 res.position = (center_x, center_y)
+
+    def update_plate_positions(
+            self,
+            plate: Plate,
+            positions: list[tuple[float, float, str]]  # positions from calculate_multi
+    ) -> None:
+        """
+        Update the position of wells in a plate based on their grid layout.
+
+        Parameters
+        ----------
+        plate : Plate
+            The Plate object containing wells.
+        positions : list[tuple[float, float, str]]
+            List of all well positions as (x, y, location_id).
+            location_id format is "col,row" (e.g., "0,0", "1,2").
+        """
+        wells = plate.get_wells()  # dict[str, Well or None]
+
+        # Extract first_well_xy offset
+        first_well_offset_x, first_well_offset_y = plate.first_well_xy
+
+        for well_id, well in wells.items():
+            if well is not None:
+                # Parse well_id which is in format "column:row" (e.g., "0:0", "1:2")
+                try:
+                    col, row = map(int, well_id.replace("well_", "").split(":"))
+                except (ValueError, AttributeError):
+                    continue  # Skip invalid well IDs
+
+                # Calculate position index in the grid
+                # The positions list is organized by rows then columns
+                idx = row * plate.wells_x + col
+
+                if idx < len(positions):
+                    x_base, y_base, _ = positions[idx]
+
+                    # Add the first_well_xy offset to get the actual well center
+                    well.position = (x_base + first_well_offset_x, y_base + first_well_offset_y)

@@ -91,10 +91,10 @@ class Slot(Serializable):
         #if not none, then labware contains labware within them. Like ReservoirHolder - reservoirs, Plate - wells, pipetteHolder -Zone
         if not None in (obj_across_x, obj_across_y):
             if not isinstance(lw, (Plate, ReservoirHolder, PipetteHolder)):
-                raise ValueError("Only (plate, reservoir, pipetteHolder) conatin labware within them (wells, reservoirs, zone)")
+                raise ValueError("Only (plate, reservoir, pipetteHolder) contain labware within them (wells, reservoirs, zone)")
             else:
                 position_allocator = Position_allocator()
-                positions = position_allocator.calculate_multi(
+                position_allocator.calculate_multi(
                     lw,
                     x_corner,
                     y_corner,

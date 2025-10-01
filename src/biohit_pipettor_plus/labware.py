@@ -19,6 +19,8 @@ class Labware(Serializable):
         Depth of the labware in millimeters.
     size_z : float
         Height of the labware in millimeters.
+    position: tuple[float, float]
+        x,y coordinate of the labware.
     labware_id : str
         Unique identifier of the labware instance.
     """
@@ -31,26 +33,30 @@ class Labware(Serializable):
         super().__init_subclass__(**kwargs)
         Labware.registry[cls.__name__] = cls
 
-    def __init__(self, size_x: float, size_y: float, size_z: float, labware_id: str = None, position: tuple[float, float] = None):
+    def __init__(self, size_x: float, size_y: float, size_z: float,position: tuple[float, float] = None, labware_id: str = None):
         """
         Initialize a Labware instance.
 
         Parameters
         ----------
         size_x : float
-            width of the labware.
+            Width of the labware in millimeters.
         size_y : float
-            Depth of the labware.
+            Depth of the labware in millimeters.
         size_z : float
-            Height of the labware.
+            Height of the labware in millimeters.
         labware_id : str, optional
             Unique ID for the labware. If None, a UUID will be generated.
+        position : tuple[float, float], optional
+            (x, y) position coordinates of the labware in millimeters.
+            If None, position is not set.
         """
         self.size_x = size_x
         self.size_y = size_y
         self.size_z = size_z
+        self.position = position or None
         self.labware_id = labware_id or f"labware_{uuid.uuid4().hex}"
-        self.position = position
+
 
     def to_dict(self) -> dict:
         """
@@ -85,13 +91,23 @@ class Labware(Serializable):
         Labware
             Reconstructed Labware instance.
         """
-        position = tuple(data["position"]) if data.get("position") else None
+        # Safely handle position deserialization
+        position = None
+        if data.get("position") is not None:
+            try:
+                pos_data = data["position"]
+                if isinstance(pos_data, (list, tuple)) and len(pos_data) == 2:
+                    position = tuple(float(coord) for coord in pos_data)
+                else:
+                    raise ValueError(f"Invalid position format: {pos_data}")
+            except (ValueError, TypeError) as e:
+                raise ValueError(f"Failed to deserialize position: {e}")
         return cls(
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
             labware_id=data["labware_id"],
-            position= position
+            position=position
         )
 
 
@@ -118,9 +134,11 @@ class Well(Labware):
         size_x: float,
         size_y: float,
         size_z: float,
-        labware_id: str = None,
-        media: str = None,
         position: tuple[float, float] = None,
+        labware_id: str = None,
+        row: int = None,
+        column: int = None,
+        media: str = None,
         add_height: float = 5,
         remove_height: float = 5,
         suck_offset_xy: tuple[float, float] = (2, 2),
@@ -131,13 +149,20 @@ class Well(Labware):
         Parameters
         ----------
         size_x : float
-            width of the well in mm.
+            Width of the well in millimeters.
         size_y : float
-            Depth of the well in mm.
+            Depth of the well in millimeters.
         size_z : float
-            Height of the well in mm.
+            Height of the well in millimeters.
+        position : tuple[float, float], optional
+            (x, y) position coordinates of the well in millimeters.
         labware_id : str, optional
             Unique identifier for this well. If None, a UUID will be generated.
+        row: int, optional.
+            row inside of plate
+        column: int, optional
+            column inside of plate
+            If None, position is not set.
         media : str, optional
             Name/type of media contained in the well.
         add_height : float, optional
@@ -145,7 +170,7 @@ class Well(Labware):
         remove_height : float, optional
             Pipette aspiration height above bottom of the well (default = 5 mm).
         suck_offset_xy : tuple[float, float], optional
-            XY offset from the well center for aspiration/dispense (default = (2, 2)).
+            XY offset from the well corner for aspiration/dispense (default = (2, 2)).
         """
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, labware_id=labware_id, position=position)
 
@@ -153,6 +178,8 @@ class Well(Labware):
         self.add_height = add_height
         self.remove_height = remove_height
         self.suck_offset_xy = suck_offset_xy
+        self.row = row
+        self.column = column
 
     def to_dict(self) -> dict:
         """
@@ -166,6 +193,8 @@ class Well(Labware):
         base = super().to_dict()
         base.update(
             {
+                "row": self.row,
+                "column": self.column,
                 "media": self.media,
                 "add_height": self.add_height,
                 "remove_height": self.remove_height,
@@ -190,95 +219,112 @@ class Well(Labware):
             Reconstructed Well instance.
         """
 
-        position = tuple(data["position"]) if data.get("position") else None
+        # Safely handle position deserialization
+        position = None
+        if data.get("position") is not None:
+            try:
+                pos_data = data["position"]
+                if isinstance(pos_data, (list, tuple)) and len(pos_data) == 2:
+                    position = tuple(float(coord) for coord in pos_data)
+                else:
+                    raise ValueError(f"Invalid position format: {pos_data}")
+            except (ValueError, TypeError) as e:
+                raise ValueError(f"Failed to deserialize position: {e}")
         base_obj = super()._from_dict(data)  # Labware attributes
         # overwrite base_obj with correct class instantiation
         obj = cls(
             size_x=base_obj.size_x,
             size_y=base_obj.size_y,
             size_z=base_obj.size_z,
-            position = position,
+            position=position,
             labware_id=base_obj.labware_id,
             media=data.get("media"),
             add_height=data.get("add_height", 5),
             remove_height=data.get("remove_height", 5),
             suck_offset_xy=tuple(data.get("suck_offset_xy", (2, 2))),
+            row=data.get("row"),
+            column=data.get("column")
         )
         return obj
 
 @register_class
 class Plate(Labware):
     """
-    Represents a Plate labware with containers.
+    Represents a Plate labware with wells.
     Attributes
     ----------
-    containers_x : int
-        Number of containers in X direction.
-    containers_y : int
-        Number of containers in Y direction.
+    wells_x : int
+        Number of wells in X direction.
+    wells_y : int
+        Number of wells in Y direction.
     first_well_xy : tuple[float, float]
         Coordinates of the first well.
     """
 
-    def __init__(self, size_x, size_y, size_z, containers_x, containers_y, first_well_xy, well: Well = None, position: tuple[float, float] = None, labware_id: str = None):
+    def __init__(self, size_x, size_y, size_z, wells_x, wells_y, first_well_xy, well: Well = None,
+                 labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a Plate instance.
 
         Parameters
         ----------
         size_x : float
-            cidth of the plate.
+            Width of the plate.
         size_y : float
             Depth of the plate.
         size_z : float
             Height of the plate.
-        containers_x : int
-            Number of containers in X direction.
-        containers_y : int
-            Number of containers in Y direction.
+        wells_x : int
+            Number of wells in X direction.
+        wells_y : int
+            Number of wells in Y direction.
         first_well_xy : tuple[float, float]
             Coordinates of the first well.
         labware_id : str, optional
             Unique ID for the plate.
         """
-        super().__init__(size_x, size_y, size_z, position, labware_id)
-        self.containers_x = containers_x
-        self.containers_y = containers_y
+
+        super().__init__(size_x, size_y, size_z, labware_id, position)
+        self.wells_x = wells_x
+        self.wells_y = wells_y
         self.first_well_xy = first_well_xy
 
-        self.__containers: dict[str, Well or None] = {}
+        self.__wells: dict[str, Well or None] = {}
         self.well = well
 
         if well:
-            if containers_x * well.size_x > size_x or containers_y * well.size_y > size_y:
+            if wells_x * well.size_x > size_x or wells_y * well.size_y > size_y:
                 raise ValueError("Well is to big for this Plate")
             else:
-                self.place_containers()
+                self.place_wells()
         else:
-            for x in range(self.containers_x):
-                for y in range(self.containers_y):
-                    self.__containers[f'{x}:{y}'] = None
+            for x in range(self.wells_x):
+                for y in range(self.wells_y):
+                    self.__wells[f'{x}:{y}'] = None
 
-    def get_containers(self):
-        return self.__containers
+    def get_wells(self):
+        return self.__wells
 
-    def place_containers(self):
-        for x in range(self.containers_x):
-            for y in range(self.containers_y):
+    def place_wells(self):
+        for x in range(self.wells_x):
+            for y in range(self.wells_y):
                 well = copy.deepcopy(self.well)  # Create a new copy
-                well.labware_id = f'{x}:{y}'
-                self.__containers[well.labware_id] = well
+                well.labware_id = f'well_{x}:{y}'
+                self.__wells[well.labware_id] = well
 
-    def place_unique_well(self, well_placement: str, well: Well):
-        if well_placement not in self.__containers.keys():
+    def place_unique_well(self, row, column, well: Well):
+        well_placement = f"{column}:{row}"
+        if well_placement not in self.__wells.keys():
             raise ValueError(f"{well_placement} is not a valid well placement")
 
         well.labware_id = well_placement
-        self.__containers[well.labware_id] = well
+        well.row = row
+        well.column = column
+        self.__wells[well.labware_id] = well
 
     def to_dict(self):
         """
-        Serialize the Plate instance to a dictionary including containers information.
+        Serialize the Plate instance to a dictionary including wells information.
 
         Returns
         -------
@@ -287,12 +333,11 @@ class Plate(Labware):
         """
         base = super().to_dict()
         base.update({
-            "containers_x": self.containers_x,
-            "containers_y": self.containers_y,
+            "wells_x": self.wells_x,
+            "wells_y": self.wells_y,
             "first_well_xy": list(self.first_well_xy),
-             "containers": {cid: well.to_dict() if well else None for cid, well in self.__containers.items()}
+            "wells": {wid: well.to_dict() if well else None for wid, well in self.__wells.items()}
         })
-
         return base
 
     @classmethod
@@ -310,25 +355,35 @@ class Plate(Labware):
         Plate
             Reconstructed Plate instance.
         """
-        position = tuple(data["position"]) if data.get("position") else None
+        # Safely handle position deserialization
+        position = None
+        if data.get("position") is not None:
+            try:
+                pos_data = data["position"]
+                if isinstance(pos_data, (list, tuple)) and len(pos_data) == 2:
+                    position = tuple(float(coord) for coord in pos_data)
+                else:
+                    raise ValueError(f"Invalid position format: {pos_data}")
+            except (ValueError, TypeError) as e:
+                raise ValueError(f"Failed to deserialize position: {e}")
         plate = cls(
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
             labware_id=data["labware_id"],
-            containers_x=data["containers_x"],
-            containers_y=data["containers_y"],
-            position = position,
-            first_well_xy = tuple(data["first_well_xy"]))
+            wells_x=data["wells_x"],
+            wells_y=data["wells_y"],
+            first_well_xy=tuple(data["first_well_xy"]),
+            position=position,)
 
-        containers_data = data.get("containers", {})
-        for cid, wdata in containers_data.items():
+        wells_data = data.get("wells", {})
+        for wid, wdata in wells_data.items():
             if wdata is None:
-                plate._Plate__containers[cid] = None
+                plate._Plate__wells[wid] = None
             else:
-                plate._Plate__containers[cid] = Serializable.from_dict(wdata)
-
+                plate._Plate__wells[wid] = Serializable.from_dict(wdata)
         return plate
+
 
 @register_class
 class PipetteHolder(Labware):
@@ -339,17 +394,26 @@ class PipetteHolder(Labware):
     def __init__(self, size_x: float,
                  size_y: float,
                  size_z: float,
-                 position: tuple[float, float] = None,
-                 labware_id: str = None):
+                 labware_id: str = None,
+                 position: tuple[float, float] = None):
         """
         Initialize a PipetteHolder instance.
 
         Parameters
         ----------
+        size_x : float
+            Width of the pipette holder in millimeters.
+        size_y : float
+            Depth of the pipette holder in millimeters.
+        size_z : float
+            Height of the pipette holder in millimeters.
         labware_id : str, optional
             Unique ID for the pipette holder.
+        position : tuple[float, float], optional
+            (x, y) position coordinates of the pipette holder in millimeters.
+            If None, position is not set.
         """
-        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, position = position, labware_id=labware_id)
+        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, labware_id=labware_id, position=position)
 
     @classmethod
     def _from_dict(cls, data: dict) -> "PipetteHolder":
@@ -366,13 +430,23 @@ class PipetteHolder(Labware):
         PipetteHolder
             Reconstructed PipetteHolder instance.
         """
-        position = tuple(data["position"]) if data.get("position") else None
+        # Safely handle position deserialization
+        position = None
+        if data.get("position") is not None:
+            try:
+                pos_data = data["position"]
+                if isinstance(pos_data, (list, tuple)) and len(pos_data) == 2:
+                    position = tuple(float(coord) for coord in pos_data)
+                else:
+                    raise ValueError(f"Invalid position format: {pos_data}")
+            except (ValueError, TypeError) as e:
+                raise ValueError(f"Failed to deserialize position: {e}")
         return cls(
-            size_x= data["size_x"],
-            size_y= data["size_y"],
-            size_z= data["size_z"],
-            labware_id= data["labware_id"],
-            position = position
+            size_x=data["size_x"],
+            size_y=data["size_y"],
+            size_z=data["size_z"],
+            labware_id=data["labware_id"],
+            position=position
         )
 
 
@@ -397,8 +471,8 @@ class TipDropzone(Labware):
                  drop_x: float,
                  drop_y: float,
                  labware_id: str = None,
-                 drop_height_relative: float = 20,
-                 position: tuple[float, float] = None
+                 position: tuple[float, float] = None,
+                 drop_height_relative: float = 20
                  ):
         """
         Initialize a TipDropzone instance.
@@ -406,21 +480,24 @@ class TipDropzone(Labware):
         Parameters
         ----------
         size_x : float
-            cidth of the drop zone.
+            Width of the drop zone in millimeters.
         size_y : float
-            Depth of the drop zone.
+            Depth of the drop zone in millimeters.
         size_z : float
-            Height of the drop zone.
+            Height of the drop zone in millimeters.
         drop_x : float
             X position (absolute in Labware, relative in Slot).
         drop_y : float
             Y position (absolute in Labware, relative in Slot).
         labware_id : str, optional
             Unique ID for the dropzone object.
+        position : tuple[float, float], optional
+            (x, y) position coordinates of the tip dropzone in millimeters.
+            If None, position is not set.
         drop_height_relative : float, optional
             Height from which tips are dropped relative to the labware. Default is 20.
         """
-        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, position = position, labware_id=labware_id)
+        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, labware_id=labware_id, position=position)
         self.drop_x = drop_x
         self.drop_y = drop_y
         self.drop_height_relative = drop_height_relative
@@ -457,7 +534,17 @@ class TipDropzone(Labware):
         TipDropzone
             Reconstructed TipDropzone instance.
         """
-        position = tuple(data["position"]) if data.get("position") else None
+        # Safely handle position deserialization
+        position = None
+        if data.get("position") is not None:
+            try:
+                pos_data = data["position"]
+                if isinstance(pos_data, (list, tuple)) and len(pos_data) == 2:
+                    position = tuple(float(coord) for coord in pos_data)
+                else:
+                    raise ValueError(f"Invalid position format: {pos_data}")
+            except (ValueError, TypeError) as e:
+                raise ValueError(f"Failed to deserialize position: {e}")
         return cls(
             size_x=data["size_x"],
             size_y=data["size_y"],
@@ -466,8 +553,7 @@ class TipDropzone(Labware):
             drop_x=data["drop_x"],
             drop_y=data["drop_y"],
             drop_height_relative=data["drop_height_relative"],
-            position = position
-
+            position=position
         )
 
 
@@ -481,11 +567,29 @@ class Reservoir(Labware):
                  content: str = None, hook_ids: list[int] = None, labware_id: str = None,
                  position: tuple[float, float] = None):
         """
-        Initialize a Reservoir instance. These are containers that store the medium to be filled in and removed from well
-        size_x, size_y, size_z are dimensions of the Reservoir labware
-        capacity is maximum amount of liquid that well can hold. if not provided, it is equal to Default_Reservoir_Capacity
-        filled_volume is the initial volume at the time of defining the reservoir. Default is 0 for waste and capacity for rest
-        hook_ids is list of hook locations on ReservoirHolder where this reservoir is going to be placed.
+        Initialize a Reservoir instance. These are containers that store the medium to be filled in and removed from well.
+        
+        Parameters
+        ----------
+        size_x : float
+            Width of the reservoir in millimeters.
+        size_y : float
+            Depth of the reservoir in millimeters.
+        size_z : float
+            Height of the reservoir in millimeters.
+        capacity : float, optional
+            Maximum amount of liquid that reservoir can hold. Default is Default_Reservoir_Capacity.
+        filled_volume : float, optional
+            Initial volume at the time of defining the reservoir. Default is 0 for waste and capacity for rest.
+        content : str, optional
+            Description of the reservoir content.
+        hook_ids : list[int], optional
+            List of hook locations on ReservoirHolder where this reservoir is going to be placed.
+        labware_id : str, optional
+            Unique ID for the reservoir.
+        position : tuple[float, float], optional
+            (x, y) position coordinates of the reservoir in millimeters.
+            If None, position is not set.
         """
         super().__init__(size_x, size_y, size_z, labware_id, position)
         self.capacity = capacity
@@ -552,7 +656,17 @@ class Reservoir(Labware):
     @classmethod
     def _from_dict(cls, data: dict) -> "Reservoir":
         """Deserialize a Reservoir instance from a dictionary."""
-        position = tuple(data["position"]) if data.get("position") else None
+        # Safely handle position deserialization
+        position = None
+        if data.get("position") is not None:
+            try:
+                pos_data = data["position"]
+                if isinstance(pos_data, (list, tuple)) and len(pos_data) == 2:
+                    position = tuple(float(coord) for coord in pos_data)
+                else:
+                    raise ValueError(f"Invalid position format: {pos_data}")
+            except (ValueError, TypeError) as e:
+                raise ValueError(f"Failed to deserialize position: {e}")
         return cls(
             size_x=data["size_x"],
             size_y=data["size_y"],
@@ -565,11 +679,10 @@ class Reservoir(Labware):
             position=position,
         )
 
-
 @register_class
 class ReservoirHolder(Labware):
-    def __init__(self, size_x: float, size_y: float, size_z: float, hook_count: int,
-                 hook_across_y: int, reservoir_dict: dict[int, dict] = None,
+    def __init__(self, size_x: float, size_y: float, size_z: float, hooks_across_x: int,
+                 hooks_across_y: int, reservoir_dict: dict[int, dict] = None,
                  labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a ReservoirHolder instance that can hold multiple reservoirs.
@@ -577,26 +690,27 @@ class ReservoirHolder(Labware):
         Parameters
         ----------
         size_x : float
-            Width of the ReservoirHolder
+            Width of the ReservoirHolder in millimeters.
         size_y : float
-            Depth of the ReservoirHolder
+            Depth of the ReservoirHolder in millimeters.
         size_z : float
-            Height of the ReservoirHolder
-        hook_count : int
-            Number of hooks along X-axis
-        hook_across_y : int
-            Number of hooks along Y-axis (rows of hooks)
+            Height of the ReservoirHolder in millimeters.
+        hooks_across_x : int
+            Number of hooks along X-axis.
+        hooks_across_y : int
+            Number of hooks along Y-axis (rows of hooks).
         reservoir_dict : dict[int, dict], optional
-            Dictionary defining individual reservoirs and their attributes
+            Dictionary defining individual reservoirs and their attributes.
         labware_id : str, optional
-            Unique ID for the holder
+            Unique ID for the holder.
         position : tuple[float, float], optional
-            (x, y) position of the ReservoirHolder
+            (x, y) position coordinates of the ReservoirHolder in millimeters.
+            If None, position is not set.
         """
         super().__init__(size_x, size_y, size_z, labware_id, position)
-        self.hook_count = hook_count
-        self.hook_across_y = hook_across_y
-        self.total_hooks = hook_count * hook_across_y
+        self.hooks_across_x = hooks_across_x
+        self.hooks_across_y = hooks_across_y
+        self.total_hooks = hooks_across_x * hooks_across_y
 
         # Initialize empty hooks - maps hook_id to reservoir (or None if empty)
         # hook_id ranges from 1 to total_hooks
@@ -620,11 +734,11 @@ class ReservoirHolder(Labware):
         Returns
         -------
         tuple[int, int]
-            (col, row) where col is 0 to hook_count-1, row is 0 to hook_across_y-1
+            (col, row) where col is 0 to hooks_across_x-1, row is 0 to hooks_across_y-1
 
         Example
         -------
-        For hook_count=3, hook_across_y=2:
+        For hooks_across_x=3, hooks_across_y=2:
         hook_id: 1 2 3 4 5 6
         layout: [1 2 3]  <- row 0
                 [4 5 6]  <- row 1
@@ -634,8 +748,8 @@ class ReservoirHolder(Labware):
 
         # Convert to 0-indexed
         idx = hook_id - 1
-        row = idx // self.hook_count
-        col = idx % self.hook_count
+        row = idx // self.hooks_across_x
+        col = idx % self.hooks_across_x
         return (col, row)
 
     def position_to_hook_id(self, col: int, row: int) -> int:
@@ -645,21 +759,21 @@ class ReservoirHolder(Labware):
         Parameters
         ----------
         col : int
-            Column (0 to hook_count-1)
+            Column (0 to hooks_across_x-1)
         row : int
-            Row (0 to hook_across_y-1)
+            Row (0 to hooks_across_y-1)
 
         Returns
         -------
         int
             hook_id (1-indexed)
         """
-        if col < 0 or col >= self.hook_count:
-            raise ValueError(f"col {col} out of range (0 to {self.hook_count - 1})")
-        if row < 0 or row >= self.hook_across_y:
-            raise ValueError(f"row {row} out of range (0 to {self.hook_across_y - 1})")
+        if col < 0 or col >= self.hooks_across_x:
+            raise ValueError(f"col {col} out of range (0 to {self.hooks_across_x - 1})")
+        if row < 0 or row >= self.hooks_across_y:
+            raise ValueError(f"row {row} out of range (0 to {self.hooks_across_y - 1})")
 
-        return row * self.hook_count + col + 1
+        return row * self.hooks_across_x + col + 1
 
 
     def get_reservoirs(self) -> list[Reservoir]:
@@ -761,8 +875,8 @@ class ReservoirHolder(Labware):
                 raise ValueError(f"Hook {hook_id} is already occupied")
 
         # Calculate maximum dimensions per hook
-        max_width_per_hook = self.size_x / self.hook_count
-        max_height_per_hook = self.size_y / self.hook_across_y
+        max_width_per_hook = self.size_x / self.hooks_across_x
+        max_height_per_hook = self.size_y / self.hooks_across_y
 
         # Calculate available space for this reservoir
         max_width_for_reservoir = max_width_per_hook * width_hooks
@@ -828,8 +942,8 @@ class ReservoirHolder(Labware):
                     hook_ids_to_use = specified_hooks
             else:
                 # Auto-allocate hooks in a rectangle
-                max_width_per_hook = self.size_x / self.hook_count
-                max_height_per_hook = self.size_y / self.hook_across_y
+                max_width_per_hook = self.size_x / self.hooks_across_x
+                max_height_per_hook = self.size_y / self.hooks_across_y
                 reservoir_width = params["size_x"]
                 reservoir_height = params["size_y"]
 
@@ -850,8 +964,8 @@ class ReservoirHolder(Labware):
                 available = set(self.get_available_hooks())
                 hook_ids_to_use = None
 
-                for start_row in range(self.hook_across_y - hooks_y + 1):
-                    for start_col in range(self.hook_count - hooks_x + 1):
+                for start_row in range(self.hooks_across_y - hooks_y + 1):
+                    for start_col in range(self.hooks_across_x - hooks_x + 1):
                         # Check if this rectangle is available
                         candidate_hooks = []
                         valid = True
@@ -903,14 +1017,14 @@ class ReservoirHolder(Labware):
             raise ValueError(f"No reservoir at hook {hook_id}")
         self.__hook_to_reservoir[hook_id].remove_volume(volume)
 
-    def get_waste_containers(self) -> list[Reservoir]:
+    def get_waste_reservoirs(self) -> list[Reservoir]:
         """Get all unique reservoirs labeled as waste."""
         return [
             res for res in self.get_reservoirs()
             if res.content and "waste" in res.content.lower()
         ]
 
-    def get_equivalent_containers(self, content: str) -> list[Reservoir]:
+    def get_equivalent_reservoirs(self, content: str) -> list[Reservoir]:
         """Get all unique reservoirs with the same content."""
         return [
             res for res in self.get_reservoirs()
@@ -934,8 +1048,8 @@ class ReservoirHolder(Labware):
             unique_reservoirs[res.labware_id] = res.to_dict()
 
         base.update({
-            "hook_count": self.hook_count,
-            "hook_across_y": self.hook_across_y,
+            "hooks_across_x": self.hooks_across_x,
+            "hooks_across_y": self.hooks_across_y,
             "reservoirs": unique_reservoirs,
         })
         return base
@@ -943,13 +1057,23 @@ class ReservoirHolder(Labware):
     @classmethod
     def _from_dict(cls, data: dict) -> "ReservoirHolder":
         """Deserialize a ReservoirHolder instance from a dictionary."""
-        position = tuple(data["position"]) if data.get("position") else None
+        # Safely handle position deserialization
+        position = None
+        if data.get("position") is not None:
+            try:
+                pos_data = data["position"]
+                if isinstance(pos_data, (list, tuple)) and len(pos_data) == 2:
+                    position = tuple(float(coord) for coord in pos_data)
+                else:
+                    raise ValueError(f"Invalid position format: {pos_data}")
+            except (ValueError, TypeError) as e:
+                raise ValueError(f"Failed to deserialize position: {e}")
         reservoir_holder = cls(
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
-            hook_count=data["hook_count"],
-            hook_across_y=data.get("hook_across_y", 1),  # Default to 1 for backwards compatibility
+            hooks_across_x=data["hooks_across_x"],
+            hooks_across_y=data.get("hooks_across_y", 1),  # Default to 1 for backwards compatibility
             labware_id=data["labware_id"],
             position=position,
         )
