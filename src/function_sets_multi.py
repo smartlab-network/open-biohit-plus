@@ -52,13 +52,13 @@ class Reservoirs:
         Remember to edit dimension in ReservoirGeometry if changing wells to adjust height calculations. #Store wells geometry in class maybe
         """
         default_capacities = {
-            1: 30000,  # 1 Waste
+            1: 35000,  # 1 Waste
             2: 30000,  # 2 0mM
             3: 30000,  # 3 1.8mM
             4: 30000,  # 4 5 mM
-            5: 30000,  # 5 15mM
+            5: 30000,  # 5 10mM
             6: 30000,  # 6 0mM
-            7: 30000,  # 7 Waste
+            7: 35000,  # 7 Waste
         }
 
         if capacities is not None:

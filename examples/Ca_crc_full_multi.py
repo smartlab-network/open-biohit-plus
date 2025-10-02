@@ -3,17 +3,15 @@ import subprocess
 import time
 import sys
 
-# Add paths
-sys.path.append(r"C:\labhub\Repos\smartlab-network\open-biohit-plus\src")
 
 # Now import
 from upload_myrimager import upload_foc_file
 
 config_file = "c:\\Labhub\\Import\\contractiondb2_gwdg.json"
+sys.path.append(r"C:\labhub\Repos\smartlab-network\open-biohit-plus\src")
 
 from function_sets_multi import EHMPlatePos, Reservoirs, PipetteTips, TipDropzone, \
     remove_multi, fill_multi, pick_multi_tips, return_multi_tips, home, calc_concentration
-
 # ... rest of your code
 
 # on bottom plate with thin wells towards back, top right corner of each lot
@@ -49,17 +47,16 @@ my_caps = {1: 40000, 2: 50000, 3: 25000}
 containers = Reservoirs(x_corner=100, y_corner=200, capacities=my_caps, disabled wells = [7,4])
 """
 
-incubation_time = 3  #seconds
-platename = 'EmptyTest'
+incubation_time = 300  #seconds
+platename = '20250911a'
 
 # Create a dictionary for replacement vol and conc as per desired concentration goal.
 # Do not enter initial concentration adn volume.
 prep_table = [
     {"µl": 500, "mM": 0},
-]
-'''
     {"µl": 500, "mM": 0},
-    {"µl": 375, "mM": 0},
+    {"µl": 375, "mM": 0},]
+'''
     {"µl": 88, "mM": 1.8},
     {"µl": 50, "mM": 1.8},
     {"µl": 54, "mM": 1.8},
@@ -73,6 +70,7 @@ prep_table = [
     {"µl": 300, "mM": 5},
     {"µl": 500, "mM": 5},
     {"µl": 68, "mM": 10},
+    {"µl": 480.0, "mM": 0},
 ]'''
 
 #this creates another dictionary with calculated concentrations. Initial conc and volume has to be entered.
@@ -84,11 +82,11 @@ bDoFoc = 1
 print("Starting Ca-force curve measurement")
 print("Starting with 1.8mM default")
 
-if bDoFoc:
-    subprocess.call([r'C:\labhub\Import\FOC48.bat', platename])  # 0.2mM
-print("Initial measurement completed")
+#if bDoFoc:
+    #subprocess.call([r'C:\labhub\Import\FOC48.bat', platename])  # 0.2mM
+#print("Initial measurement completed")
 
-cols = [2,5]
+cols = [6,2,3,4,5]
 
 if pipette_tips.change_tips == 0:
     # pick tips once
@@ -116,7 +114,7 @@ for row in prep_table:
     elif mM == 5:
         fill_multi(p, ehm_plate, containers, pipette_tips, calcium_5_mM, cols, replacement_vol, 4)  # 1.973mM
     elif mM == 10:
-        fill_multi(p, ehm_plate, containers, pipette_tips, calcium_15_mM, cols, replacement_vol, 5)  # 1.973mM
+        fill_multi(p, ehm_plate, containers, pipette_tips, calcium_10_mM, cols, replacement_vol, 5)  # 1.973mM
     else:
         print(f"Invalid Concentration in prep table i.e. not 0, 1.8, 5, 15")
 
@@ -124,13 +122,14 @@ for row in prep_table:
     if bDoFoc:
         p.move_xy(0, 0)
         time.sleep(incubation_time)
-        print(f"Incubation time {incubation_time / 60} minutes. Turn measurement ON")
+        print(f"Incubation time {incubation_time * 60} seconds. Turn measurement ON")
         subprocess.call([r'C:\labhub\Import\FOC48.bat', platename])
         print(f"Completed measurement")
         p.move_z(0)
 
-        upload_foc_file(config_file)
-        upload_foc_file(config_file, f"c:\\labhub\\Import\\{platename}.csv")
+        upload_foc_file()
+        print("Uploading results into contractiondb...")
+        print("Upload finished")
 
 
 if pipette_tips.change_tips == 0:
