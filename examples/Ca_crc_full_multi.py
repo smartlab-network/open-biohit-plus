@@ -2,8 +2,12 @@ from biohit_pipettor import Pipettor
 import subprocess
 import time
 import sys
+from upload_myrimager import upload_foc_file
+
 
 sys.path.append(r"C:\labhub\Repos\smartlab-network\open-biohit-plus\src")
+
+config_file = "c:\\Labhub\\Import\\contractiondb2_gwdg.json"
 
 from function_sets_multi import EHMPlatePos, Reservoirs, PipetteTips, TipDropzone, \
     remove_multi, fill_multi, pick_multi_tips, return_multi_tips, home, calc_concentration
@@ -21,7 +25,7 @@ p = Pipettor(tip_volume=1000, multichannel=True)
 # python -m biohit-pipettor-python.examples.Ca_crcr_full_multi
 p.x_speed = 7
 p.y_speed = 7
-p.z_speed = 8
+p.z_speed = 6
 p.tip_pickup_force = 20
 p.aspirate_speed = 1
 
@@ -41,41 +45,37 @@ my_caps = {1: 40000, 2: 50000, 3: 25000}
 containers = Reservoirs(x_corner=100, y_corner=200, capacities=my_caps, disabled wells = [7,4])
 """
 
-incubation_time = 300  #seconds
-platename = '20250101x'
+incubation_time = 3  #seconds
+platename = 'EmptyTest'
 
 # Create a dictionary for replacement vol and conc as per desired concentration goal.
 # Do not enter initial concentration adn volume.
 prep_table = [
     {"µl": 500, "mM": 0},
-    {"µl": 500, "mM": 0},
-    {"µl": 94, "mM": 1.8},
-    {"µl": 107, "mM": 1.8},
-    {"µl": 125, "mM": 1.8},
-    {"µl": 150, "mM": 1.8},
-    {"µl": 188, "mM": 1.8},
-    {"µl": 250, "mM": 1.8},
-    {"µl": 375, "mM": 1.8},
-    {"µl": 88, "mM": 5},
-    {"µl": 75, "mM": 0},
-    {"µl": 164, "mM": 5},
-    {"µl": 150, "mM": 5},
-    {"µl": 188, "mM": 5},
-    {"µl": 250, "mM": 5},
-    {"µl": 375, "mM": 5},
-    {"µl": 107, "mM": 15},
-    {"µl": 125, "mM": 0},
-    {"µl": 225, "mM": 15},
-    {"µl": 214, "mM": 15},
-    {"µl": 375, "mM": 0},
-    {"µl": 480, "mM": 0},
 ]
+'''
+    {"µl": 500, "mM": 0},
+    {"µl": 375, "mM": 0},
+    {"µl": 88, "mM": 1.8},
+    {"µl": 50, "mM": 1.8},
+    {"µl": 54, "mM": 1.8},
+    {"µl": 58, "mM": 1.8},
+    {"µl": 63, "mM": 1.8},
+    {"µl": 68, "mM": 1.8},
+    {"µl": 75, "mM": 1.8},
+    {"µl": 83, "mM": 1.8},
+    {"µl": 94, "mM": 5},
+    {"µl": 214, "mM": 5},
+    {"µl": 300, "mM": 5},
+    {"µl": 500, "mM": 5},
+    {"µl": 68, "mM": 10},
+]'''
 
 #this creates another dictionary with calculated concentrations. Initial conc and volume has to be entered.
 concentration_table =  calc_concentration(prep_table, 1.8, 750)
 
 # Turn on/off FOC Measurement
-bDoFoc = 0
+bDoFoc = 1
 
 print("Starting Ca-force curve measurement")
 print("Starting with 1.8mM default")
@@ -84,7 +84,7 @@ if bDoFoc:
     subprocess.call([r'C:\labhub\Import\FOC48.bat', platename])  # 0.2mM
 print("Initial measurement completed")
 
-cols = [1]
+cols = [2,5]
 
 if pipette_tips.change_tips == 0:
     # pick tips once
@@ -94,7 +94,7 @@ if pipette_tips.change_tips == 0:
 calcium_0_mM = containers.well2_x
 calcium_1p8_mM = containers.well3_x
 calcium_5_mM = containers.well4_x
-calcium_15_mM = containers.well5_x
+calcium_10_mM = containers.well5_x
 
 # to check proper initialisation
 for well, volume in containers.current_volume.items():
@@ -111,7 +111,7 @@ for row in prep_table:
         fill_multi(p, ehm_plate, containers, pipette_tips, calcium_1p8_mM, cols, replacement_vol, 3)  # 1.973mM
     elif mM == 5:
         fill_multi(p, ehm_plate, containers, pipette_tips, calcium_5_mM, cols, replacement_vol, 4)  # 1.973mM
-    elif mM == 15:
+    elif mM == 10:
         fill_multi(p, ehm_plate, containers, pipette_tips, calcium_15_mM, cols, replacement_vol, 5)  # 1.973mM
     else:
         print(f"Invalid Concentration in prep table i.e. not 0, 1.8, 5, 15")
@@ -124,6 +124,10 @@ for row in prep_table:
         subprocess.call([r'C:\labhub\Import\FOC48.bat', platename])
         print(f"Completed measurement")
         p.move_z(0)
+
+        upload_foc_file(config_file)
+        upload_foc_file(config_file, f"c:\\labhub\\Import\\{platename}.csv")
+
 
 if pipette_tips.change_tips == 0:
     return_multi_tips(p, pipette_tips)
