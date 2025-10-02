@@ -6,6 +6,8 @@ from .serializable import Serializable, register_class
 import copy
 from typing import Optional
 
+Pipettors_in_Multi = 8
+
 @register_class
 class Labware(Serializable):
     """
@@ -544,6 +546,9 @@ class PipetteHolder(Labware):
 
         self.__individual_holders: dict[str, IndividualPipetteHolder] = {}
         self.individual_holder = individual_holder
+
+        if holders_across_y < Pipettors_in_Multi:
+            raise ValueError(f"PipetteHolder should atleast contatin{Pipettors_in_Multi} rows")
 
         if individual_holder:
             # Validate that individual holder fits

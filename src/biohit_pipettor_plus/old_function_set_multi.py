@@ -8,10 +8,9 @@ from typing import List
 from ..biohit_pipettor import Pipettor
 from ..biohit_pipettor.errors import CommandFailed
 from math import ceil
+from .labware import PipetteHolder, Plate, Well, ReservoirHolder, Reservoir, Pipettors_in_Multi
 
 from src.tests.test1 import pipette_holder
-
-
 def pick_multi_tips(p: Pipettor, pipetteHolder):
     """
     Picks tips going through PipetteHolder right to left
@@ -21,7 +20,15 @@ def pick_multi_tips(p: Pipettor, pipetteHolder):
 
     #todo nothing like this exisit
     p.move_xy(pipette_tips.x_corner_multi, pipette_tips.y_corner_multi)
-    for i in range(1, 13, 1):
+            p.pick_tip(pipette_tips.pick_height)
+            print("Picked up pipette tip")
+            print(f"Found no tips, moving on to x {pipette_tips.x_corner - i * 9}")
+            p.move_x(pipette_tips.x_corner_multi - i * 9)
+        """
+    print("pick_multi_tips: start")
+    cols = pipetteHolder.get_occupied_columns()
+    for col in cols:
+        p.move_xy()
         try:
             p.pick_tip(pipette_tips.pick_height)
             print("Picked up pipette tip")
@@ -32,11 +39,8 @@ def pick_multi_tips(p: Pipettor, pipetteHolder):
             continue
         finally:
             p.move_z(0)
-    else:
-        raise RuntimeError(f"Failed to pick tips from {i} pipette box columns")
-        """
-    print("pick_multi_tips: start")
-    pipetteHolder.get_avaiable_c
+        else:
+            raise RuntimeError(f"Failed to pick tips from {i} pipette box columns")
 
 
 

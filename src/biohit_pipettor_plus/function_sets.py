@@ -5,9 +5,9 @@ p = Pipettor() in all cases
 import time
 from typing import List
 
-from biohit_pipettor import Pipettor
-from biohit_pipettor.errors import CommandFailed
-
+from ..biohit_pipettor import Pipettor
+from ..biohit_pipettor.errors import CommandFailed
+from .labware import PipetteHolder, Plate, Well, ReservoirHolder, Reservoir
 
 class EHMPlatePos:
     def __init__(self, x_corner, y_corner):
