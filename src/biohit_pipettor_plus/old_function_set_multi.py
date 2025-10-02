@@ -5,20 +5,20 @@ p = Pipettor() in all cases
 
 import time
 from typing import List
-from biohit_pipettor import Pipettor
-from biohit_pipettor.errors import CommandFailed
+from ..biohit_pipettor import Pipettor
+from ..biohit_pipettor.errors import CommandFailed
 from math import ceil
 
+from src.tests.test1 import pipette_holder
 
 
-
-def pick_multi_tips(p: Pipettor, pipette_tips):
+def pick_multi_tips(p: Pipettor, pipetteHolder):
     """
-    Picks tips going through tip box left to right
+    Picks tips going through PipetteHolder right to left
     :param p: Pipettor, multichannel = True
-    :param pipette_tips:
-    """
-    print("pick_multi_tips: start")
+    :param PipetteHolder:
+
+
     #todo nothing like this exisit
     p.move_xy(pipette_tips.x_corner_multi, pipette_tips.y_corner_multi)
     for i in range(1, 13, 1):
@@ -34,6 +34,10 @@ def pick_multi_tips(p: Pipettor, pipette_tips):
             p.move_z(0)
     else:
         raise RuntimeError(f"Failed to pick tips from {i} pipette box columns")
+        """
+    print("pick_multi_tips: start")
+    pipetteHolder.get_avaiable_c
+
 
 
 def return_multi_tips(p: Pipettor, pipette_tips):
@@ -255,7 +259,7 @@ def calc_concentration(prep_table, initial_conc, initial_vol):
         final_conc = round(total_moles / initial_vol, 2)
         row["final_conc"] = final_conc
         initial_conc = final_conc
-        initial_vol remains unchanged
+#        initial_vol remains unchanged
     return prep_table
 
 def home(p: Pipettor):

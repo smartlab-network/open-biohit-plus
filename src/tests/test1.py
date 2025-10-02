@@ -113,11 +113,11 @@ slot5.allocate_position(pipette_holder,
 
 # col and row are zero indexed
 pipette_holder.place_pipettes_in_columns([0,1,2])
-pipette_holder.remove_pipettes_from_columns([1,2])
+pipette_holder.remove_pipettes_from_columns([1])
 pipette_holder.remove_pipette_at(0,0)
 pipette_holder.place_pipette_at(0,0)
 print(pipette_holder.to_dict())
-
+print(pipette_holder.get_occupied_columns())
 
 #TODO understand drop zone and see how to implement it.
 tip_dropzone = TipDropzone(

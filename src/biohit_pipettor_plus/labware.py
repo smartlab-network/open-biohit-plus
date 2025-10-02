@@ -764,6 +764,50 @@ class PipetteHolder(Labware):
 
         individual_holder.remove_pipette()
 
+    def get_available_columns(self) -> list[int]:
+        """
+        Get all columns that have at least one available (unoccupied) holder position.
+
+        Returns
+        -------
+        list[int]
+            List of column indices that have available positions.
+        """
+        available_cols = set()
+
+        for col in range(self.holders_across_x):
+            for row in range(self.holders_across_y):
+                holder_id = f'holder_{col}:{row}'
+                individual_holder = self.__individual_holders.get(holder_id)
+
+                if individual_holder and individual_holder.is_available():
+                    available_cols.add(col)
+                    break  # Found at least one available in this column
+
+        return sorted(list(available_cols))
+
+    def get_occupied_columns(self) -> list[int]:
+        """
+        Get all columns that have at least one occupied holder position.
+
+        Returns
+        -------
+        list[int]
+            List of column indices that have occupied positions.
+        """
+        occupied_cols = set()
+
+        for col in range(self.holders_across_x):
+            for row in range(self.holders_across_y):
+                holder_id = f'holder_{col}:{row}'
+                individual_holder = self.__individual_holders.get(holder_id)
+
+                if individual_holder and individual_holder.is_occupied:
+                    occupied_cols.add(col)
+                    break  # Found at least one occupied in this column
+
+        return sorted(list(occupied_cols))
+
     def to_dict(self) -> dict:
         """
         Serialize the PipetteHolder instance to a dictionary.
