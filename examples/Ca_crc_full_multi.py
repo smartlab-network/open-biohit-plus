@@ -2,15 +2,19 @@ from biohit_pipettor import Pipettor
 import subprocess
 import time
 import sys
-from upload_myrimager import upload_foc_file
 
-
+# Add paths
 sys.path.append(r"C:\labhub\Repos\smartlab-network\open-biohit-plus\src")
+
+# Now import
+from upload_myrimager import upload_foc_file
 
 config_file = "c:\\Labhub\\Import\\contractiondb2_gwdg.json"
 
 from function_sets_multi import EHMPlatePos, Reservoirs, PipetteTips, TipDropzone, \
     remove_multi, fill_multi, pick_multi_tips, return_multi_tips, home, calc_concentration
+
+# ... rest of your code
 
 # on bottom plate with thin wells towards back, top right corner of each lot
 A1 = (130.5, 0)
