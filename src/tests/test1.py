@@ -22,7 +22,7 @@ deck1.add_slots([slot1, slot2, slot3, slot4, slot5])
 example_well = Well(size_x=2, size_y=1, size_z=5, media="water")
 plate1 = Plate(20, 10, 50, 6, 8, (30, 50), well=example_well)
 deck1.add_labware(plate1, slot_id="slot1", min_z=2)
-slot1.allocate_position(plate1, (5,5), 1.25,2.5, plate1.wells_x, plate1.wells_y)
+slot1.allocate_position(plate1, 2.5, 1.25)
 print(plate1.to_dict())
 
 """write_json(slot2)
@@ -67,6 +67,7 @@ reservoirHolder = ReservoirHolder(
     size_x= 100,
     size_y= 50,
     size_z= 20,
+    offset=(4,4),
     hooks_across_x = 5,
     hooks_across_y=2,
     reservoir_dict = reservoirs_data,
@@ -75,11 +76,8 @@ reservoirHolder = ReservoirHolder(
 deck1.add_labware(reservoirHolder, slot_id="slot3", min_z=2)
 slot3.allocate_position(
         reservoirHolder,
-        (8,8),
+         8.8,
         2.5,
-        2.5,
-        reservoirHolder.hooks_across_x,
-        reservoirHolder.hooks_across_y,
         )
 
 data = reservoirHolder.to_dict()
@@ -105,12 +103,8 @@ ExamplePipetteHolder = IndividualPipetteHolder(1,1,1)
 pipette_holder = PipetteHolder(labware_id="pipette_holder_1", size_x = 10, size_y = 20, size_z=20, holders_across_x=6, holders_across_y=8, individual_holder= ExamplePipetteHolder)
 deck1.add_labware(pipette_holder, slot_id="slot5", min_z=2)
 slot5.allocate_position(pipette_holder,
-        (8,8),
         2.5,
-        2.5,
-        pipette_holder.holders_across_x,
-        pipette_holder.holders_across_y)
-
+        2.5,)
 # col and row are zero indexed
 pipette_holder.place_pipettes_in_columns([0,1,2])
 pipette_holder.remove_pipettes_from_columns([1])

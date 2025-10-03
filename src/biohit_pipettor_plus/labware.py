@@ -35,7 +35,7 @@ class Labware(Serializable):
         super().__init_subclass__(**kwargs)
         Labware.registry[cls.__name__] = cls
 
-    def __init__(self, size_x: float, size_y: float, size_z: float, labware_id: str = None, position: tuple[float, float] = None):
+    def __init__(self, size_x: float, size_y: float, size_z: float, offset= tuple[float, float], labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a Labware instance.
 
@@ -56,6 +56,7 @@ class Labware(Serializable):
         self.size_x = size_x
         self.size_y = size_y
         self.size_z = size_z
+        self.offset = offset or (0,0)
         self.position = position or None
         self.labware_id = labware_id or f"labware_{uuid.uuid4().hex}"
 
@@ -75,6 +76,7 @@ class Labware(Serializable):
             "size_x": self.size_x,
             "size_y": self.size_y,
             "size_z": self.size_z,
+            "offset": self.offset,
             "position": list(self.position) if self.position else None,
         }
 
@@ -101,6 +103,7 @@ class Labware(Serializable):
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
+            offset=data["offset"],
             labware_id=data["labware_id"],
             position=position
         )
@@ -129,6 +132,7 @@ class Well(Labware):
         size_x: float,
         size_y: float,
         size_z: float,
+        offset: tuple[float, float] = (0,0),
         position: tuple[float, float] = None,
         labware_id: str = None,
         row: int = None,
@@ -167,8 +171,7 @@ class Well(Labware):
         suck_offset_xy : tuple[float, float], optional
             XY offset from the well corner for aspiration/dispense (default = (2, 2)).
         """
-        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, labware_id=labware_id, position=position)
-
+        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset = offset, labware_id=labware_id, position=position)
         self.media = media
         self.add_height = add_height
         self.remove_height = remove_height
@@ -224,8 +227,9 @@ class Well(Labware):
             size_x=base_obj.size_x,
             size_y=base_obj.size_y,
             size_z=base_obj.size_z,
-            position=position,
+            offset =base_obj.offset,
             labware_id=base_obj.labware_id,
+            position=base_obj.position,
             media=data.get("media"),
             add_height=data.get("add_height", 5),
             remove_height=data.get("remove_height", 5),
@@ -250,7 +254,8 @@ class Plate(Labware):
         Coordinates of the first well.
     """
 
-    def __init__(self, size_x, size_y, size_z, wells_x, wells_y, first_well_xy, well: Well = None,
+# TODO for plate, isn't offset and first well part of same equation. or is offset only till corners of the plate (if yes, what is the purpose to go to corner of any labware.
+    def __init__(self, size_x, size_y, size_z, wells_x, wells_y, first_well_xy, offset = (0,0), well: Well = None,
                  labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a Plate instance.
@@ -273,30 +278,30 @@ class Plate(Labware):
             Unique ID for the plate.
         """
 
-        super().__init__(size_x, size_y, size_z, labware_id, position)
-        self.wells_x = wells_x
-        self.wells_y = wells_y
+        super().__init__(size_x, size_y, size_z, offset, labware_id, position)
+        self._columns = wells_x  # Store internally
+        self._rows = wells_y
         self.first_well_xy = first_well_xy
 
         self.__wells: dict[str, Well or None] = {}
         self.well = well
 
         if well:
-            if wells_x * well.size_x > size_x or wells_y * well.size_y > size_y:
+            if self._columns * well.size_x > size_x or self._rows * well.size_y > size_y:
                 raise ValueError("Well is to big for this Plate")
             else:
                 self.place_wells()
         else:
-            for x in range(self.wells_x):
-                for y in range(self.wells_y):
+            for x in range(self._columns):
+                for y in range(self._rows):
                     self.__wells[f'{x}:{y}'] = None
 
     def get_wells(self):
         return self.__wells
 
     def place_wells(self):
-        for x in range(self.wells_x):
-            for y in range(self.wells_y):
+        for x in range(self._columns):
+            for y in range(self._rows):
                 well = copy.deepcopy(self.well)  # Create a new copy
                 well.labware_id = f'well_{x}:{y}'
                 self.__wells[well.labware_id] = well
@@ -352,6 +357,7 @@ class Plate(Labware):
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
+            offset=data["offset"],
             labware_id=data["labware_id"],
             wells_x=data["wells_x"],
             wells_y=data["wells_y"],
@@ -366,6 +372,26 @@ class Plate(Labware):
                 plate._Plate__wells[wid] = Serializable.from_dict(wdata)
         return plate
 
+
+    @property
+    def wells_x(self) -> int:
+        """Alias for grid_x"""
+        return self._columns
+
+    @property
+    def wells_y(self) -> int:
+        """Alias for grid_y"""
+        return self._rows
+
+    @property
+    def grid_x(self) -> int:
+        """Standard grid dimension"""
+        return self._columns
+
+    @property
+    def grid_y(self) -> int:
+        """Standard grid dimension"""
+        return self._rows
 
 @register_class
 class IndividualPipetteHolder(Labware):
@@ -385,7 +411,8 @@ class IndividualPipetteHolder(Labware):
             self,
             size_x: float,
             size_y: float,
-            size_z: float ,
+            size_z: float,
+            offset: tuple[float, float] = (0,0),
             pipette_type: str = "P1000",
             is_occupied: bool = False,
             labware_id: str = None,
@@ -416,6 +443,7 @@ class IndividualPipetteHolder(Labware):
             size_x=size_x,
             size_y=size_y,
             size_z=size_z,
+            offset=offset,
             labware_id=labware_id,
             position=position
         )
@@ -488,6 +516,7 @@ class IndividualPipetteHolder(Labware):
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
+            offset=data["offset"],
             labware_id=data["labware_id"],
             position=position,
             pipette_type=data.get("pipette_type"),
@@ -508,11 +537,13 @@ class PipetteHolder(Labware):
         Number of individual holder positions across Y-axis.
     """
 
-    def __init__(self, size_x: float,
+    def __init__(self,
+                 size_x: float,
                  size_y: float,
                  size_z: float,
                  holders_across_x: int,
                  holders_across_y: int,
+                 offset: float = (0, 0),
                  individual_holder: IndividualPipetteHolder = None,
                  labware_id: str = None,
                  position: tuple[float, float] = None):
@@ -540,9 +571,9 @@ class PipetteHolder(Labware):
             (x, y) position coordinates of the pipette holder in millimeters.
             If None, position is not set.
         """
-        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, labware_id=labware_id, position=position)
-        self.holders_across_x = holders_across_x
-        self.holders_across_y = holders_across_y
+        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id, position=position)
+        self._columns = holders_across_x
+        self._rows = holders_across_y
 
         self.__individual_holders: dict[str, IndividualPipetteHolder] = {}
         self.individual_holder = individual_holder
@@ -558,14 +589,14 @@ class PipetteHolder(Labware):
                 self.place_individual_holders()
         else:
             # Create empty positions
-            for x in range(self.holders_across_x):
-                for y in range(self.holders_across_y):
+            for x in range(self._columns):
+                for y in range(self._rows):
                     self.__individual_holders[f'{x}:{y}'] = None
 
     def place_individual_holders(self):
         """Create individual holder positions across the grid."""
-        for x in range(self.holders_across_x):
-            for y in range(self.holders_across_y):
+        for x in range(self._columns):
+            for y in range(self._rows):
                 holder = copy.deepcopy(self.individual_holder)
                 holder.labware_id = f'holder_{x}:{y}'
                 self.__individual_holders[holder.labware_id] = holder
@@ -620,15 +651,15 @@ class PipetteHolder(Labware):
         """
         # Validate column indices
         for col in columns:
-            if col < 0 or col >= self.holders_across_x:
+            if col < 0 or col >= self._columns:
                 raise ValueError(
                     f"Column index {col} is out of range. "
-                    f"Valid range is 0 to {self.holders_across_x - 1}"
+                    f"Valid range is 0 to {self._columns - 1}"
                 )
 
         # Check if all positions are available before placing
         for col in columns:
-            for row in range(self.holders_across_y):
+            for row in range(self._rows):
                 holder_id = f'holder_{col}:{row}'
                 individual_holder = self.__individual_holders.get(holder_id)
 
@@ -644,7 +675,7 @@ class PipetteHolder(Labware):
 
         # Place pipettes in all positions
         for col in columns:
-            for row in range(self.holders_across_y):
+            for row in range(self._rows):
                 holder_id = f'holder_{col}:{row}'
                 self.__individual_holders[holder_id].place_pipette()
 
@@ -665,15 +696,15 @@ class PipetteHolder(Labware):
         """
         # Validate column indices
         for col in columns:
-            if col < 0 or col >= self.holders_across_x:
+            if col < 0 or col >= self._columns:
                 raise ValueError(
                     f"Column index {col} is out of range. "
-                    f"Valid range is 0 to {self.holders_across_x - 1}"
+                    f"Valid range is 0 to {self._columns - 1}"
                 )
 
         # Check if all positions have pipettes before removing
         for col in columns:
-            for row in range(self.holders_across_y):
+            for row in range(self._rows):
                 holder_id = f'holder_{col}:{row}'
                 individual_holder = self.__individual_holders.get(holder_id)
 
@@ -689,7 +720,7 @@ class PipetteHolder(Labware):
 
         # Remove pipettes from all positions
         for col in columns:
-            for row in range(self.holders_across_y):
+            for row in range(self._rows):
                 holder_id = f'holder_{col}:{row}'
                 self.__individual_holders[holder_id].remove_pipette()
 
@@ -709,16 +740,16 @@ class PipetteHolder(Labware):
         ValueError
             If position is out of range, no holder exists, or position is occupied.
         """
-        if column < 0 or column >= self.holders_across_x:
+        if column < 0 or column >= self._columns:
             raise ValueError(
                 f"Column index {column} is out of range. "
-                f"Valid range is 0 to {self.holders_across_x - 1}"
+                f"Valid range is 0 to {self._columns - 1}"
             )
 
-        if row < 0 or row >= self.holders_across_y:
+        if row < 0 or row >= self._rows:
             raise ValueError(
                 f"Row index {row} is out of range. "
-                f"Valid range is 0 to {self.holders_across_y - 1}"
+                f"Valid range is 0 to {self._rows - 1}"
             )
 
         holder_id = f'holder_{column}:{row}'
@@ -747,16 +778,16 @@ class PipetteHolder(Labware):
         ValueError
             If position is out of range, no holder exists, or position is empty.
         """
-        if column < 0 or column >= self.holders_across_x:
+        if column < 0 or column >= self._columns:
             raise ValueError(
                 f"Column index {column} is out of range. "
-                f"Valid range is 0 to {self.holders_across_x - 1}"
+                f"Valid range is 0 to {self._columns - 1}"
             )
 
-        if row < 0 or row >= self.holders_across_y:
+        if row < 0 or row >= self._rows:
             raise ValueError(
                 f"Row index {row} is out of range. "
-                f"Valid range is 0 to {self.holders_across_y - 1}"
+                f"Valid range is 0 to {self._rows - 1}"
             )
 
         holder_id = f'holder_{column}:{row}'
@@ -780,8 +811,8 @@ class PipetteHolder(Labware):
         """
         available_cols = set()
 
-        for col in range(self.holders_across_x):
-            for row in range(self.holders_across_y):
+        for col in range(self._columns):
+            for row in range(self._rows):
                 holder_id = f'holder_{col}:{row}'
                 individual_holder = self.__individual_holders.get(holder_id)
 
@@ -802,8 +833,8 @@ class PipetteHolder(Labware):
         """
         occupied_cols = set()
 
-        for col in range(self.holders_across_x):
-            for row in range(self.holders_across_y):
+        for col in range(self._columns):
+            for row in range(self._rows):
                 holder_id = f'holder_{col}:{row}'
                 individual_holder = self.__individual_holders.get(holder_id)
 
@@ -855,6 +886,7 @@ class PipetteHolder(Labware):
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
+            offset=data["offset"],
             labware_id=data["labware_id"],
             holders_across_x=data["holders_across_x"],
             holders_across_y=data["holders_across_y"],
@@ -870,6 +902,26 @@ class PipetteHolder(Labware):
                 holder._PipetteHolder__individual_holders[hid] = Serializable.from_dict(hdata)
 
         return holder
+
+    @property
+    def holders_across_x(self) -> int:
+        """Alias for grid_x"""
+        return self._columns
+
+    @property
+    def holders_across_y(self) -> int:
+        """Alias for grid_y"""
+        return self._rows
+
+    @property
+    def grid_x(self) -> int:
+        """Standard grid dimension"""
+        return self._columns
+
+    @property
+    def grid_y(self) -> int:
+        """Standard grid dimension"""
+        return self._rows
 
 #TODO question existence
 @register_class
@@ -892,6 +944,7 @@ class TipDropzone(Labware):
                  size_z: float,
                  drop_x: float,
                  drop_y: float,
+                 offset: tuple[float,float] = (0, 0),
                  labware_id: str = None,
                  position: tuple[float, float] = None,
                  drop_height_relative: float = 20
@@ -919,7 +972,7 @@ class TipDropzone(Labware):
         drop_height_relative : float, optional
             Height from which tips are dropped relative to the labware. Default is 20.
         """
-        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, labware_id=labware_id, position=position)
+        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id, position=position)
         self.drop_x = drop_x
         self.drop_y = drop_y
         self.drop_height_relative = drop_height_relative
@@ -964,6 +1017,7 @@ class TipDropzone(Labware):
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
+            offset=data["offset"],
             labware_id=data["labware_id"],
             drop_x=data["drop_x"],
             drop_y=data["drop_y"],
@@ -977,7 +1031,7 @@ Default_Reservoir_Capacity = 30000
 
 @register_class
 class Reservoir(Labware):
-    def __init__(self, size_x: float, size_y: float, size_z: float,
+    def __init__(self, size_x: float, size_y: float, size_z: float, offset: tuple[float,float] = (0, 0),
                  capacity: float = Default_Reservoir_Capacity, filled_volume: float = None,
                  content: str = None, hook_ids: list[int] = None, labware_id: str = None,
                  position: tuple[float, float] = None):
@@ -1006,7 +1060,7 @@ class Reservoir(Labware):
             (x, y) position coordinates of the reservoir in millimeters.
             If None, position is not set.
         """
-        super().__init__(size_x, size_y, size_z, labware_id, position)
+        super().__init__(size_x, size_y, size_z, offset, labware_id, position)
         self.capacity = capacity
         self.filled_volume = filled_volume
         self.hook_ids = hook_ids if hook_ids is not None else []
@@ -1082,6 +1136,7 @@ class Reservoir(Labware):
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
+            offset=data["offset"],
             labware_id=data["labware_id"],
             hook_ids=data.get("hook_ids", []),
             capacity=data.get("capacity", Default_Reservoir_Capacity),
@@ -1092,8 +1147,8 @@ class Reservoir(Labware):
 
 @register_class
 class ReservoirHolder(Labware):
-    def __init__(self, size_x: float, size_y: float, size_z: float, hooks_across_x: int,
-                 hooks_across_y: int, reservoir_dict: dict[int, dict] = None,
+    def __init__(self, size_x: float, size_y: float, size_z: float, hooks_across_x: int, hooks_across_y: int,
+                offset: tuple[float,float] = (0, 0), reservoir_dict: dict[int, dict] = None,
                  labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a ReservoirHolder instance that can hold multiple reservoirs.
@@ -1118,9 +1173,9 @@ class ReservoirHolder(Labware):
             (x, y) position coordinates of the ReservoirHolder in millimeters.
             If None, position is not set.
         """
-        super().__init__(size_x, size_y, size_z, labware_id, position)
-        self.hooks_across_x = hooks_across_x
-        self.hooks_across_y = hooks_across_y
+        super().__init__(size_x, size_y, size_z, offset, labware_id, position)
+        self._columns = hooks_across_x
+        self._rows = hooks_across_y
         self.total_hooks = hooks_across_x * hooks_across_y
 
         # Initialize empty hooks - maps hook_id to reservoir (or None if empty)
@@ -1159,8 +1214,8 @@ class ReservoirHolder(Labware):
 
         # Convert to 0-indexed
         idx = hook_id - 1
-        row = idx // self.hooks_across_x
-        col = idx % self.hooks_across_x
+        row = idx // self._columns
+        col = idx % self._columns
         return (col, row)
 
     def position_to_hook_id(self, col: int, row: int) -> int:
@@ -1179,12 +1234,12 @@ class ReservoirHolder(Labware):
         int
             hook_id (1-indexed)
         """
-        if col < 0 or col >= self.hooks_across_x:
-            raise ValueError(f"col {col} out of range (0 to {self.hooks_across_x - 1})")
-        if row < 0 or row >= self.hooks_across_y:
-            raise ValueError(f"row {row} out of range (0 to {self.hooks_across_y - 1})")
+        if col < 0 or col >= self._columns:
+            raise ValueError(f"col {col} out of range (0 to {self._columns - 1})")
+        if row < 0 or row >= self._rows:
+            raise ValueError(f"row {row} out of range (0 to {self._rows - 1})")
 
-        return row * self.hooks_across_x + col + 1
+        return row * self._columns + col + 1
 
 
     def get_reservoirs(self) -> list[Reservoir]:
@@ -1286,8 +1341,8 @@ class ReservoirHolder(Labware):
                 raise ValueError(f"Hook {hook_id} is already occupied")
 
         # Calculate maximum dimensions per hook
-        max_width_per_hook = self.size_x / self.hooks_across_x
-        max_height_per_hook = self.size_y / self.hooks_across_y
+        max_width_per_hook = self.size_x / self._columns
+        max_height_per_hook = self.size_y / self._rows
 
         # Calculate available space for this reservoir
         max_width_for_reservoir = max_width_per_hook * width_hooks
@@ -1353,8 +1408,8 @@ class ReservoirHolder(Labware):
                     hook_ids_to_use = specified_hooks
             else:
                 # Auto-allocate hooks in a rectangle
-                max_width_per_hook = self.size_x / self.hooks_across_x
-                max_height_per_hook = self.size_y / self.hooks_across_y
+                max_width_per_hook = self.size_x / self._columns
+                max_height_per_hook = self.size_y / self._rows
                 reservoir_width = params["size_x"]
                 reservoir_height = params["size_y"]
 
@@ -1375,8 +1430,8 @@ class ReservoirHolder(Labware):
                 available = set(self.get_available_hooks())
                 hook_ids_to_use = None
 
-                for start_row in range(self.hooks_across_y - hooks_y + 1):
-                    for start_col in range(self.hooks_across_x - hooks_x + 1):
+                for start_row in range(self._rows - hooks_y + 1):
+                    for start_col in range(self._columns - hooks_x + 1):
                         # Check if this rectangle is available
                         candidate_hooks = []
                         valid = True
@@ -1475,6 +1530,7 @@ class ReservoirHolder(Labware):
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
+            offset = data["offset"],
             hooks_across_x=data["hooks_across_x"],
             hooks_across_y=data.get("hooks_across_y", 1),  # Default to 1 for backwards compatibility
             labware_id=data["labware_id"],
@@ -1490,3 +1546,19 @@ class ReservoirHolder(Labware):
                 reservoir_holder.place_reservoir(reservoir.hook_ids, reservoir)
 
         return reservoir_holder
+
+    @property
+    def hooks_across_x(self) -> int:
+        return self._columns
+
+    @property
+    def hooks_across_y(self) -> int:
+        return self._rows
+
+    @property
+    def grid_x(self) -> int:
+        return self._columns
+
+    @property
+    def grid_y(self) -> int:
+        return self._rows

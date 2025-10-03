@@ -71,11 +71,8 @@ class Slot(Serializable):
     def allocate_position(
             self,
             lw: Labware,
-            offset: tuple[float, float] = (0.0,0.0),
-            x_spacing: float = 0,
-            y_spacing: float = 0,
-            obj_across_x: float = None,
-            obj_across_y: float = None
+            x_spacing: float = None,
+            y_spacing: float = None,
     ):
         """
         if labware is placed in slot, x & y coordinates of the labware is slot 
@@ -83,26 +80,25 @@ class Slot(Serializable):
         if lw.labware_id not in self.labware_stack:
             raise ValueError("Labware not in labware stack")
 
-        x_corner = min(self.range_x[0], self.range_x[1]) 
-        y_corner = min(self.range_y[0], self.range_y[1]) 
+        x_corner = min(self.range_x[0], self.range_x[1])
+        y_corner = min(self.range_y[0], self.range_y[1])
+        offset_x, offset_y = lw.offset
 
-        lw.position = (x_corner, y_corner)
+        #position is slot corner + offset of the labware.
+        lw.position = (x_corner + offset_x, y_corner + offset_y)
 
         #if not none, then labware contains labware within them. Like ReservoirHolder - reservoirs, Plate - wells, pipetteHolder -Zone
-        if not None in (obj_across_x, obj_across_y):
+        if hasattr(lw, "_rows") and hasattr(lw, "_columns"):
             if not isinstance(lw, (Plate, ReservoirHolder, PipetteHolder)):
-                raise ValueError("Only (plate, reservoir, pipetteHolder) contain labware within them (wells, reservoirs, zone)")
+                raise ValueError("Only (plate, reservoir, pipetteHolder) contain labware within them (wells, reservoirs, zone). Update the code for your labware")
             else:
                 position_allocator = Position_allocator()
                 position_allocator.calculate_multi(
                     lw,
-                    x_corner,
-                    y_corner,
-                    offset,
+                    lw.position[0],
+                    lw.position[1],
                     x_spacing,
                     y_spacing,
-                    obj_across_x,
-                    obj_across_y
                 )
 
     def is_compatible_labware(self, lw: Labware, min_z: float) -> bool:

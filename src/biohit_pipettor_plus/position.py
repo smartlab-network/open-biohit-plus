@@ -10,11 +10,9 @@ class Position_allocator:
         lw: Labware,
         x_corner: float,
         y_corner: float,
-        offset: Tuple[float, float],
-        x_spacing: float,
-        y_spacing: float,
-        obj_across_x: int,
-        obj_across_y: int):
+        x_spacing: float = None,
+        y_spacing: float = None,
+        ):
         """
         Generate grid positions for labware containers inside a slot.
 
@@ -26,25 +24,25 @@ class Position_allocator:
             Y coordinate of the slot's corner.
         lw : Labware
             Labware object to place.
-        offset : (float, float)
-            Offset (x, y) from the slot corner.
         x_spacing : float
             Distance between containers along X.
         y_spacing : float
             Distance between containers along Y.
-        obj_across_x : int
-            Number of wells/reservoirs/PipetteHolder along X axis.
-        obj_across_y: int
-            Number of wells/reservoirs/PipetteHolder along Y axis.
-
         """
         positions = []
-        offset_x, offset_y = offset
 
-        for i in range(obj_across_y):
-            for j in range(obj_across_x):
-                x_pos = x_corner + offset_x + j * x_spacing
-                y_pos = y_corner + offset_y + i * y_spacing
+        rows = lw._rows
+        columns = lw._columns
+
+        #dynamic X spacing and y spacing.
+        if x_spacing == None:
+            print("do")
+            x_spacing = lw.size_x - lw.offset[0]
+
+        for i in range(rows):
+            for j in range(columns):
+                x_pos = x_corner + j * x_spacing
+                y_pos = y_corner + i * y_spacing
                 location = (f"{j},{i}")
                 positions.append((x_pos, y_pos,location))
 
@@ -58,6 +56,7 @@ class Position_allocator:
 
         if isinstance(lw, PipetteHolder):
             self.update_PipetteHolder_positions(lw, positions)
+
     def update_reservoir_positions(
             self,
             holder: ReservoirHolder,
@@ -94,8 +93,8 @@ class Position_allocator:
             else:
                 # Compute center of multiple hooks
                 xs, ys = zip(*hooks_pos)
-                center_x = sum(xs) / len(xs)
-                center_y = sum(ys) / len(ys)
+                center_x = round((sum(xs) / len(xs)),2)
+                center_y = round((sum(ys) / len(ys)),2)
                 res.position = (center_x, center_y)
 
     def update_plate_positions(
