@@ -74,7 +74,7 @@ class Deck(Serializable):
                     )
             self.slots[slot_id] = slot
 
-    def add_labware(self, labware: Labware, slot_id: str, min_z: float):
+    def add_labware(self, labware: Labware, slot_id: str, min_z: float, x_spacing: float = None, y_spacing: float = None):
         """
         Add a Labware to a specific Slot at a specific Z position.
 
@@ -110,6 +110,9 @@ class Deck(Serializable):
 
         # Place labware in the slot stack
         slot.place_labware(lw=labware, min_z=min_z)
+
+        #allocation position to labware on deck.
+        slot.allocate_position(labware, x_spacing, y_spacing)
 
         # Optionally store in deck's global labware dict
         self.labware[labware.labware_id] = labware

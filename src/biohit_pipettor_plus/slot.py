@@ -75,17 +75,17 @@ class Slot(Serializable):
             y_spacing: float = None,
     ):
         """
-        if labware is placed in slot, x & y coordinates of the labware is slot 
+        if labware is placed in slot, x & y coordinates of the labware + offset is slot.
         """
         if lw.labware_id not in self.labware_stack:
             raise ValueError("Labware not in labware stack")
 
-        x_corner = min(self.range_x[0], self.range_x[1])
-        y_corner = min(self.range_y[0], self.range_y[1])
         offset_x, offset_y = lw.offset
+        x_corner = min(self.range_x[0], self.range_x[1]) + offset_x
+        y_corner = min(self.range_y[0], self.range_y[1]) + offset_y
 
         #position is slot corner + offset of the labware.
-        lw.position = (x_corner + offset_x, y_corner + offset_y)
+        lw.position = (x_corner, y_corner)
 
         #if not none, then labware contains labware within them. Like ReservoirHolder - reservoirs, Plate - wells, pipetteHolder -Zone
         if hasattr(lw, "_rows") and hasattr(lw, "_columns"):
@@ -99,6 +99,8 @@ class Slot(Serializable):
                     lw.position[1],
                     x_spacing,
                     y_spacing,
+                    lw._rows,
+                    lw._columns,
                 )
 
     def is_compatible_labware(self, lw: Labware, min_z: float) -> bool:

@@ -20,9 +20,8 @@ deck1.add_slots([slot1, slot2, slot3, slot4, slot5])
 
 #plate & well creating and checking
 example_well = Well(size_x=2, size_y=1, size_z=5, media="water")
-plate1 = Plate(20, 10, 50, 6, 8, (30, 50), well=example_well)
-deck1.add_labware(plate1, slot_id="slot1", min_z=2)
-slot1.allocate_position(plate1, 2.5, 1.25)
+plate1 = Plate(20, 50, 50, 6, 9, (3, 5), well=example_well)
+deck1.add_labware(plate1, slot_id="slot1", min_z=2, x_spacing=2.5, y_spacing=2.5)
 print(plate1.to_dict())
 
 """write_json(slot2)
@@ -49,8 +48,8 @@ reservoirs_data = {
     3: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
         "filled_volume": 100, "content": "1.8 conc"},
 
-    4: {"size_x": 35, "size_y": 20, "size_z": 15, "capacity": 30000,
-        "filled_volume": 100, "content": "5 conc", "hook_ids": [4,5]},
+    4: {"size_x": 15, "size_y": 30, "size_z": 15, "capacity": 30000,
+        "filled_volume": 100, "content": "5 conc"},
 
     5: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
         "filled_volume": 100, "content": "15 conc"},
@@ -58,60 +57,31 @@ reservoirs_data = {
     6: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
         "filled_volume": 100, "content": "0 conc"},
 
-    7: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
+    7: {"size_x": 35, "size_y": 20, "size_z": 15, "capacity": 30000,
         "filled_volume": 100, "content": "waste"},
 
 }
 
 reservoirHolder = ReservoirHolder(
     size_x= 100,
-    size_y= 50,
+    size_y=50,
     size_z= 20,
     offset=(4,4),
-    hooks_across_x = 5,
+    hooks_across_x = 6,
     hooks_across_y=2,
     reservoir_dict = reservoirs_data,
 )
 
 deck1.add_labware(reservoirHolder, slot_id="slot3", min_z=2)
-slot3.allocate_position(
-        reservoirHolder,
-         8.8,
-        2.5,
-        )
-
-data = reservoirHolder.to_dict()
-print(data)
-
-print(reservoirHolder.position)
-print(reservoirHolder.hook_id_to_position(6))
-print(reservoirHolder.position_to_hook_id(1,1))
-print((reservoirHolder.get_reservoirs()))
-print(f"get_hook_to_reservoir_map: {reservoirHolder.get_hook_to_reservoir_map()}")
-print(reservoirHolder.get_occupied_hooks())
-print(reservoirHolder.get_available_hooks())
-print(reservoirHolder.get_waste_reservoirs())
-print(f"water: {reservoirHolder.get_equivalent_reservoirs("water")}")
-print(reservoirHolder.get_reservoir_by_content("15 conc"))
-reservoirHolder.add_volume(1,20000)
-reservoirHolder.remove_volume(4,100)
-new_reservoir = ReservoirHolder.from_dict(data)
-print(new_reservoir.to_dict())
-
+print(reservoirHolder.to_dict())
 
 ExamplePipetteHolder = IndividualPipetteHolder(1,1,1)
 pipette_holder = PipetteHolder(labware_id="pipette_holder_1", size_x = 10, size_y = 20, size_z=20, holders_across_x=6, holders_across_y=8, individual_holder= ExamplePipetteHolder)
 deck1.add_labware(pipette_holder, slot_id="slot5", min_z=2)
-slot5.allocate_position(pipette_holder,
-        2.5,
-        2.5,)
+
 # col and row are zero indexed
-pipette_holder.place_pipettes_in_columns([0,1,2])
-pipette_holder.remove_pipettes_from_columns([1])
-pipette_holder.remove_pipette_at(0,0)
-pipette_holder.place_pipette_at(0,0)
 print(pipette_holder.to_dict())
-print(pipette_holder.get_occupied_columns())
+
 
 #TODO understand drop zone and see how to implement it.
 tip_dropzone = TipDropzone(

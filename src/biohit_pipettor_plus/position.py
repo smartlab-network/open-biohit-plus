@@ -10,8 +10,10 @@ class Position_allocator:
         lw: Labware,
         x_corner: float,
         y_corner: float,
-        x_spacing: float = None,
-        y_spacing: float = None,
+        x_spacing: float ,
+        y_spacing: float,
+        rows : float,
+        columns : float,
         ):
         """
         Generate grid positions for labware containers inside a slot.
@@ -28,16 +30,39 @@ class Position_allocator:
             Distance between containers along X.
         y_spacing : float
             Distance between containers along Y.
+        rows: float
+            Number of rows in the labware.
+        columns: float
+            Number of columns in the labware.
         """
         positions = []
 
-        rows = lw._rows
-        columns = lw._columns
+        rows = rows
+        columns = columns
+        offset_x, offset_y = lw.offset
 
-        #dynamic X spacing and y spacing.
-        if x_spacing == None:
-            print("do")
-            x_spacing = lw.size_x - lw.offset[0]
+        """
+            if x and y spacing is None -: 
+                x spacing =  (size_x of the parent labware - offset*2 (from both sides)) / lw.rows
+                y spacing = (size_y of the parent labware - offset*2 (from both sides)) / lw.columns
+        """
+
+        if x_spacing is None or y_spacing is None:
+            try:
+                x_spacing = round((lw.size_x - 2 * offset_x) / (columns - 1), 2)
+                y_spacing = round((lw.size_y - 2 * offset_y) / (rows - 1), 2)
+            except Exception:
+                x_spacing = 0
+                y_spacing = 0
+
+            # Ensure spacing is never negative
+            if x_spacing < 0:
+                x_spacing = 0
+            if y_spacing < 0:
+                y_spacing = 0
+
+            print(f"x_spacing: {x_spacing}, y_spacing: {y_spacing}")
+
 
         for i in range(rows):
             for j in range(columns):
@@ -115,9 +140,6 @@ class Position_allocator:
         """
         wells = plate.get_wells()  # dict[str, Well or None]
 
-        # Extract first_well_xy offset
-        first_well_offset_x, first_well_offset_y = plate.first_well_xy
-
         for well_id, well in wells.items():
             if well is not None:
                 # Parse well_id which is in format "column:row" (e.g., "0:0", "1:2")
@@ -134,7 +156,7 @@ class Position_allocator:
                     x_base, y_base, _ = positions[idx]
 
                     # Add the first_well_xy offset to get the actual well center
-                    well.position = (x_base + first_well_offset_x, y_base + first_well_offset_y)
+                    well.position = (x_base , y_base)
 
     def update_PipetteHolder_positions(
             self,

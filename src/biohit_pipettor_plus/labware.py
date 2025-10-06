@@ -250,12 +250,10 @@ class Plate(Labware):
         Number of wells in X direction.
     wells_y : int
         Number of wells in Y direction.
-    first_well_xy : tuple[float, float]
-        Coordinates of the first well.
     """
 
 # TODO for plate, isn't offset and first well part of same equation. or is offset only till corners of the plate (if yes, what is the purpose to go to corner of any labware.
-    def __init__(self, size_x, size_y, size_z, wells_x, wells_y, first_well_xy, offset = (0,0), well: Well = None,
+    def __init__(self, size_x, size_y, size_z, wells_x, wells_y, offset = (0,0), well: Well = None,
                  labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a Plate instance.
@@ -272,16 +270,17 @@ class Plate(Labware):
             Number of wells in X direction.
         wells_y : int
             Number of wells in Y direction.
-        first_well_xy : tuple[float, float]
-            Coordinates of the first well.
         labware_id : str, optional
             Unique ID for the plate.
         """
 
         super().__init__(size_x, size_y, size_z, offset, labware_id, position)
+
+        if wells_x <= 0 or wells_y <= 0:
+            raise ValueError("wells_x and wells_y cannot be negative or 0")
+
         self._columns = wells_x  # Store internally
         self._rows = wells_y
-        self.first_well_xy = first_well_xy
 
         self.__wells: dict[str, Well or None] = {}
         self.well = well
@@ -330,7 +329,6 @@ class Plate(Labware):
         base.update({
             "wells_x": self.wells_x,
             "wells_y": self.wells_y,
-            "first_well_xy": list(self.first_well_xy),
             "wells": {wid: well.to_dict() if well else None for wid, well in self.__wells.items()}
         })
         return base
@@ -361,7 +359,6 @@ class Plate(Labware):
             labware_id=data["labware_id"],
             wells_x=data["wells_x"],
             wells_y=data["wells_y"],
-            first_well_xy = tuple(data["first_well_xy"]),
             position=position,)
 
         wells_data = data.get("wells", {})
@@ -572,6 +569,10 @@ class PipetteHolder(Labware):
             If None, position is not set.
         """
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id, position=position)
+
+        if holders_across_x <= 0 or holders_across_y <= 0:
+            raise ValueError("wells_x and wells_y cannot be negative or 0")
+
         self._columns = holders_across_x
         self._rows = holders_across_y
 
@@ -1174,6 +1175,10 @@ class ReservoirHolder(Labware):
             If None, position is not set.
         """
         super().__init__(size_x, size_y, size_z, offset, labware_id, position)
+
+        if hooks_across_x <= 0 or hooks_across_y <= 0:
+            raise ValueError("wells_x and wells_y cannot be negative or 0")
+
         self._columns = hooks_across_x
         self._rows = hooks_across_y
         self.total_hooks = hooks_across_x * hooks_across_y
@@ -1469,6 +1474,7 @@ class ReservoirHolder(Labware):
                 position=params.get("position", None),
             )
 
+            #print(f"Placing reservoir with size_y={params['size_y']}, hooks_x={hooks_x}, hooks_y={hooks_y}, hook_ids={hook_ids_to_use}")
             self.place_reservoir(hook_ids_to_use, reservoir)
 
     def add_volume(self, hook_id: int, volume: float) -> None:
