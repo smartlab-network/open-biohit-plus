@@ -93,3 +93,5 @@ tip_dropzone = TipDropzone(
     labware_id="dropzone_1",
     drop_height_relative=15  # Drop height 15mm above the dropzone base
 )
+
+print(deck1.to_dict())
