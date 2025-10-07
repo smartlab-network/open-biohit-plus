@@ -117,8 +117,8 @@ class Well(Labware):
 
     Attributes
     ----------
-    media : str or None
-        Optional description of the media (e.g. "water", "buffer").
+    content : str or None
+        Optional description of the content (e.g. "water", "buffer").
     add_height : float
         Height above the well bottom used when adding liquid (in mm).
     remove_height : float
@@ -137,7 +137,7 @@ class Well(Labware):
         labware_id: str = None,
         row: int = None,
         column: int = None,
-        media: str = None,
+        content: str = None,
         add_height: float = 5,
         remove_height: float = 5,
         suck_offset_xy: tuple[float, float] = (2, 2),
@@ -162,8 +162,8 @@ class Well(Labware):
         column: int, optional
             column inside of plate
             If None, position is not set.
-        media : str, optional
-            Name/type of media contained in the well.
+        content : str, optional
+            Name/type of content contained in the well.
         add_height : float, optional
             Pipette dispensing height above bottom of the well (default = 5 mm).
         remove_height : float, optional
@@ -172,7 +172,7 @@ class Well(Labware):
             XY offset from the well corner for aspiration/dispense (default = (2, 2)).
         """
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset = offset, labware_id=labware_id, position=position)
-        self.media = media
+        self.content = content
         self.add_height = add_height
         self.remove_height = remove_height
         self.suck_offset_xy = suck_offset_xy
@@ -193,7 +193,7 @@ class Well(Labware):
             {
                 "row": self.row,
                 "column": self.column,
-                "media": self.media,
+                "content": self.content,
                 "add_height": self.add_height,
                 "remove_height": self.remove_height,
                 "suck_offset_xy": list(self.suck_offset_xy),
@@ -230,7 +230,7 @@ class Well(Labware):
             offset =base_obj.offset,
             labware_id=base_obj.labware_id,
             position=base_obj.position,
-            media=data.get("media"),
+            content=data.get("content"),
             add_height=data.get("add_height", 5),
             remove_height=data.get("remove_height", 5),
             suck_offset_xy=tuple(data.get("suck_offset_xy", (2, 2))),
@@ -924,7 +924,6 @@ class PipetteHolder(Labware):
         """Standard grid dimension"""
         return self._rows
 
-#TODO question existence
 @register_class
 class TipDropzone(Labware):
     """
@@ -932,10 +931,6 @@ class TipDropzone(Labware):
 
     Attributes
     ----------
-    drop_x : float
-        X position (absolute in Labware, relative in Slot).
-    drop_y : float
-        Y position (absolute in Labware, relative in Slot).
     drop_height_relative : float
         Drop height relative to the labware height.
     """
@@ -943,8 +938,6 @@ class TipDropzone(Labware):
     def __init__(self, size_x: float,
                  size_y: float,
                  size_z: float,
-                 drop_x: float,
-                 drop_y: float,
                  offset: tuple[float,float] = (0, 0),
                  labware_id: str = None,
                  position: tuple[float, float] = None,
@@ -961,10 +954,6 @@ class TipDropzone(Labware):
             Depth of the drop zone in millimeters.
         size_z : float
             Height of the drop zone in millimeters.
-        drop_x : float
-            X position (absolute in Labware, relative in Slot).
-        drop_y : float
-            Y position (absolute in Labware, relative in Slot).
         labware_id : str, optional
             Unique ID for the dropzone object.
         position : tuple[float, float], optional
@@ -974,8 +963,6 @@ class TipDropzone(Labware):
             Height from which tips are dropped relative to the labware. Default is 20.
         """
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id, position=position)
-        self.drop_x = drop_x
-        self.drop_y = drop_y
         self.drop_height_relative = drop_height_relative
 
     def to_dict(self) -> dict:
@@ -989,8 +976,6 @@ class TipDropzone(Labware):
         """
         base_dict = super().to_dict()
         base_dict.update({
-            "drop_x": self.drop_x,
-            "drop_y": self.drop_y,
             "drop_height_relative": self.drop_height_relative,
         })
         return base_dict
@@ -1020,8 +1005,6 @@ class TipDropzone(Labware):
             size_z=data["size_z"],
             offset=data["offset"],
             labware_id=data["labware_id"],
-            drop_x=data["drop_x"],
-            drop_y=data["drop_y"],
             drop_height_relative=data["drop_height_relative"],
             position=position
         )

@@ -19,9 +19,9 @@ slot6 = Slot((100, 300), (50, 100), 500, "slot6")
 deck1.add_slots([slot1, slot2, slot3, slot4, slot5])
 
 #plate & well creating and checking
-example_well = Well(size_x=2, size_y=1, size_z=5, media="water")
+example_well = Well(size_x=2, size_y=1, size_z=5, content="water")
 plate1 = Plate(20, 50, 50, 6, 9, (3, 5), well=example_well)
-deck1.add_labware(plate1, slot_id="slot1", min_z=2, x_spacing=2.5, y_spacing=2.5)
+deck1.add_labware(plate1, slot_id="slot1", min_z=2)
 print(plate1.to_dict())
 
 """write_json(slot2)
@@ -90,8 +90,10 @@ tip_dropzone = TipDropzone(
     size_z=20,
     drop_x=25,  # Center of the dropzone in X (relative to slot)
     drop_y=25,  # Center of the dropzone in Y (relative to slot)
+    offset=(54,15),
     labware_id="dropzone_1",
     drop_height_relative=15  # Drop height 15mm above the dropzone base
 )
-
+deck1.add_labware(tip_dropzone, slot_id="slot2", min_z=2)
+print(tip_dropzone.to_dict())
 print(deck1.to_dict())
