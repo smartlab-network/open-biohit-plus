@@ -5,7 +5,7 @@ from math import ceil
 from .deck import Deck
 from .slot import Slot
 from .labware import Labware, Plate, Well, ReservoirHolder, Reservoir, PipetteHolder, IndividualPipetteHolder, \
-    TipDropzone
+    TipDropzone, Pipettors_in_Multi
 
 
 class PipettorPlus(Pipettor):
@@ -29,7 +29,11 @@ class PipettorPlus(Pipettor):
         self.slots: dict[str, Slot] = deck.slots
 
         # Tip content tracking
-        self.initalize_tips()
+        self.has_tips = False
+        self.tip_content: dict = {}  # Current content in tip as dict {content_type: volume}
+        self.tip_volume_remaining: float = 0.0  # Volume remaining in tip
+        self.initialize_tips()
+
     def pick_multi_tips(self, pipette_holder_id: str, columns: Optional[List[int]] = None) -> None:
         """
         Pick tips from a PipetteHolder going through specified columns (right to left).
@@ -195,8 +199,55 @@ class PipettorPlus(Pipettor):
         self.move_z(0)
 
     def replace_multi_tips(self, pipette_holder_id: str) -> None:
-        self.return_multi_tips(pipette_holder_id)
-        self.pick_multi_tips(pipette_holder_id)
+
+        if self.multichannel:
+            self.return_multi_tips(pipette_holder_id)
+            self.pick_multi_tips(pipette_holder_id)
+
+    def suck(self, volume: float, height: float, reservoir_holder_id: str = None,
+             hook_id: int = None) -> None:
+        """
+        Aspirate liquid and track volume in reservoir if specified
+        
+        Parameters
+        ----------
+        volume : float
+            Volume to aspirate (µL)
+        height : float
+            Aspiration height (mm)
+        reservoir_holder_id : str, optional
+            ReservoirHolder ID for volume tracking
+        hook_id : int, optional
+            Hook ID in reservoir holder
+        """
+        max_vol_per_go = 200  # Conservative aspirate volume per step. allows for both 200 & 1000ul tips
+        total_steps = ceil(volume / max_vol_per_go)
+        
+        source_content = None
+
+        # If tracking reservoir, remove volume first (validates availability)
+        if reservoir_holder_id and hook_id is not None:
+            for slot in self.slots.values():
+                if slot.labware and slot.labware.labware_id == reservoir_holder_id:
+                    holder = slot.labware
+                    if isinstance(holder, ReservoirHolder):
+                        # Get content from reservoir at hook
+                        hook_to_reservoir = holder.get_hook_to_reservoir_map()
+                        if hook_id in hook_to_reservoir and hook_to_reservoir[hook_id]:
+                            reservoir = hook_to_reservoir[hook_id]
+                            source_content = reservoir.content
+                        
+                        # Multiply by Pipettors_in_Multi if multichannel
+                        total_volume = volume * (Pipettors_in_Multi if self.multichannel else 1)
+                        holder.remove_volume(hook_id, total_volume)
+                        break
+
+        for step in range(total_steps):
+            vol = min(max_vol_per_go, volume - step * max_vol_per_go)
+            self.move_z(height)
+            self._aspirate_with_content_tracking(vol, source_content)
+
+        self.move_z(0)
 
     def fill_medium(self, plate_id: str):
         pass
@@ -223,12 +274,21 @@ class PipettorPlus(Pipettor):
         pass
 
     def spit(self, volume: float, height: float, labware_id: str = None):
-        if labware_id is not None:
-            labware_id.volume
-
-        p.move_z(height)
-        p.dispense(volume)
-        p.move_z(0)
+        """
+        Dispense volume to a specific labware with content tracking.
+        
+        Parameters
+        ----------
+        volume : float
+            Volume to dispense (µL)
+        height : float
+            Dispense height (mm)
+        labware_id : str, optional
+            ID of target labware for content tracking
+        """
+        self.move_z(height)
+        self._dispense_with_content_tracking(volume, labware_id)
+        self.move_z(0)
 
 
     def home(self):
@@ -236,7 +296,7 @@ class PipettorPlus(Pipettor):
         self.move_xy(0, 0)
         pass
 
-""" Helper functions. Not available for GUI"""
+    # Helper functions. Not necessarily available for GUI
     def _find_labware(self, labware_id: str, expected_type: type) -> Labware:
         """Find labware by ID, verify it's the expected type, and confirm it's placed in a slot."""
         # Check if labware exists in deck's global dictionary
@@ -266,6 +326,117 @@ class PipettorPlus(Pipettor):
     def initialize_tips(self) -> None:
         """Clear tip content when tips are discarded."""
         self.has_tips = False
-        self.tip_content = None
+        self.tip_content = {}
         self.tip_volume_remaining = 0.0
         print(f"  → Tips discarded, content cleared")
+
+    def _aspirate_with_content_tracking(self, volume: float, source_content: Optional[str] = None) -> None:
+        """
+        Aspirate volume and update tip content tracking.
+        
+        Parameters
+        ----------
+        volume : float
+            Volume to aspirate (µL)
+        source_content : str, optional
+            Content of the source labware. If None, no content tracking is performed.
+        """
+        self.aspirate(volume)
+        
+        if source_content:
+            # Add content to tip dictionary
+            if source_content in self.tip_content:
+                self.tip_content[source_content] += volume
+            else:
+                self.tip_content[source_content] = volume
+                
+            self.tip_volume_remaining += volume
+            print(f"  → Tip content updated: added {volume}µl of '{source_content}'")
+            print(f"  → Current tip content: {self._get_tip_content_summary()}")
+
+    def _dispense_with_content_tracking(self, volume: float, target_labware=None) -> None:
+        """
+        Dispense volume and update tip content tracking.
+        
+        Parameters
+        ----------
+        volume : float
+            Volume to dispense (µL)
+        target_labware : Labware or str, optional
+            Target labware object or labware_id string to update content. If None, no target tracking is performed.
+        """
+        self.dispense(volume)
+        
+        # Handle both labware objects and labware_id strings
+        labware_obj = None
+        if isinstance(target_labware, str):
+            try:
+                labware_obj = self._find_labware(target_labware, Labware)
+            except ValueError:
+                print(f"  → Warning: Labware '{target_labware}' not found for content tracking")
+        elif target_labware is not None:
+            labware_obj = target_labware
+        
+        # Update target labware content if it has content tracking methods
+        if labware_obj and hasattr(labware_obj, 'add_content') and self.tip_content:
+            # Calculate proportion to dispense
+            if self.tip_volume_remaining > 0:
+                proportion = volume / self.tip_volume_remaining
+                
+                # Add each content type from tip to target and update tip content
+                content_types = list(self.tip_content.keys())
+                for content_type in content_types:
+                    content_volume = self.tip_content[content_type]
+                    dispensed_volume = content_volume * proportion
+                    labware_obj.add_content(content_type, dispensed_volume)
+                    
+                    # Update tip content (remove dispensed amount)
+                    self.tip_content[content_type] -= dispensed_volume
+                    
+                    # Clean up zero or negative volumes
+                    if self.tip_content[content_type] <= 0:
+                        del self.tip_content[content_type]
+            
+            print(f"  → Target content updated (dispensed {volume}µl)")
+            
+        # Update remaining tip volume
+        self.tip_volume_remaining -= volume
+        
+        # Clear tip content if fully dispensed
+        if self.tip_volume_remaining <= 0:
+            self.tip_content = {}
+            self.tip_volume_remaining = 0.0
+            print(f"  → Tip emptied, content cleared")
+
+    def _get_tip_content_summary(self) -> str:
+        """
+        Get a readable summary of tip content.
+        Returns
+        -------
+        str
+            Summary string like "PBS: 150µL, water: 100µL" or "empty"
+        """
+        if not self.tip_content or self.tip_volume_remaining <= 0:
+            return "empty"
+            
+        parts = []
+        for content_type, volume in self.tip_content.items():
+            parts.append(f"{content_type}: {volume:.1f}µL")
+        
+        return ", ".join(parts)
+
+    def get_tip_status(self) -> dict:
+        """
+        Get current tip status.
+        
+        Returns
+        -------
+        dict
+            Dictionary with tip content and remaining volume information
+        """
+        return {
+            "content_dict": self.tip_content.copy(),
+            "volume_remaining": self.tip_volume_remaining,
+            "is_empty": self.tip_volume_remaining <= 0,
+            "content_summary": self._get_tip_content_summary()
+        }

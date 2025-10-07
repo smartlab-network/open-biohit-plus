@@ -4,7 +4,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import uuid
 from .serializable import Serializable, register_class
 import copy
-from typing import Optional
+from typing import Optional, Union
 
 Pipettors_in_Multi = 8
 
@@ -137,7 +137,7 @@ class Well(Labware):
         labware_id: str = None,
         row: int = None,
         column: int = None,
-        content: str = None,
+        content: Union[str, dict] = None,
         add_height: float = 5,
         remove_height: float = 5,
         suck_offset_xy: tuple[float, float] = (2, 2),
@@ -172,12 +172,167 @@ class Well(Labware):
             XY offset from the well corner for aspiration/dispense (default = (2, 2)).
         """
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset = offset, labware_id=labware_id, position=position)
-        self.content = content
+        
+        # Initialize content as dictionary for sophisticated tracking
+        if content is None:
+            self.content = {}
+        elif isinstance(content, dict):
+            self.content = content.copy()
+        else:
+            raise ValueError(f"Content must be str, dict, or None, got {type(content)}")
+            
         self.add_height = add_height
         self.remove_height = remove_height
         self.suck_offset_xy = suck_offset_xy
         self.row = row
         self.column = column
+
+    def add_content(self, content: str, volume: float) -> None:
+        """
+        Add content to the well with intelligent mixing logic.
+        
+        When adding content to a well:
+        - Same content type: volumes are combined
+        - Different content type: tracked separately (but physically mixed)
+        
+        Note: Once liquids are mixed in a well, they cannot be separated.
+        Removal is always proportional from all content types.
+        
+        Parameters
+        ----------
+        content : str
+            Content to add (e.g., "PBS", "water", "sample")
+        volume : float
+            Volume to add (µL)
+        """
+        if not content or volume <= 0:
+            return
+            
+        # Add content to dictionary
+        if content in self.content:
+            self.content[content] += volume
+        else:
+            self.content[content] = volume
+
+    def remove_content(self, volume: float) -> None:
+        """
+        Remove content from the well proportionally.
+        
+        When content is removed from a well, it's removed proportionally from all
+        content types since they are mixed together.
+        
+        Parameters
+        ----------
+        volume : float
+            Volume to remove (µL)
+            
+        Raises
+        ------
+        ValueError
+            If trying to remove more volume than available
+        """
+        total_volume = self.get_total_volume()
+        
+        if total_volume <= 0:
+            return  # Nothing to remove from empty well
+            
+        if volume > total_volume:
+            raise ValueError(f"Cannot remove {volume}µL, only {total_volume}µL available")
+            
+        # Remove proportionally from all content types (since they're mixed)
+        removal_ratio = volume / total_volume
+        
+        # Remove proportionally from each content type
+        content_types = list(self.content.keys())
+        for content_type in content_types:
+            remove_amount = self.content[content_type] * removal_ratio
+            self.content[content_type] -= remove_amount
+            
+            # Clean up zero or negative volumes
+            if self.content[content_type] <= 0:
+                del self.content[content_type]
+
+    def get_total_volume(self) -> float:
+        """
+        Get total volume of all content in the well.
+        
+        Returns
+        -------
+        float
+            Total volume in µL
+        """
+        return sum(self.content.values()) if self.content else 0.0
+
+    def get_content_info(self) -> dict:
+        """
+        Get current content information.
+        
+        Returns
+        -------
+        dict
+            Dictionary with detailed content information
+        """
+        total_volume = self.get_total_volume()
+        return {
+            "content_dict": self.content.copy(),
+            "total_volume": total_volume,
+            "is_empty": total_volume <= 0,
+            "content_summary": self.get_content_summary()
+        }
+
+    def get_content_summary(self) -> str:
+        """
+        Get a human-readable summary of well content.
+        
+        Returns
+        -------
+        str
+            Summary string like "PBS: 150µL, water: 100µL" or "empty"
+        """
+        if not self.content or self.get_total_volume() <= 0:
+            return "empty"
+            
+        parts = []
+        for content_type, volume in self.content.items():
+            parts.append(f"{content_type}: {volume:.1f}µL")
+        
+        return ", ".join(parts)
+
+    def get_content_by_type(self, content_type: str) -> float:
+        """
+        Get volume of specific content type.
+        
+        Parameters
+        ----------
+        content_type : str
+            Type of content to query
+            
+        Returns
+        -------
+        float
+            Volume of specified content type (0 if not present)
+        """
+        return self.content.get(content_type, 0.0)
+
+    def clear_content(self) -> None:
+        """Clear all content from the well."""
+        self.content = {}
+
+    def has_content_type(self, content_type: str) -> bool:
+        """
+        Check if well contains specific content type.
+        
+        Parameters
+        ----------
+        content_type : str
+            Type of content to check
+            
+        Returns
+        -------
+        bool
+            True if content type is present
+        """
+        return content_type in self.content and self.content[content_type] > 0
 
     def to_dict(self) -> dict:
         """

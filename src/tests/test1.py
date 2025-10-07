@@ -19,7 +19,7 @@ slot6 = Slot((100, 300), (50, 100), 500, "slot6")
 deck1.add_slots([slot1, slot2, slot3, slot4, slot5])
 
 #plate & well creating and checking
-example_well = Well(size_x=2, size_y=1, size_z=5, content="water")
+example_well = Well(size_x=2, size_y=1, size_z=5, content={"water": "750", "pbs" : "250"})
 plate1 = Plate(20, 50, 50, 6, 9, (3, 5), well=example_well)
 deck1.add_labware(plate1, slot_id="slot1", min_z=2)
 print(plate1.to_dict())
