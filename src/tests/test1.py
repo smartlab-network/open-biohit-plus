@@ -88,9 +88,7 @@ tip_dropzone = TipDropzone(
     size_x=50,
     size_y=50,
     size_z=20,
-    drop_x=25,  # Center of the dropzone in X (relative to slot)
-    drop_y=25,  # Center of the dropzone in Y (relative to slot)
-    offset=(54,15),
+    offset=(54,15),  # Center of the dropzone in X and Y (relative to slot)
     labware_id="dropzone_1",
     drop_height_relative=15  # Drop height 15mm above the dropzone base
 )
