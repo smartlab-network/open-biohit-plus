@@ -35,7 +35,7 @@ class Labware(Serializable):
         super().__init_subclass__(**kwargs)
         Labware.registry[cls.__name__] = cls
 
-    def __init__(self, size_x: float, size_y: float, size_z: float, offset= tuple[float, float], labware_id: str = None, position: tuple[float, float] = None):
+    def __init__(self, size_x: float, size_y: float, size_z: float, offset: tuple[float, float] = (0.0, 0.0), labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a Labware instance.
 
@@ -137,7 +137,7 @@ class Well(Labware):
         labware_id: str = None,
         row: int = None,
         column: int = None,
-        content: Union[str, dict] = None,
+        content: dict = None,
         add_height: float = 5,
         remove_height: float = 5,
         suck_offset_xy: tuple[float, float] = (2, 2),
@@ -302,14 +302,10 @@ class Well(Labware):
         """
         Get volume of specific content type.
         
-        Parameters
-        ----------
-        content_type : str
+        Parameters - content_type : str
             Type of content to query
-            
-        Returns
-        -------
-        float
+
+        Returns float
             Volume of specified content type (0 if not present)
         """
         return self.content.get(content_type, 0.0)
@@ -1094,9 +1090,9 @@ class TipDropzone(Labware):
                  size_y: float,
                  size_z: float,
                  offset: tuple[float,float] = (0, 0),
-                 labware_id: str = None,
+                 drop_height_relative: float = 20,
                  position: tuple[float, float] = None,
-                 drop_height_relative: float = 20
+                 labware_id: str = None
                  ):
         """
         Initialize a TipDropzone instance.
@@ -1159,9 +1155,9 @@ class TipDropzone(Labware):
             size_y=data["size_y"],
             size_z=data["size_z"],
             offset=data["offset"],
-            labware_id=data["labware_id"],
+            position=position,
             drop_height_relative=data["drop_height_relative"],
-            position=position
+            labware_id = data["labware_id"]
         )
 
 

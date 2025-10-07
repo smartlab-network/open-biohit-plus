@@ -11,7 +11,7 @@ from .labware import Labware, Plate, Well, ReservoirHolder, Reservoir, PipetteHo
 class PipettorPlus(Pipettor):
     def __init__(self, tip_volume: Literal[200, 1000], *, multichannel: bool, initialize: bool = True, deck: Deck):
         """
-        Interface to the Biohit Roboline pipettor with modern deck/slot/labware structure
+        Interface to the Biohit Roboline pipettor with deck/slot/labware structure
 
         Parameters
         ----------
@@ -32,7 +32,6 @@ class PipettorPlus(Pipettor):
         self.has_tips = False
         self.tip_content: dict = {}  # Current content in tip as dict {content_type: volume}
         self.tip_volume_remaining: float = 0.0  # Volume remaining in tip
-        self.initialize_tips()
 
     def pick_multi_tips(self, pipette_holder_id: str, columns: Optional[List[int]] = None) -> None:
         """
