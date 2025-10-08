@@ -41,12 +41,6 @@ class Position_allocator:
         columns = columns
         offset_x, offset_y = lw.offset
 
-        """
-            if x and y spacing is None -: 
-                x spacing =  (size_x of the parent labware - offset*2 (from both sides)) / lw.rows
-                y spacing = (size_y of the parent labware - offset*2 (from both sides)) / lw.columns
-        """
-
         if x_spacing is None or y_spacing is None:
             try:
                 x_spacing = round((lw.size_x - 2 * offset_x) / (columns - 1), 2)
@@ -71,8 +65,7 @@ class Position_allocator:
                 location = (f"{j},{i}")
                 positions.append((x_pos, y_pos,location))
 
-        # Special handling for ReservoirHolder labware
-
+        # Special handling for labware which contain labwares
         if isinstance(lw, ReservoirHolder):
             self.update_reservoir_positions(lw, positions)
 
@@ -142,10 +135,14 @@ class Position_allocator:
 
         for well_id, well in wells.items():
             if well is not None:
-                # Parse well_id which is in format "column:row" (e.g., "0:0", "1:2")
+                # Parse well_id which is in format "plate_id_col:row" (e.g., "labware_abc123_0:0")
                 try:
-                    col, row = map(int, well_id.replace("well_", "").split(":"))
-                except (ValueError, AttributeError):
+                    # Split by last underscore to separate plate_id from col:row
+                    parts = well_id.rsplit('_', 1)
+                    if len(parts) == 2:
+                        col_row = parts[1]
+                        col, row = map(int, col_row.split(':'))
+                except (ValueError, AttributeError, IndexError):
                     continue  # Skip invalid well IDs
 
                 # Calculate position index in the grid
@@ -153,10 +150,12 @@ class Position_allocator:
                 idx = row * plate.wells_x + col
 
                 if idx < len(positions):
-                    x_base, y_base, _ = positions[idx]
+                    x_pos, y_pos, _ = positions[idx]
+                    well.position = (x_pos, y_pos)
 
-                    # Add the first_well_xy offset to get the actual well center
-                    well.position = (x_base , y_base)
+                    # Set row and column attributes
+                    well.row = row
+                    well.column = col
 
     def update_PipetteHolder_positions(
             self,
@@ -181,9 +180,13 @@ class Position_allocator:
             if individual_holder is not None:
                 # Parse holder_id which is in format "holder_col:row" (e.g., "holder_0:0", "holder_1:2")
                 try:
-                    col, row = map(int, holder_id.replace("holder_", "").split(":"))
-                except (ValueError, AttributeError):
-                    continue  # Skip invalid holder IDs
+                    # Split by last underscore to separate holder_id from col:row
+                    parts = holder_id.rsplit('_', 1)
+                    if len(parts) == 2:
+                        col_row = parts[1]
+                        col, row = map(int, col_row.split(':'))
+                except (ValueError, AttributeError, IndexError):
+                    continue  # Skip invalid holder IDs  # Skip invalid holder IDs
 
                 # Calculate position index in the grid
                 # The positions list is organized by rows then columns

@@ -1,5 +1,6 @@
 import sys
 import os
+
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import uuid
 from .serializable import Serializable, register_class
@@ -7,6 +8,7 @@ import copy
 from typing import Optional, Union
 
 Pipettors_in_Multi = 8
+
 
 @register_class
 class Labware(Serializable):
@@ -35,7 +37,8 @@ class Labware(Serializable):
         super().__init_subclass__(**kwargs)
         Labware.registry[cls.__name__] = cls
 
-    def __init__(self, size_x: float, size_y: float, size_z: float, offset: tuple[float, float] = (0.0, 0.0), labware_id: str = None, position: tuple[float, float] = None):
+    def __init__(self, size_x: float, size_y: float, size_z: float, offset: tuple[float, float] = (0.0, 0.0),
+                 labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a Labware instance.
 
@@ -56,10 +59,9 @@ class Labware(Serializable):
         self.size_x = size_x
         self.size_y = size_y
         self.size_z = size_z
-        self.offset = offset or (0,0)
+        self.offset = offset or (0, 0)
         self.position = position or None
-        self.labware_id = labware_id or f"labware_{uuid.uuid4().hex}"
-
+        self.labware_id = labware_id or f"labware_{uuid.uuid4().hex[:8]}"
 
     def to_dict(self) -> dict:
         """
@@ -128,19 +130,19 @@ class Well(Labware):
     """
 
     def __init__(
-        self,
-        size_x: float,
-        size_y: float,
-        size_z: float,
-        offset: tuple[float, float] = (0,0),
-        position: tuple[float, float] = None,
-        labware_id: str = None,
-        row: int = None,
-        column: int = None,
-        content: dict = None,
-        add_height: float = 5,
-        remove_height: float = 5,
-        suck_offset_xy: tuple[float, float] = (2, 2),
+            self,
+            size_x: float,
+            size_y: float,
+            size_z: float,
+            offset: tuple[float, float] = (0, 0),
+            position: tuple[float, float] = None,
+            labware_id: str = None,
+            row: int = None,
+            column: int = None,
+            content: dict = None,
+            add_height: float = 5,
+            remove_height: float = 5,
+            suck_offset_xy: tuple[float, float] = (2, 2),
     ):
         """
         Initialize a Well instance.
@@ -171,8 +173,9 @@ class Well(Labware):
         suck_offset_xy : tuple[float, float], optional
             XY offset from the well corner for aspiration/dispense (default = (2, 2)).
         """
-        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset = offset, labware_id=labware_id, position=position)
-        
+        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id,
+                         position=position)
+
         # Initialize content as dictionary for sophisticated tracking
         if content is None:
             self.content = {}
@@ -180,7 +183,7 @@ class Well(Labware):
             self.content = content.copy()
         else:
             raise ValueError(f"Content must be str, dict, or None, got {type(content)}")
-            
+
         self.add_height = add_height
         self.remove_height = remove_height
         self.suck_offset_xy = suck_offset_xy
@@ -190,14 +193,14 @@ class Well(Labware):
     def add_content(self, content: str, volume: float) -> None:
         """
         Add content to the well with intelligent mixing logic.
-        
+
         When adding content to a well:
         - Same content type: volumes are combined
         - Different content type: tracked separately (but physically mixed)
-        
+
         Note: Once liquids are mixed in a well, they cannot be separated.
         Removal is always proportional from all content types.
-        
+
         Parameters
         ----------
         content : str
@@ -207,7 +210,7 @@ class Well(Labware):
         """
         if not content or volume <= 0:
             return
-            
+
         # Add content to dictionary
         if content in self.content:
             self.content[content] += volume
@@ -217,37 +220,37 @@ class Well(Labware):
     def remove_content(self, volume: float) -> None:
         """
         Remove content from the well proportionally.
-        
+
         When content is removed from a well, it's removed proportionally from all
         content types since they are mixed together.
-        
+
         Parameters
         ----------
         volume : float
             Volume to remove (µL)
-            
+
         Raises
         ------
         ValueError
             If trying to remove more volume than available
         """
         total_volume = self.get_total_volume()
-        
+
         if total_volume <= 0:
             return  # Nothing to remove from empty well
-            
+
         if volume > total_volume:
             raise ValueError(f"Cannot remove {volume}µL, only {total_volume}µL available")
-            
+
         # Remove proportionally from all content types (since they're mixed)
         removal_ratio = volume / total_volume
-        
+
         # Remove proportionally from each content type
         content_types = list(self.content.keys())
         for content_type in content_types:
             remove_amount = self.content[content_type] * removal_ratio
             self.content[content_type] -= remove_amount
-            
+
             # Clean up zero or negative volumes
             if self.content[content_type] <= 0:
                 del self.content[content_type]
@@ -255,7 +258,7 @@ class Well(Labware):
     def get_total_volume(self) -> float:
         """
         Get total volume of all content in the well.
-        
+
         Returns
         -------
         float
@@ -266,7 +269,7 @@ class Well(Labware):
     def get_content_info(self) -> dict:
         """
         Get current content information.
-        
+
         Returns
         -------
         dict
@@ -283,7 +286,7 @@ class Well(Labware):
     def get_content_summary(self) -> str:
         """
         Get a human-readable summary of well content.
-        
+
         Returns
         -------
         str
@@ -291,17 +294,17 @@ class Well(Labware):
         """
         if not self.content or self.get_total_volume() <= 0:
             return "empty"
-            
+
         parts = []
         for content_type, volume in self.content.items():
             parts.append(f"{content_type}: {volume:.1f}µL")
-        
+
         return ", ".join(parts)
 
     def get_content_by_type(self, content_type: str) -> float:
         """
         Get volume of specific content type.
-        
+
         Parameters - content_type : str
             Type of content to query
 
@@ -317,12 +320,12 @@ class Well(Labware):
     def has_content_type(self, content_type: str) -> bool:
         """
         Check if well contains specific content type.
-        
+
         Parameters
         ----------
         content_type : str
             Type of content to check
-            
+
         Returns
         -------
         bool
@@ -378,7 +381,7 @@ class Well(Labware):
             size_x=base_obj.size_x,
             size_y=base_obj.size_y,
             size_z=base_obj.size_z,
-            offset =base_obj.offset,
+            offset=base_obj.offset,
             labware_id=base_obj.labware_id,
             position=base_obj.position,
             content=data.get("content"),
@@ -403,8 +406,8 @@ class Plate(Labware):
         Number of wells in Y direction.
     """
 
-# TODO for plate, isn't offset and first well part of same equation. or is offset only till corners of the plate (if yes, what is the purpose to go to corner of any labware.
-    def __init__(self, size_x, size_y, size_z, wells_x, wells_y, offset = (0,0), well: Well = None,
+    # TODO for plate, isn't offset and first well part of same equation. or is offset only till corners of the plate (if yes, what is the purpose to go to corner of any labware.
+    def __init__(self, size_x, size_y, size_z, wells_x, wells_y, offset=(0, 0), well: Well = None,
                  labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a Plate instance.
@@ -453,19 +456,22 @@ class Plate(Labware):
         for x in range(self._columns):
             for y in range(self._rows):
                 well = copy.deepcopy(self.well)  # Create a new copy
-                well.labware_id = f'well_{x}:{y}'
+                well.labware_id = f'{self.labware_id}_{x}:{y}'
                 self.__wells[well.labware_id] = well
 
-    # TODO question existence   
+    # TODO question existence
+    """
     def place_unique_well(self, row, column, well: Well):
         well_placement = f"{column}:{row}"
         if well_placement not in self.__wells.keys():
             raise ValueError(f"{well_placement} is not a valid well placement")
 
+        #need to fix this.
         well.labware_id = well_placement
         well.row = row
         well.column = column
         self.__wells[well.labware_id] = well
+    """
 
     def to_dict(self):
         """
@@ -510,7 +516,7 @@ class Plate(Labware):
             labware_id=data["labware_id"],
             wells_x=data["wells_x"],
             wells_y=data["wells_y"],
-            position=position,)
+            position=position, )
 
         wells_data = data.get("wells", {})
         for wid, wdata in wells_data.items():
@@ -519,7 +525,6 @@ class Plate(Labware):
             else:
                 plate._Plate__wells[wid] = Serializable.from_dict(wdata)
         return plate
-
 
     @property
     def wells_x(self) -> int:
@@ -541,6 +546,7 @@ class Plate(Labware):
         """Standard grid dimension"""
         return self._rows
 
+
 @register_class
 class IndividualPipetteHolder(Labware):
     """
@@ -560,7 +566,7 @@ class IndividualPipetteHolder(Labware):
             size_x: float,
             size_y: float,
             size_z: float,
-            offset: tuple[float, float] = (0,0),
+            offset: tuple[float, float] = (0, 0),
             pipette_type: str = "P1000",
             is_occupied: bool = False,
             labware_id: str = None,
@@ -691,7 +697,7 @@ class PipetteHolder(Labware):
                  size_z: float,
                  holders_across_x: int,
                  holders_across_y: int,
-                 offset: float = (0, 0),
+                 offset: tuple[float, float] = (0, 0),
                  individual_holder: IndividualPipetteHolder = None,
                  labware_id: str = None,
                  position: tuple[float, float] = None):
@@ -719,10 +725,11 @@ class PipetteHolder(Labware):
             (x, y) position coordinates of the pipette holder in millimeters.
             If None, position is not set.
         """
-        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id, position=position)
+        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id,
+                         position=position)
 
         if holders_across_x <= 0 or holders_across_y <= 0:
-            raise ValueError("wells_x and wells_y cannot be negative or 0")
+            raise ValueError("holders_across_x and holders_across_y cannot be negative or 0")
 
         self._columns = holders_across_x
         self._rows = holders_across_y
@@ -750,7 +757,7 @@ class PipetteHolder(Labware):
         for x in range(self._columns):
             for y in range(self._rows):
                 holder = copy.deepcopy(self.individual_holder)
-                holder.labware_id = f'holder_{x}:{y}'
+                holder.labware_id = f'{self.labware_id}_{x}:{y}'
                 self.__individual_holders[holder.labware_id] = holder
 
     def get_individual_holders(self) -> dict[str, IndividualPipetteHolder]:
@@ -760,7 +767,6 @@ class PipetteHolder(Labware):
             Dictionary mapping position IDs to IndividualPipetteHolder instances.
         """
         return self.__individual_holders
-
 
     def get_available_holders(self) -> list[IndividualPipetteHolder]:
         """
@@ -812,7 +818,7 @@ class PipetteHolder(Labware):
         # Check if all positions are available before placing
         for col in columns:
             for row in range(self._rows):
-                holder_id = f'holder_{col}:{row}'
+                holder_id = f'{self.labware_id}_{col}:{row}'
                 individual_holder = self.__individual_holders.get(holder_id)
 
                 if individual_holder is None:
@@ -828,7 +834,7 @@ class PipetteHolder(Labware):
         # Place pipettes in all positions
         for col in columns:
             for row in range(self._rows):
-                holder_id = f'holder_{col}:{row}'
+                holder_id = f'{self.labware_id}_{col}:{row}'
                 self.__individual_holders[holder_id].place_pipette()
 
     def remove_pipettes_from_columns(self, columns: list[int]) -> None:
@@ -857,7 +863,7 @@ class PipetteHolder(Labware):
         # Check if all positions have pipettes before removing
         for col in columns:
             for row in range(self._rows):
-                holder_id = f'holder_{col}:{row}'
+                holder_id = f'{self.labware_id}_{col}:{row}'
                 individual_holder = self.__individual_holders.get(holder_id)
 
                 if individual_holder is None:
@@ -873,7 +879,7 @@ class PipetteHolder(Labware):
         # Remove pipettes from all positions
         for col in columns:
             for row in range(self._rows):
-                holder_id = f'holder_{col}:{row}'
+                holder_id = f'{self.labware_id}_{col}:{row}'
                 self.__individual_holders[holder_id].remove_pipette()
 
     def place_pipette_at(self, column: int, row: int) -> None:
@@ -904,7 +910,7 @@ class PipetteHolder(Labware):
                 f"Valid range is 0 to {self._rows - 1}"
             )
 
-        holder_id = f'holder_{column}:{row}'
+        holder_id = f'{self.labware_id}_{column}:{row}'
         individual_holder = self.__individual_holders.get(holder_id)
 
         if individual_holder is None:
@@ -942,7 +948,7 @@ class PipetteHolder(Labware):
                 f"Valid range is 0 to {self._rows - 1}"
             )
 
-        holder_id = f'holder_{column}:{row}'
+        holder_id = f'{self.labware_id}_{column}:{row}'
         individual_holder = self.__individual_holders.get(holder_id)
 
         if individual_holder is None:
@@ -965,7 +971,7 @@ class PipetteHolder(Labware):
 
         for col in range(self._columns):
             for row in range(self._rows):
-                holder_id = f'holder_{col}:{row}'
+                holder_id = f'{self.labware_id}_{col}:{row}'
                 individual_holder = self.__individual_holders.get(holder_id)
 
                 if individual_holder and individual_holder.is_available():
@@ -987,7 +993,7 @@ class PipetteHolder(Labware):
 
         for col in range(self._columns):
             for row in range(self._rows):
-                holder_id = f'holder_{col}:{row}'
+                holder_id = f'{self.labware_id}_{col}:{row}'
                 individual_holder = self.__individual_holders.get(holder_id)
 
                 if individual_holder and individual_holder.is_occupied:
@@ -1075,6 +1081,7 @@ class PipetteHolder(Labware):
         """Standard grid dimension"""
         return self._rows
 
+
 @register_class
 class TipDropzone(Labware):
     """
@@ -1089,7 +1096,7 @@ class TipDropzone(Labware):
     def __init__(self, size_x: float,
                  size_y: float,
                  size_z: float,
-                 offset: tuple[float,float] = (0, 0),
+                 offset: tuple[float, float] = (0, 0),
                  drop_height_relative: float = 20,
                  position: tuple[float, float] = None,
                  labware_id: str = None
@@ -1113,7 +1120,8 @@ class TipDropzone(Labware):
         drop_height_relative : float, optional
             Height from which tips are dropped relative to the labware. Default is 20.
         """
-        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id, position=position)
+        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id,
+                         position=position)
         self.drop_height_relative = drop_height_relative
 
     def to_dict(self) -> dict:
@@ -1157,7 +1165,7 @@ class TipDropzone(Labware):
             offset=data["offset"],
             position=position,
             drop_height_relative=data["drop_height_relative"],
-            labware_id = data["labware_id"]
+            labware_id=data["labware_id"]
         )
 
 
@@ -1166,13 +1174,13 @@ Default_Reservoir_Capacity = 30000
 
 @register_class
 class Reservoir(Labware):
-    def __init__(self, size_x: float, size_y: float, size_z: float, offset: tuple[float,float] = (0, 0),
+    def __init__(self, size_x: float, size_y: float, size_z: float, offset: tuple[float, float] = (0, 0),
                  capacity: float = Default_Reservoir_Capacity, filled_volume: float = None,
                  content: str = None, hook_ids: list[int] = None, labware_id: str = None,
                  position: tuple[float, float] = None):
         """
         Initialize a Reservoir instance. These are containers that store the medium to be filled in and removed from well.
-        
+
         Parameters
         ----------
         size_x : float
@@ -1280,10 +1288,11 @@ class Reservoir(Labware):
             position=position,
         )
 
+
 @register_class
 class ReservoirHolder(Labware):
     def __init__(self, size_x: float, size_y: float, size_z: float, hooks_across_x: int, hooks_across_y: int,
-                offset: tuple[float,float] = (0, 0), reservoir_dict: dict[int, dict] = None,
+                 offset: tuple[float, float] = (0, 0), reservoir_dict: dict[int, dict] = None,
                  labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a ReservoirHolder instance that can hold multiple reservoirs.
@@ -1311,7 +1320,7 @@ class ReservoirHolder(Labware):
         super().__init__(size_x, size_y, size_z, offset, labware_id, position)
 
         if hooks_across_x <= 0 or hooks_across_y <= 0:
-            raise ValueError("wells_x and wells_y cannot be negative or 0")
+            raise ValueError("hooks_across_x and hooks_across_y cannot be negative or 0")
 
         self._columns = hooks_across_x
         self._rows = hooks_across_y
@@ -1379,7 +1388,6 @@ class ReservoirHolder(Labware):
             raise ValueError(f"row {row} out of range (0 to {self._rows - 1})")
 
         return row * self._columns + col + 1
-
 
     def get_reservoirs(self) -> list[Reservoir]:
         """Return list of all unique reservoirs (no duplicates)."""
@@ -1533,11 +1541,11 @@ class ReservoirHolder(Labware):
             If a specified hook_id is occupied, insufficient space, or
             reservoir parameters are invalid.
         """
-        for params in reservoir_dict.values():
+        for res in reservoir_dict.values():
             # Determine which hooks to use
-            specified_hooks = params.get("hook_ids")
-            num_hooks_x = params.get("num_hooks_x", 1)
-            num_hooks_y = params.get("num_hooks_y", 1)
+            specified_hooks = res.get("hook_ids")
+            num_hooks_x = res.get("num_hooks_x", 1)
+            num_hooks_y = res.get("num_hooks_y", 1)
 
             if specified_hooks is not None:
                 # User specified exact hooks - convert to list if needed
@@ -1549,8 +1557,8 @@ class ReservoirHolder(Labware):
                 # Auto-allocate hooks in a rectangle
                 max_width_per_hook = self.size_x / self._columns
                 max_height_per_hook = self.size_y / self._rows
-                reservoir_width = params["size_x"]
-                reservoir_height = params["size_y"]
+                reservoir_width = res["size_x"]
+                reservoir_height = res["size_y"]
 
                 # Calculate minimum hooks needed based on dimensions
                 min_hooks_x = int(reservoir_width / max_width_per_hook)
@@ -1596,19 +1604,33 @@ class ReservoirHolder(Labware):
                         f"available hooks for reservoir"
                     )
 
+            # Generate position-based labware_id if not provided
+            labware_id = res.get("labware_id")
+            if labware_id is None:
+                # Get all positions for this reservoir's hooks
+                positions = [self.hook_id_to_position(hid) for hid in hook_ids_to_use]
+                cols = [pos[0] for pos in positions]
+                rows = [pos[1] for pos in positions]
+
+                # Use a corner  (min row, min col)
+                min_col = min(cols)
+                min_row = min(rows)
+
+                labware_id = f"{self.labware_id}_{min_col}:{min_row}"
+
             # Create Reservoir instance
             reservoir = Reservoir(
-                size_x=params["size_x"],
-                size_y=params["size_y"],
-                size_z=params["size_z"],
-                capacity=params.get("capacity", Default_Reservoir_Capacity),
-                filled_volume=params.get("filled_volume"),
-                content=params.get("content"),
-                labware_id=params.get("labware_id"),
-                position=params.get("position", None),
+                size_x=res["size_x"],
+                size_y=res["size_y"],
+                size_z=res["size_z"],
+                capacity=res.get("capacity", Default_Reservoir_Capacity),
+                filled_volume=res.get("filled_volume"),
+                content=res.get("content"),
+                labware_id=labware_id,
+                position=res.get("position", None),
             )
 
-            #print(f"Placing reservoir with size_y={params['size_y']}, hooks_x={hooks_x}, hooks_y={hooks_y}, hook_ids={hook_ids_to_use}")
+            # Place the reservoir
             self.place_reservoir(hook_ids_to_use, reservoir)
 
     def add_volume(self, hook_id: int, volume: float) -> None:
@@ -1670,7 +1692,7 @@ class ReservoirHolder(Labware):
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
-            offset = data["offset"],
+            offset=data["offset"],
             hooks_across_x=data["hooks_across_x"],
             hooks_across_y=data.get("hooks_across_y", 1),  # Default to 1 for backwards compatibility
             labware_id=data["labware_id"],
