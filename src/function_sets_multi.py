@@ -230,7 +230,7 @@ def pick_multi_tips(p: Pipettor, pipette_tips):
     :param pipette_tips:
     """
     print("pick_multi_tips: start")
-    p.move_xy(pipette_tips.x_corner_multi, pipette_tips.y_corner_multi)
+    p.move_xy(pipette_tips.x_corner, pipette_tips.y_corner)
     for i in range(1, 13, 1):
         try:
             p.pick_tip(pipette_tips.pick_height)
