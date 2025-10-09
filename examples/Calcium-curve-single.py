@@ -59,7 +59,7 @@ platename = 'single-pipettor-test'
 # Create a dictionary for replacement vol and conc as per desired concentration goal.
 # Do not enter initial concentration adn volume.
 prep_table = [
-   {"µl": 50, "mM": 0},
+   {"µl": 200, "mM": 0},
    {"µl": 500, "mM": 0},
    {"µl": 94, "mM": 1.8},
    {"µl": 107, "mM": 1.8},

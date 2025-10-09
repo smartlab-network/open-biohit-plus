@@ -27,7 +27,7 @@ class EHMPlatePos:
        self.x_corner_multi = x_corner + 12
        self.y_corner_multi = y_corner + 43
        self.add_height = 58
-       self.remove_height = 60
+       self.remove_height = 58
        self.cols = 6
        self.rows = 8
 
@@ -298,8 +298,11 @@ def spit_all(p: Pipettor, height: float, volume: float = None, reservoirs: Reser
     """
     Dispenses (empties) all liquid currently inside the pipette, then returns to z=0 (safe height).
 
+    CRITICAL: The pipette will NEVER go deeper than the specified height limit, regardless of
+    surface detection results or distance_from_surface settings.
+
     :param p: Pipettor object
-    :param height: dispense height inside the well (mm) - used as limit if surface detection is enabled
+    :param height: MAXIMUM dispense depth - pipette will never exceed this (mm)
     :param volume: (optional) volume to record in reservoir tracking (µl)
     :param reservoirs: (optional) Reservoirs object to track liquid usage
     :param well: (optional) specific well index in the reservoir
@@ -311,12 +314,20 @@ def spit_all(p: Pipettor, height: float, volume: float = None, reservoirs: Reser
 
     if use_surface_detection:
         try:
-            print(f"Attempting surface detection with limit={height}, distance={distance_from_surface}")
+            print(f"Attempting surface detection with HARD LIMIT={height} mm, distance={distance_from_surface} mm")
+            # move_to_surface with limit ensures pipette STOPS at height if surface not found
             p.move_to_surface(limit=height, distance_from_surface=distance_from_surface)
-            current_z = p.z_position  # FIXED: Use p.z_position instead of p.get_position()[2]
-            print(f"✓ Surface detected successfully at Z={current_z} mm (distance from surface: {distance_from_surface} mm)")
+            current_z = p.z_position
+
+            # SAFETY CHECK: Verify we didn't exceed the height limit
+            if current_z > height:
+                print(f"⚠️ WARNING: Position {current_z} mm exceeds limit {height} mm. Correcting to {height} mm")
+                p.move_z(height)
+                current_z = height
+
+            print(f"✓ Surface detected at Z={current_z} mm (distance from surface: {distance_from_surface} mm)")
         except CommandFailed:
-            print(f"⚠️ Surface detection failed. Falling back to manual height: {height} mm")
+            print(f"⚠️ Surface detection failed. Using safe fallback height: {height} mm")
             p.move_z(height)
             print(f"Manual position set to Z={height} mm")
     else:
@@ -332,9 +343,12 @@ def spit(p: Pipettor, volume: float, height: float, reservoirs: Reservoirs = Non
     """
     Dispenses (spits out) a given volume and returns pipette to z=0 (safe height).
 
+    CRITICAL: The pipette will NEVER go deeper than the specified height limit, regardless of
+    surface detection results or distance_from_surface settings.
+
     :param p: Pipettor object
     :param volume: volume to dispense (µl)
-    :param height: dispense height inside the well (mm) - used as limit if surface detection is enabled
+    :param height: MAXIMUM dispense depth - pipette will never exceed this (mm)
     :param reservoirs: (optional) Reservoirs object to track liquid usage
     :param well: (optional) specific well index in the reservoir
     :param use_surface_detection: if True, uses move_to_surface instead of move_z
@@ -345,12 +359,19 @@ def spit(p: Pipettor, volume: float, height: float, reservoirs: Reservoirs = Non
 
     if use_surface_detection:
         try:
-            print(f"Attempting surface detection with limit={height}, distance={distance_from_surface}")
+            print(f"Attempting surface detection with HARD LIMIT={height} mm, distance={distance_from_surface} mm")
             p.move_to_surface(limit=height, distance_from_surface=distance_from_surface)
-            current_z = p.z_position  # FIXED: Use p.z_position
-            print(f"✓ Surface detected successfully at Z={current_z} mm (distance from surface: {distance_from_surface} mm)")
+            current_z = p.z_position
+
+            # SAFETY CHECK: Verify we didn't exceed the height limit
+            if current_z > height:
+                print(f"⚠️ WARNING: Position {current_z} mm exceeds limit {height} mm. Correcting to {height} mm")
+                p.move_z(height)
+                current_z = height
+
+            print(f"✓ Surface detected at Z={current_z} mm (distance from surface: {distance_from_surface} mm)")
         except CommandFailed:
-            print(f"⚠️ Surface detection failed. Falling back to manual height: {height} mm")
+            print(f"⚠️ Surface detection failed. Using safe fallback height: {height} mm")
             p.move_z(height)
             print(f"Manual position set to Z={height} mm")
     else:
@@ -366,14 +387,18 @@ def suck(p: Pipettor, volume: float, height: float, reservoirs: Reservoirs = Non
     """
     Aspirates (sucks up) a given volume and returns pipette to z=0 (safe height).
 
+    CRITICAL: The pipette will NEVER go deeper than the specified height limit, regardless of
+    surface detection results or distance_from_surface settings.
+
     :param p: Pipettor object
     :param volume: volume to aspirate (µl)
-    :param height: aspiration height inside the well (mm) - used as limit if surface detection is enabled
+    :param height: MAXIMUM aspiration depth - pipette will never exceed this (mm)
     :param reservoirs: (optional) Reservoirs object to track liquid usage
     :param well: (optional) specific well index in the reservoir
     :param use_surface_detection: if True, uses move_to_surface instead of move_z
     :param distance_from_surface: distance to maintain from the detected surface (mm).
-                                   Negative value moves into the liquid (default: 3.0 mm into liquid)
+                                   Positive value = above surface, Negative value = into liquid
+                                   (default: 3.0 mm into liquid)
     """
     max_vol_per_go = 100
     total_steps_required = ceil(volume / max_vol_per_go)
@@ -386,12 +411,20 @@ def suck(p: Pipettor, volume: float, height: float, reservoirs: Reservoirs = Non
 
         if use_surface_detection:
             try:
-                print(f"Attempting surface detection with limit={height}, distance={-distance_from_surface}")
+                # For aspiration, typically want to go INTO the liquid (negative distance)
+                print(f"Attempting surface detection with HARD LIMIT={height} mm, distance={-distance_from_surface} mm")
                 p.move_to_surface(limit=height, distance_from_surface=-distance_from_surface)
-                current_z = p.z_position  # FIXED: Use p.z_position
-                print(f"✓ Surface detected successfully at Z={current_z} mm (distance into liquid: {distance_from_surface} mm)")
+                current_z = p.z_position
+
+                # SAFETY CHECK: Verify we didn't exceed the height limit
+                if current_z > height:
+                    print(f"⚠️ WARNING: Position {current_z} mm exceeds limit {height} mm. Correcting to {height} mm")
+                    p.move_z(height)
+                    current_z = height
+
+                print(f"✓ Surface detected at Z={current_z} mm (distance into liquid: {distance_from_surface} mm)")
             except CommandFailed:
-                print(f"⚠️ Surface detection failed. Falling back to manual height: {height} mm")
+                print(f"⚠️ Surface detection failed. Using safe fallback height: {height} mm")
                 p.move_z(height)
                 print(f"Manual position set to Z={height} mm")
         else:
@@ -447,7 +480,7 @@ def fill_single(p: Pipettor, ehm_plate: EHMPlatePos, containers: Reservoirs, pip
                             # Suck function includes checks if aspiration is possible or not.
                             p.move_xy(getattr(containers, f"well{candidate}_x"), containers.y_corner)
                             suck(p, vol, containers.remove_height, reservoirs=containers, well=candidate,
-                                 use_surface_detection=use_surface_detection, distance_from_surface=0.0)
+                                 use_surface_detection=use_surface_detection, distance_from_surface=2.0)
                             print(f"Aspirated {vol} µl from well {candidate}")
                             break
                         except ValueError as e:
@@ -516,7 +549,7 @@ def remove_single(p: Pipettor, ehm_plate: EHMPlatePos, containers: Reservoirs, p
                     # Decide how much to aspirate this step (don't exceed pipette capacity)
                     vol = min(max_vol_per_go, (volume - (steps_done * max_vol_per_go)))
                     suck(p, vol, ehm_plate.remove_height,
-                         use_surface_detection=use_surface_detection, distance_from_surface=0.0)
+                         use_surface_detection=use_surface_detection, distance_from_surface=2.0)
 
                     # --- Step 4: Transfer aspirated liquid to waste well (group 1) ---
                     for candidate in containers.get_equivalent_group(1):  # 1 = waste group
