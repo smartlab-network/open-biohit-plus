@@ -146,7 +146,7 @@ for row in prep_table:
     else:
         print(f"Invalid Concentration in prep table i.e. not 0, 1.8, 5, 15")
 
-    print(f"Filled well with {replacement_vol} medium")
+    print(f"Filled well with {replacement_vol}ul")
     if bDoFoc:
         p.move_xy(0, 0)
         time.sleep(incubation_time)
