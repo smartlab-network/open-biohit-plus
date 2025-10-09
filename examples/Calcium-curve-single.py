@@ -25,7 +25,6 @@ C2 = (0, 140)
 p = Pipettor(tip_volume=200, multichannel=False)
 
 
-# python -m biohit-pipettor-python.examples.Ca_crcr_full_multi
 p.x_speed = 7
 p.y_speed = 7
 p.z_speed = 8
