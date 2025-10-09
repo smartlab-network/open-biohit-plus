@@ -5,8 +5,8 @@ import sys
 import winreg
 import re
 
-from examples.contractiondb import ContractionDB
-from examples.contractiondb import parse_args
+from contractiondb import ContractionDB
+from contractiondb import (parse_args)
 
 #sys.path.append("E:\\Labhub\\Repos\\meyerti\\contractiondb-python")
 
