@@ -7,6 +7,7 @@ from .deck import Deck
 from .slot import Slot
 from .labware import Labware, Plate, Well, ReservoirHolder, Reservoir, PipetteHolder, IndividualPipetteHolder, \
     TipDropzone, Pipettors_in_Multi
+from .errors import CommandFailed
 
 
 class PipettorPlus(Pipettor):
@@ -36,14 +37,14 @@ class PipettorPlus(Pipettor):
         self.volume_present_in_tip: float = 0.0  # Volume remaining in tip
         self.change_tips = 0    #control if tips are to be changed
 
-    def pick_multi_tips(self, pipette_holder_id: str, columns: Optional[List[int]] = None) -> None:
+    def pick_multi_tips(self, pipette_holder: Labware, columns: Optional[List[int]] = None) -> None:
         """
         Pick tips from a PipetteHolder going through specified columns (right to left).
 
         Parameters
         ----------
-        pipette_holder_id : str
-            ID of the PipetteHolder labware
+        pipette_holder: str
+            PipetteHolder labware
         columns : List[int], optional
             List of column indices to try. If None, uses all occupied columns.
 
@@ -57,31 +58,32 @@ class PipettorPlus(Pipettor):
             raise ValueError("pick_multi_tips requires multichannel pipettor")
 
         # Find the pipette holder
-        pipette_holder = self._find_labware(pipette_holder_id, PipetteHolder)
+        if not isinstance(pipette_holder, PipetteHolder):
+            raise ValueError("Pick tips only work on pipette_holders")
 
         if columns is None:
             columns = pipette_holder.get_occupied_columns()
 
         if not columns:
-            raise ValueError(f"No occupied columns found in pipette holder {pipette_holder_id}")
+            raise ValueError(f"No occupied columns found in pipette holder {pipette_holder.labware_id}")
 
         print(f"pick_multi_tips: start, trying columns {columns}")
 
-        for col in sorted(columns):  # ascending trys
+        for col in sorted(columns):  # ascending attempts to pick pipette
             # Get the position for the first row of this column
-            holder_id = f'{pipette_holder_id}_{col}:0'
+            holder_id = f'{pipette_holder.labware_id}_{col}:0'
             individual_holder = pipette_holder.get_individual_holders().get(holder_id)
             if individual_holder is None or not individual_holder.is_occupied:
                 continue
 
             try:
                 # Move to the tip position
-
                 if individual_holder.position is None:
                     raise ValueError(f"Individual holder {holder_id} has no position set")
 
                 x, y = individual_holder.position
                 self.move_xy(x, y)
+
                 #TODO understand height attribute
                 self.move_z(22)  # pick_height
                 self.pick_tip()
@@ -92,9 +94,8 @@ class PipettorPlus(Pipettor):
                 print(f"Picked up tips from column {col}")
                 break
 
-            except Exception as e:
+            except CommandFailed:
                 print(f"Failed to pick tips from column {col}: {e}")
-
                 continue
             finally:
                 self.move_z(0)
@@ -102,14 +103,14 @@ class PipettorPlus(Pipettor):
             raise RuntimeError(f"Failed to pick tips from any of the specified columns {columns}")
 
 
-    def return_multi_tips(self, pipette_holder_id: str, columns: Optional[List[int]] = None) -> None:
+    def return_multi_tips(self, pipette_holder: Labware, columns: Optional[List[int]] = None) -> None:
         """
         Return tips to PipetteHolder in available columns (left to right).
 
         Parameters
         ----------
-        pipette_holder_id : str
-            ID of the PipetteHolder labware
+        pipette_holder : str
+            PipetteHolder labware
         columns : List[int], optional
             List of column indices to try for returning tips.
             If None, uses all available columns.
@@ -133,20 +134,20 @@ class PipettorPlus(Pipettor):
         if not self.has_tips:
             raise ValueError("No tips to return - pipettor is empty")
 
-            # Find the pipette holder
-        pipette_holder = self._find_labware(pipette_holder_id, PipetteHolder)
+        if not isinstance(pipette_holder, PipetteHolder):
+            raise ValueError("Pick tips only work on pipette_holders")
 
         if columns is None:
             columns = pipette_holder.get_available_columns()
 
         if not columns:
-            raise ValueError(f"No empty columns found in pipette holder {pipette_holder_id}")
+            raise ValueError(f"No empty columns found in pipette holder {pipette_holder.labware_id}")
 
         print(f"return_multi_tips: start, trying columns {columns}")
 
-        for col in sorted(columns, reverse=True):  # descending trys
+        for col in sorted(columns, reverse=True):  # attempts to return tips in descending order to available columns.
             # Get the position for the first row of this column
-            holder_id = f'{pipette_holder_id}_{col}:0'
+            holder_id = f'{pipette_holder.labware_id}_{col}:0'
             individual_holder = pipette_holder.get_individual_holders().get(holder_id)
 
             if individual_holder is None or individual_holder.is_occupied:
@@ -159,6 +160,7 @@ class PipettorPlus(Pipettor):
 
                 x, y = individual_holder.position
                 self.move_xy(x, y)
+                #TODO Fix height
                 self.move_z(22)  # Slightly above pick height
                 self.eject_tip()
 
@@ -179,7 +181,7 @@ class PipettorPlus(Pipettor):
                 f"Holder is full. Tips still attached to pipettor."
             )
 
-    def discard_tips(self, tip_dropzone_id: str) -> None:
+    def discard_tips(self, tip_dropzone_id: Labware) -> None:
         """
                Discard tips to a TipDropzone.
                Parameters
@@ -239,11 +241,11 @@ class PipettorPlus(Pipettor):
         total_vol_to_aspirate = source_volume_per_column * len(source_columns) * self.tip_count
         total_vol_to_dispense = destination_volume_per_column * len(destination_columns) * self.tip_count
 
+        if total_vol_to_aspirate != total_vol_to_dispense:
+            raise ValueError("total_vol_to_aspirate should be equal to total_vol_to_dispense.")
+
         source_lw.id = source_lw.labware_id
         destination_lw.id = destination_lw.labware_id
-
-        if  total_vol_to_aspirate != total_vol_to_dispense:
-            raise ValueError("total_vol_to_aspirate should be equal to total_vol_to_dispense.")
 
         # any parent labware that contain labware in them has rows and cols attribute. Only columns change are physically possible due to nature of multi Pipettor.
         if hasattr(source_lw, "_rows") and hasattr(source_lw, "_columns") and hasattr(destination_lw, "_rows") and hasattr(destination_lw, "_columns") :
