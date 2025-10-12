@@ -2,6 +2,7 @@ from biohit_pipettor import Pipettor
 from typing import Literal, List, Optional, Union
 from math import ceil
 
+from .cursor import total_volume
 from .deck import Deck
 from .slot import Slot
 from .labware import Labware, Plate, Well, ReservoirHolder, Reservoir, PipetteHolder, IndividualPipetteHolder, \
@@ -15,7 +16,7 @@ class PipettorPlus(Pipettor):
 
         Parameters
         ----------
-        tip_volume : Literal[200, 1000]
+       tip_volume : Literal[200, 1000]
             The tip volume (must be 1000 if multichannel is True)
         multichannel : bool
             If True, it is assumed the device uses a multichannel pipet
@@ -29,9 +30,10 @@ class PipettorPlus(Pipettor):
         self.slots: dict[str, Slot] = deck.slots
 
         # Tip content tracking
+        self.tip_count = 8
         self.has_tips = False
         self.tip_content: dict = {}  # Current content in tip as dict {content_type: volume}
-        self.tip_volume_remaining: float = 0.0  # Volume remaining in tip
+        self.volume_present_in_tip: float = 0.0  # Volume remaining in tip
         self.change_tips = 0    #control if tips are to be changed
 
     def pick_multi_tips(self, pipette_holder_id: str, columns: Optional[List[int]] = None) -> None:
@@ -207,43 +209,84 @@ class PipettorPlus(Pipettor):
     def suck(self, volume: float, height: float) -> None:
         pass
 
-    def fill_medium(self, plate_id: str):
-        pass
-
-    def remove_medium(self, plate_id: str):
-        pass
-
     def replace_multi(self):
+        #remove and fill
         pass
 
     def remove_multi(self):
         pass
 
-    def fill_multi(self, source_labware_id : str, source_columns: list[int], source_volume_per_column, destination_labware_id : str, destination_columns_per_column: list[int], destination_volume:float) -> None:
+
+    def fill_multi(self, source_lw : Labware, source_columns: list[int], source_volume_per_column, destination_lw : Labware, destination_columns: list[int], destination_volume_per_column:float) -> None:
         """
         Fill_multi aspirates liquid (source volume) from source column, found at source labware.
         Then it dispenses destination volume  to destination columns, found at destination labware.
 
-        source_column can be a list, meaning destination volume can be aspirated from various source_columns.
-        Destination_columns can be a list meaning volume can be dispensed to multiple columns
+        source_column can be a list, meaning destination volume can be aspirated from various source_columns. check to see if column is in place
+        Destination_columns can be a list meaning volume can be dispensed to multiple columns. Check to see if column is in place
 
-        let's say a source column is [1,3] and pervolume is 500. dispense volume is 250ul per column for columns [1,2,3,4]. Since tip volume is 1000, the pipette will aspirate 500ul from 1 and 500 from 3.  Since total volume aspriated is >= than total to dispense, then it will dispense 250 to remaining columns. Lastly it will go to waste and dispense everything
-             If source volume was 550, it will aspirate, finish the loop(dispense) and do it again.
+        let's say a source column is [1,3] and source_volume_per_column is 500. dispense volume is 250ul per column for columns [1,2,3,4]. Since tip volume is 1000, the pipette will aspirate 500ul from 1 and 500 from 3.  Since total volume aspriated is >= than total to dispense, then it will dispense 250 to remaining columns. Lastly it will go to waste and dispense everything
+             If source_volume_per_column was 550 for col[1,3] and dispense volume is 275. Since tip volume is 550, it will aspirate from 1. dispense , finish the loop(dispense) and do it again.
 
-
-
-            tip content and volume_remainning will be tracked during this time
-
+            tip content and volume_remaining will be tracked during this time
 
         If tip_volume allows, the pipettor will aspirate for several columns at once.
         """
 
-        source_labware = self._find_labware(source_labware_id)
-        destination_labware = self._find_labware(destination_labware_id)
+        if not self.multichannel:
+            raise ValueError("fill_multi_tips requires multichannel pipettor")
 
-        # if not none, then labware contains labware within them. Like ReservoirHolder - reservoirs, Plate - wells, pipetteHolder - Zone
-        if hasattr(source_labware, "_rows") and hasattr(source_labware, "_columns"):
-            pass
+        total_vol_to_aspirate = source_volume_per_column * len(source_columns) * self.tip_count
+        total_vol_to_dispense = destination_volume_per_column * len(destination_columns) * self.tip_count
+
+        source_lw.id = source_lw.labware_id
+        destination_lw.id = destination_lw.labware_id
+
+        if  total_vol_to_aspirate != total_vol_to_dispense:
+            raise ValueError("total_vol_to_aspirate should be equal to total_vol_to_dispense.")
+
+        # any parent labware that contain labware in them has rows and cols attribute. Only columns change are physically possible due to nature of multi Pipettor.
+        if hasattr(source_lw, "_rows") and hasattr(source_lw, "_columns") and hasattr(destination_lw, "_rows") and hasattr(destination_lw, "_columns") :
+            if not isinstance(source_lw, (Plate, ReservoirHolder)) or not isinstance(destination_lw, (Plate, ReservoirHolder)):
+                raise ValueError("Only (plate & reservoir) contain labware within them (wells, reservoirs) with volume attribute. Please Update the code for your labware")
+
+            # write a check to see if i and j is in range of _cols attribute.
+            source_columns_id =[f'{self.source_labware_id}_{i}:0' for i in source_columns]
+            destination_columns_id = [f'{self.destination_labware_id}_{j}:0' for j in destination_columns]
+
+            #get access to each labware position attribute
+
+
+            print(destination_columns_id)
+            print(source_columns_id)
+
+    def labware_suck(self, lw: Labware, columns: list[int], vol_per_column: float):
+
+        if not self.multichannel:
+            raise ValueError("fill_multi_tips requires multichannel pipettor")
+
+        total_vol_to_aspirate = vol_per_column * len(columns)
+        lw.id = lw.labware_id
+
+        if hasattr(lw, "_rows") and hasattr(lw, "_columns"):
+            if not isinstance(lw, (Plate, ReservoirHolder)):
+                raise ValueError(
+                    "Only (plate & reservoir) contain volume attribute. Please Update the code for your labware")
+
+            # Validate column indices are in range
+            for col in columns:
+                if col < 0 or col >= lw._columns:
+                    raise ValueError(
+                        f"Source column {col} out of range (0 to {lw._columns - 1})"
+                    )
+
+            column_labware_ids = [f'{lw.id}_{i}:0' for i in columns]
+
+            #move z to 0. start aspiration as said
+
+
+
+
 
     def change_medium_multi(self):
         pass
@@ -291,7 +334,7 @@ class PipettorPlus(Pipettor):
         """Clear tip content when tips are discarded."""
         self.has_tips = False
         self.tip_content = {}
-        self.tip_volume_remaining = 0.0
+        self.volume_present_in_tip = 0.0
         print(f"  → Tips discarded, content cleared")
 
 
@@ -303,7 +346,7 @@ class PipettorPlus(Pipettor):
         str
             Summary string like "PBS: 150µL, water: 100µL" or "empty"
         """
-        if not self.tip_content or self.tip_volume_remaining <= 0:
+        if not self.tip_content or self.volume_present_in_tip <= 0:
             return "empty"
 
         parts = []
@@ -324,11 +367,10 @@ class PipettorPlus(Pipettor):
         """
         return {
             "content_dict": self.tip_content.copy(),
-            "volume_remaining": self.tip_volume_remaining,
-            "is_empty": self.tip_volume_remaining <= 0,
+            "volume_remaining": self.volume_present_in_tip,
+            "is_empty": self.volume_present_in_tip <= 0,
             "content_summary": self._get_tip_content_summary()
         }
-
 
     def find_labware_location(self):
         pass

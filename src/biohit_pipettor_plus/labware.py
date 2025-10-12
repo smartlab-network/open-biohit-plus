@@ -440,7 +440,7 @@ class Plate(Labware):
         self.well = well
 
         if well:
-            if self._columns * well.size_x > size_x or self._rows * well.size_y > size_y:
+            if self._columns * well.size_x * wells_x> size_x or self._rows * well.size_y * wells_y> size_y:
                 raise ValueError("Well is to big for this Plate")
             else:
                 self.place_wells()
