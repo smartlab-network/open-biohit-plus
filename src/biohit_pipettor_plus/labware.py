@@ -1122,7 +1122,6 @@ class PipetteHolder(Labware):
         """Standard grid dimension"""
         return self._rows
 
-
 @register_class
 class TipDropzone(Labware):
     """
@@ -1214,7 +1213,6 @@ class TipDropzone(Labware):
 
 
 @register_class
-@register_class
 class Reservoir(Labware):
     def __init__(self, size_x: float, size_y: float, size_z: float, offset: tuple[float, float] = (0, 0),
                  capacity: float = Default_Reservoir_Capacity, content: dict = None,
@@ -1305,7 +1303,7 @@ class Reservoir(Labware):
         else:
             self.content[content_type] = volume
 
-    def remove_content(self, volume: float) -> None:
+    def remove_content(self, volume: float, return_dict: bool = False) -> Optional[dict[str, float]]:
         """
         Remove content from the reservoir proportionally.
 
@@ -1316,6 +1314,14 @@ class Reservoir(Labware):
         ----------
         volume : float
             Volume to remove (µL)
+        return_dict : bool, optional
+            If True, return a dictionary of removed content types and volumes (default: False)
+
+        Returns
+        -------
+        Optional[dict[str, float]]
+            If return_dict is True, returns dictionary mapping content types to removed volumes.
+            Otherwise returns None.
 
         Raises
         ------
@@ -1335,6 +1341,9 @@ class Reservoir(Labware):
                 f"Underflow! Cannot remove {volume}µL, only {total_volume}µL available"
             )
 
+        # Dictionary to track what was removed
+        removed_content: dict[str, float] = {}
+
         # Remove proportionally from all content types (since they're mixed)
         removal_ratio = volume / total_volume
 
@@ -1342,11 +1351,17 @@ class Reservoir(Labware):
         content_types = list(self.content.keys())
         for content_type in content_types:
             remove_amount = self.content[content_type] * removal_ratio
+            removed_content[content_type] = remove_amount
             self.content[content_type] -= remove_amount
 
             # Clean up zero or negative volumes
             if self.content[content_type] <= 1e-6:  # Use small epsilon for floating point comparison
                 del self.content[content_type]
+
+        # Return the dictionary if requested
+        if return_dict:
+            return removed_content
+        return None
 
     def get_total_volume(self) -> float:
         """
@@ -1849,7 +1864,7 @@ class ReservoirHolder(Labware):
             raise ValueError(f"No reservoir at hook {hook_id}")
         self.__hook_to_reservoir[hook_id].add_content(content, volume)
 
-    def remove_content(self, hook_id: int, volume: float) -> None:
+    def remove_content(self, hook_id: int, volume: float, return_dict: bool = False) -> Optional[dict[str, float]]:
         """
         Remove content from a reservoir at a specific hook.
 
@@ -1859,6 +1874,14 @@ class ReservoirHolder(Labware):
             Hook ID where the reservoir is located
         volume : float
             Volume to remove (µL)
+        return_dict : bool, optional
+            If True, return a dictionary of removed content types and volumes (default: False)
+
+        Returns
+        -------
+        Optional[dict[str, float]]
+            If return_dict is True, returns dictionary mapping content types to removed volumes.
+            Otherwise returns None.
 
         Raises
         ------
@@ -1867,7 +1890,7 @@ class ReservoirHolder(Labware):
         """
         if hook_id not in self.__hook_to_reservoir or self.__hook_to_reservoir[hook_id] is None:
             raise ValueError(f"No reservoir at hook {hook_id}")
-        self.__hook_to_reservoir[hook_id].remove_content(volume)
+        return self.__hook_to_reservoir[hook_id].remove_content(volume, return_dict=return_dict)
 
     def get_waste_reservoirs(self) -> list[Reservoir]:
         """
@@ -1960,3 +1983,5 @@ class ReservoirHolder(Labware):
     @property
     def grid_y(self) -> int:
         return self._rows
+
+
