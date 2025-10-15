@@ -5,9 +5,11 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import uuid
 from .serializable import Serializable, register_class
 import copy
-from typing import Optional, Union
+from typing import Optional
 
 Pipettors_in_Multi = 8
+Default_Reservoir_Capacity = 30000
+Default_well_capacity = 1000
 
 
 @register_class
@@ -119,14 +121,16 @@ class Well(Labware):
 
     Attributes
     ----------
-    content : str or None
-        Optional description of the content (e.g. "water", "buffer").
+    content : dict
+        Dictionary mapping content types to volumes (µL).
+    capacity : float
+        Maximum volume the well can hold (µL).
     add_height : float
         Height above the well bottom used when adding liquid (in mm).
     remove_height : float
         Height above the well bottom used when removing liquid (in mm).
     suck_offset_xy : tuple[float, float]
-        XY offset inside the well for pipetting (in mm).
+        XY offset inside the well for using pipettor (in mm).
     """
 
     def __init__(
@@ -140,6 +144,7 @@ class Well(Labware):
             row: int = None,
             column: int = None,
             content: dict = None,
+            capacity: float = Default_well_capacity,
             add_height: float = 5,
             remove_height: float = 5,
             suck_offset_xy: tuple[float, float] = (2, 2),
@@ -163,9 +168,11 @@ class Well(Labware):
             row inside of plate
         column: int, optional
             column inside of plate
-            If None, position is not set.
-        content : str, optional
-            Name/type of content contained in the well.
+        content : dict, optional
+            Dictionary mapping content types to volumes (µL).
+            Example: {"PBS": 150, "water": 100}
+        capacity : float, optional
+            Maximum volume the well can hold (µL). Default is Default_well_capacity.
         add_height : float, optional
             Pipette dispensing height above bottom of the well (default = 5 mm).
         remove_height : float, optional
@@ -176,21 +183,29 @@ class Well(Labware):
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id,
                          position=position)
 
-        # Initialize content as dictionary for sophisticated tracking
-        if content is None:
-            self.content = {}
-        elif isinstance(content, dict):
-            self.content = content.copy()
-        else:
-            raise ValueError(f"Content must be str, dict, or None, got {type(content)}")
-
+        self.capacity = capacity
         self.add_height = add_height
         self.remove_height = remove_height
         self.suck_offset_xy = suck_offset_xy
         self.row = row
         self.column = column
 
-    def add_content(self, content: str, volume: float) -> None:
+        # Initialize content as dictionary for sophisticated tracking
+        if content is None:
+            self.content = {}
+        elif isinstance(content, dict):
+            self.content = content.copy()
+        else:
+            raise ValueError(f"Content must be dict or None, got {type(content)}")
+
+        # Validate inputs
+        total_volume = self.get_total_volume()
+        if total_volume > self.capacity:
+            raise ValueError(f"Total content volume ({total_volume}µL) cannot exceed capacity ({self.capacity}µL)")
+        if self.capacity < 0:
+            raise ValueError("Capacity cannot be negative")
+
+    def add_content(self, content_type: str, volume: float) -> None:
         """
         Add content to the well with intelligent mixing logic.
 
@@ -203,19 +218,34 @@ class Well(Labware):
 
         Parameters
         ----------
-        content : str
+        content_type : str
             Content to add (e.g., "PBS", "water", "sample")
         volume : float
             Volume to add (µL)
+
+        Raises
+        ------
+        ValueError
+            If adding volume would exceed capacity or volume is negative
         """
-        if not content or volume <= 0:
-            return
+        if volume < 0:
+            raise ValueError("Volume to add must be positive")
+
+        if not content_type:
+            raise ValueError("Content type cannot be empty")
+
+        # Check if adding would exceed capacity
+        if self.get_total_volume() + volume > self.capacity:
+            raise ValueError(
+                f"Overflow! Adding {volume}µL would exceed capacity of {self.capacity}µL. "
+                f"Current volume: {self.get_total_volume()}µL"
+            )
 
         # Add content to dictionary
-        if content in self.content:
-            self.content[content] += volume
+        if content_type in self.content:
+            self.content[content_type] += volume
         else:
-            self.content[content] = volume
+            self.content[content_type] = volume
 
     def remove_content(self, volume: float) -> None:
         """
@@ -232,15 +262,20 @@ class Well(Labware):
         Raises
         ------
         ValueError
-            If trying to remove more volume than available
+            If trying to remove more volume than available or volume is negative
         """
+        if volume < 0:
+            raise ValueError("Volume to remove must be positive")
+
         total_volume = self.get_total_volume()
 
         if total_volume <= 0:
-            return  # Nothing to remove from empty well
+            raise ValueError("Cannot remove from empty well")
 
         if volume > total_volume:
-            raise ValueError(f"Cannot remove {volume}µL, only {total_volume}µL available")
+            raise ValueError(
+                f"Underflow! Cannot remove {volume}µL, only {total_volume}µL available"
+            )
 
         # Remove proportionally from all content types (since they're mixed)
         removal_ratio = volume / total_volume
@@ -251,8 +286,8 @@ class Well(Labware):
             remove_amount = self.content[content_type] * removal_ratio
             self.content[content_type] -= remove_amount
 
-            # Clean up zero or negative volumes
-            if self.content[content_type] <= 0:
+            # Clean up zero or negative volumes (use epsilon for floating point comparison)
+            if self.content[content_type] <= 1e-6:
                 del self.content[content_type]
 
     def get_total_volume(self) -> float:
@@ -265,6 +300,17 @@ class Well(Labware):
             Total volume in µL
         """
         return sum(self.content.values()) if self.content else 0.0
+
+    def get_available_volume(self) -> float:
+        """
+        Get the remaining capacity available in the well.
+
+        Returns
+        -------
+        float
+            Available volume in µL
+        """
+        return self.capacity - self.get_total_volume()
 
     def get_content_info(self) -> dict:
         """
@@ -279,7 +325,9 @@ class Well(Labware):
         return {
             "content_dict": self.content.copy(),
             "total_volume": total_volume,
+            "available_capacity": self.get_available_volume(),
             "is_empty": total_volume <= 0,
+            "is_full": total_volume >= self.capacity,
             "content_summary": self.get_content_summary()
         }
 
@@ -290,7 +338,7 @@ class Well(Labware):
         Returns
         -------
         str
-            Summary string like "PBS: 150µL, water: 100µL" or "empty"
+            Summary string like "PBS: 150.0µL, water: 100.0µL" or "empty"
         """
         if not self.content or self.get_total_volume() <= 0:
             return "empty"
@@ -305,10 +353,14 @@ class Well(Labware):
         """
         Get volume of specific content type.
 
-        Parameters - content_type : str
+        Parameters
+        ----------
+        content_type : str
             Type of content to query
 
-        Returns float
+        Returns
+        -------
+        float
             Volume of specified content type (0 if not present)
         """
         return self.content.get(content_type, 0.0)
@@ -329,7 +381,7 @@ class Well(Labware):
         Returns
         -------
         bool
-            True if content type is present
+            True if content type is present with volume > 0
         """
         return content_type in self.content and self.content[content_type] > 0
 
@@ -348,6 +400,7 @@ class Well(Labware):
                 "row": self.row,
                 "column": self.column,
                 "content": self.content,
+                "capacity": self.capacity,
                 "add_height": self.add_height,
                 "remove_height": self.remove_height,
                 "suck_offset_xy": list(self.suck_offset_xy),
@@ -367,48 +420,38 @@ class Well(Labware):
 
         Returns
         -------
-        Well
-            Reconstructed Well instance.
+        Reconstructed Well instance.
         """
-
         # Safely handle position deserialization
         position = tuple(data["position"]) if data.get("position") else None
 
-        base_obj = super()._from_dict(data)  # Labware attributes
-
-        # overwrite base_obj with correct class instantiation
-        obj = cls(
-            size_x=base_obj.size_x,
-            size_y=base_obj.size_y,
-            size_z=base_obj.size_z,
-            offset=base_obj.offset,
-            labware_id=base_obj.labware_id,
-            position=base_obj.position,
+        return cls(
+            size_x=data["size_x"],
+            size_y=data["size_y"],
+            size_z=data["size_z"],
+            offset=data["offset"],
+            labware_id=data["labware_id"],
+            position=position,
             content=data.get("content"),
+            capacity=data.get("capacity", Default_well_capacity),
             add_height=data.get("add_height", 5),
             remove_height=data.get("remove_height", 5),
             suck_offset_xy=tuple(data.get("suck_offset_xy", (2, 2))),
             row=data.get("row"),
             column=data.get("column")
         )
-        return obj
-
 
 @register_class
 class Plate(Labware):
-    """
-    Represents a Plate labware with wells.
-    Attributes
-    ----------
-    wells_x : int
-        Number of wells in X direction.
-    wells_y : int
-        Number of wells in Y direction.
-    """
 
-    # TODO for plate, isn't offset and first well part of same equation. or is offset only till corners of the plate (if yes, what is the purpose to go to corner of any labware.
-    def __init__(self, size_x, size_y, size_z, wells_x, wells_y, offset=(0, 0), well: Well = None,
-                 labware_id: str = None, position: tuple[float, float] = None):
+    def __init__(self, size_x: float,
+            size_y: float,
+            size_z: float,
+            wells_x: int,
+            wells_y: int,
+            offset: tuple[float, float] = (0, 0),
+            well: Well = None,
+            labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a Plate instance.
 
@@ -424,54 +467,60 @@ class Plate(Labware):
             Number of wells in X direction.
         wells_y : int
             Number of wells in Y direction.
+        offset : tuple[float, float], optional
+            Offset of the plate.
+        well : Well, optional
+            Template well to use for all wells in the plate.
         labware_id : str, optional
             Unique ID for the plate.
+        position : tuple[float, float], optional
+            (x, y) position coordinates of the plate in millimeters.
         """
 
-        super().__init__(size_x, size_y, size_z, offset, labware_id, position)
+        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id,
+                         position=position)
 
         if wells_x <= 0 or wells_y <= 0:
             raise ValueError("wells_x and wells_y cannot be negative or 0")
 
-        self._columns = wells_x  # Store internally
+        self._columns = wells_x
         self._rows = wells_y
 
-        self.__wells: dict[str, Well or None] = {}
+        self.__wells: dict[str, Well | None] = {}
         self.well = well
 
         if well:
-            if self._columns * well.size_x> size_x or self._rows * well.size_y> size_y:
-                raise ValueError("Well is to big for this Plate")
+            # Validate that well fits in plate
+            if self._columns * well.size_x > size_x or self._rows * well.size_y > size_y:
+                raise ValueError("Well is too big for this Plate")
             else:
                 self.place_wells()
         else:
+            # Create empty positions
             for x in range(self._columns):
                 for y in range(self._rows):
                     self.__wells[f'{x}:{y}'] = None
 
-    def get_wells(self):
+    def get_wells(self) -> dict[str, Well | None]:
+        """
+        Get all wells in the plate.
+
+        Returns
+        -------
+        dict[str, Well | None]
+            Dictionary mapping well IDs to Well instances or None
+        """
         return self.__wells
 
     def place_wells(self):
+        """Create wells across the grid using the template well."""
         for x in range(self._columns):
             for y in range(self._rows):
-                well = copy.deepcopy(self.well)  # Create a new copy
+                well = copy.deepcopy(self.well)
                 well.labware_id = f'{self.labware_id}_{x}:{y}'
+                well.row = y
+                well.column = x
                 self.__wells[well.labware_id] = well
-
-    # TODO question existence
-    """
-    def place_unique_well(self, row, column, well: Well):
-        well_placement = f"{column}:{row}"
-        if well_placement not in self.__wells.keys():
-            raise ValueError(f"{well_placement} is not a valid well placement")
-
-        #need to fix this.
-        well.labware_id = well_placement
-        well.row = row
-        well.column = column
-        self.__wells[well.labware_id] = well
-    """
 
     def to_dict(self):
         """
@@ -493,7 +542,7 @@ class Plate(Labware):
     @classmethod
     def _from_dict(cls, data: dict) -> "Plate":
         """
-        Deserialize a Plate instance from a dictionary using the base Labware _from_dict.
+        Deserialize a Plate instance from a dictionary.
 
         Parameters
         ----------
@@ -516,34 +565,37 @@ class Plate(Labware):
             labware_id=data["labware_id"],
             wells_x=data["wells_x"],
             wells_y=data["wells_y"],
-            position=position, )
+            position=position,
+        )
 
+        # Restore wells
         wells_data = data.get("wells", {})
         for wid, wdata in wells_data.items():
             if wdata is None:
                 plate._Plate__wells[wid] = None
             else:
                 plate._Plate__wells[wid] = Serializable.from_dict(wdata)
+
         return plate
 
     @property
     def wells_x(self) -> int:
-        """Alias for grid_x"""
+        """Number of wells in X direction (columns)"""
         return self._columns
 
     @property
     def wells_y(self) -> int:
-        """Alias for grid_y"""
+        """Number of wells in Y direction (rows)"""
         return self._rows
 
     @property
     def grid_x(self) -> int:
-        """Standard grid dimension"""
+        """Standard grid dimension (columns)"""
         return self._columns
 
     @property
     def grid_y(self) -> int:
-        """Standard grid dimension"""
+        """Standard grid dimension (rows)"""
         return self._rows
 
 
@@ -680,17 +732,6 @@ class IndividualPipetteHolder(Labware):
 
 @register_class
 class PipetteHolder(Labware):
-    """
-    Represents a Pipette Holder labware that contains multiple individual holder positions.
-
-    Attributes
-    ----------
-    holders_across_x : int
-        Number of individual holder positions across X-axis.
-    holders_across_y : int
-        Number of individual holder positions across Y-axis.
-    """
-
     def __init__(self,
                  size_x: float,
                  size_y: float,
@@ -734,11 +775,11 @@ class PipetteHolder(Labware):
         self._columns = holders_across_x
         self._rows = holders_across_y
 
-        self.__individual_holders: dict[str, IndividualPipetteHolder] = {}
+        self.__individual_holders: dict[str, IndividualPipetteHolder | None] = {}
         self.individual_holder = individual_holder
 
         if holders_across_y < Pipettors_in_Multi:
-            raise ValueError(f"PipetteHolder should atleast contatin{Pipettors_in_Multi} rows")
+            raise ValueError(f"PipetteHolder should at least contain {Pipettors_in_Multi} rows")
 
         if individual_holder:
             # Validate that individual holder fits
@@ -1169,14 +1210,15 @@ class TipDropzone(Labware):
         )
 
 
-Default_Reservoir_Capacity = 30000
+
 
 
 @register_class
+@register_class
 class Reservoir(Labware):
     def __init__(self, size_x: float, size_y: float, size_z: float, offset: tuple[float, float] = (0, 0),
-                 capacity: float = Default_Reservoir_Capacity, filled_volume: float = None,
-                 content: str = None, hook_ids: list[int] = None, labware_id: str = None,
+                 capacity: float = Default_Reservoir_Capacity, content: dict = None,
+                 hook_ids: list[int] = None, labware_id: str = None,
                  position: tuple[float, float] = None):
         """
         Initialize a Reservoir instance. These are containers that store the medium to be filled in and removed from well.
@@ -1191,10 +1233,9 @@ class Reservoir(Labware):
             Height of the reservoir in millimeters.
         capacity : float, optional
             Maximum amount of liquid that reservoir can hold. Default is Default_Reservoir_Capacity.
-        filled_volume : float, optional
-            Initial volume at the time of defining the reservoir. Default is 0 for waste and capacity for rest.
-        content : str, optional
-            Description of the reservoir content.
+        content : dict, optional
+            Dictionary mapping content types to volumes (µL).
+            Example: {"PBS": 25000, "water": 5000}
         hook_ids : list[int], optional
             List of hook locations on ReservoirHolder where this reservoir is going to be placed.
         labware_id : str, optional
@@ -1205,54 +1246,213 @@ class Reservoir(Labware):
         """
         super().__init__(size_x, size_y, size_z, offset, labware_id, position)
         self.capacity = capacity
-        self.filled_volume = filled_volume
         self.hook_ids = hook_ids if hook_ids is not None else []
 
-        # Default filled_volume logic: capacity for non-waste, 0 for waste
-        if filled_volume is None:
-            if content and "waste" in content.lower():
-                filled_volume = 0
-            else:
-                filled_volume = capacity
-
-        self.current_volume = filled_volume
-        self.content = content
+        # Initialize content as dictionary for sophisticated tracking
+        if content is None:
+            self.content = {}
+        elif isinstance(content, dict):
+            self.content = content.copy()
+        else:
+            raise ValueError(f"Content must be dict or None, got {type(content)}")
 
         # Validate inputs
-        if self.current_volume > self.capacity:
-            raise ValueError(f"Filled volume ({self.current_volume}) cannot exceed capacity ({self.capacity})")
-        if self.current_volume < 0:
-            raise ValueError("Filled volume cannot be negative")
+        total_volume = self.get_total_volume()
+        if total_volume > self.capacity:
+            raise ValueError(f"Total content volume ({total_volume}) cannot exceed capacity ({self.capacity})")
         if self.capacity < 0:
             raise ValueError("Capacity cannot be negative")
 
-    def add_volume(self, volume: float) -> None:
+    def add_content(self, content_type: str, volume: float) -> None:
         """
-        Add volume to the reservoir.
-        Volume to add in µL.
-        ValueError if adding volume would exceed capacity.
+        Add content to the reservoir with intelligent mixing logic.
+
+        When adding content to a reservoir:
+        - Same content type: volumes are combined
+        - Different content type: tracked separately (but physically mixed)
+
+        Note: Once liquids are mixed in a reservoir, they cannot be separated.
+        Removal is always proportional from all content types.
+
+        Parameters
+        ----------
+        content_type : str
+            Content to add (e.g., "PBS", "water", "waste")
+        volume : float
+            Volume to add (µL)
+
+        Raises
+        ------
+        ValueError
+            If adding volume would exceed capacity or volume is negative
         """
         if volume < 0:
             raise ValueError("Volume to add must be positive")
-        if self.current_volume + volume > self.capacity:
-            raise ValueError(f"Overflow! Capacity: {self.capacity} µl")
-        self.current_volume += volume
 
-    def remove_volume(self, volume: float) -> None:
+        if not content_type:
+            raise ValueError("Content type cannot be empty")
+
+        # Check if adding would exceed capacity
+        if self.get_total_volume() + volume > self.capacity:
+            raise ValueError(
+                f"Overflow! Adding {volume}µL would exceed capacity of {self.capacity}µL. "
+                f"Current volume: {self.get_total_volume()}µL"
+            )
+
+        # Add content to dictionary
+        if content_type in self.content:
+            self.content[content_type] += volume
+        else:
+            self.content[content_type] = volume
+
+    def remove_content(self, volume: float) -> None:
         """
-        Removes volume from the reservoir.
-        Volume to remove in µL.
-        ValueError if remove volume exceed current volume.
+        Remove content from the reservoir proportionally.
+
+        When content is removed from a reservoir, it's removed proportionally from all
+        content types since they are mixed together.
+
+        Parameters
+        ----------
+        volume : float
+            Volume to remove (µL)
+
+        Raises
+        ------
+        ValueError
+            If trying to remove more volume than available or volume is negative
         """
         if volume < 0:
             raise ValueError("Volume to remove must be positive")
-        if self.current_volume < volume:
-            raise ValueError(f"Underflow! Available: {self.current_volume} µl")
-        self.current_volume -= volume
+
+        total_volume = self.get_total_volume()
+
+        if total_volume <= 0:
+            raise ValueError("Cannot remove from empty reservoir")
+
+        if volume > total_volume:
+            raise ValueError(
+                f"Underflow! Cannot remove {volume}µL, only {total_volume}µL available"
+            )
+
+        # Remove proportionally from all content types (since they're mixed)
+        removal_ratio = volume / total_volume
+
+        # Remove proportionally from each content type
+        content_types = list(self.content.keys())
+        for content_type in content_types:
+            remove_amount = self.content[content_type] * removal_ratio
+            self.content[content_type] -= remove_amount
+
+            # Clean up zero or negative volumes
+            if self.content[content_type] <= 1e-6:  # Use small epsilon for floating point comparison
+                del self.content[content_type]
+
+    def get_total_volume(self) -> float:
+        """
+        Get total volume of all content in the reservoir.
+
+        Returns
+        -------
+        float
+            Total volume in µL
+        """
+        return sum(self.content.values()) if self.content else 0.0
 
     def get_available_volume(self) -> float:
-        """Return the current available volume in µL."""
-        return self.current_volume
+        """
+        Get the remaining capacity available in the reservoir.
+
+        Returns
+        -------
+        float
+            Available volume in µL
+        """
+        return self.capacity - self.get_total_volume()
+
+    def get_content_info(self) -> dict:
+        """
+        Get current content information.
+
+        Returns
+        -------
+        dict
+            Dictionary with detailed content information
+        """
+        total_volume = self.get_total_volume()
+        return {
+            "content_dict": self.content.copy(),
+            "total_volume": total_volume,
+            "available_capacity": self.get_available_volume(),
+            "is_empty": total_volume <= 0,
+            "is_full": total_volume >= self.capacity,
+            "content_summary": self.get_content_summary()
+        }
+
+    def get_content_summary(self) -> str:
+        """
+        Get a human-readable summary of reservoir content.
+
+        Returns
+        -------
+        str
+            Summary string like "PBS: 25000µL, water: 5000µL" or "empty"
+        """
+        if not self.content or self.get_total_volume() <= 0:
+            return "empty"
+
+        parts = []
+        for content_type, volume in self.content.items():
+            parts.append(f"{content_type}: {volume:.1f}µL")
+
+        return ", ".join(parts)
+
+    def get_content_by_type(self, content_type: str) -> float:
+        """
+        Get volume of specific content type.
+
+        Parameters
+        ----------
+        content_type : str
+            Type of content to query
+
+        Returns
+        -------
+        float
+            Volume of specified content type (0 if not present)
+        """
+        return self.content.get(content_type, 0.0)
+
+    def clear_content(self) -> None:
+        """Clear all content from the reservoir."""
+        self.content = {}
+
+    def has_content_type(self, content_type: str) -> bool:
+        """
+        Check if reservoir contains specific content type.
+
+        Parameters
+        ----------
+        content_type : str
+            Type of content to check
+
+        Returns
+        -------
+        bool
+            True if content type is present
+        """
+        return content_type in self.content and self.content[content_type] > 0
+
+    def is_waste_reservoir(self) -> bool:
+        """
+        Check if this is a waste reservoir.
+
+        Returns
+        -------
+        bool
+            True if any content type contains "waste" (case-insensitive)
+        """
+        return any("waste" in ct.lower() for ct in self.content.keys())
 
     def to_dict(self) -> dict:
         """Serialize the Reservoir to a dictionary."""
@@ -1260,7 +1460,6 @@ class Reservoir(Labware):
         base.update({
             "hook_ids": self.hook_ids,
             "capacity": self.capacity,
-            "filled_volume": self.current_volume,
             "content": self.content,
         })
         return base
@@ -1268,12 +1467,9 @@ class Reservoir(Labware):
     @classmethod
     def _from_dict(cls, data: dict) -> "Reservoir":
         """Deserialize a Reservoir instance from a dictionary."""
-
         # Safely handle position deserialization
-        position = None
+        position = tuple(data["position"]) if data.get("position") else None
 
-        if data.get("position") is not None:
-            position = tuple(data["position"])
 
         return cls(
             size_x=data["size_x"],
@@ -1283,7 +1479,6 @@ class Reservoir(Labware):
             labware_id=data["labware_id"],
             hook_ids=data.get("hook_ids", []),
             capacity=data.get("capacity", Default_Reservoir_Capacity),
-            filled_volume=data.get("filled_volume"),
             content=data.get("content"),
             position=position,
         )
@@ -1364,7 +1559,7 @@ class ReservoirHolder(Labware):
         idx = hook_id - 1
         row = idx // self._columns
         col = idx % self._columns
-        return (col, row)
+        return col, row
 
     def position_to_hook_id(self, col: int, row: int) -> int:
         """
@@ -1528,7 +1723,7 @@ class ReservoirHolder(Labware):
         reservoir_dict : dict[int, dict]
             Dictionary where keys are ignored. Each value should contain:
             - Required: size_x, size_y, size_z
-            - Optional: capacity, filled_volume, content, labware_id, hook_ids (list or int),
+            - Optional: capacity, content (dict), labware_id, hook_ids (list or int),
               num_hooks_x (int), num_hooks_y (int)
 
             If hook_ids is specified, the reservoir will be placed there.
@@ -1624,8 +1819,7 @@ class ReservoirHolder(Labware):
                 size_y=res["size_y"],
                 size_z=res["size_z"],
                 capacity=res.get("capacity", Default_Reservoir_Capacity),
-                filled_volume=res.get("filled_volume"),
-                content=res.get("content"),
+                content=res.get("content"),  # Now expects dict or None
                 labware_id=labware_id,
                 position=res.get("position", None),
             )
@@ -1633,38 +1827,80 @@ class ReservoirHolder(Labware):
             # Place the reservoir
             self.place_reservoir(hook_ids_to_use, reservoir)
 
-    def add_volume(self, hook_id: int, volume: float) -> None:
-        """Add volume to a reservoir at a specific hook."""
-        if hook_id not in self.__hook_to_reservoir or self.__hook_to_reservoir[hook_id] is None:
-            raise ValueError(f"No reservoir at hook {hook_id}")
-        self.__hook_to_reservoir[hook_id].add_volume(volume)
+    def add_content(self, hook_id: int, content: str, volume: float) -> None:
+        """
+        Add content to a reservoir at a specific hook.
 
-    def remove_volume(self, hook_id: int, volume: float) -> None:
-        """Remove volume from a reservoir at a specific hook."""
+        Parameters
+        ----------
+        hook_id : int
+            Hook ID where the reservoir is located
+        content : str
+            Type of content to add (e.g., "PBS", "water")
+        volume : float
+            Volume to add (µL)
+
+        Raises
+        ------
+        ValueError
+            If no reservoir at hook or volume exceeds capacity
+        """
         if hook_id not in self.__hook_to_reservoir or self.__hook_to_reservoir[hook_id] is None:
             raise ValueError(f"No reservoir at hook {hook_id}")
-        self.__hook_to_reservoir[hook_id].remove_volume(volume)
+        self.__hook_to_reservoir[hook_id].add_content(content, volume)
+
+    def remove_content(self, hook_id: int, volume: float) -> None:
+        """
+        Remove content from a reservoir at a specific hook.
+
+        Parameters
+        ----------
+        hook_id : int
+            Hook ID where the reservoir is located
+        volume : float
+            Volume to remove (µL)
+
+        Raises
+        ------
+        ValueError
+            If no reservoir at hook or insufficient volume
+        """
+        if hook_id not in self.__hook_to_reservoir or self.__hook_to_reservoir[hook_id] is None:
+            raise ValueError(f"No reservoir at hook {hook_id}")
+        self.__hook_to_reservoir[hook_id].remove_content(volume)
 
     def get_waste_reservoirs(self) -> list[Reservoir]:
-        """Get all unique reservoirs labeled as waste."""
+        """
+        Get all unique reservoirs that contain 'waste' in any content type.
+
+        Returns
+        -------
+        list[Reservoir]
+            List of waste reservoirs
+        """
         return [
             res for res in self.get_reservoirs()
-            if res.content and "waste" in res.content.lower()
+            if any("waste" in content_type.lower() for content_type in res.content.keys())
         ]
 
-    def get_equivalent_reservoirs(self, content: str) -> list[Reservoir]:
-        """Get all unique reservoirs with the same content."""
+    def get_reservoirs_by_content_type(self, content_type: str) -> list[Reservoir]:
+        """
+        Get all unique reservoirs that contain a specific content type.
+
+        Parameters
+        ----------
+        content_type : str
+            Content type to search for (case-insensitive)
+
+        Returns
+        -------
+        list[Reservoir]
+            List of reservoirs containing this content type
+        """
         return [
             res for res in self.get_reservoirs()
-            if res.content and res.content.lower() == content.lower()
+            if res.has_content_type(content_type)
         ]
-
-    def get_reservoir_by_content(self, content: str) -> Optional[Reservoir]:
-        """Get the first matching reservoir with the specified content."""
-        for res in self.get_reservoirs():
-            if res.content and res.content.lower() == content.lower():
-                return res
-        return None
 
     def to_dict(self) -> dict:
         """Serialize the ReservoirHolder instance to a dictionary."""
