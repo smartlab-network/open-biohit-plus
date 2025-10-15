@@ -247,7 +247,7 @@ class Well(Labware):
         else:
             self.content[content_type] = volume
 
-    def remove_content(self, volume: float) -> None:
+    def remove_content(self, volume: float, return_dict: bool = False) -> Optional[dict[str, float]]:
         """
         Remove content from the well proportionally.
 
@@ -258,6 +258,14 @@ class Well(Labware):
         ----------
         volume : float
             Volume to remove (µL)
+        return_dict : bool, optional
+            If True, return a dictionary of removed content types and volumes (default: False)
+
+        Returns
+        -------
+        Optional[dict[str, float]]
+            If return_dict is True, returns dictionary mapping content types to removed volumes.
+            Otherwise returns None.
 
         Raises
         ------
@@ -277,6 +285,9 @@ class Well(Labware):
                 f"Underflow! Cannot remove {volume}µL, only {total_volume}µL available"
             )
 
+        # Dictionary to track what was removed
+        removed_content: dict[str, float] = {}
+
         # Remove proportionally from all content types (since they're mixed)
         removal_ratio = volume / total_volume
 
@@ -284,11 +295,17 @@ class Well(Labware):
         content_types = list(self.content.keys())
         for content_type in content_types:
             remove_amount = self.content[content_type] * removal_ratio
+            removed_content[content_type] = remove_amount
             self.content[content_type] -= remove_amount
 
             # Clean up zero or negative volumes (use epsilon for floating point comparison)
             if self.content[content_type] <= 1e-6:
                 del self.content[content_type]
+
+        # Return the dictionary if requested
+        if return_dict:
+            return removed_content
+        return None
 
     def get_total_volume(self) -> float:
         """
