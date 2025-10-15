@@ -72,7 +72,6 @@ reservoirHolder = ReservoirHolder(
 )
 
 deck1.add_labware(reservoirHolder, slot_id="slot3", min_z=2)
-
 ExamplePipetteHolder = IndividualPipetteHolder(1, 1, 1)
 pipette_holder = PipetteHolder(size_x=10, size_y=20, size_z=20, holders_across_x=6, holders_across_y=8,
                                individual_holder=ExamplePipetteHolder)
