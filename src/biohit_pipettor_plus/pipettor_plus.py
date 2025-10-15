@@ -1,5 +1,5 @@
 from .pipettor import Pipettor
-from typing import Literal, List, Optional, Union, Tuple
+from typing import Literal, List, Optional, Union
 from math import ceil
 
 #from .cursor import total_volume
@@ -231,10 +231,10 @@ class PipettorPlus(Pipettor):
 
     def add_medium(self,
                    source: ReservoirHolder,
-                   source_col_row: Tuple[int, int],
+                   source_col_row: tuple[int, int],
                    destination: Plate,
                    volume_per_well: float,
-                   dest_col_row: List[Tuple[int, int]]) -> None:
+                   dest_col_row: List[tuple[int, int]]) -> None:
         """
         Add medium from reservoir to plate wells.
 
@@ -242,13 +242,13 @@ class PipettorPlus(Pipettor):
         ----------
         source : ReservoirHolder
             Source reservoir holder
-        source_col_row : Tuple[int, int]
+        source_col_row : tuple[int, int]
             Column index in reservoir holder (which reservoir to use)
         destination : Plate
             Destination plate
         volume_per_well : float
             Volume to add per well (µL)
-        dest_col_row : Tuple[int, int]
+        dest_col_row : tuple[int, int]
             Destination column and row to aspirate.
 
         Example
@@ -351,14 +351,15 @@ class PipettorPlus(Pipettor):
         """
 
         # todo figure out how to provide labware id
+        lw = self.find_labware_by_type("PipetteHolder")[0]  # Gets first PipetteHolder
         if self.change_tips and not self.has_tips:
-            self.pick_multi_tips()
+            self.pick_multi_tips(lw)
         elif self.change_tips and self.has_tips:
-            self.replace_multi_tips()
+            self.replace_multi_tips(lw)
         elif not self.has_tips:
             raise ValueError("No tips loaded. Pick tips first.")
 
-    def check_col_row(self, col_row: Union[Tuple[int, int], List[Tuple[int, int]]], lw: Labware) -> None:
+    def check_col_row(self, col_row: Union[tuple[int, int], List[tuple[int, int]]], lw: Labware) -> None:
         """
         Raises ValueError if (col, row) are out of bounds of the labware.
         """
@@ -384,9 +385,38 @@ class PipettorPlus(Pipettor):
                 raise ValueError(f"columns in ({coord}) must be between 0 and {lw._columns - 1}. Columns are 0 indexed")
 
             if row < 0 or row >= lw._rows:
-                raise ValueError(f"rows in ({coord}) must be between 0 and {lw._row - 1}. rows are 0 indexed")
+                raise ValueError(f"rows in ({coord}) must be between 0 and {lw._rows - 1}. rows are 0 indexed")
 
+    def find_labware_by_type(self, labware_type: str) -> list[Labware]:
+        """
+        Find a labware instance by its type name (case-sensitive).
 
+        Parameters
+        ----------
+        labware_type : str
+            The class name of the labware to find (e.g., "Plate", "ReservoirHolder", "PipetteHolder")
+            Case-sensitive.
+
+        Returns list of Labwares
+            Any Labware instance of the specified type, placed in deck and slot.
+
+        Raises ValueError
+            If no labware of the specified type is found in the deck and placed in a slot.
+        """
+        # Iterate through all labware in the deck
+        lw = []
+        for labware_id, labware in self.deck.labware.items():
+            # Check if the labware's class name matches the requested type (case-sensitive)
+            if labware.__class__.__name__ == labware_type:
+                # Check if this labware is placed in a slot
+                slot_id = self.deck.get_slot_for_labware(labware_id)
+                if slot_id is not None:
+                    lw.append(labware)
+
+        if not lw:
+            raise ValueError(f"No labware found for type '{labware_type}'.")
+        else:
+            return lw
 
 
 

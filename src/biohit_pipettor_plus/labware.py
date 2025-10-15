@@ -5,7 +5,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import uuid
 from .serializable import Serializable, register_class
 import copy
-from typing import Optional, Tuple
+from typing import Optional
 
 Pipettors_in_Multi = 8
 Default_Reservoir_Capacity = 30000
@@ -25,7 +25,7 @@ class Labware(Serializable):
         Depth of the labware in millimeters.
     size_z : float
         Height of the labware in millimeters.
-    position: Tuple[float, float]
+    position: tuple[float, float]
         x,y coordinate of the labware.
     labware_id : str
         Unique identifier of the labware instance.
@@ -39,8 +39,8 @@ class Labware(Serializable):
         super().__init_subclass__(**kwargs)
         Labware.registry[cls.__name__] = cls
 
-    def __init__(self, size_x: float, size_y: float, size_z: float, offset: Tuple[float, float] = (0.0, 0.0),
-                 labware_id: str = None, position: Tuple[float, float] = None):
+    def __init__(self, size_x: float, size_y: float, size_z: float, offset: tuple[float, float] = (0.0, 0.0),
+                 labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a Labware instance.
 
@@ -54,7 +54,7 @@ class Labware(Serializable):
             Height of the labware in millimeters.
         labware_id : str, optional
             Unique ID for the labware. If None, a UUID will be generated.
-        position : Tuple[float, float], optional
+        position : tuple[float, float], optional
             (x, y) position coordinates of the labware in millimeters.
             If None, position is not set.
     """
@@ -101,7 +101,7 @@ class Labware(Serializable):
         """
 
         # Safely handle position deserialization
-        position = Tuple(data["position"]) if data.get("position") else None
+        position = tuple(data["position"]) if data.get("position") else None
 
         return cls(
             size_x=data["size_x"],
@@ -129,7 +129,7 @@ class Well(Labware):
         Height above the well bottom used when adding liquid (in mm).
     remove_height : float
         Height above the well bottom used when removing liquid (in mm).
-    suck_offset_xy : Tuple[float, float]
+    suck_offset_xy : tuple[float, float]
         XY offset inside the well for using pipettor (in mm).
     """
 
@@ -138,8 +138,8 @@ class Well(Labware):
             size_x: float,
             size_y: float,
             size_z: float,
-            offset: Tuple[float, float] = (0, 0),
-            position: Tuple[float, float] = None,
+            offset: tuple[float, float] = (0, 0),
+            position: tuple[float, float] = None,
             labware_id: str = None,
             row: int = None,
             column: int = None,
@@ -147,7 +147,7 @@ class Well(Labware):
             capacity: float = Default_well_capacity,
             add_height: float = 5,
             remove_height: float = 5,
-            suck_offset_xy: Tuple[float, float] = (2, 2),
+            suck_offset_xy: tuple[float, float] = (2, 2),
     ):
         """
         Initialize a Well instance.
@@ -160,7 +160,7 @@ class Well(Labware):
             Depth of the well in millimeters.
         size_z : float
             Height of the well in millimeters.
-        position : Tuple[float, float], optional
+        position : tuple[float, float], optional
             (x, y) position coordinates of the well in millimeters.
         labware_id : str, optional
             Unique identifier for this well. If None, a UUID will be generated.
@@ -177,7 +177,7 @@ class Well(Labware):
             Pipette dispensing height above bottom of the well (default = 5 mm).
         remove_height : float, optional
             Pipette aspiration height above bottom of the well (default = 5 mm).
-        suck_offset_xy : Tuple[float, float], optional
+        suck_offset_xy : tuple[float, float], optional
             XY offset from the well corner for aspiration/dispense (default = (2, 2)).
         """
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id,
@@ -423,7 +423,7 @@ class Well(Labware):
         Reconstructed Well instance.
         """
         # Safely handle position deserialization
-        position = Tuple(data["position"]) if data.get("position") else None
+        position = tuple(data["position"]) if data.get("position") else None
 
         return cls(
             size_x=data["size_x"],
@@ -436,7 +436,7 @@ class Well(Labware):
             capacity=data.get("capacity", Default_well_capacity),
             add_height=data.get("add_height", 5),
             remove_height=data.get("remove_height", 5),
-            suck_offset_xy=Tuple(data.get("suck_offset_xy", (2, 2))),
+            suck_offset_xy=tuple(data.get("suck_offset_xy", (2, 2))),
             row=data.get("row"),
             column=data.get("column")
         )
@@ -449,9 +449,9 @@ class Plate(Labware):
             size_z: float,
             wells_x: int,
             wells_y: int,
-            offset: Tuple[float, float] = (0, 0),
+            offset: tuple[float, float] = (0, 0),
             well: Well = None,
-            labware_id: str = None, position: Tuple[float, float] = None):
+            labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a Plate instance.
 
@@ -467,13 +467,13 @@ class Plate(Labware):
             Number of wells in X direction.
         wells_y : int
             Number of wells in Y direction.
-        offset : Tuple[float, float], optional
+        offset : tuple[float, float], optional
             Offset of the plate.
         well : Well, optional
             Template well to use for all wells in the plate.
         labware_id : str, optional
             Unique ID for the plate.
-        position : Tuple[float, float], optional
+        position : tuple[float, float], optional
             (x, y) position coordinates of the plate in millimeters.
         """
 
@@ -555,7 +555,7 @@ class Plate(Labware):
             Reconstructed Plate instance.
         """
         # Safely handle position deserialization
-        position = Tuple(data["position"]) if data.get("position") else None
+        position = tuple(data["position"]) if data.get("position") else None
 
         plate = cls(
             size_x=data["size_x"],
@@ -618,11 +618,11 @@ class IndividualPipetteHolder(Labware):
             size_x: float,
             size_y: float,
             size_z: float,
-            offset: Tuple[float, float] = (0, 0),
+            offset: tuple[float, float] = (0, 0),
             pipette_type: str = "P1000",
             is_occupied: bool = False,
             labware_id: str = None,
-            position: Tuple[float, float] = None
+            position: tuple[float, float] = None
     ):
         """
         Initialize an IndividualPipetteHolder instance.
@@ -641,7 +641,7 @@ class IndividualPipetteHolder(Labware):
             Whether a pipette is currently stored here. Default is False.
         labware_id : str, optional
             Unique identifier for this holder position. If None, a UUID will be generated.
-        position : Tuple[float, float], optional
+        position : tuple[float, float], optional
             (x, y) absolute position coordinates in millimeters.
             If None, position is not set.
         """
@@ -716,7 +716,7 @@ class IndividualPipetteHolder(Labware):
             Reconstructed IndividualPipetteHolder instance.
         """
         # Safely handle position deserialization
-        position = Tuple(data["position"]) if data.get("position") else None
+        position = tuple(data["position"]) if data.get("position") else None
 
         return cls(
             size_x=data["size_x"],
@@ -738,10 +738,10 @@ class PipetteHolder(Labware):
                  size_z: float,
                  holders_across_x: int,
                  holders_across_y: int,
-                 offset: Tuple[float, float] = (0, 0),
+                 offset: tuple[float, float] = (0, 0),
                  individual_holder: IndividualPipetteHolder = None,
                  labware_id: str = None,
-                 position: Tuple[float, float] = None):
+                 position: tuple[float, float] = None):
         """
         Initialize a PipetteHolder instance.
 
@@ -762,7 +762,7 @@ class PipetteHolder(Labware):
             for each position in the grid.
         labware_id : str, optional
             Unique ID for the pipette holder.
-        position : Tuple[float, float], optional
+        position : tuple[float, float], optional
             (x, y) position coordinates of the pipette holder in millimeters.
             If None, position is not set.
         """
@@ -1079,7 +1079,7 @@ class PipetteHolder(Labware):
             Reconstructed PipetteHolder instance.
         """
         # Safely handle position deserialization
-        position = Tuple(data["position"]) if data.get("position") else None
+        position = tuple(data["position"]) if data.get("position") else None
 
         holder = cls(
             size_x=data["size_x"],
@@ -1137,9 +1137,9 @@ class TipDropzone(Labware):
     def __init__(self, size_x: float,
                  size_y: float,
                  size_z: float,
-                 offset: Tuple[float, float] = (0, 0),
+                 offset: tuple[float, float] = (0, 0),
                  drop_height_relative: float = 20,
-                 position: Tuple[float, float] = None,
+                 position: tuple[float, float] = None,
                  labware_id: str = None
                  ):
         """
@@ -1155,7 +1155,7 @@ class TipDropzone(Labware):
             Height of the drop zone in millimeters.
         labware_id : str, optional
             Unique ID for the dropzone object.
-        position : Tuple[float, float], optional
+        position : tuple[float, float], optional
             (x, y) position coordinates of the tip dropzone in millimeters.
             If None, position is not set.
         drop_height_relative : float, optional
@@ -1197,7 +1197,7 @@ class TipDropzone(Labware):
         """
         # Safely handle position deserialization
         # Safely handle position deserialization
-        position = Tuple(data["position"]) if data.get("position") else None
+        position = tuple(data["position"]) if data.get("position") else None
 
         return cls(
             size_x=data["size_x"],
@@ -1216,10 +1216,10 @@ class TipDropzone(Labware):
 @register_class
 @register_class
 class Reservoir(Labware):
-    def __init__(self, size_x: float, size_y: float, size_z: float, offset: Tuple[float, float] = (0, 0),
+    def __init__(self, size_x: float, size_y: float, size_z: float, offset: tuple[float, float] = (0, 0),
                  capacity: float = Default_Reservoir_Capacity, content: dict = None,
                  hook_ids: list[int] = None, labware_id: str = None,
-                 position: Tuple[float, float] = None):
+                 position: tuple[float, float] = None):
         """
         Initialize a Reservoir instance. These are containers that store the medium to be filled in and removed from well.
 
@@ -1240,7 +1240,7 @@ class Reservoir(Labware):
             List of hook locations on ReservoirHolder where this reservoir is going to be placed.
         labware_id : str, optional
             Unique ID for the reservoir.
-        position : Tuple[float, float], optional
+        position : tuple[float, float], optional
             (x, y) position coordinates of the reservoir in millimeters.
             If None, position is not set.
         """
@@ -1468,7 +1468,7 @@ class Reservoir(Labware):
     def _from_dict(cls, data: dict) -> "Reservoir":
         """Deserialize a Reservoir instance from a dictionary."""
         # Safely handle position deserialization
-        position = Tuple(data["position"]) if data.get("position") else None
+        position = tuple(data["position"]) if data.get("position") else None
 
 
         return cls(
@@ -1487,8 +1487,8 @@ class Reservoir(Labware):
 @register_class
 class ReservoirHolder(Labware):
     def __init__(self, size_x: float, size_y: float, size_z: float, hooks_across_x: int, hooks_across_y: int,
-                 offset: Tuple[float, float] = (0, 0), reservoir_dict: dict[int, dict] = None,
-                 labware_id: str = None, position: Tuple[float, float] = None):
+                 offset: tuple[float, float] = (0, 0), reservoir_dict: dict[int, dict] = None,
+                 labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a ReservoirHolder instance that can hold multiple reservoirs.
 
@@ -1508,7 +1508,7 @@ class ReservoirHolder(Labware):
             Dictionary defining individual reservoirs and their attributes.
         labware_id : str, optional
             Unique ID for the holder.
-        position : Tuple[float, float], optional
+        position : tuple[float, float], optional
             (x, y) position coordinates of the ReservoirHolder in millimeters.
             If None, position is not set.
         """
@@ -1531,7 +1531,7 @@ class ReservoirHolder(Labware):
         if reservoir_dict:
             self.place_reservoirs(reservoir_dict)
 
-    def hook_id_to_position(self, hook_id: int) -> Tuple[int, int]:
+    def hook_id_to_position(self, hook_id: int) -> tuple[int, int]:
         """
         Convert hook_id to (col, row) position.
 
@@ -1542,7 +1542,7 @@ class ReservoirHolder(Labware):
 
         Returns
         -------
-        Tuple[int, int]
+        tuple[int, int]
             (col, row) where col is 0 to hooks_across_x-1, row is 0 to hooks_across_y-1
 
         Example
@@ -1606,13 +1606,13 @@ class ReservoirHolder(Labware):
         """Return list of occupied hook IDs."""
         return [hook_id for hook_id, res in self.__hook_to_reservoir.items() if res is not None]
 
-    def _validate_hooks_form_rectangle(self, hook_ids: list[int]) -> Tuple[bool, int, int]:
+    def _validate_hooks_form_rectangle(self, hook_ids: list[int]) -> tuple[bool, int, int]:
         """
         Check if hook IDs form a rectangular grid.
 
         Returns
         -------
-        Tuple[bool, int, int]
+        tuple[bool, int, int]
             (is_valid, width, height) where width and height are in hook units
         """
         if not hook_ids:
@@ -1922,7 +1922,7 @@ class ReservoirHolder(Labware):
     def _from_dict(cls, data: dict) -> "ReservoirHolder":
         """Deserialize a ReservoirHolder instance from a dictionary."""
         # Safely handle position deserialization
-        position = Tuple(data["position"]) if data.get("position") else None
+        position = tuple(data["position"]) if data.get("position") else None
 
         reservoir_holder = cls(
             size_x=data["size_x"],
