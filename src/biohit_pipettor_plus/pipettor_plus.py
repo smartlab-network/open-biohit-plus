@@ -1,8 +1,8 @@
-from biohit_pipettor import Pipettor
-from typing import Literal, List, Optional, Union
+from .pipettor import Pipettor
+from typing import Literal, List, Optional, Union, Tuple
 from math import ceil
 
-from .cursor import total_volume
+#from .cursor import total_volume
 from .deck import Deck
 from .slot import Slot
 from .labware import Labware, Plate, Well, ReservoirHolder, Reservoir, PipetteHolder, IndividualPipetteHolder, \
@@ -56,6 +56,9 @@ class PipettorPlus(Pipettor):
 
         if not self.multichannel:
             raise ValueError("pick_multi_tips requires multichannel pipettor")
+
+        if self.has_tips:
+            raise ValueError("pipettor already has tips")
 
         # Find the pipette holder
         if not isinstance(pipette_holder, PipetteHolder):
@@ -135,7 +138,7 @@ class PipettorPlus(Pipettor):
             raise ValueError("No tips to return - pipettor is empty")
 
         if not isinstance(pipette_holder, PipetteHolder):
-            raise ValueError("Pick tips only work on pipette_holders")
+            raise ValueError("Pick tips only work with pipette_holders")
 
         if columns is None:
             columns = pipette_holder.get_available_columns()
@@ -181,20 +184,22 @@ class PipettorPlus(Pipettor):
                 f"Holder is full. Tips still attached to pipettor."
             )
 
-    def discard_tips(self, tip_dropzone_id: Labware) -> None:
+    def discard_tips(self, tip_dropzone: Labware) -> None:
         """
                Discard tips to a TipDropzone.
                Parameters
                ----------
-               tip_dropzone_id : str
-                   ID of the TipDropzone labware
+               tip_dropzone : labware
+                    TipDropzone labware
                """
 
         if not self.has_tips:
-            print("Warning: No tips to discard")
-            return
+            raise RuntimeError("No tips to discard")
 
-        tip_dropzone = self._find_labware(tip_dropzone_id, TipDropzone)
+        if not isinstance(tip_dropzone, TipDropzone):
+            raise ValueError("discard_tips only works with TipDropzone")
+
+        #Todo understand drop height
         x, y = tip_dropzone.position
         self.move_xy(x, y)
         self.move_z(tip_dropzone.drop_height_relative)
@@ -202,101 +207,92 @@ class PipettorPlus(Pipettor):
         self.initialize_tips()
         self.move_z(0)
 
-    def replace_multi_tips(self, pipette_holder_id: str) -> None:
+    def replace_multi_tips(self, pipette_holder: Labware) -> None:
+        """ Replace multiple tips. By return current tips to and picking new ones from the pipette_holder.
+            Does not take tips from the column it returned to """
+        if  not isinstance(pipette_holder, PipetteHolder):
+            raise ValueError("replace_multi_tips only works with PipetteHolder")
 
         if self.multichannel:
-            self.return_multi_tips(pipette_holder_id)
-            self.pick_multi_tips(pipette_holder_id)
+            """
+                get a list of available columns -> Place tips back with .return_multi ->
+                get a list of occupied columns -> Common column is the used column ->
+                pretend to remove tips from used columns -> pick tips  with .pick_multi
+                pretend to put tips back to used columns.``
+            """
+            available_columns = pipette_holder.get_available_columns()
+            self.return_multi_tips(pipette_holder)
+            occupied_columns = pipette_holder.get_occupied_columns()
+            returned_column = list(set(available_columns) & set(occupied_columns))
+            pipette_holder.remove_pipettes_from_columns(returned_column)
+            self.pick_multi_tips(pipette_holder)
+            pipette_holder.place_pipettes_in_columns(returned_column)
 
-    def suck(self, volume: float, height: float) -> None:
-        pass
 
-    def replace_multi(self):
-        #remove and fill
-        pass
-
-    def remove_multi(self):
-        pass
-
-
-    def fill_multi(self, source_lw : Labware, source_columns: list[int], source_volume_per_column, destination_lw : Labware, destination_columns: list[int], destination_volume_per_column:float) -> None:
+    def add_medium(self,
+                   source: ReservoirHolder,
+                   source_col_row: Tuple[int, int],
+                   destination: Plate,
+                   volume_per_well: float,
+                   dest_col_row: List[Tuple[int, int]]) -> None:
         """
-        Fill_multi aspirates liquid (source volume) from source column, found at source labware.
-        Then it dispenses destination volume  to destination columns, found at destination labware.
+        Add medium from reservoir to plate wells.
 
-        source_column can be a list, meaning destination volume can be aspirated from various source_columns. check to see if column is in place
-        Destination_columns can be a list meaning volume can be dispensed to multiple columns. Check to see if column is in place
+        Parameters
+        ----------
+        source : ReservoirHolder
+            Source reservoir holder
+        source_col_row : Tuple[int, int]
+            Column index in reservoir holder (which reservoir to use)
+        destination : Plate
+            Destination plate
+        volume_per_well : float
+            Volume to add per well (µL)
+        dest_col_row : Tuple[int, int]
+            Destination column and row to aspirate.
 
-        let's say a source column is [1,3] and source_volume_per_column is 500. dispense volume is 250ul per column for columns [1,2,3,4]. Since tip volume is 1000, the pipette will aspirate 500ul from 1 and 500 from 3.  Since total volume aspriated is >= than total to dispense, then it will dispense 250 to remaining columns. Lastly it will go to waste and dispense everything
-             If source_volume_per_column was 550 for col[1,3] and dispense volume is 275. Since tip volume is 550, it will aspirate from 1. dispense , finish the loop(dispense) and do it again.
-
-            tip content and volume_remaining will be tracked during this time
-
-        If tip_volume allows, the pipettor will aspirate for several columns at once.
+        Example
+        -------
+        # Add 200µL medium from reservoir column 0 to plate columns 0, 1, 2
+        pipettor.add_medium(reservoir_holder, 0, plate1, 200, [0, 1, 2])
         """
 
         if not self.multichannel:
-            raise ValueError("fill_multi_tips requires multichannel pipettor")
+            raise ValueError("add_medium requires multichannel pipettor")
 
-        total_vol_to_aspirate = source_volume_per_column * len(source_columns) * self.tip_count
-        total_vol_to_dispense = destination_volume_per_column * len(destination_columns) * self.tip_count
+        #todo write find labware by type
+        self.check_tips()
 
-        if total_vol_to_aspirate != total_vol_to_dispense:
-            raise ValueError("total_vol_to_aspirate should be equal to total_vol_to_dispense.")
+        self.check_col_row(source_col_row, source)
+        self.check_col_row(dest_col_row, destination)
 
-        source_lw.id = source_lw.labware_id
-        destination_lw.id = destination_lw.labware_id
+        # Calculate volumes
+        volume_per_column = volume_per_well * self.tip_count  # Total for all 8 tips
+        max_vol_per_aspirate = self.tip_volume * self.tip_count  # Max tips can hold
 
-        # any parent labware that contain labware in them has rows and cols attribute. Only columns change are physically possible due to nature of multi Pipettor.
-        if hasattr(source_lw, "_rows") and hasattr(source_lw, "_columns") and hasattr(destination_lw, "_rows") and hasattr(destination_lw, "_columns") :
-            if not isinstance(source_lw, (Plate, ReservoirHolder)) or not isinstance(destination_lw, (Plate, ReservoirHolder)):
-                raise ValueError("Only (plate & reservoir) contain labware within them (wells, reservoirs) with volume attribute. Please Update the code for your labware")
+        for dest_col in dest_columns:
+            volume_remaining = volume_per_column
 
-            # write a check to see if i and j is in range of _cols attribute.
-            source_columns_id =[f'{self.source_labware_id}_{i}:0' for i in source_columns]
-            destination_columns_id = [f'{self.destination_labware_id}_{j}:0' for j in destination_columns]
+            while volume_remaining > 0:
+                # Aspirate as much as tips can hold
+                vol_to_transfer = min(volume_remaining, max_vol_per_aspirate)
 
-            #get access to each labware position attribute
+                # Aspirate from reservoir
+                self.suck(source, vol_to_transfer, source_column)
 
+                # Dispense to plate
+                self.spit(destination, dest_col, vol_to_transfer)
 
-            print(destination_columns_id)
-            print(source_columns_id)
+                volume_remaining -= vol_to_transfer
 
-    def labware_suck(self, lw: Labware, columns: list[int], vol_per_column: float):
-
-        if not self.multichannel:
-            raise ValueError("fill_multi_tips requires multichannel pipettor")
-
-        total_vol_to_aspirate = vol_per_column * len(columns)
-        lw.id = lw.labware_id
-
-        if hasattr(lw, "_rows") and hasattr(lw, "_columns"):
-            if not isinstance(lw, (Plate, ReservoirHolder)):
-                raise ValueError(
-                    "Only (plate & reservoir) contain volume attribute. Please Update the code for your labware")
-
-            # Validate column indices are in range
-            for col in columns:
-                if col < 0 or col >= lw._columns:
-                    raise ValueError(
-                        f"Source column {col} out of range (0 to {lw._columns - 1})"
-                    )
-
-            column_labware_ids = [f'{lw.id}_{i}:0' for i in columns]
-
-            #move z to 0. start aspiration as said
-
-
-
+                print(f"  Transferred {vol_to_transfer}µL to column {dest_col}, "
+                      f"{volume_remaining}µL remaining for this column")
 
 
     def change_medium_multi(self):
         pass
 
     def dilute_multi(self):
-        pass
-
-    def spit(self):
         pass
 
     def spit_all(self):
@@ -306,32 +302,6 @@ class PipettorPlus(Pipettor):
         self.move_z(0)
         self.move_xy(0, 0)
 
-    # Helper functions. Not necessarily available for GUI
-    def _find_labware(self, labware_id: str, expected_type: type = None) -> Labware:
-        """Find labware by ID, verify it's the expected type, and confirm it's placed in a slot."""
-        # Check if labware exists in deck's global dictionary
-        if labware_id not in self.deck.labware:
-            raise ValueError(f"Labware '{labware_id}' not found in deck")
-
-        labware = self.deck.labware[labware_id]
-
-        # Verify labware is the expected type (if specified)
-        if expected_type is not None and not isinstance(labware, expected_type):
-            raise ValueError(f"Labware '{labware_id}' is not of type {expected_type.__name__}")
-
-        # Verify labware is actually placed in a slot
-        labware_placed = False
-        for slot_id, slot in self.slots.items():
-            if labware_id in slot.labware_stack:
-                labware_placed = True
-                print(f" ✓ Labware '{labware_id}' found in slot '{slot_id}'")
-                break
-
-        if not labware_placed:
-            raise ValueError(f"Labware '{labware_id}' exists in deck but is not placed in any slot")
-
-        return labware
-
     def initialize_tips(self) -> None:
         """Clear tip content when tips are discarded."""
         self.has_tips = False
@@ -339,7 +309,7 @@ class PipettorPlus(Pipettor):
         self.volume_present_in_tip = 0.0
         print(f"  → Tips discarded, content cleared")
 
-
+    # Helper functions. Not necessarily available for GUI
     def _get_tip_content_summary(self) -> str:
         """
         Get a readable summary of tip content.
@@ -374,6 +344,51 @@ class PipettorPlus(Pipettor):
             "content_summary": self._get_tip_content_summary()
         }
 
-    def find_labware_location(self):
-        pass
+
+    def check_tips(self) -> None:
+        """
+        Check if tip change is required. if yes, do it.
+        """
+
+        # todo figure out how to provide labware id
+        if self.change_tips and not self.has_tips:
+            self.pick_multi_tips()
+        elif self.change_tips and self.has_tips:
+            self.replace_multi_tips()
+        elif not self.has_tips:
+            raise ValueError("No tips loaded. Pick tips first.")
+
+    def check_col_row(self, col_row: Union[Tuple[int, int], List[Tuple[int, int]]], lw: Labware) -> None:
+        """
+        Raises ValueError if (col, row) are out of bounds of the labware.
+        """
+
+        #checks if labware has _columns & _rows
+        if not (hasattr(lw, "_columns") and  hasattr(lw, "_rows")):
+            raise ValueError(
+                f"Invalid Labware {lw}. Labware lacks _rows or _columns attributes. "
+                f"Check implementation for ReservoirHolder, PipetteHolder, or Plate.")
+
+        #coverts col_row types to list
+        if isinstance(col_row, tuple):
+            coordinates = [col_row]
+        elif isinstance(col_row, list):
+            coordinates = col_row
+        else:
+            raise TypeError(f"col_row must be a tuple or list of tuples, got {type(col_row)}")
+
+        for coord in coordinates:
+            #loops through each col, row. Raising value error if out of bound.
+            col, row = coord
+            if col < 0 or col >= lw._columns:
+                raise ValueError(f"columns in ({coord}) must be between 0 and {lw._columns - 1}. Columns are 0 indexed")
+
+            if row < 0 or row >= lw._rows:
+                raise ValueError(f"rows in ({coord}) must be between 0 and {lw._row - 1}. rows are 0 indexed")
+
+
+
+
+
+
 
