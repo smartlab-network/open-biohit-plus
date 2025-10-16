@@ -8,13 +8,11 @@ class Deck:
 
     lDir:str='LABWARE_DIR'
 
-    range_x = 246
-    range_y = 210
+    #range_x = 246
+    #range_y = 210
 
     if env(lDir) is not None:
         labware_folder= env(lDir)
-    
-
 
 
     _tipPosition: str = "B2"
@@ -27,23 +25,17 @@ class Deck:
                         "P3" :[132.8,170.5, 41.40]}
 
     def __init__(self):    
-        
 
-        
-    @property
-    def tipPosition(self) -> str:
-        """True if the device is connected, False otherwise"""
-        return self._tipPosition
 
-    @tipPosition.setter
-    def tipPosition(self, sPosition):
-        self._tipPosition=sPosition
+        @property
+        def tipPosition(self) -> str:
+            """True if the device is connected, False otherwise"""
+            return self._tipPosition
 
-    def tipCoordinates(self):
-        return self._deckPosition[self._tipPosition]
+        @tipPosition.setter
+        def tipPosition(self, sPosition):
+            self._tipPosition=sPosition
 
-    @property
-    def tipPosition(self) -> str:
-        """True if the device is connected, False otherwise"""
-        return self._tipPosition
- #   pass
+        def tipCoordinates(self):
+            return self._deckPosition[self._tipPosition]
+     #   pass

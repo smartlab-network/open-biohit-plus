@@ -1,6 +1,7 @@
 from .slot import Slot
 from .labware import Labware
 from .serializable import Serializable, register_class
+from typing import Optional
 
 
 @register_class
@@ -38,7 +39,7 @@ class Deck(Serializable):
         self.slots: dict[str, Slot] = {}           # store Slot objects
         self.labware: dict[str, Labware] = {}     # global access to Labware objects
 
-    def add_slot(self, slot: Slot):
+    def add_slots(self, slots: list[Slot]):
         """
         Add a Slot to the Deck after validating range and overlap.
 
@@ -46,32 +47,34 @@ class Deck(Serializable):
         ----------
         slot : Slot
             The slot to add to the deck.
-
         Raises
         ------
         ValueError
             If slot ID already exists, is out of deck range, or overlaps an existing slot.
         """
-        slot_id = slot.slot_id
 
-        if slot_id in self.slots:
-            raise ValueError(f"Slot-ID '{slot_id}' already exists in this Deck.")
+        for slot in slots:
+            if not isinstance(slot, Slot):
+                raise TypeError(f"Object {slot} is not a Slot instance.")
+            slot_id = slot.slot_id
 
-        if not self._is_within_range(slot):
-            raise ValueError(
-                f"Slot '{slot_id}' is outside the deck range "
-                f"x={self.range_x}, y={self.range_y}"
-            )
+            if slot_id in self.slots:
+                raise ValueError(f"Slot-ID '{slot_id}' already exists in this Deck.")
 
-        for existing_id, existing_slot in self.slots.items():
-            if self._overlaps(slot, existing_slot):
+            if not self._is_within_range(slot):
                 raise ValueError(
-                    f"Slot '{slot_id}' overlaps with existing slot: '{existing_id}'."
+                    f"Slot '{slot_id}' is outside the deck range "
+                    f"x={self.range_x}, y={self.range_y}"
                 )
 
-        self.slots[slot_id] = slot
+            for existing_id, existing_slot in self.slots.items():
+                if self._overlaps(slot, existing_slot):
+                    raise ValueError(
+                        f"Slot '{slot_id}' overlaps with existing slot: '{existing_id}'."
+                    )
+            self.slots[slot_id] = slot
 
-    def add_labware(self, labware: Labware, slot_id: str, min_z: float):
+    def add_labware(self, labware: Labware, slot_id: str, min_z: float, x_spacing: float = None, y_spacing: float = None):
         """
         Add a Labware to a specific Slot at a specific Z position.
 
@@ -107,6 +110,9 @@ class Deck(Serializable):
 
         # Place labware in the slot stack
         slot.place_labware(lw=labware, min_z=min_z)
+
+        #allocation position to labware on deck.
+        slot.allocate_position(labware, x_spacing, y_spacing)
 
         # Optionally store in deck's global labware dict
         self.labware[labware.labware_id] = labware
@@ -172,3 +178,23 @@ class Deck(Serializable):
             deck.labware[lid] = Serializable.from_dict(lwdata)
 
         return deck
+
+    def get_slot_for_labware(self, labware_id: str) -> Optional[str]:
+            """
+            Find the slot ID containing the given labware_id.
+            Parameters
+            ----------
+            deck : Deck
+                The Deck instance to search.
+            labware_id : str
+                The ID of the labware to locate.
+
+            Returns
+            -------
+            Optional[str]
+                The slot ID if found, else None.
+            """
+            for slot_id, slot in self.slots.items():
+                if labware_id in slot.labware_stack:
+                    return slot_id
+            return None
