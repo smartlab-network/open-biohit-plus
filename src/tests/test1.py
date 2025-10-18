@@ -1,7 +1,6 @@
 from ..biohit_pipettor_plus.deck import Deck
 from ..biohit_pipettor_plus.slot import Slot
-from ..biohit_pipettor_plus.labware import Plate, PipetteHolder, TipDropzone, ReservoirHolder, IndividualPipetteHolder, \
-    Well
+from ..biohit_pipettor_plus.labware import Plate, PipetteHolder, TipDropzone, ReservoirHolder, IndividualPipetteHolder, Well
 from ..biohit_pipettor_plus.serializable import Serializable
 import json
 from ..biohit_pipettor_plus.control_json import read_json, write_json
@@ -27,38 +26,25 @@ example_well = Well(
     size_y=1,
     size_z=1,
     content={"water": 750, "pbs": 250},
-    capacity=1000  # Add capacity to template well
+    capacity=1000
 )
 print(f"Template well capacity: {example_well.capacity}µL")
 print(f"Template well content: {example_well.get_content_summary()}")
 print(f"Template well available volume: {example_well.get_available_volume()}µL")
 
-plate1 = Plate(20, 50, 50, 6, 9, (3, 5), well=example_well)
+plate1 = Plate(20, 50, 50, 6, 9, well=example_well, offset=(3, 5))
 deck1.add_labware(plate1, slot_id="slot1", min_z=2)
 print(f"\nPlate created with {plate1.wells_x} x {plate1.wells_y} wells")
 
 # Updated reservoirs_data to use content as dictionary
 reservoirs_data = {
-    1: {"size_x": 30, "size_y": 20, "size_z": 10, "capacity": 30000,
-        "content": {}},  # Empty waste reservoir
-
-    2: {"size_x": 10, "size_y": 20, "size_z": 12, "capacity": 30000,
-        "content": {"0 conc": 10000}},
-
-    3: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
-        "content": {"1.8 conc": 100}},
-
-    4: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
-        "content": {"5 conc": 100}},
-
-    5: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
-        "content": {"15 conc": 100}},
-
-    6: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000,
-        "content": {"0 conc": 100}},
-
-    7: {"size_x": 35, "size_y": 20, "size_z": 15, "capacity": 30000,
-        "content": {}},  # Empty waste reservoir
+    1: {"size_x": 30, "size_y": 20, "size_z": 10, "capacity": 30000, "content": {}},
+    2: {"size_x": 10, "size_y": 20, "size_z": 12, "capacity": 30000, "content": {"0 conc": 10000}},
+    3: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000, "content": {"1.8 conc": 100}},
+    4: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000, "content": {"5 conc": 100}},
+    5: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000, "content": {"15 conc": 100}},
+    6: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000, "content": {"0 conc": 100}},
+    7: {"size_x": 35, "size_y": 20, "size_z": 15, "capacity": 30000, "content": {}},
 }
 
 reservoirHolder = ReservoirHolder(
@@ -72,9 +58,13 @@ reservoirHolder = ReservoirHolder(
 )
 
 deck1.add_labware(reservoirHolder, slot_id="slot3", min_z=2)
+
 ExamplePipetteHolder = IndividualPipetteHolder(1, 1, 1)
-pipette_holder = PipetteHolder(size_x=10, size_y=20, size_z=20, holders_across_x=6, holders_across_y=8,
-                               individual_holder=ExamplePipetteHolder)
+pipette_holder = PipetteHolder(
+    size_x=10, size_y=20, size_z=20,
+    holders_across_x=6, holders_across_y=8,
+    individual_holder=ExamplePipetteHolder
+)
 deck1.add_labware(pipette_holder, slot_id="slot5", min_z=2)
 pipette_holder.place_pipettes_in_columns([3, 5])
 
@@ -87,6 +77,10 @@ tip_dropzone = TipDropzone(
     drop_height_relative=15
 )
 deck1.add_labware(tip_dropzone, slot_id="slot2", min_z=2)
+print(plate1.to_dict())
+print(reservoirHolder.to_dict())
+print(pipette_holder.to_dict())
+print(deck1.to_dict())
 
 print("\n" + "=" * 60)
 print("VERIFICATION TESTS")
@@ -94,17 +88,19 @@ print("=" * 60)
 
 # Test 1: Check Plate Well Positions and Content
 print("\n1. Checking Plate Well Positions and Content:")
-wells = plate1.get_wells()
-sample_well_ids = [
-    f"{plate1.labware_id}_0:0",  # First well
-    f"{plate1.labware_id}_5:8",  # Last well
-    f"{plate1.labware_id}_2:4"  # Middle well
+
+# ✅ Use tuple positions instead of string IDs
+sample_positions = [
+    (0, 0),  # First well
+    (5, 8),  # Last well
+    (2, 4)   # Middle well
 ]
 
-for well_id in sample_well_ids:
-    if well_id in wells and wells[well_id]:
-        well = wells[well_id]
-        print(f"\n   Well: {well_id}")
+for col, row in sample_positions:
+    well = plate1.get_well_at(col, row)  # ✅ Use helper method
+    if well:
+        print(f"\n   Well at position ({col}, {row}):")
+        print(f"   Labware ID: {well.labware_id}")
         print(f"   Row: {well.row}, Column: {well.column}")
         if well.position:
             print(f"   ✓ Position: {well.position}")
@@ -116,14 +112,13 @@ for well_id in sample_well_ids:
         print(f"   Available volume: {well.get_available_volume()}µL")
         print(f"   Is full: {well.get_content_info()['is_full']}")
     else:
-        print(f"   ❌ {well_id}: NOT FOUND (ERROR!)")
+        print(f"   ❌ Well at ({col}, {row}): NOT FOUND (ERROR!)")
 
 # Test 1b: Test Well Content Methods
 print("\n1b. Testing Well Content Methods:")
-test_well_id = f"{plate1.labware_id}_0:0"
-if test_well_id in wells and wells[test_well_id]:
-    test_well = wells[test_well_id]
-    print(f"   Testing well: {test_well_id}")
+test_well = plate1.get_well_at(0, 0)  # ✅ Use helper method
+if test_well:
+    print(f"   Testing well at position (0, 0): {test_well.labware_id}")
 
     # Test adding content
     print(f"\n   Adding 100µL of 'buffer' to well...")
@@ -171,17 +166,20 @@ if test_well_id in wells and wells[test_well_id]:
         print(f"   ❌ ERROR: Removal from empty well was not prevented!")
     except ValueError as e:
         print(f"   ✓ Empty well removal prevented: {e}")
+else:
+    print(f"   ❌ Could not get test well at (0, 0)")
 
 # Test 1c: Test content_by_type
 print("\n1c. Testing get_content_by_type:")
-test_well_id = f"{plate1.labware_id}_1:1"
-if test_well_id in wells and wells[test_well_id]:
-    test_well = wells[test_well_id]
-    print(f"   Testing well: {test_well_id}")
+test_well = plate1.get_well_at(1, 1)  # ✅ Use helper method
+if test_well:
+    print(f"   Testing well at position (1, 1): {test_well.labware_id}")
     print(f"   Water volume: {test_well.get_content_by_type('water')}µL")
     print(f"   PBS volume: {test_well.get_content_by_type('pbs')}µL")
     print(f"   Has water: {test_well.has_content_type('water')}")
     print(f"   Has ethanol: {test_well.has_content_type('ethanol')}")
+else:
+    print(f"   ❌ Could not get test well at (1, 1)")
 
 # Test 2: Check Reservoir Positions and Content
 print("\n2. Checking Reservoir Positions and Content:")
@@ -219,23 +217,23 @@ if reservoirs:
 
 # Test 3: Check Pipette Holder Positions
 print("\n3. Checking Pipette Holder Positions:")
-holders = pipette_holder.get_individual_holders()
 
-test_holder_ids = [
-    f"{pipette_holder.labware_id}_0:0",
-    f"{pipette_holder.labware_id}_3:0",
-    f"{pipette_holder.labware_id}_5:7"
+# ✅ Use tuple positions instead of string IDs
+test_positions = [
+    (0, 0),
+    (3, 0),
+    (5, 7)
 ]
 
-for holder_id in test_holder_ids:
-    if holder_id in holders:
-        holder = holders[holder_id]
-        if holder and holder.position:
-            print(f"   ✓ {holder_id}: position = {holder.position}")
+for col, row in test_positions:
+    holder = pipette_holder.get_holder_at(col, row)  # ✅ Use helper method
+    if holder:
+        if holder.position:
+            print(f"   ✓ Holder at ({col}, {row}): position = {holder.position}, occupied = {holder.is_occupied}")
         else:
-            print(f"   ❌ {holder_id}: position = None (ERROR!)")
+            print(f"   ❌ Holder at ({col}, {row}): position = None (ERROR!)")
     else:
-        print(f"   ❌ {holder_id}: NOT FOUND (ERROR!)")
+        print(f"   ❌ Holder at ({col}, {row}): NOT FOUND (ERROR!)")
 
 # Test 4: Check Tip Dropzone Position
 print("\n4. Checking Tip Dropzone Position:")
@@ -246,30 +244,29 @@ else:
 
 # Test 5: Simulate Pipettor Access
 print("\n5. Simulating Pipettor Access:")
-print("   Testing if pipettor can access holders with correct ID format...")
+print("   Testing if pipettor can access holders using helper method...")
 
 col = 3
 row = 0
-holder_id = f'{pipette_holder.labware_id}_{col}:{row}'
-print(f"   Looking for holder: '{holder_id}'")
-
-holder = pipette_holder.get_individual_holders().get(holder_id)
+holder = pipette_holder.get_holder_at(col, row)  # ✅ Use helper method
 if holder:
     print(f"   ✓ Found holder at column={col}, row={row}")
+    print(f"     Labware ID: {holder.labware_id}")
     if holder.position:
         print(f"     Position: {holder.position}")
         print(f"     Is occupied: {holder.is_occupied}")
     else:
         print(f"     ❌ ERROR: Position not set!")
 else:
-    print(f"   ❌ ERROR: Holder NOT found!")
+    print(f"   ❌ ERROR: Holder at ({col}, {row}) NOT found!")
 
 # Test 6: Check Occupied Columns
 print("\n6. Checking Occupied Columns:")
 occupied = pipette_holder.get_occupied_columns()
-print(f"   Occupied columns: {occupied}")
-print(f"   Expected: [3, 5]")
-if occupied == [3, 5]:
+print(f"   Occupied multi-channel positions: {occupied}")
+print(f"   Expected: [(3, 0), (5, 0)]")
+# ✅ Updated expectation - returns list of (column, start_row) tuples
+if occupied == [(3, 0), (5, 0)]:
     print("   ✓ Matches expected!")
 else:
     print("   ❌ Does not match expected!")
@@ -317,20 +314,291 @@ try:
     restored_plate = Plate._from_dict(plate_dict)
     print(f"   ✓ Plate deserialized successfully")
 
-    # Check if capacity was restored
-    restored_wells = restored_plate.get_wells()
-    test_well_id = f"{restored_plate.labware_id}_0:0"
-    if test_well_id in restored_wells and restored_wells[test_well_id]:
-        restored_well = restored_wells[test_well_id]
+    # Check if capacity was restored - ✅ Use helper method
+    restored_well = restored_plate.get_well_at(0, 0)
+    if restored_well:
         print(f"   Restored well capacity: {restored_well.capacity}µL")
         print(f"   Restored well content: {restored_well.get_content_summary()}")
         if restored_well.capacity == example_well.capacity:
             print(f"   ✓ Capacity correctly restored!")
         else:
             print(f"   ❌ Capacity mismatch!")
+    else:
+        print(f"   ❌ Could not retrieve restored well at (0, 0)")
 except Exception as e:
     print(f"   ❌ Deserialization failed: {e}")
 
+# Test 8: Comprehensive Serialization/Deserialization Test
+print("\n8. Testing Serialization/Deserialization:")
+
+print("\n   === PLATE SERIALIZATION ===")
+print("   Serializing plate...")
+plate_dict = plate1.to_dict()
+print(f"   ✓ Plate serialized")
+
+# Verify serialized structure
+print(f"   Checking serialized structure...")
+print(f"   - Wells count in dict: {len(plate_dict['wells'])}")
+print(f"   - Expected wells: {plate1.wells_x * plate1.wells_y}")
+if len(plate_dict['wells']) == plate1.wells_x * plate1.wells_y:
+    print(f"   ✓ All wells serialized")
+else:
+    print(f"   ❌ Wells count mismatch!")
+
+# Check a sample well's data
+sample_well_data = plate_dict['wells']['0:0']
+if sample_well_data:
+    print(f"   Sample well (0:0) data:")
+    print(f"   - Has capacity: {'capacity' in sample_well_data}")
+    print(f"   - Has content: {'content' in sample_well_data}")
+    print(f"   - Has position: {'position' in sample_well_data}")
+    print(f"   - Capacity value: {sample_well_data.get('capacity')}µL")
+    print(f"   - Content: {sample_well_data.get('content')}")
+else:
+    print(f"   ❌ Sample well data not found!")
+
+# Deserialize plate
+print("\n   Deserializing plate...")
+try:
+    restored_plate = Plate._from_dict(plate_dict)
+    print(f"   ✓ Plate deserialized successfully")
+
+    # Verify ALL wells were restored
+    print(f"\n   Verifying restored plate:")
+    print(f"   - Restored wells count: {len(restored_plate.get_wells())}")
+    print(f"   - Original wells count: {len(plate1.get_wells())}")
+
+    if len(restored_plate.get_wells()) == len(plate1.get_wells()):
+        print(f"   ✓ All wells restored")
+    else:
+        print(f"   ❌ Wells count mismatch!")
+
+    # Check several wells for correctness
+    test_positions = [(0, 0), (2, 4), (5, 8)]
+    all_correct = True
+
+    for col, row in test_positions:
+        original_well = plate1.get_well_at(col, row)
+        restored_well = restored_plate.get_well_at(col, row)
+
+        if not restored_well:
+            print(f"   ❌ Well at ({col}, {row}) not restored!")
+            all_correct = False
+            continue
+
+        # Check capacity
+        if restored_well.capacity != original_well.capacity:
+            print(f"   ❌ Well ({col}, {row}): Capacity mismatch!")
+            all_correct = False
+
+        # Check content
+        if restored_well.content != original_well.content:
+            print(f"   ❌ Well ({col}, {row}): Content mismatch!")
+            print(f"      Original: {original_well.content}")
+            print(f"      Restored: {restored_well.content}")
+            all_correct = False
+
+        # Check position
+        if restored_well.position != original_well.position:
+            print(f"   ❌ Well ({col}, {row}): Position mismatch!")
+            all_correct = False
+
+        # Check row/column attributes
+        if restored_well.row != row or restored_well.column != col:
+            print(f"   ❌ Well ({col}, {row}): Row/Column mismatch!")
+            all_correct = False
+
+    if all_correct:
+        print(f"   ✓ All checked wells restored correctly!")
+
+except Exception as e:
+    print(f"   ❌ Plate deserialization failed: {e}")
+    import traceback
+
+    traceback.print_exc()
+
+print("\n   === PIPETTE HOLDER SERIALIZATION ===")
+print("   Serializing pipette holder...")
+holder_dict = pipette_holder.to_dict()
+print(f"   ✓ PipetteHolder serialized")
+
+print(f"   Checking serialized structure...")
+print(f"   - Holders count in dict: {len(holder_dict['individual_holders'])}")
+print(f"   - Expected holders: {pipette_holder.holders_across_x * pipette_holder.holders_across_y}")
+
+if len(holder_dict['individual_holders']) == pipette_holder.holders_across_x * pipette_holder.holders_across_y:
+    print(f"   ✓ All holders serialized")
+else:
+    print(f"   ❌ Holders count mismatch!")
+
+# Check occupied status is in serialized data
+sample_holder_data = holder_dict['individual_holders']['3:0']
+if sample_holder_data:
+    print(f"   Sample holder (3:0) data:")
+    print(f"   - Is occupied in dict: {sample_holder_data.get('is_occupied')}")
+    print(f"   - Expected (occupied): True")
+else:
+    print(f"   ❌ Sample holder data not found!")
+
+# Deserialize pipette holder
+print("\n   Deserializing pipette holder...")
+try:
+    restored_holder = PipetteHolder._from_dict(holder_dict)
+    print(f"   ✓ PipetteHolder deserialized successfully")
+
+    # Verify ALL holders were restored
+    print(f"\n   Verifying restored pipette holder:")
+    print(f"   - Restored holders count: {len(restored_holder.get_individual_holders())}")
+    print(f"   - Original holders count: {len(pipette_holder.get_individual_holders())}")
+
+    if len(restored_holder.get_individual_holders()) == len(pipette_holder.get_individual_holders()):
+        print(f"   ✓ All holders restored")
+    else:
+        print(f"   ❌ Holders count mismatch!")
+
+    # Check occupied status is preserved
+    test_positions = [(3, 0), (5, 0), (0, 0), (4, 0)]  # Mix of occupied and empty
+    all_correct = True
+
+    for col, row in test_positions:
+        original_holder = pipette_holder.get_holder_at(col, row)
+        restored_holder_item = restored_holder.get_holder_at(col, row)
+
+        if not restored_holder_item:
+            print(f"   ❌ Holder at ({col}, {row}) not restored!")
+            all_correct = False
+            continue
+
+        # Check occupied status
+        if restored_holder_item.is_occupied != original_holder.is_occupied:
+            print(f"   ❌ Holder ({col}, {row}): Occupied status mismatch!")
+            print(f"      Original: {original_holder.is_occupied}")
+            print(f"      Restored: {restored_holder_item.is_occupied}")
+            all_correct = False
+
+        # Check position
+        if restored_holder_item.position != original_holder.position:
+            print(f"   ❌ Holder ({col}, {row}): Position mismatch!")
+            all_correct = False
+
+    if all_correct:
+        print(f"   ✓ All checked holders restored correctly!")
+
+    # Verify occupied columns match
+    original_occupied = pipette_holder.get_occupied_columns()
+    restored_occupied = restored_holder.get_occupied_columns()
+
+    print(f"\n   Checking occupied columns:")
+    print(f"   - Original: {original_occupied}")
+    print(f"   - Restored: {restored_occupied}")
+
+    if original_occupied == restored_occupied:
+        print(f"   ✓ Occupied columns match!")
+    else:
+        print(f"   ❌ Occupied columns don't match!")
+
+except Exception as e:
+    print(f"   ❌ PipetteHolder deserialization failed: {e}")
+    import traceback
+
+    traceback.print_exc()
+
+print("\n   === RESERVOIR HOLDER SERIALIZATION ===")
+print("   Serializing reservoir holder...")
+reservoir_dict = reservoirHolder.to_dict()
+print(f"   ✓ ReservoirHolder serialized")
+
+print(f"   Checking serialized structure...")
+print(f"   - Reservoirs count in dict: {len(reservoir_dict['reservoirs'])}")
+print(f"   - Expected reservoirs: {len(reservoirHolder.get_reservoirs())}")
+
+if len(reservoir_dict['reservoirs']) == len(reservoirHolder.get_reservoirs()):
+    print(f"   ✓ All reservoirs serialized")
+else:
+    print(f"   ❌ Reservoirs count mismatch!")
+
+# Deserialize reservoir holder
+print("\n   Deserializing reservoir holder...")
+try:
+    restored_res_holder = ReservoirHolder._from_dict(reservoir_dict)
+    print(f"   ✓ ReservoirHolder deserialized successfully")
+
+    # Verify reservoirs were restored
+    print(f"\n   Verifying restored reservoir holder:")
+    print(f"   - Restored reservoirs count: {len(restored_res_holder.get_reservoirs())}")
+    print(f"   - Original reservoirs count: {len(reservoirHolder.get_reservoirs())}")
+
+    if len(restored_res_holder.get_reservoirs()) == len(reservoirHolder.get_reservoirs()):
+        print(f"   ✓ All reservoirs restored")
+    else:
+        print(f"   ❌ Reservoirs count mismatch!")
+
+    # Check reservoir content is preserved
+    original_reservoirs = {res.labware_id: res for res in reservoirHolder.get_reservoirs()}
+    restored_reservoirs = {res.labware_id: res for res in restored_res_holder.get_reservoirs()}
+
+    all_correct = True
+    for labware_id, original_res in original_reservoirs.items():
+        if labware_id not in restored_reservoirs:
+            print(f"   ❌ Reservoir {labware_id} not restored!")
+            all_correct = False
+            continue
+
+        restored_res = restored_reservoirs[labware_id]
+
+        # Check content
+        if restored_res.content != original_res.content:
+            print(f"   ❌ Reservoir {labware_id}: Content mismatch!")
+            print(f"      Original: {original_res.content}")
+            print(f"      Restored: {restored_res.content}")
+            all_correct = False
+
+        # Check capacity
+        if restored_res.capacity != original_res.capacity:
+            print(f"   ❌ Reservoir {labware_id}: Capacity mismatch!")
+            all_correct = False
+
+        # Check hook_ids
+        if restored_res.hook_ids != original_res.hook_ids:
+            print(f"   ❌ Reservoir {labware_id}: Hook IDs mismatch!")
+            all_correct = False
+
+    if all_correct:
+        print(f"   ✓ All reservoirs restored correctly!")
+
+except Exception as e:
+    print(f"   ❌ ReservoirHolder deserialization failed: {e}")
+    import traceback
+
+    traceback.print_exc()
+
+print("\n   === TIP DROPZONE SERIALIZATION ===")
+print("   Serializing tip dropzone...")
+dropzone_dict = tip_dropzone.to_dict()
+print(f"   ✓ TipDropzone serialized")
+
+print("\n   Deserializing tip dropzone...")
+try:
+    restored_dropzone = TipDropzone._from_dict(dropzone_dict)
+    print(f"   ✓ TipDropzone deserialized successfully")
+
+    # Verify attributes
+    if (restored_dropzone.drop_height_relative == tip_dropzone.drop_height_relative and
+            restored_dropzone.position == tip_dropzone.position and
+            restored_dropzone.labware_id == tip_dropzone.labware_id):
+        print(f"   ✓ TipDropzone attributes restored correctly!")
+    else:
+        print(f"   ❌ TipDropzone attributes mismatch!")
+
+except Exception as e:
+    print(f"   ❌ TipDropzone deserialization failed: {e}")
+    import traceback
+
+    traceback.print_exc()
+
 print("\n" + "=" * 60)
-print("TESTS COMPLETE")
+print("SERIALIZATION TESTS COMPLETE")
 print("=" * 60)
+
+
+
