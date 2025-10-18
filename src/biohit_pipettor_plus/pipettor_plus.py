@@ -371,7 +371,6 @@ class PipettorPlus(Pipettor):
             f"Tip still attached to pipettor."
         )
 
-
     def discard_tips(self, tip_dropzone: Labware) -> None:
         """
                Discard tips to a TipDropzone.
@@ -394,6 +393,7 @@ class PipettorPlus(Pipettor):
         self.eject_tip()
         self.initialize_tips()
         self.move_z(0)
+
 
 
     def add_medium_multi(self, source: ReservoirHolder, source_col: int, volume_per_well: float,
@@ -467,6 +467,14 @@ class PipettorPlus(Pipettor):
                 self.spit(destination, dest_pos, volume_per_destination)
 
             idx += len(chunk)
+
+    def remove_medium_multi(self, source: Plate, waste: ReservoirHolder,
+                      volume_per_well: float, columns: Optional[List[int]] = None) -> None:
+
+    def transfer_plate_to_plate(self, source: Plate, destination: Plate,
+                                volume_per_well: float,
+                                source_columns: Optional[List[int]] = None,
+                                dest_columns: Optional[List[int]] = None) -> None:
 
     def suck(self, source: Labware, source_col_row: tuple[int, int], volume: float) -> None:
         """
@@ -640,9 +648,6 @@ class PipettorPlus(Pipettor):
         print(f"  → Aspirated {volume}µL from {source.labware_id} at {source_col_row}")
         print(f"  → Tip content now: {self._get_tip_content_summary()}")
         print(f"  → Total volume in tips: {self.volume_present_in_tip}µL")
-
-    def change_medium_multi(self):
-        pass
 
     def dilute_multi(self):
         pass
