@@ -76,7 +76,7 @@ class Labware(Serializable):
         row : int
             Starting row index
         consecutive_rows : int, optional
-            Number of consecutive rows needed (default: 1)
+            Number of consecutive rows needed (default: 1). For multichannel pipette, generally 8
 
         Returns
         -------
@@ -857,15 +857,11 @@ class PipetteHolder(Labware):
         self.__individual_holders: dict[tuple[int, int], IndividualPipetteHolder] = {}
         self.individual_holder = individual_holder
 
-        if holders_across_y < Pipettors_in_Multi:
-            raise ValueError(f"PipetteHolder should at least contain {Pipettors_in_Multi} rows")
-
         # Validate that individual holder fits
         if holders_across_x * individual_holder.size_x > size_x or holders_across_y * individual_holder.size_y > size_y:
             raise ValueError("Individual holder is too big for this PipetteHolder")
         else:
             self.place_individual_holders()
-
 
     def place_individual_holders(self):
         """Create individual holder positions across the grid."""
@@ -1064,89 +1060,99 @@ class PipetteHolder(Labware):
                 individual_holder = self.get_holder_at(col, current_row)
                 individual_holder.remove_pipette()
 
-    def get_available_columns(self) -> list[tuple[int, int]]:
+    def check_col_start_row(self, col: int, start_row: int) -> str:
         """
-        Get all columns with starting rows where at least 8 consecutive available positions exist.
-        No holder is reused - if a column appears multiple times, the blocks don't overlap.
+        Check the occupancy status of 8 consecutive positions starting from (col, start_row).
+
+        Parameters
+        ----------
+        col : int
+            Column index
+        start_row : int
+            Starting row index
 
         Returns
         -------
-        list[tuple[int, int]]
-            List of (column, start_row) tuples where 8 consecutive positions are available.
-            Blocks are non-overlapping (minimum gap of 8 rows between start positions in same column).
+        str
+            Status of the 8 consecutive positions:
+            - "FULLY_OCCUPIED": All 8 positions exist and are occupied
+            - "FULLY_AVAILABLE": All 8 positions exist and are empty
+            - "MIXED": All 8 positions exist but have mixed occupancy
+            - "INVALID": One or more positions don't exist (out of bounds)
         """
-        available_positions = []
+        # Check if all positions exist
+        if col < 0 or col >= self._columns:
+            return "INVALID"
+        if start_row < 0 or start_row + Pipettors_in_Multi > self._rows:
+            return "INVALID"
 
-        for col in range(self._columns):
-            # Track which rows are already used in a block for this column
-            used_rows = set()
+        # Check occupancy of all 8 positions
+        occupied_count = 0
+        for i in range(Pipettors_in_Multi):
+            current_row = start_row + i
+            individual_holder = self.get_holder_at(col, current_row)
 
-            # Try each possible starting row
-            for start_row in range(self._rows - Pipettors_in_Multi + 1):
-                # Skip if this start_row would overlap with already found blocks
-                if start_row in used_rows:
-                    continue
+            if individual_holder is None:
+                return "INVALID"
 
-                # Check if all 8 consecutive positions are available
-                all_available = True
-                for i in range(Pipettors_in_Multi):
-                    current_row = start_row + i
-                    individual_holder = self.get_holder_at(col, current_row)
+            if individual_holder.is_occupied:
+                occupied_count += 1
 
-                    if individual_holder is None or not individual_holder.is_available():
-                        all_available = False
-                        break
+        # Determine status
+        if occupied_count == Pipettors_in_Multi:
+            return "FULLY_OCCUPIED"
+        elif occupied_count == 0:
+            return "FULLY_AVAILABLE"
+        else:
+            return "MIXED"
 
-                if all_available:
-                    # Found a valid block
-                    available_positions.append((col, start_row))
-                    # Mark all rows in this block as used
-                    for i in range(Pipettors_in_Multi):
-                        used_rows.add(start_row + i)
-
-        return available_positions
-
-    def get_occupied_columns(self) -> list[tuple[int, int]]:
+    def get_occupied_col_row(self) -> list[tuple[int, int]]:
         """
-        Get all columns with starting rows where at least 8 consecutive occupied positions exist.
-        No holder is reused - if a column appears multiple times, the blocks don't overlap.
-
-        Returns
-        -------
-        list[tuple[int, int]]
-            List of (column, start_row) tuples where 8 consecutive positions are occupied.
-            Blocks are non-overlapping (minimum gap of 8 rows between start positions in same column).
+        Get all columns with starting rows where 8 consecutive occupied positions exist.
+        No holder is reused - blocks are non-overlapping.
         """
         occupied_positions = []
 
         for col in range(self._columns):
-            # Track which rows are already used in a block for this column
             used_rows = set()
 
-            # Try each possible starting row
             for start_row in range(self._rows - Pipettors_in_Multi + 1):
-                # Skip if this start_row would overlap with already found blocks
                 if start_row in used_rows:
                     continue
 
-                # Check if all 8 consecutive positions are occupied
-                all_occupied = True
-                for i in range(Pipettors_in_Multi):
-                    current_row = start_row + i
-                    individual_holder = self.get_holder_at(col, current_row)
+                # Use helper function instead of manual checking
+                status = self.check_col_start_row(col, start_row)
 
-                    if individual_holder is None or not individual_holder.is_occupied:
-                        all_occupied = False
-                        break
-
-                if all_occupied:
-                    # Found a valid block
+                if status == "FULLY_OCCUPIED":
                     occupied_positions.append((col, start_row))
                     # Mark all rows in this block as used
                     for i in range(Pipettors_in_Multi):
                         used_rows.add(start_row + i)
 
         return occupied_positions
+
+    def get_available_col_row(self) -> list[tuple[int, int]]:
+        """
+        Get all columns with starting rows where 8 consecutive available positions exist.
+        No holder is reused - blocks are non-overlapping.
+        """
+        available_positions = []
+
+        for col in range(self._columns):
+            used_rows = set()
+
+            for start_row in range(self._rows - Pipettors_in_Multi + 1):
+                if start_row in used_rows:
+                    continue
+
+                status = self.check_col_start_row(col, start_row)
+
+                if status == "FULLY_AVAILABLE":
+                    available_positions.append((col, start_row))
+                    for i in range(Pipettors_in_Multi):
+                        used_rows.add(start_row + i)
+
+        return available_positions
 
     def to_dict(self) -> dict:
         """

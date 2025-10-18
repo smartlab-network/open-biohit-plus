@@ -37,36 +37,26 @@ class PipettorPlus(Pipettor):
         self.change_tips = 0  # control if tips are to be changed
 
     def pick_tips(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None,) -> None:
+        """
+                Pick tips from a PipetteHolder.
+
+                Parameters
+                ----------
+                pipette_holder : PipetteHolder
+                    PipetteHolder labware containing tips
+                list_col_row : List[tuple[int, int]], optional
+                    List of (column, row) grid indices to try.
+                    If None, automatically finds occupied grid locations.
+
+                Raises
+                ------
+                ValueError
+                    If pipettor already has tips or pipette holder not found
+                """
 
         #check if tips already exist.
         if self.has_tips:
             raise ValueError("pipettor already has tips")
-
-        if self.multichannel:
-            self.pick_multi_tips(pipette_holder, list_col_row)
-        else:
-            self.pick_single_tip(pipette_holder, list_col_row)
-
-    def pick_tips(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None) -> None:
-        """
-        Pick tips from a PipetteHolder.
-
-        Parameters
-        ----------
-        pipette_holder : PipetteHolder
-            PipetteHolder labware containing tips
-        list_col_row : List[tuple[int, int]], optional
-            List of (column, row) grid indices to try.
-            If None, automatically finds occupied grid locations.
-
-        Raises
-        ------
-        ValueError
-            If pipettor already has tips or pipette holder not found
-        """
-        # Check if tips already exist
-        if self.has_tips:
-            raise ValueError("Pipettor already has tips")
 
         if self.multichannel:
             self.pick_multi_tips(pipette_holder, list_col_row)
@@ -98,67 +88,49 @@ class PipettorPlus(Pipettor):
         if not self.multichannel:
             raise ValueError("pick_multi_tips requires multichannel pipettor")
 
-        # Build list of (column, start_row) grid indices to try
         if list_col_row is None:
-            #get_occupied_columns() returns list[tuple[int, int]] of (column, start_row)
-            occupied_indices = pipette_holder.get_occupied_columns()
-
-            if not occupied_indices:
+            occupied_col_row = pipette_holder.get_occupied_col_row()
+            if not occupied_col_row:
                 raise ValueError(
                     f"No occupied multi-channel grid locations found in pipette holder {pipette_holder.labware_id}")
-
-            list_col_row = occupied_indices
+            list_col_row = occupied_col_row
             print(f"Auto-detected {len(list_col_row)} multi-channel grid locations: {list_col_row}")
 
         if not list_col_row:
-            raise ValueError(f"No grid indices specified for pipette holder {pipette_holder.labware_id}")
+            raise ValueError(f"No col_row specified. list_col_row given : {list_col_row}")
 
         print(f"pick_multi_tips: start, trying grid locations {list_col_row}")
 
-        # Try each (column, start_row) grid index
         for col, start_row in list_col_row:
-            # ✅ Validate the grid indices first
-            is_valid, error_msg = pipette_holder.validate_col_row([col], start_row, Pipettors_in_Multi)
-            if not is_valid:
-                print(f"Grid location ({col}, {start_row}) invalid: {error_msg}")
+            #checks the status of Individual pipette holders at  col_row
+            status = pipette_holder.check_col_start_row(col, start_row)
+
+            if status == "INVALID":
+                print(f"Grid location ({col}, {start_row}) is invalid, skipping")
                 continue
 
-            # ✅ Check that ALL 8 consecutive holders are occupied
-            all_holders_valid = True
-            holders_to_use = []
-
-            for i in range(Pipettors_in_Multi):  # Check all 8 holders
-                current_row = start_row + i
-                individual_holder = pipette_holder.get_holder_at(col, current_row)
-
-                if individual_holder is None:
-                    print(f"Grid location ({col}, {current_row}) has no holder, skipping")
-                    all_holders_valid = False
-                    break
-
-                if not individual_holder.is_occupied:
-                    print(f"Grid location ({col}, {current_row}) is empty, skipping")
-                    all_holders_valid = False
-                    break
-
-                holders_to_use.append(individual_holder)
-
-            # Skip this grid location if not all 8 tips are available
-            if not all_holders_valid:
-                print(f"Column {col} starting at row {start_row}: Not all 8 holders occupied")
+            if status != "FULLY_OCCUPIED":
+                print(f"Grid location ({col}, {start_row}) is not fully occupied (status: {status}), skipping")
                 continue
+
+            # All positions valid and occupied - get holders
+            holders_to_use = [pipette_holder.get_holder_at(col, start_row + i)
+                              for i in range(Pipettors_in_Multi)]
+
 
             # All 8 holders are valid, attempt to pick tips
             try:
                 # Move to the deck position of the first holder
+                #todo
                 first_holder = holders_to_use[0]
                 if first_holder.position is None:
                     raise ValueError(f"Holder at grid location ({col}, {start_row}) has no position set")
 
-                x, y = first_holder.position  # ✅ position = deck coordinates
+                x, y = first_holder.position  #  position = deck coordinates
                 self.move_xy(x, y)
 
                 # Pick tips at the specified height
+                # todo
                 self.pick_tip(22)  # pick_height
 
                 # Mark all 8 tips in this column as removed
@@ -176,183 +148,229 @@ class PipettorPlus(Pipettor):
 
         # If we got here, all attempts failed
         raise RuntimeError(
-            f"Failed to pick tips from any of the specified grid locations {list_col_row}. "
-            f"Tried {len(list_col_row)} locations."
+            f"Failed to pick tips from any of the specified locations {list_col_row}. "
         )
 
     def pick_single_tip(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None) -> None:
-        """
-        Pick a single tip from a PipetteHolder using single-channel pipettor.
-
-        Parameters
-        ----------
-        pipette_holder : PipetteHolder
-            PipetteHolder labware containing tips
-        list_col_row : List[tuple[int, int]], optional
-            List of (column, row) grid indices to try.
-            If None, tries all occupied grid locations in order.
-
-        Raises
-        ------
-        ValueError
-            If not a single-channel pipettor or no tips available
-        RuntimeError
-            If failed to pick tip from any specified grid location
-        """
+        """Pick a single tip from a PipetteHolder using single-channel pipettor."""
         if self.multichannel:
             raise ValueError("pick_single_tip requires single-channel pipettor")
 
-        # If no grid indices specified, get all occupied holders
         if list_col_row is None:
+            # Use existing method!
             occupied_holders = pipette_holder.get_occupied_holders()
-
             if not occupied_holders:
-                raise ValueError(f"No occupied grid locations found in pipette holder {pipette_holder.labware_id}")
+                raise ValueError(
+                    f"No occupied tips found in pipette holder {pipette_holder.labware_id}")
 
-            # ✅ Build list of (column, row) tuples from occupied holders
-            list_col_row = [(holder.column, holder.row) for holder in occupied_holders]
-
-            # Sort grid indices for predictable order (left to right, top to bottom)
-            list_col_row.sort(key=lambda idx: (idx[0], idx[1]))
-
-            print(f"Auto-detected {len(list_col_row)} occupied grid locations")
+            list_col_row = [(h.column, h.row) for h in occupied_holders]
+            print(f"Auto-detected {len(list_col_row)} occupied tip positions")
 
         if not list_col_row:
-            raise ValueError(f"No grid indices specified for pipette holder {pipette_holder.labware_id}")
+            raise ValueError(f"No col_row specified. list_col_row given: {list_col_row}")
 
         print(f"pick_single_tip: start, trying grid locations {list_col_row}")
 
-        # Try each (column, row) grid index
         for col, row in list_col_row:
-            # ✅ Validate the grid indices
-            is_valid, error_msg = pipette_holder.validate_col_row([col], row, 1)
-            if not is_valid:
-                print(f"Grid location ({col}, {row}) invalid: {error_msg}")
-                continue
+            holder = pipette_holder.get_holder_at(col, row)
 
-            # ✅ Get the holder at this grid location
-            individual_holder = pipette_holder.get_holder_at(col, row)
-
-            if individual_holder is None:
+            if holder is None:
                 print(f"Grid location ({col}, {row}) has no holder, skipping")
                 continue
 
-            if not individual_holder.is_occupied:
+            if not holder.is_occupied:
                 print(f"Grid location ({col}, {row}) is empty, skipping")
                 continue
 
-            # Attempt to pick tip
             try:
-                # Move to the deck position
-                if individual_holder.position is None:
-                    raise ValueError(f"Holder at grid location ({col}, {row}) has no position set")
+                if holder.position is None:
+                    print(f"Holder at grid location ({col}, {row}) has no position set, skipping")
+                    continue
 
-                x, y = individual_holder.position  # ✅ position = deck coordinates
+                x, y = holder.position
                 self.move_xy(x, y)
+                self.pick_tip(22)
 
-                # Pick tip at the specified height
-                self.pick_tip(22)  # pick_height
-
-                # Mark tip as removed
-                pipette_holder.remove_pipette_at(col, row)
+                holder.is_occupied = False
                 self.has_tips = True
 
-                print(f"✓ Successfully picked tip from grid location ({col}, {row})")
-                return  # Successfully picked, exit function
+                print(f"✓ Successfully picked tip from column {col}, row {row}")
+                return
 
             except CommandFailed as e:
-                print(f"✗ Failed to pick tip from grid location ({col}, {row}): {e}")
+                print(f"✗ Failed to pick tip from column {col}, row {row}: {e}")
                 continue
             finally:
                 self.move_z(0)
 
-        # If we got here, all attempts failed
         raise RuntimeError(
-            f"Failed to pick tip from any of the specified grid locations {list_col_row}. "
-            f"Tried {len(list_col_row)} locations."
+            f"Failed to pick tip from any of the specified locations {list_col_row}."
         )
 
-
-
-
-
-    def return_multi_tips(self, pipette_holder: PipetteHolder, columns: Optional[List[int]] = None) -> None:
+    def return_tips(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None) -> None:
         """
-        Return tips to PipetteHolder in available columns (left to right).
+                        return tips to PipetteHolder.
+        """
+
+        if not self.has_tips:
+            raise ValueError("pipettor have no tips to return")
+
+        if self.multichannel:
+            self.return_multi_tips(pipette_holder, list_col_row)
+        else:
+            self.return_single_tip(pipette_holder, list_col_row)
+
+    def return_multi_tips(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None) -> None:
+        """
+        Return tips to a PipetteHolder using multi-channel pipettor.
+
+        For multi-channel, 8 consecutive tips are returned vertically.
 
         Parameters
         ----------
-        pipette_holder : str
-            PipetteHolder labware
-        columns : List[int], optional
-            List of column indices to try for returning tips.
-            If None, uses all available columns.
+        pipette_holder : PipetteHolder
+            PipetteHolder labware to return tips to
+        list_col_row : List[tuple[int, int]], optional
+            List of (column, start_row) grid indices to try.
+            start_row indicates where the first pipettor in multi-channel would be positioned.
+            If None, automatically finds all grid locations with 8 consecutive empty positions.
 
         Raises
         ------
         ValueError
-            If pipette holder not found, no empty columns available, or no tips to return
+            If not a multichannel pipettor or no tips to return
         RuntimeError
-            If failed to return tips to any available column
-
-        Notes
-        -----
-        This function returns tips to the pipette holder if there are empty columns.
-        It's useful for reusing tip positions instead of discarding to a dropzone.
+            If failed to return tips to any specified grid location
         """
-
         if not self.multichannel:
             raise ValueError("return_multi_tips requires multichannel pipettor")
 
         if not self.has_tips:
             raise ValueError("No tips to return - pipettor is empty")
 
-        if not isinstance(pipette_holder, PipetteHolder):
-            raise ValueError("Pick tips only work with pipette_holders")
+        if list_col_row is None:
+            available_col_row = pipette_holder.get_available_col_row()
+            if not available_col_row:
+                raise ValueError(
+                    f"No available multi-channel grid locations found in pipette holder {pipette_holder.labware_id}")
+            list_col_row = available_col_row
+            print(f"Auto-detected {len(list_col_row)} available multi-channel grid locations: {list_col_row}")
 
-        if columns is None:
-            columns = pipette_holder.get_available_columns()
+        if not list_col_row:
+            raise ValueError(f"No col_row specified. list_col_row given: {list_col_row}")
 
-        if not columns:
-            raise ValueError(f"No empty columns found in pipette holder {pipette_holder.labware_id}")
+        print(f"return_multi_tips: start, trying grid locations {list_col_row}")
 
-        print(f"return_multi_tips: start, trying columns {columns}")
+        for col, start_row in list_col_row:
+            # Check the status of positions
+            status = pipette_holder.check_col_start_row(col, start_row)
 
-        for col in sorted(columns, reverse=True):  # attempts to return tips in descending order to available columns.
-            # Get the position for the first row of this column
-            holder_id = f'{pipette_holder.labware_id}_{col}:0'
-            individual_holder = pipette_holder.get_individual_holders().get(holder_id)
-
-            if individual_holder is None or individual_holder.is_occupied:
+            if status == "INVALID":
+                print(f"Grid location ({col}, {start_row}) is invalid, skipping")
                 continue
 
-            try:
-                # Move to the tip return position
-                if individual_holder.position is None:
-                    raise ValueError(f"Individual holder {holder_id} has no position set")
+            if status != "FULLY_AVAILABLE":
+                print(f"Grid location ({col}, {start_row}) is not fully available (status: {status}), skipping")
+                continue
 
-                x, y = individual_holder.position
+            # All positions valid and available - get holders
+            holders_to_use = [pipette_holder.get_holder_at(col, start_row + i)
+                              for i in range(Pipettors_in_Multi)]
+
+            # Attempt to return tips
+            try:
+                first_holder = holders_to_use[0]
+                if first_holder.position is None:
+                    print(f"Holder at grid location ({col}, {start_row}) has no position set, skipping")
+                    continue
+
+                x, y = first_holder.position  # deck coordinates
                 self.move_xy(x, y)
-                # TODO Fix height
-                self.move_z(22)  # Slightly above pick height
+
+                # Return tips at the specified height
+                self.move_z(22)  # return_height
                 self.eject_tip()
 
-                # Mark all tips in this column as placed
-                pipette_holder.place_pipettes_in_columns([col])
-                self.initialize_tips()
-                print(f"Returned tips to column {col}")
-                break
+                # Mark all 8 positions in this column as occupied
+                pipette_holder.place_pipettes_in_columns([col], start_row)
+                self.has_tips = False
 
-            except Exception as e:
-                print(f"Failed to return tips to column {col}: {e}")
+                print(f"✓ Successfully returned 8 tips to column {col}, rows {start_row} to {start_row + 7}")
+                return  # Successfully returned, exit function
+
+            except CommandFailed as e:
+                print(f"✗ Failed to return tips to column {col}, row {start_row}: {e}")
                 continue
             finally:
                 self.move_z(0)
-        else:
-            raise RuntimeError(
-                f"Failed to return tips to any available column {columns}. "
-                f"Holder is full. Tips still attached to pipettor."
-            )
+
+        # If we got here, all attempts failed
+        raise RuntimeError(
+            f"Failed to return tips to any of the specified locations {list_col_row}. "
+            f"Tips still attached to pipettor."
+        )
+
+    def return_single_tip(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None) -> None:
+        """Return a single tip to a PipetteHolder using single-channel pipettor."""
+        if self.multichannel:
+            raise ValueError("return_single_tip requires single-channel pipettor")
+
+        if not self.has_tips:
+            raise ValueError("No tip to return - pipettor is empty")
+
+        if list_col_row is None:
+            # Use existing method!
+            available_holders = pipette_holder.get_available_holders()
+            if not available_holders:
+                raise ValueError(
+                    f"No available positions found in pipette holder {pipette_holder.labware_id}")
+
+            list_col_row = [(h.column, h.row) for h in available_holders]
+            print(f"Auto-detected {len(list_col_row)} available tip positions")
+
+        if not list_col_row:
+            raise ValueError(f"No col_row specified. list_col_row given: {list_col_row}")
+
+        print(f"return_single_tip: start, trying grid locations {list_col_row}")
+
+        for col, row in list_col_row:
+            holder = pipette_holder.get_holder_at(col, row)
+
+            if holder is None:
+                print(f"Grid location ({col}, {row}) has no holder, skipping")
+                continue
+
+            if holder.is_occupied:
+                print(f"Grid location ({col}, {row}) is already occupied, skipping")
+                continue
+
+            try:
+                if holder.position is None:
+                    print(f"Holder at grid location ({col}, {row}) has no position set, skipping")
+                    continue
+
+                x, y = holder.position
+                self.move_xy(x, y)
+                self.move_z(22)
+                self.eject_tip()
+
+                holder.is_occupied = True
+                self.has_tips = False
+
+                print(f"✓ Successfully returned tip to column {col}, row {row}")
+                return
+
+            except CommandFailed as e:
+                print(f"✗ Failed to return tip to column {col}, row {row}: {e}")
+                continue
+            finally:
+                self.move_z(0)
+
+        raise RuntimeError(
+            f"Failed to return tip to any of the specified locations {list_col_row}. "
+            f"Tip still attached to pipettor."
+        )
+
 
     def discard_tips(self, tip_dropzone: Labware) -> None:
         """
@@ -369,35 +387,13 @@ class PipettorPlus(Pipettor):
         if not isinstance(tip_dropzone, TipDropzone):
             raise ValueError("discard_tips only works with TipDropzone")
 
-        # Todo understand drop height
+        # understand drop height
         x, y = tip_dropzone.position
         self.move_xy(x, y)
         self.move_z(tip_dropzone.drop_height_relative)
         self.eject_tip()
         self.initialize_tips()
         self.move_z(0)
-
-    def replace_multi_tips(self, pipette_holder: Labware) -> None:
-        """ Replace multiple tips. By return current tips to and picking new ones from the pipette_holder.
-            Does not take tips from the column it returned to """
-        if not isinstance(pipette_holder, PipetteHolder):
-            raise ValueError("replace_multi_tips only works with PipetteHolder")
-
-        if self.multichannel:
-            """
-                get a list of available columns -> Place tips back with .return_multi ->
-                get a list of occupied columns -> Common column is the used column ->
-                pretend to remove tips from used columns -> pick tips  with .pick_multi
-                pretend to put tips back to used columns.``
-            """
-            available_columns = pipette_holder.get_available_columns()
-            self.return_multi_tips(pipette_holder)
-            occupied_columns = pipette_holder.get_occupied_columns()
-            returned_column = list(set(available_columns) & set(occupied_columns))
-            pipette_holder.remove_pipettes_from_columns(returned_column)
-            self.pick_multi_tips(pipette_holder)
-            pipette_holder.place_pipettes_in_columns(returned_column)
-
 
 
     def add_medium_multi(self, source: ReservoirHolder, source_col: int, volume_per_well: float,

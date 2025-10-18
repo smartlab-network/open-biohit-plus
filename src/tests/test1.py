@@ -262,7 +262,7 @@ else:
 
 # Test 6: Check Occupied Columns
 print("\n6. Checking Occupied Columns:")
-occupied = pipette_holder.get_occupied_columns()
+occupied = pipette_holder.get_occupied_col_row()
 print(f"   Occupied multi-channel positions: {occupied}")
 print(f"   Expected: [(3, 0), (5, 0)]")
 # ✅ Updated expectation - returns list of (column, start_row) tuples
@@ -485,8 +485,8 @@ try:
         print(f"   ✓ All checked holders restored correctly!")
 
     # Verify occupied columns match
-    original_occupied = pipette_holder.get_occupied_columns()
-    restored_occupied = restored_holder.get_occupied_columns()
+    original_occupied = pipette_holder.get_occupied_col_row()
+    restored_occupied = restored_holder.get_occupied_col_row()
 
     print(f"\n   Checking occupied columns:")
     print(f"   - Original: {original_occupied}")
