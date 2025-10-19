@@ -295,7 +295,7 @@ class PipettorPlus(Pipettor):
 
                 # Mark all 8 positions in this column as occupied
                 pipette_holder.place_consecutive_pipettes_multi([col], start_row)
-                self.has_tips = False
+                self.initialize_tips()
 
                 print(f"✓ Successfully returned 8 tips to column {col}, rows {start_row} to {start_row + 7}")
                 return  # Successfully returned, exit function
@@ -357,7 +357,7 @@ class PipettorPlus(Pipettor):
                 self.eject_tip()
 
                 holder.is_occupied = True
-                self.has_tips = False
+                self.initialize_tips()
 
                 print(f"✓ Successfully returned tip to column {col}, row {row}")
                 return
@@ -902,17 +902,6 @@ class PipettorPlus(Pipettor):
     def spit_all(self):
         pass
 
-    def home(self):
-        self.move_z(0)
-        self.move_xy(0, 0)
-
-    def initialize_tips(self) -> None:
-        """Clear tip content when tips are discarded."""
-        self.has_tips = False
-        self.tip_content = {}
-        self.volume_present_in_tip = 0.0
-        print(f"  → Tips discarded, content cleared")
-
     def add_content(self, content_type: str, volume: float) -> None:
         """
         Add content to the tips with intelligent mixing logic.
@@ -1003,7 +992,16 @@ class PipettorPlus(Pipettor):
         # Update total volume present in tip
         self.volume_present_in_tip -= volume
 
+    def home(self):
+        self.move_z(0)
+        self.move_xy(0, 0)
+
     # Helper functions. Not necessarily available for GUI
+    def initialize_tips(self) -> None:
+        """Clear tip content when tips are discarded."""
+        self.has_tips = False
+        self.tip_dict = {}
+        print(f"  → Tips discarded, content cleared")
 
     def _validate_transfer(self, source, source_positions, destination, destination_positions,
                            source_consecutive_rows: int, dest_consecutive_rows: int) -> None:
@@ -1176,7 +1174,6 @@ class PipettorPlus(Pipettor):
             self.replace_multi_tips(lw)
         elif not self.has_tips:
             raise ValueError("No tips loaded. Pick tips first.")
-
 
     def find_labware_by_type(self, labware_type: str) -> list[Labware]:
         """
