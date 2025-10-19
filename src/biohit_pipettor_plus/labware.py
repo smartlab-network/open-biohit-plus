@@ -12,6 +12,7 @@ Default_Reservoir_Capacity = 30000
 Default_well_capacity = 1000
 
 
+#todo validate reservoir size so that it can fit Pipettors_in_Multi across Y atleast
 @register_class
 class Labware(Serializable):
     """
@@ -972,7 +973,7 @@ class PipetteHolder(Labware):
 
         individual_holder.remove_pipette()
 
-    def place_pipettes_in_columns(self, columns: list[int], row: int = 0) -> None:
+    def place_consecutive_pipettes_multi(self, columns: list[int], row: int = 0) -> None:
         """
         Place pipettes in consecutive positions within specified columns for multichannel pipettor.
 
@@ -1016,7 +1017,7 @@ class PipetteHolder(Labware):
                 individual_holder = self.get_holder_at(col, current_row)
                 individual_holder.place_pipette()
 
-    def remove_pipettes_from_columns(self, columns: list[int], row: int = 0) -> None:
+    def remove_consecutive_pipettes_multi(self, columns: list[int], row: int = 0) -> None:
         """
         Remove pipettes from consecutive positions within specified columns for multichannel pipettor.
 
@@ -1060,7 +1061,7 @@ class PipetteHolder(Labware):
                 individual_holder = self.get_holder_at(col, current_row)
                 individual_holder.remove_pipette()
 
-    def check_col_start_row(self, col: int, start_row: int) -> str:
+    def check_col_start_row_multi(self, col: int, start_row: int) -> str:
         """
         Check the occupancy status of 8 consecutive positions starting from (col, start_row).
 
@@ -1106,7 +1107,7 @@ class PipetteHolder(Labware):
         else:
             return "MIXED"
 
-    def get_occupied_col_row(self) -> list[tuple[int, int]]:
+    def get_occupied_holder_multi(self) -> list[tuple[int, int]]:
         """
         Get all columns with starting rows where 8 consecutive occupied positions exist.
         No holder is reused - blocks are non-overlapping.
@@ -1131,7 +1132,7 @@ class PipetteHolder(Labware):
 
         return occupied_positions
 
-    def get_available_col_row(self) -> list[tuple[int, int]]:
+    def get_available_holder_multi(self) -> list[tuple[int, int]]:
         """
         Get all columns with starting rows where 8 consecutive available positions exist.
         No holder is reused - blocks are non-overlapping.

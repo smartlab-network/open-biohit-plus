@@ -1,5 +1,5 @@
 from .pipettor import Pipettor
-from typing import Literal, List, Optional, Union
+from typing import Literal, List, Optional, Union, Callable
 from math import ceil
 
 # from .cursor import total_volume
@@ -9,6 +9,9 @@ from .labware import Labware, Plate, Well, ReservoirHolder, Reservoir, PipetteHo
     TipDropzone, Pipettors_in_Multi
 from .errors import CommandFailed
 
+
+Change_Tips = 0
+MAX_BATCH_SIZE = 5
 
 class PipettorPlus(Pipettor):
     def __init__(self, tip_volume: Literal[200, 1000], *, multichannel: bool,  initialize: bool = True, deck: Deck):
@@ -29,12 +32,12 @@ class PipettorPlus(Pipettor):
         super().__init__(tip_volume=tip_volume, multichannel = multichannel, initialize=initialize)
         self.deck = deck
         self.slots: dict[str, Slot] = deck.slots
-        self.tip_count = Pipettors_in_Multi
 
         #creates a dict of all tips, each tips having its own dict where content and volume in tip can be stored.
+        self.tip_count = Pipettors_in_Multi if self.multichannel else 1
         self.tip_dict = {i: {} for i in range(0, self.tip_count)}
         self.has_tips = False
-        self.change_tips = 0  # control if tips are to be changed
+        self.change_tips = Change_Tips  # control if tips are to be changed
 
     def pick_tips(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None,) -> None:
         """
@@ -65,9 +68,9 @@ class PipettorPlus(Pipettor):
 
     def pick_multi_tips(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None) -> None:
         """
-        Pick tips from a PipetteHolder using multi-channel pipettor.
+        Pick tips from a PipetteHolder using multichannel pipettor.
 
-        For multi-channel, 8 consecutive tips are picked vertically.
+        For multichannel, 8 consecutive tips are picked vertically.
 
         Parameters
         ----------
@@ -75,7 +78,7 @@ class PipettorPlus(Pipettor):
             PipetteHolder labware containing tips
         list_col_row : List[tuple[int, int]], optional
             List of (column, start_row) grid indices to try.
-            start_row indicates where the first pipettor in multi-channel would be positioned.
+            start_row indicates where the first pipettor in multichannel would be positioned.
             If None, automatically finds all grid locations with 8 consecutive occupied tips.
 
         Raises
@@ -89,12 +92,12 @@ class PipettorPlus(Pipettor):
             raise ValueError("pick_multi_tips requires multichannel pipettor")
 
         if list_col_row is None:
-            occupied_col_row = pipette_holder.get_occupied_col_row()
+            occupied_col_row = pipette_holder.get_occupied_holder_multi()
             if not occupied_col_row:
                 raise ValueError(
-                    f"No occupied multi-channel grid locations found in pipette holder {pipette_holder.labware_id}")
+                    f"No occupied multichannel grid locations found in pipette holder {pipette_holder.labware_id}")
             list_col_row = occupied_col_row
-            print(f"Auto-detected {len(list_col_row)} multi-channel grid locations: {list_col_row}")
+            print(f"Auto-detected {len(list_col_row)} multichannel grid locations: {list_col_row}")
 
         if not list_col_row:
             raise ValueError(f"No col_row specified. list_col_row given : {list_col_row}")
@@ -103,7 +106,7 @@ class PipettorPlus(Pipettor):
 
         for col, start_row in list_col_row:
             #checks the status of Individual pipette holders at  col_row
-            status = pipette_holder.check_col_start_row(col, start_row)
+            status = pipette_holder.check_col_start_row_multi(col, start_row)
 
             if status == "INVALID":
                 print(f"Grid location ({col}, {start_row}) is invalid, skipping")
@@ -115,8 +118,7 @@ class PipettorPlus(Pipettor):
 
             # All positions valid and occupied - get holders
             holders_to_use = [pipette_holder.get_holder_at(col, start_row + i)
-                              for i in range(Pipettors_in_Multi)]
-
+                              for i in range(self.tip_count)]
 
             # All 8 holders are valid, attempt to pick tips
             try:
@@ -134,7 +136,7 @@ class PipettorPlus(Pipettor):
                 self.pick_tip(22)  # pick_height
 
                 # Mark all 8 tips in this column as removed
-                pipette_holder.remove_pipettes_from_columns([col], start_row)
+                pipette_holder.remove_consecutive_pipettes_multi([col], start_row)
                 self.has_tips = True
 
                 print(f"✓ Successfully picked 8 tips from column {col}, rows {start_row} to {start_row + 7}")
@@ -222,9 +224,9 @@ class PipettorPlus(Pipettor):
 
     def return_multi_tips(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None) -> None:
         """
-        Return tips to a PipetteHolder using multi-channel pipettor.
+        Return tips to a PipetteHolder using multichannel pipettor.
 
-        For multi-channel, 8 consecutive tips are returned vertically.
+        For multichannel, 8 consecutive tips are returned vertically.
 
         Parameters
         ----------
@@ -232,7 +234,7 @@ class PipettorPlus(Pipettor):
             PipetteHolder labware to return tips to
         list_col_row : List[tuple[int, int]], optional
             List of (column, start_row) grid indices to try.
-            start_row indicates where the first pipettor in multi-channel would be positioned.
+            start_row indicates where the first pipettor in multichannel would be positioned.
             If None, automatically finds all grid locations with 8 consecutive empty positions.
 
         Raises
@@ -249,12 +251,12 @@ class PipettorPlus(Pipettor):
             raise ValueError("No tips to return - pipettor is empty")
 
         if list_col_row is None:
-            available_col_row = pipette_holder.get_available_col_row()
+            available_col_row = pipette_holder.get_available_holder_multi()
             if not available_col_row:
                 raise ValueError(
-                    f"No available multi-channel grid locations found in pipette holder {pipette_holder.labware_id}")
+                    f"No available multichannel grid locations found in pipette holder {pipette_holder.labware_id}")
             list_col_row = available_col_row
-            print(f"Auto-detected {len(list_col_row)} available multi-channel grid locations: {list_col_row}")
+            print(f"Auto-detected {len(list_col_row)} available multichannel grid locations: {list_col_row}")
 
         if not list_col_row:
             raise ValueError(f"No col_row specified. list_col_row given: {list_col_row}")
@@ -263,7 +265,7 @@ class PipettorPlus(Pipettor):
 
         for col, start_row in list_col_row:
             # Check the status of positions
-            status = pipette_holder.check_col_start_row(col, start_row)
+            status = pipette_holder.check_col_start_row_multi(col, start_row)
 
             if status == "INVALID":
                 print(f"Grid location ({col}, {start_row}) is invalid, skipping")
@@ -275,7 +277,7 @@ class PipettorPlus(Pipettor):
 
             # All positions valid and available - get holders
             holders_to_use = [pipette_holder.get_holder_at(col, start_row + i)
-                              for i in range(Pipettors_in_Multi)]
+                              for i in range(self.tip_count)]
 
             # Attempt to return tips
             try:
@@ -292,7 +294,7 @@ class PipettorPlus(Pipettor):
                 self.eject_tip()
 
                 # Mark all 8 positions in this column as occupied
-                pipette_holder.place_pipettes_in_columns([col], start_row)
+                pipette_holder.place_consecutive_pipettes_multi([col], start_row)
                 self.has_tips = False
 
                 print(f"✓ Successfully returned 8 tips to column {col}, rows {start_row} to {start_row + 7}")
@@ -394,107 +396,183 @@ class PipettorPlus(Pipettor):
         self.initialize_tips()
         self.move_z(0)
 
-
-
-    def add_medium_multi(self, source: ReservoirHolder, source_col: int, volume_per_well: float,
-                         destination: Plate, dest_cols: Union[int, list[int]], source_start_row: int = 0,
-                         dest_start_row: int = 0) -> None:
+    def add_medium(self, source: ReservoirHolder, source_col_row: tuple[int, int],
+                   volume_per_well: float, destination: Plate,
+                   dest_col_row: List[tuple[int, int]]) -> None:
         """
-    Transfer medium from a reservoir to multiple columns on a destination plate.
-
-    params:
-        source: ReservoirHolder containing the medium to transfer
-        source_col: Column index in the source reservoir to draw from
-        volume_per_well: Volume (µL) to dispense into each destination well
-        destination: Target plate to receive the medium
-        dest_cols: Destination column index or list of column indices
-        source_start_row: Starting row index in source reservoir (default: 0)
-        dest_start_row: Starting row index in destination plate (default: 0)
-
-    Returns:
-        None
-    """
-
-        if not self.multichannel:
-            raise ValueError("add_medium requires multichannel pipettor")
-
-        # Initial validation
-        self.check_tips()
-        self.check_col_row((source_col, source_start_row), source)
-        self.check_col_row(dest_col_row, destination)
-
-        # Calculate volumes for multichannel operation
-        volume_per_destination = volume_per_well * self.tip_count  # total per destination column
-        max_vol_per_aspirate = self.tip_volume * self.tip_count  # total capacity across all tips
-
-        if volume_per_destination <= 0:
-            raise ValueError("volume_per_well must be > 0")
-
-        print(f"Transferring {volume_per_well}µL per well to {len(dest_col_row)} destinations")
-        print(f"Max volume per aspirate: {max_vol_per_aspirate}µL")
-        print(f"Volume per destination: {volume_per_destination}µL")
-
-        # If a single destination needs more than a full load, handle per-destination multi-trips
-        if volume_per_destination > max_vol_per_aspirate:
-            for dest_pos in dest_col_row:
-                remaining = volume_per_destination
-                while remaining > 0:
-                    vol = min(remaining, max_vol_per_aspirate)
-                    self.suck(source, source_col_row, vol)
-                    self.spit(destination, dest_pos, vol)
-                    remaining -= vol
-                    if remaining > 0:
-                        print(f"Destination requires refill: {remaining}µL remaining")
-            return
-
-        # Otherwise, batch multiple destinations per aspirate without refills
-        batch_size = max(1, int(max_vol_per_aspirate / volume_per_destination))
-        print(f"Batch size (destinations per aspirate): {batch_size}")
-
-        # Process in chunks
-        idx = 0
-        n = len(dest_col_row)
-        while idx < n:
-            chunk = dest_col_row[idx: min(idx + batch_size, n)]
-            total_chunk_volume = len(chunk) * volume_per_destination
-            volume_to_aspirate = min(total_chunk_volume, max_vol_per_aspirate)
-
-            # Aspirate once for the entire chunk
-            self.suck(source, source_col_row, volume_to_aspirate)
-
-            # Dispense to each destination in the chunk
-            for dest_pos in chunk:
-                self.spit(destination, dest_pos, volume_per_destination)
-
-            idx += len(chunk)
-
-    def remove_medium_multi(self, source: Plate, waste: ReservoirHolder,
-                      volume_per_well: float, columns: Optional[List[int]] = None) -> None:
-
-    def transfer_plate_to_plate(self, source: Plate, destination: Plate,
-                                volume_per_well: float,
-                                source_columns: Optional[List[int]] = None,
-                                dest_columns: Optional[List[int]] = None) -> None:
-
-    def suck(self, source: Labware, source_col_row: tuple[int, int], volume: float) -> None:
-        """
-        Aspirate from a source labware.
+        Transfer medium from a reservoir to destination plate column(s).
+        Works for both single-channel and multichannel pipettors.
 
         Parameters
         ----------
-        source : Labware
-            Source labware
+        source : ReservoirHolder
+            ReservoirHolder containing the medium to transfer
         source_col_row : tuple[int, int]
-            Column and row index in source labware
-        volume : float
-            Total volume to aspirate across all tips (µL)
+            (Column, Row) position of reservoir.
+        volume_per_well : float
+            Volume (µL) to dispense into each destination well
+        destination : Plate
+            Target plate to receive the medium
+        dest_col_row : List[tuple[int, int]]
+            List of (Column, Row) positions in destination plate.
+            Row is start row for multichannel pipettor.
+        """
+        # Validate (source needs 1 row, destinations need tip_count rows)
+        self._validate_transfer(source, [source_col_row], destination, dest_col_row, 1, self.tip_count)
+
+        # Calculate volumes
+        volume_per_destination, max_vol = self._calculate_volumes(volume_per_well)
+
+        # Choose strategy
+        if volume_per_destination > max_vol:
+            self._multi_trip_transfer(dest_col_row, volume_per_destination, max_vol,
+                                      source, source_col_row, destination, None, is_one_to_many=True)
+        else:
+            self._batch_transfer(dest_col_row, volume_per_destination, max_vol,
+                                 source, source_col_row, destination, None, is_one_to_many=True)
+
+    def remove_medium(self, source: Plate, source_col_row: List[tuple[int, int]],
+                      volume_per_well: float, destination: ReservoirHolder,
+                      destination_col_row: tuple[int, int]) -> None:
+        """
+        Remove medium from plate wells to a destination reservoir.
+        Works for both single-channel and multichannel pipettors.
+
+        Parameters
+        ----------
+        source : Plate
+            Plate to remove medium from
+        source_col_row : List[tuple[int, int]]
+            List of (Column, Row) positions to remove from.
+            Row is start row for multichannel pipettor.
+        volume_per_well : float
+            Volume (µL) to remove from each well
+        destination : ReservoirHolder
+            ReservoirHolder to receive the liquid
+        destination_col_row : tuple[int, int]
+            (Column, Row) position of destination reservoir.
+        """
+        # Validate (sources need tip_count rows, destination needs 1 row)
+        self._validate_transfer(source, source_col_row, destination, [destination_col_row], self.tip_count, 1)
+
+        # Calculate volumes
+        volume_per_source, max_vol = self._calculate_volumes(volume_per_well)
+
+        # Choose strategy
+        if volume_per_source > max_vol:
+            self._multi_trip_transfer(source_col_row, volume_per_source, max_vol,
+                                      source, None, destination, destination_col_row, is_one_to_many=False)
+        else:
+            self._batch_transfer(source_col_row, volume_per_source, max_vol,
+                                 source, None, destination, destination_col_row, is_one_to_many=False)
+
+    def transfer_plate_to_plate(self, source: Plate, source_col_row: List[tuple[int, int]],
+                                destination: Plate, dest_col_row: List[tuple[int, int]],
+                                volume_per_well: float) -> None:
+        """
+        Transfer liquid from source plate to destination plate (one-to-one mapping).
+        Works for both single-channel and multichannel pipettors.
+
+        Each source position is transferred to the corresponding destination position.
+        source_col_row[i] → dest_col_row[i]
+
+        Parameters
+        ----------
+        source : Plate
+            Source plate
+        source_col_row : List[tuple[int, int]]
+            List of source (Column, Row) positions.
+            Row is start row for multichannel pipettor.
+        destination : Plate
+            Destination plate
+        dest_col_row : List[tuple[int, int]]
+            List of destination (Column, Row) positions.
+            Must be same length as source_col_row.
+        volume_per_well : float
+            Volume (µL) to transfer from each well
 
         Raises
         ------
         ValueError
-            If labware position is invalid or volume is negative
+            If source and destination lists have different lengths
         """
-        # Validation
+        # Validate list lengths match
+        if len(source_col_row) != len(dest_col_row):
+            raise ValueError(
+                f"Source and destination lists must be same length. "
+                f"Got {len(source_col_row)} sources and {len(dest_col_row)} destinations."
+            )
+
+        # Validate all positions (both need tip_count rows)
+        self._validate_transfer(source, source_col_row, destination, dest_col_row,
+                               self.tip_count, self.tip_count)
+
+        # Calculate volumes
+        volume_per_transfer, max_vol = self._calculate_volumes(volume_per_well)
+
+        print(f"\n{'=' * 60}")
+        print(f"Plate-to-plate transfer (one-to-one)")
+        print(f"{'=' * 60}")
+        print(f"Number of transfers: {len(source_col_row)}")
+        print(f"Volume per well: {volume_per_well}µL")
+        print(f"Volume per transfer: {volume_per_transfer}µL")
+        print(f"Max volume per aspirate: {max_vol}µL\n")
+
+        # Process each source → destination pair
+        for idx, (src_pos, dst_pos) in enumerate(zip(source_col_row, dest_col_row), 1):
+            src_col, src_row = src_pos
+            dst_col, dst_row = dst_pos
+
+            print(f"Transfer {idx}/{len(source_col_row)}: ({src_col},{src_row}) → ({dst_col},{dst_row})")
+
+            # Check if multi-trip needed
+            if volume_per_transfer > max_vol:
+                # Multi-trip for this pair
+                num_trips = ceil(volume_per_transfer / max_vol)
+                base_volume = volume_per_transfer // num_trips
+                remainder = volume_per_transfer % num_trips
+
+                print(f"  {num_trips} trips needed")
+
+                for trip_num in range(num_trips):
+                    trip_volume = base_volume + (1 if trip_num < remainder else 0)
+                    self.suck(source, src_pos, trip_volume)
+                    self.spit(destination, dst_pos, trip_volume)
+                    print(f"    Trip {trip_num + 1}/{num_trips}: {trip_volume}µL")
+            else:
+                # Single transfer
+                self.suck(source, src_pos, volume_per_transfer)
+                self.spit(destination, dst_pos, volume_per_transfer)
+                print(f"  ✓ {volume_per_transfer}µL transferred")
+
+            print()
+
+        print(f"{'=' * 60}")
+        print("✓ Plate-to-plate transfer complete\n")
+
+
+        # These are helper methods for the PipettorPlus class
+        # Add them to your class definition
+
+
+    def suck(self, source: Labware, source_col_row: tuple[int, int], volume: float) -> None:
+        """
+            Aspirate from a source labware.
+
+            Parameters
+            ----------
+            source : Labware
+                Source labware
+            source_col_row : tuple[int, int]
+                Column and row index in source labware
+            volume : float
+                Total volume to aspirate across all tips (µL)
+
+            Raises
+            ------
+            ValueError
+                If labware position is invalid or volume is negative
+        """
         self.check_col_row(source_col_row, source)
         if volume <= 0:
             raise ValueError("Volume must be positive")
@@ -648,12 +726,6 @@ class PipettorPlus(Pipettor):
         print(f"  → Aspirated {volume}µL from {source.labware_id} at {source_col_row}")
         print(f"  → Tip content now: {self._get_tip_content_summary()}")
         print(f"  → Total volume in tips: {self.volume_present_in_tip}µL")
-
-    def dilute_multi(self):
-        pass
-
-    def spit_all(self):
-        pass
 
     def spit(self, destination: Labware, dest_col_row: tuple[int, int], volume: float) -> None:
         """
@@ -827,6 +899,9 @@ class PipettorPlus(Pipettor):
         print(f"  → Dispensed {volume}µL to {destination.labware_id} at {dest_col_row}")
         print(f"  → Tip content now: {self._get_tip_content_summary()}")
 
+    def spit_all(self):
+        pass
+
     def home(self):
         self.move_z(0)
         self.move_xy(0, 0)
@@ -929,6 +1004,133 @@ class PipettorPlus(Pipettor):
         self.volume_present_in_tip -= volume
 
     # Helper functions. Not necessarily available for GUI
+
+    def _validate_transfer(self, source, source_positions, destination, destination_positions,
+                           source_consecutive_rows: int, dest_consecutive_rows: int) -> None:
+        """Helper: Validate source and destination positions."""
+        self.check_tips()
+
+        # Validate source positions
+        if not isinstance(source_positions, list):
+            source_positions = [source_positions]
+        for source_col, source_row in source_positions:
+            source.validate_col_row_or_raise([source_col], source_row, source_consecutive_rows)
+
+        # Validate destination positions
+        if not isinstance(destination_positions, list):
+            destination_positions = [destination_positions]
+        for dest_col, dest_row in destination_positions:
+            destination.validate_col_row_or_raise([dest_col], dest_row, dest_consecutive_rows)
+
+    def _calculate_volumes(self, volume_per_well: float) -> tuple[int, int]:
+        """Helper: Calculate volume per position and max volume per aspirate."""
+        volume_per_position = int(volume_per_well * self.tip_count)
+        max_vol_per_aspirate = int(self.tip_volume * self.tip_count)
+
+        if volume_per_position <= 0:
+            raise ValueError("volume_per_well must be > 0")
+
+        return volume_per_position, max_vol_per_aspirate
+
+    def _multi_trip_transfer(self, positions: List[tuple[int, int]],
+                             volume_per_position: int, max_vol_per_aspirate: int,
+                             source, source_pos, destination, dest_positions,
+                             is_one_to_many: bool) -> None:
+        """
+        Helper: Handle multi-trip transfers when volume exceeds capacity.
+
+        Parameters
+        ----------
+        is_one_to_many : bool
+            True for add_medium (1 source → many dests), False for remove_medium (many sources → 1 dest)
+        """
+        print(f"\n→ Strategy: MULTI-TRIP (volume exceeds tip capacity)")
+        print(f"{'=' * 60}\n")
+
+        for pos in positions:
+            col, row = pos
+
+            num_trips = ceil(volume_per_position / max_vol_per_aspirate)
+            print(f"Position ({col}, {row}): {num_trips} trips needed")
+
+            # Distribute volume evenly across trips
+            base_volume = volume_per_position // num_trips
+            remainder = volume_per_position % num_trips
+
+            for trip_num in range(num_trips):
+                trip_volume = base_volume + (1 if trip_num < remainder else 0)
+
+                if is_one_to_many:
+                    # add_medium: same source, different destinations
+                    self.suck(source, source_pos, trip_volume)
+                    self.spit(destination, pos, trip_volume)
+                else:
+                    # remove_medium: different sources, same destination
+                    self.suck(source, pos, trip_volume)
+                    self.spit(destination, dest_positions, trip_volume)
+
+        print("✓ Multi-trip transfer complete\n")
+
+    def _batch_transfer(self, positions: List[tuple[int, int]],
+                        volume_per_position: int, max_vol_per_aspirate: int,
+                        source, source_pos, destination, dest_pos,
+                        is_one_to_many: bool) -> None:
+        """
+        Helper: Handle batch transfers for multiple positions.
+
+        Parameters
+        ----------
+        is_one_to_many : bool
+            True for add_medium (1 source → many dests), False for remove_medium (many sources → 1 dest)
+        """
+        print(f"\n→ Strategy: BATCH MODE")
+        print(f"{'=' * 60}\n")
+
+        # Calculate optimal batch size
+        max_positions_by_volume = max_vol_per_aspirate // volume_per_position
+        batch_size = min(MAX_BATCH_SIZE, max_positions_by_volume)
+
+        if batch_size < 1:
+            batch_size = 1
+
+        num_batches = ceil(len(positions) / batch_size)
+        print(f"Batch size: {batch_size} position(s) per aspirate")
+        print(f"Total batches: {num_batches}\n")
+
+        # Process positions in batches
+        idx = 0
+        batch_num = 1
+
+        while idx < len(positions):
+            batch_end = min(idx + batch_size, len(positions))
+            batch = positions[idx:batch_end]
+            total_batch_volume = len(batch) * volume_per_position
+
+            print(f"Batch {batch_num}/{num_batches}:")
+            print(f"  Positions: {batch}")
+            print(f"  Total volume: {total_batch_volume}µL")
+
+            if is_one_to_many:
+                # add_medium: aspirate once, dispense multiple times
+                self.suck(source, source_pos, total_batch_volume)
+                for pos in batch:
+                    self.spit(destination, pos, volume_per_position)
+                    print(f"  ✓ Dispensed to {pos}: {volume_per_position}µL")
+            else:
+                # remove_medium: aspirate multiple times, dispense once
+                for pos in batch:
+                    self.suck(source, pos, volume_per_position)
+                    print(f"  ✓ Aspirated from {pos}: {volume_per_position}µL")
+                self.spit(destination, dest_pos, total_batch_volume)
+                print(f"  ✓ Dispensed to destination: {total_batch_volume}µL")
+
+            print()
+            idx = batch_end
+            batch_num += 1
+
+        print(f"{'=' * 60}")
+        print("✓ Batch transfer complete\n")
+
     def _get_tip_content_summary(self) -> str:
         """
         Get a readable summary of tip content.
@@ -967,8 +1169,7 @@ class PipettorPlus(Pipettor):
         Check if tip change is required. if yes, do it.
         """
 
-        # todo figure out how to provide labware id
-        lw = self.find_labware_by_type("PipetteHolder")[0]  # Gets first PipetteHolder
+        lw = self.find_labware_by_type("PipetteHolder")[0]  # Gets first PipetteHolder found
         if self.change_tips and not self.has_tips:
             self.pick_multi_tips(lw)
         elif self.change_tips and self.has_tips:
@@ -998,7 +1199,7 @@ class PipettorPlus(Pipettor):
         for labware_id, labware in self.deck.labware.items():
             # Check if the labware's class name matches the requested type (case-sensitive)
             if labware.__class__.__name__ == labware_type:
-                # Check if this labware is placed in a slot
+                # Check if this labware is placed in a slot ( in all slots placed in deck)
                 slot_id = self.deck.get_slot_for_labware(labware_id)
                 if slot_id is not None:
                     lw.append(labware)
@@ -1007,69 +1208,3 @@ class PipettorPlus(Pipettor):
             raise ValueError(f"No labware found for type '{labware_type}'.")
         else:
             return lw
-
-    def validate_and_get_grid_items(
-            self,
-            labware: Labware,
-            col: int,
-            start_row: int,
-            consecutive_items: int,
-            validator_func: Callable[[Any], bool],
-            validator_description: str = "validation"
-    ) -> tuple[bool, List[Any], str]:
-        """
-        Validate grid location and get items if all checks pass.
-
-        Parameters
-        ----------
-        labware : Labware
-            Grid-based labware (PipetteHolder, Plate, etc.)
-        col : int
-            Column index
-        start_row : int
-            Starting row index
-        consecutive_items : int
-            Number of consecutive items needed vertically
-        validator_func : Callable[[Any], bool]
-            Function that takes an item and returns True if valid
-        validator_description : str, optional
-            Description of what validator checks (for error messages)
-
-        Returns
-        -------
-        tuple[bool, List[Any], str]
-            (is_valid, items_list, error_message)
-            - is_valid: True if all checks passed
-            - items_list: List of validated items (empty if invalid)
-            - error_message: Description of what failed (empty if valid)
-        """
-        # Check grid boundaries first
-        is_valid, error_msg = labware.validate_col_row([col], start_row, consecutive_items)
-        if not is_valid:
-            return (False, [], error_msg)
-
-        # Get items and validate each one
-        items = []
-        for i in range(consecutive_items):
-            current_row = start_row + i
-
-            # Get item using appropriate getter method
-            item = None
-            if hasattr(labware, 'get_holder_at'):
-                item = labware.get_holder_at(col, current_row)
-            elif hasattr(labware, 'get_well_at'):
-                item = labware.get_well_at(col, current_row)
-            else:
-                return (False, [], f"Labware type {type(labware).__name__} doesn't have a grid getter method")
-
-            # Check if item exists
-            if item is None:
-                return (False, [], f"No item at grid location ({col}, {current_row})")
-
-            # Validate item state
-            if not validator_func(item):
-                return (False, [], f"Item at grid location ({col}, {current_row}) failed {validator_description}")
-
-            items.append(item)
-
-        return (True, items, "")
