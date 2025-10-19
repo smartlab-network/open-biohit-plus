@@ -12,7 +12,6 @@ Default_Reservoir_Capacity = 30000
 Default_well_capacity = 1000
 
 
-#todo validate reservoir size so that it can fit Pipettors_in_Multi across Y atleast
 @register_class
 class Labware(Serializable):
     """
@@ -127,6 +126,28 @@ class Labware(Serializable):
                 """
         return True  # Default: items are small, tips need separate items. overwritten for some labwares like plate
 
+    def validate_multichannel_compatible(self, item_size_y: float) -> tuple[bool, str]:
+        """
+        Validate if an item is large enough for multichannel operation.
+
+        Parameters
+        ----------
+        item_size_y : float
+            The Y-dimension of the item to validate (e.g., reservoir, well)
+
+        Returns
+        -------
+        tuple[bool, str]
+            (is_valid, error_message)
+        """
+        if not self.each_tip_needs_separate_item():
+            min_required_y = Pipettors_in_Multi * MIN_TIP_SPACING_Y
+            if item_size_y < min_required_y:
+                return (False,
+                        f"Item size_y ({item_size_y}mm) is too small for multichannel operation. "
+                        f"Minimum required: {min_required_y}mm")
+
+        return (True, "")
 
     def to_dict(self) -> dict:
         """
@@ -1764,6 +1785,10 @@ class ReservoirHolder(Labware):
                 f"holder height ({self.size_z} mm)"
             )
 
+        is_valid, error_msg = self.validate_multichannel_compatible(reservoir.size_y)
+        if not is_valid:
+            raise ValueError(error_msg)
+
         # Assign hook_ids and place reservoir. also find col and row
         reservoir.hook_ids = hook_ids
         positions = [self.hook_id_to_position(hid) for hid in hook_ids]
@@ -1887,6 +1912,38 @@ class ReservoirHolder(Labware):
 
             # Place the reservoir
             self.place_reservoir(hook_ids_to_use, reservoir)
+
+    def remove_reservoir(self, hook_id: int) -> Reservoir:
+        """
+        Remove a reservoir from the holder.
+
+        Parameters
+        ----------
+        hook_id : int
+            Any hook ID occupied by the reservoir to remove
+
+        Returns
+        -------
+        Reservoir
+            The removed reservoir
+
+        Raises
+        ------
+        ValueError
+            If no reservoir at the specified hook
+        """
+        if hook_id not in self.__hook_to_reservoir:
+            raise ValueError(f"Invalid hook_id {hook_id}")
+
+        reservoir = self.__hook_to_reservoir[hook_id]
+        if reservoir is None:
+            raise ValueError(f"No reservoir at hook {hook_id}")
+
+        # Clear all hooks occupied by this reservoir
+        for hid in reservoir.hook_ids:
+            self.__hook_to_reservoir[hid] = None
+
+        return reservoir
 
     def add_content(self, hook_id: int, content: str, volume: float) -> None:
         """

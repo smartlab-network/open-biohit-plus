@@ -478,11 +478,11 @@ try:
 
         # Check position
         if restored_holder_item.position != original_holder.position:
-            print(f"   ❌ Holder ({col}, {row}): Position mismatch!")
+            print(f" ❌ Holder ({col}, {row}): Position mismatch!")
             all_correct = False
 
     if all_correct:
-        print(f"   ✓ All checked holders restored correctly!")
+        print(f" ✓ All checked holders restored correctly!")
 
     # Verify occupied columns match
     original_occupied = pipette_holder.get_occupied_holder_multi()

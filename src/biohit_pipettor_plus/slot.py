@@ -11,7 +11,7 @@ class Slot(Serializable):
     vertically with specified Z-ranges.
 
     Attributes
-    ----------
+    ---------
     range_x : tuple[float, float]
         Minimum and maximum x coordinates of the slot.
     range_y : tuple[float, float]

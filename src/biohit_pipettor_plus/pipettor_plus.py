@@ -15,7 +15,7 @@ MAX_BATCH_SIZE = 5
 class PipettorPlus(Pipettor):
     def __init__(self, tip_volume: Literal[200, 1000], *, multichannel: bool,  initialize: bool = True, deck: Deck):
         """
-        Interface to the Biohit Roboline pipettor with deck/slot/labware structure
+        Interface to the Biohit Robo pipettor with deck/slot/labware structure
 
         Parameters
         ----------

@@ -156,7 +156,7 @@ class Position_allocator:
         Update the position of individual pipette holders based on their grid layout.
 
         Parameters
-        ----------
+        ---------
         holder : PipetteHolder
             The PipetteHolder object containing individual holder positions.
         positions : list[tuple[float, float, str]]

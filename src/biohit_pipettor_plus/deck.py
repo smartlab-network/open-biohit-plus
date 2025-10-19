@@ -219,7 +219,7 @@ class Deck(Serializable):
             """
             Find the slot ID containing the given labware_id.
             Parameters
-            ----------
+            ---------
             deck : Deck
                 The Deck instance to search.
             labware_id : str
