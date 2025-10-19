@@ -66,7 +66,7 @@ pipette_holder = PipetteHolder(
     individual_holder=ExamplePipetteHolder
 )
 deck1.add_labware(pipette_holder, slot_id="slot5", min_z=2)
-pipette_holder.place_pipettes_in_columns([3, 5])
+pipette_holder.place_consecutive_pipettes_multi([3, 5])
 
 tip_dropzone = TipDropzone(
     size_x=50,
@@ -262,7 +262,7 @@ else:
 
 # Test 6: Check Occupied Columns
 print("\n6. Checking Occupied Columns:")
-occupied = pipette_holder.get_occupied_col_row()
+occupied = pipette_holder.get_occupied_holder_multi()
 print(f"   Occupied multi-channel positions: {occupied}")
 print(f"   Expected: [(3, 0), (5, 0)]")
 # ✅ Updated expectation - returns list of (column, start_row) tuples
@@ -485,8 +485,8 @@ try:
         print(f"   ✓ All checked holders restored correctly!")
 
     # Verify occupied columns match
-    original_occupied = pipette_holder.get_occupied_col_row()
-    restored_occupied = restored_holder.get_occupied_col_row()
+    original_occupied = pipette_holder.get_occupied_holder_multi()
+    restored_occupied = restored_holder.get_occupied_holder_multi()
 
     print(f"\n   Checking occupied columns:")
     print(f"   - Original: {original_occupied}")

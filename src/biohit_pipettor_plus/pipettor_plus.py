@@ -1,8 +1,7 @@
 from .pipettor import Pipettor
-from typing import Literal, List, Optional, Union, Callable
+from typing import Literal, List, Optional
 from math import ceil
 
-# from .cursor import total_volume
 from .deck import Deck
 from .slot import Slot
 from .labware import Labware, Plate, Well, ReservoirHolder, Reservoir, PipetteHolder, IndividualPipetteHolder, \
@@ -30,8 +29,10 @@ class PipettorPlus(Pipettor):
             The deck containing slots and labware
                 """
         super().__init__(tip_volume=tip_volume, multichannel = multichannel, initialize=initialize)
-        self.deck = deck
-        self.slots: dict[str, Slot] = deck.slots
+        #super().__init__(tip_volume=tip_volume, initialize=initialize)  # ✅ Fixed
+        #self.multichannel = multichannel  # ✅ Set it on self instead
+        self._deck = deck
+        self._slots: dict[str, Slot] = deck.slots
 
         #creates a dict of all tips, each tips having its own dict where content and volume in tip can be stored.
         self.tip_count = Pipettors_in_Multi if self.multichannel else 1
@@ -554,453 +555,272 @@ class PipettorPlus(Pipettor):
         # These are helper methods for the PipettorPlus class
         # Add them to your class definition
 
-
     def suck(self, source: Labware, source_col_row: tuple[int, int], volume: float) -> None:
         """
-            Aspirate from a source labware.
+        Aspirate from a source labware.
 
-            Parameters
-            ----------
-            source : Labware
-                Source labware
-            source_col_row : tuple[int, int]
-                Column and row index in source labware
-            volume : float
-                Total volume to aspirate across all tips (µL)
-
-            Raises
-            ------
-            ValueError
-                If labware position is invalid or volume is negative
-        """
-        self.check_col_row(source_col_row, source)
-        if volume <= 0:
-            raise ValueError("Volume must be positive")
-
-        # Check if labware supports content tracking
-        has_content = (hasattr(source, 'content') and
-                       hasattr(source, 'get_total_volume') and
-                       hasattr(source, 'remove_content'))
-
-        if has_content:
-            source_col, source_row = source_col_row
-
-            if self.multichannel:
-                # For multichannel: handle content for all tip_count rows
-                if hasattr(source, 'get_reservoirs'):
-                    # Reservoir: usually one massive reservoir for all 8 tips
-                    reservoirs = source.get_reservoirs()
-                    source_id = f"{source.labware_id}_{source_col}:{source_row}"
-                    source_item = None
-                    for res in reservoirs:
-                        if res.labware_id == source_id:
-                            source_item = res
-                            break
-                    if source_item is None:
-                        raise ValueError(f"Reservoir not found at position ({source_col}, {source_row})")
-
-                    # Check if reservoir has enough content for all tips
-                    available_volume = source_item.get_total_volume()
-                    if available_volume < volume:
-                        raise ValueError(
-                            f"Insufficient volume in reservoir {source_id}. "
-                            f"Available: {available_volume}µL, Requested: {volume}µL"
-                        )
-
-                    # Remove content from reservoir and get what was removed
-                    removed_content = source_item.remove_content(volume)
-
-                    # Add the removed content to tips
-                    for content_type, volume_removed in removed_content.items():
-                        if volume_removed > 0:
-                            self.add_content(content_type, volume_removed)
-
-                    # Move to reservoir position
-                    if source_item.position is not None:
-                        x, y = source_item.position
-                        self.move_xy(x, y)
-                        aspiration_height = source_item.size_z * 0.8
-                        self.move_z(aspiration_height)
-                        self.aspirate(volume)
-                        self.move_z(0)
-
-                elif hasattr(source, 'get_wells'):
-                    # Plate: handle each well individually for each tip
-                    wells_map = source.get_wells()
-                    total_volume_available = 0
-                    source_wells = []
-
-                    # Collect all wells for this column across tip_count rows
-                    for tip_idx in range(self.tip_count):
-                        well_id = f"{source.labware_id}_{source_col}:{source_row + tip_idx}"
-                        well = wells_map.get(well_id)
-                        if well is None:
-                            raise ValueError(f"Well not found at position ({source_col}, {source_row + tip_idx})")
-                        source_wells.append(well)
-                        total_volume_available += well.get_total_volume()
-
-                    if total_volume_available < volume:
-                        raise ValueError(
-                            f"Insufficient volume in wells. "
-                            f"Available: {total_volume_available}µL, Requested: {volume}µL"
-                        )
-
-                    # Distribute volume across wells proportionally
-                    volume_per_well = volume / self.tip_count
-                    for well in source_wells:
-                        well_volume = min(volume_per_well, well.get_total_volume())
-                        if well_volume > 0:
-                            # Remove content from well and get what was removed
-                            removed_content = well.remove_content(well_volume)
-
-                            # Add the removed content to tips
-                            for content_type, volume_removed in removed_content.items():
-                                if volume_removed > 0:
-                                    self.add_content(content_type, volume_removed)
-
-                    # Move to first well position (multichannel covers the column)
-                    first_well = source_wells[0]
-                    if first_well.position is not None:
-                        x, y = first_well.position
-                        self.move_xy(x, y)
-                        aspiration_height = first_well.remove_height
-                        self.move_z(aspiration_height)
-                        self.aspirate(volume)
-                        self.move_z(0)
-            else:
-                # Single channel: handle one position
-                source_id = f"{source.labware_id}_{source_col}:{source_row}"
-
-                if hasattr(source, 'get_reservoirs'):
-                    reservoirs = source.get_reservoirs()
-                    source_item = None
-                    for res in reservoirs:
-                        if res.labware_id == source_id:
-                            source_item = res
-                            break
-                    if source_item is None:
-                        raise ValueError(f"Reservoir not found at position ({source_col}, {source_row})")
-                elif hasattr(source, 'get_wells'):
-                    wells_map = source.get_wells()
-                    source_item = wells_map.get(source_id)
-                    if source_item is None:
-                        raise ValueError(f"Well not found at position ({source_col}, {source_row})")
-                else:
-                    source_item = source
-
-                # Check if source has enough content
-                available_volume = source_item.get_total_volume()
-                if available_volume < volume:
-                    raise ValueError(
-                        f"Insufficient volume in {source_id}. "
-                        f"Available: {available_volume}µL, Requested: {volume}µL"
-                    )
-
-                # Remove content from source and get what was removed
-                removed_content = source_item.remove_content(volume)
-
-                # Add the removed content to tips
-                for content_type, volume_removed in removed_content.items():
-                    if volume_removed > 0:
-                        self.add_content(content_type, volume_removed)
-
-                # Move to the position if available
-                if hasattr(source_item, 'position') and source_item.position is not None:
-                    x, y = source_item.position
-                    self.move_xy(x, y)
-
-                    if hasattr(source_item, 'remove_height'):
-                        aspiration_height = source_item.remove_height
-                    elif hasattr(source_item, 'size_z'):
-                        aspiration_height = source_item.size_z * 0.8
-                    else:
-                        aspiration_height = 5
-
-                    self.move_z(aspiration_height)
-                    self.aspirate(volume)
-                    self.move_z(0)
-
-            # Update total volume present in tip
-            self.volume_present_in_tip += volume
-
-        print(f"  → Aspirated {volume}µL from {source.labware_id} at {source_col_row}")
-        print(f"  → Tip content now: {self._get_tip_content_summary()}")
-        print(f"  → Total volume in tips: {self.volume_present_in_tip}µL")
-
-    def spit(self, destination: Labware, dest_col_row: tuple[int, int], volume: float) -> None:
-        """
-        Dispense from tips to a destination labware position.
+        Works with any labware type. If labware supports content tracking, content is tracked.
+        If not, only physical movement is performed.
 
         Parameters
         ----------
-        destination : Labware
-            Destination labware
-        dest_col_row : tuple[int, int]
-            Column and row index in destination labware
+        source : Labware
+            Source labware (Plate, ReservoirHolder, or any other labware)
+        source_col_row : tuple[int, int]
+            (Column, Row) position in source labware
         volume : float
-            Total volume to dispense across all tips (µL)
-
-        Behavior
-        --------
-        - Proportionally distributes the current tip content into the destination content
-        - Removes the dispensed volume from tip_content proportionally
-        - Moves to the destination position and performs a dispense
+            Total volume to aspirate across all tips (µL)
         """
-        dest_col, dest_row = dest_col_row
+        source_col, source_row = source_col_row
 
-        # Validation
-        self.check_col_row(dest_col_row, destination)
         if volume <= 0:
-            raise ValueError("Dispense volume must be positive")
-        if self.volume_present_in_tip <= 0 or not self.tip_content:
-            raise ValueError("No content in tips to dispense")
-        if volume > self.volume_present_in_tip:
-            raise ValueError(
-                f"Insufficient volume in tips. Available: {self.volume_present_in_tip}µL, Requested: {volume}µL"
-            )
+            raise ValueError("Volume must be positive")
 
-        # Check if destination supports content tracking
-        has_content = (hasattr(destination, 'content') and
-                       hasattr(destination, 'get_total_volume') and
-                       hasattr(destination, 'add_content'))
+        # Validate based on whether it's a reservoir or not
+        if not source.each_tip_needs_separate_item():
+            # like for Reservoir: all tips access same reservoir
+            source.validate_col_row_or_raise([source_col], source_row, 1)
+        else:
+            # Plate or other grid labware: each tip accesses different position
+            source.validate_col_row_or_raise([source_col], source_row, self.tip_count)
 
-        if has_content:
-            if self.multichannel:
-                # For multichannel: handle content for all tip_count rows
-                if hasattr(destination, 'get_reservoirs'):
-                    # Reservoir: usually one massive reservoir for all 8 tips
-                    reservoirs = destination.get_reservoirs()
-                    dest_id = f"{destination.labware_id}_{dest_col}:{dest_row}"
-                    dest_item = None
-                    for res in reservoirs:
-                        if res.labware_id == dest_id:
-                            dest_item = res
-                            break
-                    if dest_item is None:
-                        raise ValueError(f"Reservoir not found at position ({dest_col}, {dest_row})")
+        if self._supports_content_management(source, source_col, source_row):
+            # Track content if supported
+            self._aspirate_with_content_tracking(source, source_col, source_row, volume)
+            print(f"  → Aspirated {volume}µL from {source.labware_id} at {source_col_row}")
+            print(f"  → Tip content now: {self._get_tip_content_summary()}")
+        else:
+            # Just do physical movement without content tracking
+            self._aspirate_physical_only(source, source_col, source_row, volume)
+            print(f"  → Aspirated {volume}µL from {source.labware_id} at {source_col_row}")
 
-                    # Distribute content proportionally to reservoir
-                    total_tip_volume_before = self.volume_present_in_tip
-                    if total_tip_volume_before <= 0:
-                        raise ValueError("Tips are empty; cannot dispense")
-
-                    # Add content to reservoir proportionally
-                    for content_type, content_volume in list(self.tip_content.items()):
-                        if content_volume <= 0:
-                            continue
-                        proportion = content_volume / total_tip_volume_before
-                        add_volume = volume * proportion
-                        if add_volume > 0:
-                            dest_item.add_content(content_type, add_volume)
-
-                    # Move to reservoir position
-                    if dest_item.position is not None:
-                        x, y = dest_item.position
-                        self.move_xy(x, y)
-                        dispense_height = dest_item.size_z * 0.2
-                        self.move_z(dispense_height)
-                        self.dispense(volume)
-                        self.move_z(0)
-
-                elif hasattr(destination, 'get_wells'):
-                    # Plate: handle each well individually for each tip
-                    wells_map = destination.get_wells()
-                    dest_wells = []
-
-                    # Collect all wells for this column across tip_count rows
-                    for tip_idx in range(self.tip_count):
-                        well_id = f"{destination.labware_id}_{dest_col}:{dest_row + tip_idx}"
-                        well = wells_map.get(well_id)
-                        if well is None:
-                            raise ValueError(f"Well not found at position ({dest_col}, {dest_row + tip_idx})")
-                        dest_wells.append(well)
-
-                    # Distribute volume across wells proportionally
-                    total_tip_volume_before = self.volume_present_in_tip
-                    if total_tip_volume_before <= 0:
-                        raise ValueError("Tips are empty; cannot dispense")
-
-                    volume_per_well = volume / self.tip_count
-                    for well in dest_wells:
-                        well_volume = min(volume_per_well, volume)  # Ensure we don't exceed total volume
-                        if well_volume > 0:
-                            # Add content to well proportionally
-                            for content_type, content_volume in list(self.tip_content.items()):
-                                if content_volume <= 0:
-                                    continue
-                                proportion = content_volume / total_tip_volume_before
-                                add_volume = well_volume * proportion
-                                if add_volume > 0:
-                                    well.add_content(content_type, add_volume)
-
-                    # Move to first well position (multichannel covers the column)
-                    first_well = dest_wells[0]
-                    if first_well.position is not None:
-                        x, y = first_well.position
-                        self.move_xy(x, y)
-                        dispense_height = first_well.add_height
-                        self.move_z(dispense_height)
-                        self.dispense(volume)
-                        self.move_z(0)
-            else:
-                # Single channel: handle one position
-                dest_id = f"{destination.labware_id}_{dest_col}:{dest_row}"
-
-                if hasattr(destination, 'get_reservoirs'):
-                    reservoirs = destination.get_reservoirs()
-                    dest_item = None
-                    for res in reservoirs:
-                        if res.labware_id == dest_id:
-                            dest_item = res
-                            break
-                    if dest_item is None:
-                        raise ValueError(f"Reservoir not found at position ({dest_col}, {dest_row})")
-                elif hasattr(destination, 'get_wells'):
-                    wells_map = destination.get_wells()
-                    dest_item = wells_map.get(dest_id)
-                    if dest_item is None:
-                        raise ValueError(f"Well not found at position ({dest_col}, {dest_row})")
-                else:
-                    dest_item = destination
-
-                # Distribute content proportionally to destination
-                total_tip_volume_before = self.volume_present_in_tip
-                if total_tip_volume_before <= 0:
-                    raise ValueError("Tips are empty; cannot dispense")
-
-                # Add content to destination proportionally
-                for content_type, content_volume in list(self.tip_content.items()):
-                    if content_volume <= 0:
-                        continue
-                    proportion = content_volume / total_tip_volume_before
-                    add_volume = volume * proportion
-                    if add_volume > 0:
-                        dest_item.add_content(content_type, add_volume)
-
-                # Move to the position if available
-                if hasattr(dest_item, 'position') and dest_item.position is not None:
-                    x, y = dest_item.position
-                    self.move_xy(x, y)
-
-                    if hasattr(dest_item, 'add_height'):
-                        dispense_height = dest_item.add_height
-                    elif hasattr(dest_item, 'size_z'):
-                        dispense_height = dest_item.size_z * 0.2
-                    else:
-                        dispense_height = 5
-
-                    self.move_z(dispense_height)
-                    self.dispense(volume)
-                    self.move_z(0)
-
-            # Remove content from tips proportionally
-            self.remove_content(volume)
-
-        print(f"  → Dispensed {volume}µL to {destination.labware_id} at {dest_col_row}")
-        print(f"  → Tip content now: {self._get_tip_content_summary()}")
-
-    def spit_all(self):
-        pass
-
-    def add_content(self, content_type: str, volume: float) -> None:
+    def add_content(self, content_type: str, volume: float, tip_index: int = None) -> None:
         """
-        Add content to the tips with intelligent mixing logic.
-
-        When adding content to tips:
-        - Same content type: volumes are combined
-        - Different content type: tracked separately (but physically mixed)
-
-        Note: Once liquids are mixed in tips, they cannot be separated.
-        Removal is always proportional from all content types.
+        Add content to specific tip(s).
 
         Parameters
         ----------
         content_type : str
-            Content to add (e.g., "PBS", "water", "sample")
+            Content to add (e.g., "PBS", "water")
         volume : float
             Volume to add (µL)
-
-        Raises
-        ------
-        ValueError
-            If adding volume would exceed tip capacity or volume is negative
+        tip_index : int, optional
+            Which tip to add to (0-7 for multichannel, 0 for single).
+            If None, adds to all tips equally.
         """
-        if volume < 0:
+        if volume <= 0:
             raise ValueError("Volume to add must be positive")
 
         if not content_type:
             raise ValueError("Content type cannot be empty")
 
-        # Check if adding would exceed tip capacity
-        max_tip_capacity = self.tip_volume * self.tip_count
-        if self.volume_present_in_tip + volume > max_tip_capacity:
-            raise ValueError(
-                f"Overflow! Adding {volume}µL would exceed tip capacity of {max_tip_capacity}µL. "
-                f"Current volume: {self.volume_present_in_tip}µL"
-            )
-
-        # Add content to dictionary
-        if content_type in self.tip_content:
-            self.tip_content[content_type] += volume
+        # Determine which tips to update
+        if tip_index is not None:
+            if tip_index not in self.tip_dict:
+                raise ValueError(f"Invalid tip index {tip_index}. Valid range: 0-{self.tip_count - 1}")
+            tip_indices = [tip_index]
         else:
-            self.tip_content[content_type] = volume
+            # Add to all tips
+            tip_indices = list(self.tip_dict.keys())
 
-        # Update total volume present in tip
-        self.volume_present_in_tip += volume
+        # Add content to each specified tip
+        for idx in tip_indices:
+            if content_type in self.tip_dict[idx]:
+                self.tip_dict[idx][content_type] += volume
+            else:
+                self.tip_dict[idx][content_type] = volume
 
-    def remove_content(self, volume: float) -> None:
+    def remove_content(self, volume: float, tip_index: int = None) -> None:
         """
-        Remove content from the tips proportionally.
-
-        When content is removed from tips, it's removed proportionally from all
-        content types since they are mixed together.
+        Remove content from tip(s) proportionally.
 
         Parameters
         ----------
         volume : float
             Volume to remove (µL)
-
-        Raises
-        ------
-        ValueError
-            If trying to remove more volume than available or volume is negative
+        tip_index : int, optional
+            Which tip to remove from. If None, removes from all tips.
         """
-        if volume < 0:
+        if volume <= 0:
             raise ValueError("Volume to remove must be positive")
 
-        if self.volume_present_in_tip <= 0:
-            raise ValueError("Cannot remove from empty tips")
+        # Determine which tips to update
+        if tip_index is not None:
+            if tip_index not in self.tip_dict:
+                raise ValueError(f"Invalid tip index {tip_index}")
+            tip_indices = [tip_index]
+        else:
+            tip_indices = list(self.tip_dict.keys())
 
-        if volume > self.volume_present_in_tip:
-            raise ValueError(
-                f"Underflow! Cannot remove {volume}µL, only {self.volume_present_in_tip}µL available"
-            )
+        # Remove from each tip
+        for idx in tip_indices:
+            tip_content = self.tip_dict[idx]
+            current_volume = sum(tip_content.values()) if tip_content else 0.0
 
-        # Remove proportionally from all content types (since they're mixed)
-        removal_ratio = volume / self.volume_present_in_tip
+            if current_volume <= 0:
+                raise ValueError(f"Cannot remove from empty tip {idx}")
 
-        # Remove proportionally from each content type
-        content_types = list(self.tip_content.keys())
-        for content_type in content_types:
-            remove_amount = self.tip_content[content_type] * removal_ratio
-            self.tip_content[content_type] -= remove_amount
+            if volume > current_volume:
+                raise ValueError(
+                    f"Underflow in tip {idx}! Cannot remove {volume}µL, only {current_volume}µL available"
+                )
 
-            # Clean up zero or negative volumes (use epsilon for floating point comparison)
-            if self.tip_content[content_type] <= 1e-6:
-                del self.tip_content[content_type]
+            # Remove proportionally
+            removal_ratio = volume / current_volume
+            content_types = list(tip_content.keys())
 
-        # Update total volume present in tip
-        self.volume_present_in_tip -= volume
+            for content_type in content_types:
+                remove_amount = tip_content[content_type] * removal_ratio
+                tip_content[content_type] -= remove_amount
+
+                if tip_content[content_type] <= 1e-6:
+                    del tip_content[content_type]
+
+    def get_total_tip_volume(self, tip_index: int = None) -> float:
+        """
+        Get total volume in tip(s).
+
+        Parameters
+        ----------
+        tip_index : int, optional
+            Specific tip. If None, returns total across all tips.
+
+        Returns
+        -------
+        float
+            Total volume in µL
+        """
+        if tip_index is not None:
+            return sum(self.tip_dict[tip_index].values()) if self.tip_dict[tip_index] else 0.0
+        else:
+            # Sum across all tips
+            total = 0.0
+            for tip_content in self.tip_dict.values():
+                total += sum(tip_content.values()) if tip_content else 0.0
+            return total
 
     def home(self):
         self.move_z(0)
         self.move_xy(0, 0)
 
     # Helper functions. Not necessarily available for GUI
+
+    def _aspirate_with_content_tracking(self, source: Labware, col: int, row: int, volume: float) -> None:
+        """Aspirate with content tracking (works for any labware with content management)."""
+
+        # Check if each tip needs separate item
+        if self.multichannel and source.each_tip_needs_separate_item():
+            # Small items: each tip accesses different item (e.g., Plate)
+            items = [self._get_content_item(source, col, row + i)
+                     for i in range(self.tip_count)]
+            volume_per_item = volume / self.tip_count
+        else:
+            # Large items: all tips access same item (e.g., Reservoir), or single channel
+            items = [self._get_content_item(source, col, row)]
+            volume_per_item = volume
+
+        # Validate items exist
+        if any(item is None for item in items):
+            raise ValueError(f"Content item not found at position ({col}, {row})")
+
+        # Check total available volume
+        total_available = sum(item.get_total_volume() for item in items if item)
+        if total_available < volume:
+            raise ValueError(
+                f"Insufficient volume. Available: {total_available}µL, Requested: {volume}µL"
+            )
+
+        # Remove content from source and add to tips (WITH TIP INDEX!)
+        for tip_idx, item in enumerate(items):
+            if item and volume_per_item > 0:  # Properly indented
+                removed_content = item.remove_content(volume_per_item, return_dict=True)
+
+                # If single item for multichannel, distribute to all tips
+                if len(items) == 1 and self.multichannel:
+                    # Distribute to all tips
+                    for tip_i in range(self.tip_count):
+                        for content_type, vol in removed_content.items():
+                            if vol > 0:
+                                # Each tip gets equal share
+                                self.add_content(content_type, vol / self.tip_count, tip_index=tip_i)
+                else:
+                    # Each tip gets from its own item
+                    for content_type, vol in removed_content.items():
+                        if vol > 0:
+                            self.add_content(content_type, vol, tip_index=tip_idx)
+
+        # Physical movement
+        self._move_to_and_aspirate(items[0], volume)
+
+    def _aspirate_physical_only(self, source: Labware, col: int, row: int, volume: float) -> None:
+        """Aspirate without content tracking (for labware without content management)."""
+
+        # Get position - try to get item first, fallback to labware itself
+        item = self._get_content_item(source, col, row)
+        if item is None:
+            item = source
+
+        # Physical movement
+        self._move_to_and_aspirate(item, volume)
+        print(f"  → Note: Content tracking not available for {type(source).__name__}")
+
+    def _move_to_and_aspirate(self, item: Labware, volume: float) -> None:
+        """Move to item position and perform aspiration."""
+        if not item or not item.position:
+            raise ValueError("Item has no position set")
+
+        x, y = item.position
+        self.move_xy(x, y)
+
+        #todo
+        # Determine height (duck typing!)
+        if hasattr(item, 'remove_height'):
+            z = item.remove_height
+        elif hasattr(item, 'size_z'):
+            z = item.size_z * 0.8
+        else:
+            z = 5  # Default
+
+        self.move_z(z)
+        self.aspirate(volume/self.tip_count)
+        self.move_z(0)
+
+    def _supports_content_management(self, labware: Labware, col: int, row: int) -> bool:
+        """Check if labware supports content tracking at this position."""
+        item = self._get_content_item(labware, col, row)
+
+        return (item is not None and
+                hasattr(item, 'content') and
+                hasattr(item, 'remove_content') and
+                hasattr(item, 'add_content') and
+                hasattr(item, 'get_total_volume'))
+
+    def _get_content_item(self, labware: Labware, col: int, row: int):
+        """
+        Get the actual item that holds content at a position.
+
+        Uses duck typing to work with any labware structure:
+        - If it has get_well_at(), it's a Plate-like structure
+        - If it has reservoir mapping methods, it's a ReservoirHolder-like structure
+        - Otherwise, the labware itself might hold content
+        """
+
+        # Try Plate-like: get_well_at(col, row)
+        if hasattr(labware, 'get_well_at'):
+            return labware.get_well_at(col, row)
+
+        # Try ReservoirHolder-like: position_to_hook_id + get_hook_to_reservoir_map
+        if hasattr(labware, 'position_to_hook_id') and hasattr(labware, 'get_hook_to_reservoir_map'):
+            hook_id = labware.position_to_hook_id(col, row)
+            return labware.get_hook_to_reservoir_map().get(hook_id)
+
+        # Direct content holder: the labware itself has content
+        return labware
+
     def initialize_tips(self) -> None:
         """Clear tip content when tips are discarded."""
         self.has_tips = False
-        self.tip_dict = {}
+        self.tip_dict = {i: {} for i in range(self.tip_count)}
         print(f"  → Tips discarded, content cleared")
 
     def _validate_transfer(self, source, source_positions, destination, destination_positions,
@@ -1130,35 +950,33 @@ class PipettorPlus(Pipettor):
         print("✓ Batch transfer complete\n")
 
     def _get_tip_content_summary(self) -> str:
-        """
-        Get a readable summary of tip content.
-        Returns
-        -------
-        str
-            Summary string like "PBS: 150µL, water: 100µL" or "empty"
-        """
-        if not self.tip_content or self.volume_present_in_tip <= 0:
+        """Get a readable summary of tip content across all tips."""
+        total_volume = self.get_total_tip_volume()
+        if not self.tip_dict or total_volume <= 0:
             return "empty"
 
+        # Aggregate content across all tips
+        aggregated_content = {}
+        for tip_content in self.tip_dict.values():
+            for content_type, volume in tip_content.items():
+                if content_type in aggregated_content:
+                    aggregated_content[content_type] += volume
+                else:
+                    aggregated_content[content_type] = volume
+
         parts = []
-        for content_type, volume in self.tip_content.items():
+        for content_type, volume in aggregated_content.items():
             parts.append(f"{content_type}: {volume:.1f}µL")
 
         return ", ".join(parts)
 
     def get_tip_status(self) -> dict:
-        """
-        Get current tip status.
-
-        Returns
-        -------
-        dict
-            Dictionary with tip content and remaining volume information
-        """
+        """Get current tip status."""
+        total_volume = self.get_total_tip_volume()
         return {
-            "content_dict": self.tip_content.copy(),
-            "volume_remaining": self.volume_present_in_tip,
-            "is_empty": self.volume_present_in_tip <= 0,
+            "content_dict": self.tip_dict.copy(),
+            "volume_remaining": total_volume,
+            "is_empty": total_volume <= 0,
             "content_summary": self._get_tip_content_summary()
         }
 
@@ -1193,11 +1011,11 @@ class PipettorPlus(Pipettor):
         """
         # Iterate through all labware in the deck
         lw = []
-        for labware_id, labware in self.deck.labware.items():
+        for labware_id, labware in self._deck.labware.items():
             # Check if the labware's class name matches the requested type (case-sensitive)
             if labware.__class__.__name__ == labware_type:
                 # Check if this labware is placed in a slot ( in all slots placed in deck)
-                slot_id = self.deck.get_slot_for_labware(labware_id)
+                slot_id = self._deck.get_slot_for_labware(labware_id)
                 if slot_id is not None:
                     lw.append(labware)
 
@@ -1205,3 +1023,174 @@ class PipettorPlus(Pipettor):
             raise ValueError(f"No labware found for type '{labware_type}'.")
         else:
             return lw
+
+    def spit(self, destination: Labware, dest_col_row: tuple[int, int], volume: float) -> None:
+        """
+        Dispense from tips to a destination labware.
+
+        Works with any labware type. If labware supports content tracking, content is tracked.
+        If not, only physical movement is performed.
+
+        Parameters
+        ----------
+        destination : Labware
+            Destination labware (Plate, ReservoirHolder, or any other labware)
+        dest_col_row : tuple[int, int]
+            (Column, Row) position in destination labware
+        volume : float
+            Total volume to dispense across all tips (µL)
+        """
+        dest_col, dest_row = dest_col_row
+
+        if volume <= 0:
+            raise ValueError("Volume must be positive")
+
+        # Check we have enough volume in tips
+        total_available = self.get_total_tip_volume()
+        if total_available < volume:
+            raise ValueError(
+                f"Insufficient volume in tips. Available: {total_available}µL, Requested: {volume}µL"
+            )
+
+        # Validate based on whether destination needs separate items per tip
+        if not destination.each_tip_needs_separate_item():
+            # Reservoir: all tips dispense to same item
+            destination.validate_col_row_or_raise([dest_col], dest_row, 1)
+        else:
+            # Plate: each tip dispenses to different item
+            destination.validate_col_row_or_raise([dest_col], dest_row, self.tip_count)
+
+        if self._supports_content_management(destination, dest_col, dest_row):
+            # Track content if supported
+            self._dispense_with_content_tracking(destination, dest_col, dest_row, volume)
+            print(f"  → Dispensed {volume}µL to {destination.labware_id} at {dest_col_row}")
+            print(f"  → Tip content now: {self._get_tip_content_summary()}")
+        else:
+            # Just do physical movement without content tracking
+            self._dispense_physical_only(destination, dest_col, dest_row, volume)
+            print(f"  → Dispensed {volume}µL to {destination.labware_id} at {dest_col_row}")
+
+    def spit_all(self, destination: Labware, dest_col_row: tuple[int, int]) -> None:
+        """
+        Dispense ALL content from tips to a destination labware.
+
+        Parameters
+        ----------
+        destination : Labware
+            Destination labware
+        dest_col_row : tuple[int, int]
+            (Column, Row) position in destination labware
+        """
+        total_volume = self.get_total_tip_volume()
+
+        if total_volume <= 0:
+            raise ValueError("No content in tips to dispense")
+
+        print(f"  → Dispensing all content: {total_volume}µL")
+        self.spit(destination, dest_col_row, total_volume)
+
+    def _dispense_with_content_tracking(self, destination: Labware, col: int, row: int, volume: float) -> None:
+        """Dispense with content tracking (works for any labware with content management)."""
+
+        # Check if each tip needs separate destination item
+        if self.multichannel and destination.each_tip_needs_separate_item():
+            # Small items: each tip dispenses to different item (e.g., Plate)
+            items = [self._get_content_item(destination, col, row + i)
+                     for i in range(self.tip_count)]
+            volume_per_item = volume / self.tip_count
+        else:
+            # Large items: all tips dispense to same item (e.g., Reservoir), or single channel
+            items = [self._get_content_item(destination, col, row)]
+            volume_per_item = volume
+
+        # Validate items exist
+        if any(item is None for item in items):
+            raise ValueError(f"Content item not found at position ({col}, {row})")
+
+        # Transfer content from tips to destination
+        if len(items) == 1 and self.multichannel:
+            # All tips dispense to ONE item (Reservoir)
+            # Aggregate content from all tips
+            item = items[0]
+
+            # Collect content from all tips proportionally
+            for tip_idx in range(self.tip_count):
+                tip_content = self.tip_dict[tip_idx]
+                tip_total = sum(tip_content.values()) if tip_content else 0.0
+
+                if tip_total > 0:
+                    # Calculate this tip's share of total volume to dispense
+                    tip_volume_to_dispense = volume / self.tip_count
+
+                    # Remove proportionally from this tip and add to destination
+                    removal_ratio = tip_volume_to_dispense / tip_total
+
+                    for content_type in list(tip_content.keys()):
+                        remove_amount = tip_content[content_type] * removal_ratio
+
+                        # Add to destination
+                        item.add_content(content_type, remove_amount)
+
+                        # Remove from tip
+                        tip_content[content_type] -= remove_amount
+                        if tip_content[content_type] <= 1e-6:
+                            del tip_content[content_type]
+
+        else:
+            # Each tip dispenses to its own item (Plate) OR single channel
+            for tip_idx, item in enumerate(items):
+                if item and volume_per_item > 0:
+                    tip_content = self.tip_dict[tip_idx]
+                    tip_total = sum(tip_content.values()) if tip_content else 0.0
+
+                    if tip_total <= 0:
+                        continue
+
+                    # Remove proportionally from this tip and add to destination
+                    removal_ratio = volume_per_item / tip_total
+
+                    for content_type in list(tip_content.keys()):
+                        remove_amount = tip_content[content_type] * removal_ratio
+
+                        # Add to destination
+                        item.add_content(content_type, remove_amount)
+
+                        # Remove from tip
+                        tip_content[content_type] -= remove_amount
+                        if tip_content[content_type] <= 1e-6:
+                            del tip_content[content_type]
+
+        # Physical movement
+        self._move_to_and_dispense(items[0], volume)
+
+    def _dispense_physical_only(self, destination: Labware, col: int, row: int, volume: float) -> None:
+        """Dispense without content tracking (for labware without content management)."""
+
+        # Get position - try to get item first, fallback to labware itself
+        item = self._get_content_item(destination, col, row)
+        if item is None:
+            item = destination
+
+        # Physical movement
+        self._move_to_and_dispense(item, volume)
+        print(f"  → Note: Content tracking not available for {type(destination).__name__}")
+
+    def _move_to_and_dispense(self, item: Labware, volume: float) -> None:
+        """Move to item position and perform dispense."""
+        if not item or not item.position:
+            raise ValueError("Item has no position set")
+
+        x, y = item.position
+        self.move_xy(x, y)
+
+        # Determine height (duck typing!)
+        if hasattr(item, 'add_height'):
+            z = item.add_height
+        elif hasattr(item, 'size_z'):
+            z = item.size_z * 0.2  # 20% height for dispensing
+        else:
+            z = 5  # Default
+
+        self.move_z(z)
+        self.dispense(volume / self.tip_count)  # Volume per tip
+        self.move_z(0)

@@ -115,6 +115,19 @@ class Labware(Serializable):
         if not is_valid:
             raise ValueError(error_msg)
 
+    def each_tip_needs_separate_item(self) -> bool:
+        """
+            For multichannel operation, does each tip need to access a separate item?
+
+                Returns
+                -------
+                bool
+                    True: Each tip needs its own item (e.g., Plate - small wells)
+                    False: All tips can share one item (e.g., ReservoirHolder - large reservoirs)
+                """
+        return True  # Default: items are small, tips need separate items. overwritten for some labwares like plate
+
+
     def to_dict(self) -> dict:
         """
         Serialize the Labware instance to a dictionary.
@@ -1122,7 +1135,7 @@ class PipetteHolder(Labware):
                     continue
 
                 # Use helper function instead of manual checking
-                status = self.check_col_start_row(col, start_row)
+                status = self.check_col_start_row_multi(col, start_row)
 
                 if status == "FULLY_OCCUPIED":
                     occupied_positions.append((col, start_row))
@@ -1570,6 +1583,9 @@ class ReservoirHolder(Labware):
         # Place reservoirs to holder if provided
         if reservoir_dict:
             self.place_reservoirs(reservoir_dict)
+
+    def each_tip_needs_separate_item(self) -> bool:
+        return False  # Reservoirs are large, all tips fit in one
 
     def hook_id_to_position(self, hook_id: int) -> tuple[int, int]:
         """
