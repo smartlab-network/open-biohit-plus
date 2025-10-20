@@ -19,7 +19,7 @@ def calculate_liquid_height(item: 'Labware') -> float:
     Uses proper geometric formulas for different container shapes.
 
     Parameters
-    ----------
+    ---------
     item : Labware
         Well or Reservoir containing liquid
 

@@ -200,7 +200,7 @@ class Deck(Serializable):
         Deserialize a Deck from a dictionary, restoring slots and stacked labware.
 
         Parameters
-        ----------
+        ---------
         data : dict
             Dictionary containing deck, slot, and labware attributes.
 

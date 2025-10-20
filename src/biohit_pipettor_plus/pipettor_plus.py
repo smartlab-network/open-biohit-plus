@@ -17,13 +17,14 @@ from .geometry import (
 
 Change_Tips = 0
 MAX_BATCH_SIZE = 5
+Min_Clearance = 1
 
 class PipettorPlus(Pipettor):
+    #todo find real dimensions. Pipettor_length, only required if diff for diff pipettors. otherwise it works
     TIP_LENGTHS = {
         200: 51.0,  # 200µL tips are 51mm
         1000: 96.5,  # 1000µL tips are 96.5mm
     }
-
     Pipettor_length = {
         1000 : 50,  #in case they are different
         200: 50,
@@ -144,8 +145,8 @@ class PipettorPlus(Pipettor):
                 if first_holder.position is None:
                     raise ValueError(f"Holder at grid location ({col}, {start_row}) has no position set")
 
-                # ✅ FIXED: Calculate center position
-                x, y = self._calculate_multichannel_center_position(holders_to_use)
+                # FIXED: Calculate center position
+                x, y = self._get_robot_xy_position(holders_to_use)
                 self.move_xy(x, y)
 
                 # Pick tips at the specified height
@@ -304,7 +305,7 @@ class PipettorPlus(Pipettor):
                     print(f"Holder at grid location ({col}, {start_row}) has no position set, skipping")
                     continue
 
-                x, y = self._calculate_multichannel_center_position(holders_to_use)
+                x, y = self._get_robot_xy_position(holders_to_use)
                 self.move_xy(x, y)
 
                 # Return tips at the specified height
@@ -398,23 +399,28 @@ class PipettorPlus(Pipettor):
 
     def discard_tips(self, tip_dropzone: Labware) -> None:
         """
-               Discard tips to a TipDropzone.
-               Parameters
-               ----------
-               tip_dropzone : labware
-                    TipDropzone labware
-               """
+        Discard tips to a TipDropzone.
 
+        Parameters
+        ----------
+        tip_dropzone : labware
+            TipDropzone labware
+        """
         if not self.has_tips:
             raise RuntimeError("No tips to discard")
 
         if not isinstance(tip_dropzone, TipDropzone):
             raise ValueError("discard_tips only works with TipDropzone")
 
-        # understand drop height
+        # convert height using _get_pipettor_z
         x, y = tip_dropzone.position
         self.move_xy(x, y)
-        self.move_z(tip_dropzone.drop_height_relative)
+
+        # Convert relative height (from bottom) to pipettor coordinate
+        relative_z = tip_dropzone.drop_height_relative
+        pipettor_z = self._get_pipettor_z(tip_dropzone, relative_z)
+
+        self.move_z(pipettor_z)
         self.eject_tip()
         self.initialize_tips()
         self.move_z(0)
@@ -616,6 +622,71 @@ class PipettorPlus(Pipettor):
             self._aspirate_physical_only(source, source_col, source_row, volume)
             print(f"  → Aspirated {volume}µL from {source.labware_id} at {source_col_row}")
 
+    def spit(self, destination: Labware, dest_col_row: tuple[int, int], volume: float) -> None:
+        """
+        Dispense from tips to a destination labware.
+
+        Works with any labware type. If labware supports content tracking, content is tracked.
+        If not, only physical movement is performed.
+
+        Parameters
+        ----------
+        destination : Labware
+            Destination labware (Plate, ReservoirHolder, or any other labware)
+        dest_col_row : tuple[int, int]
+            (Column, Row) position in destination labware
+        volume : float
+            Total volume to dispense across all tips (µL)
+        """
+        dest_col, dest_row = dest_col_row
+
+        if volume <= 0:
+            raise ValueError("Volume must be positive")
+
+        # Check we have enough volume in tips
+        total_available = self.get_total_tip_volume()
+        if total_available < volume:
+            raise ValueError(
+                f"Insufficient volume in tips. Available: {total_available}µL, Requested: {volume}µL"
+            )
+
+        # Validate based on whether destination needs separate items per tip
+        if not destination.each_tip_needs_separate_item():
+            # Reservoir: all tips dispense to same item
+            destination.validate_col_row_or_raise([dest_col], dest_row, 1)
+        else:
+            # Plate: each tip dispenses to different item
+            destination.validate_col_row_or_raise([dest_col], dest_row, self.tip_count)
+
+        if self._supports_content_management(destination, dest_col, dest_row):
+            # Track content if supported
+            self._dispense_with_content_tracking(destination, dest_col, dest_row, volume)
+            print(f"  → Dispensed {volume}µL to {destination.labware_id} at {dest_col_row}")
+            print(f"  → Tip content now: {self._get_tip_content_summary()}")
+        else:
+            # Just do physical movement without content tracking
+            self._dispense_physical_only(destination, dest_col, dest_row, volume)
+            print(f"  → Dispensed {volume}µL to {destination.labware_id} at {dest_col_row}")
+
+    def spit_all(self, destination: Labware, dest_col_row: tuple[int, int]) -> None:
+        """
+        Dispense ALL content from tips to a destination labware.
+
+        Parameters
+        ----------
+        destination : Labware
+            Destination labware
+        dest_col_row : tuple[int, int]
+            (Column, Row) position in destination labware
+        """
+        total_volume = self.get_total_tip_volume()
+
+        if total_volume <= 0:
+            raise ValueError("No content in tips to dispense")
+
+        print(f"  → Dispensing all content: {total_volume}µL")
+        self.spit(destination, dest_col_row, total_volume)
+
     def add_content(self, content_type: str, volume: float, tip_index: int = None) -> None:
         """
         Add content to specific tip(s).
@@ -698,128 +769,12 @@ class PipettorPlus(Pipettor):
                 if tip_content[content_type] <= 1e-6:
                     del tip_content[content_type]
 
-    def get_total_tip_volume(self, tip_index: int = None) -> float:
-        """
-        Get total volume in tip(s).
-
-        Parameters
-        ----------
-        tip_index : int, optional
-            Specific tip. If None, returns total across all tips.
-
-        Returns
-        -------
-        float
-            Total volume in µL
-        """
-        if tip_index is not None:
-            return sum(self.tip_dict[tip_index].values()) if self.tip_dict[tip_index] else 0.0
-        else:
-            # Sum across all tips
-            total = 0.0
-            for tip_content in self.tip_dict.values():
-                total += sum(tip_content.values()) if tip_content else 0.0
-            return total
 
     def home(self):
         self.move_z(0)
         self.move_xy(0, 0)
 
-    # Helper functions. Not necessarily available for GUI
-    def _aspirate_with_content_tracking(self, source: Labware, col: int, row: int, volume: float) -> None:
-        """Aspirate with content tracking."""
-
-        # Check if each tip needs separate item
-        if self.multichannel and source.each_tip_needs_separate_item():
-            items = [self._get_content_item(source, col, row + i)
-                     for i in range(self.tip_count)]
-            volume_per_item = volume / self.tip_count
-        else:
-            items = [self._get_content_item(source, col, row)]
-            volume_per_item = volume
-
-        # Validate items exist
-        if any(item is None for item in items):
-            raise ValueError(f"Content item not found at position ({col}, {row})")
-
-        # Check total available volume
-        total_available = sum(item.get_total_volume() for item in items if item)
-        if total_available < volume:
-            raise ValueError(
-                f"Insufficient volume. Available: {total_available}µL, Requested: {volume}µL"
-            )
-
-        # Remove content from source and add to tips
-        for tip_idx, item in enumerate(items):
-            if item and volume_per_item > 0:
-                removed_content = item.remove_content(volume_per_item, return_dict=True)
-
-                if len(items) == 1 and self.multichannel:
-                    # Distribute to all tips
-                    for tip_i in range(self.tip_count):
-                        for content_type, vol in removed_content.items():
-                            if vol > 0:
-                                self.add_content(content_type, vol / self.tip_count, tip_index=tip_i)
-                else:
-                    # Each tip gets from its own item
-                    for content_type, vol in removed_content.items():
-                        if vol > 0:
-                            self.add_content(content_type, vol, tip_index=tip_idx)
-
-        self._move_to_and_aspirate(items, volume)
-
-    def _aspirate_physical_only(self, source: Labware, col: int, row: int, volume: float) -> None:
-        """Aspirate without content tracking."""
-
-        # Get items (same logic as content tracking)
-        if self.multichannel and source.each_tip_needs_separate_item():
-            items = [self._get_content_item(source, col, row + i)
-                     for i in range(self.tip_count)]
-        else:
-            item = self._get_content_item(source, col, row)
-            items = [item if item else source]
-
-        self._move_to_and_aspirate(items, volume)
-        print(f"  → Note: Content tracking not available for {type(source).__name__}")
-
-    def _supports_content_management(self, labware: Labware, col: int, row: int) -> bool:
-        """Check if labware supports content tracking at this position."""
-        item = self._get_content_item(labware, col, row)
-
-        return (item is not None and
-                hasattr(item, 'content') and
-                hasattr(item, 'remove_content') and
-                hasattr(item, 'add_content') and
-                hasattr(item, 'get_total_volume'))
-
-    def _get_content_item(self, labware: Labware, col: int, row: int):
-        """
-        Get the actual item that holds content at a position.
-
-        Uses duck typing to work with any labware structure:
-        - If it has get_well_at(), it's a Plate-like structure
-        - If it has reservoir mapping methods, it's a ReservoirHolder-like structure
-        - Otherwise, the labware itself might hold content
-        """
-
-        # Try Plate-like: get_well_at(col, row)
-        if hasattr(labware, 'get_well_at'):
-            return labware.get_well_at(col, row)
-
-        # Try ReservoirHolder-like: position_to_hook_id + get_hook_to_reservoir_map
-        if hasattr(labware, 'position_to_hook_id') and hasattr(labware, 'get_hook_to_reservoir_map'):
-            hook_id = labware.position_to_hook_id(col, row)
-            return labware.get_hook_to_reservoir_map().get(hook_id)
-
-        # Direct content holder: the labware itself has content
-        return labware
-
-    def initialize_tips(self) -> None:
-        """Clear tip content when tips are discarded."""
-        self.has_tips = False
-        self.tip_dict = {i: {} for i in range(self.tip_count)}
-        print(f"  → Tips discarded, content cleared")
-
+    # Helper Functions. Not necessarily available for GUI
     def _validate_transfer(self, source, source_positions, destination, destination_positions,
                            source_consecutive_rows: int, dest_consecutive_rows: int) -> None:
         """Helper: Validate source and destination positions."""
@@ -836,16 +791,6 @@ class PipettorPlus(Pipettor):
             destination_positions = [destination_positions]
         for dest_col, dest_row in destination_positions:
             destination.validate_col_row_or_raise([dest_col], dest_row, dest_consecutive_rows)
-
-    def _calculate_volumes(self, volume_per_well: float) -> tuple[int, int]:
-        """Helper: Calculate volume per position and max volume per aspirate."""
-        volume_per_position = int(volume_per_well * self.tip_count)
-        max_vol_per_aspirate = int(self.tip_volume * self.tip_count)
-
-        if volume_per_position <= 0:
-            raise ValueError("volume_per_well must be > 0")
-
-        return volume_per_position, max_vol_per_aspirate
 
     def _multi_trip_transfer(self, positions: List[tuple[int, int]],
                              volume_per_position: int, max_vol_per_aspirate: int,
@@ -946,6 +891,298 @@ class PipettorPlus(Pipettor):
         print(f"{'=' * 60}")
         print("✓ Batch transfer complete\n")
 
+    def _aspirate_with_content_tracking(self, source: Labware, col: int, row: int, volume: float) -> None:
+        """Aspirate with content tracking."""
+
+        # Check if each tip needs separate item
+        if self.multichannel and source.each_tip_needs_separate_item():
+            items = [self._get_content_item(source, col, row + i)
+                     for i in range(self.tip_count)]
+            volume_per_item = volume / self.tip_count
+        else:
+            items = [self._get_content_item(source, col, row)]
+            volume_per_item = volume
+
+        # Validate items exist
+        if any(item is None for item in items):
+            raise ValueError(f"Content item not found at position ({col}, {row})")
+
+        # Check total available volume
+        total_available = sum(item.get_total_volume() for item in items if item)
+        if total_available < volume:
+            raise ValueError(
+                f"Insufficient volume. Available: {total_available}µL, Requested: {volume}µL"
+            )
+
+        # Remove content from source and add to tips
+        for tip_idx, item in enumerate(items):
+            if item and volume_per_item > 0:
+                removed_content = item.remove_content(volume_per_item, return_dict=True)
+
+                if len(items) == 1 and self.multichannel:
+                    # Distribute to all tips
+                    for tip_i in range(self.tip_count):
+                        for content_type, vol in removed_content.items():
+                            if vol > 0:
+                                self.add_content(content_type, vol / self.tip_count, tip_index=tip_i)
+                else:
+                    # Each tip gets from its own item
+                    for content_type, vol in removed_content.items():
+                        if vol > 0:
+                            self.add_content(content_type, vol, tip_index=tip_idx)
+
+        self._move_to_and_aspirate(items, volume)
+
+    def _aspirate_physical_only(self, source: Labware, col: int, row: int, volume: float) -> None:
+        """Aspirate without content tracking."""
+
+        # Get items (same logic as content tracking)
+        if self.multichannel and source.each_tip_needs_separate_item():
+            items = [self._get_content_item(source, col, row + i)
+                     for i in range(self.tip_count)]
+        else:
+            item = self._get_content_item(source, col, row)
+            items = [item if item else source]
+
+        self._move_to_and_aspirate(items, volume)
+        print(f"  → Note: Content tracking not available for {type(source).__name__}")
+
+    def _dispense_with_content_tracking(self, destination: Labware, col: int, row: int, volume: float) -> None:
+        """Dispense with content tracking."""
+
+        # Check if each tip needs separate destination item
+        if self.multichannel and destination.each_tip_needs_separate_item():
+            items = [self._get_content_item(destination, col, row + i)
+                     for i in range(self.tip_count)]
+            volume_per_item = volume / self.tip_count
+        else:
+            items = [self._get_content_item(destination, col, row)]
+            volume_per_item = volume
+
+        # Validate items exist
+        if any(item is None for item in items):
+            raise ValueError(f"Content item not found at position ({col}, {row})")
+
+        # Transfer content from tips to destination
+        if len(items) == 1 and self.multichannel:
+            # All tips dispense to ONE item (Reservoir)
+            item = items[0]
+            for tip_idx in range(self.tip_count):
+                tip_content = self.tip_dict[tip_idx]
+                tip_total = sum(tip_content.values()) if tip_content else 0.0
+
+                if tip_total > 0:
+                    tip_volume_to_dispense = volume / self.tip_count
+                    removal_ratio = tip_volume_to_dispense / tip_total
+
+                    for content_type in list(tip_content.keys()):
+                        remove_amount = tip_content[content_type] * removal_ratio
+                        item.add_content(content_type, remove_amount)
+                        tip_content[content_type] -= remove_amount
+                        if tip_content[content_type] <= 1e-6:
+                            del tip_content[content_type]
+        else:
+            # Each tip dispenses to its own item (Plate) OR single channel
+            for tip_idx, item in enumerate(items):
+                if item and volume_per_item > 0:
+                    tip_content = self.tip_dict[tip_idx]
+                    tip_total = sum(tip_content.values()) if tip_content else 0.0
+
+                    if tip_total <= 0:
+                        continue
+
+                    removal_ratio = volume_per_item / tip_total
+
+                    for content_type in list(tip_content.keys()):
+                        remove_amount = tip_content[content_type] * removal_ratio
+                        item.add_content(content_type, remove_amount)
+                        tip_content[content_type] -= remove_amount
+                        if tip_content[content_type] <= 1e-6:
+                            del tip_content[content_type]
+
+        self._move_to_and_dispense(items, volume)
+
+    def _dispense_physical_only(self, destination: Labware, col: int, row: int, volume: float) -> None:
+        """Dispense without content tracking."""
+
+        # Get items
+        if self.multichannel and destination.each_tip_needs_separate_item():
+            items = [self._get_content_item(destination, col, row + i)
+                     for i in range(self.tip_count)]
+        else:
+            item = self._get_content_item(destination, col, row)
+            items = [item if item else destination]
+
+        self._move_to_and_dispense(items, volume)
+        print(f"  → Note: Content tracking not available for {type(destination).__name__}")
+
+    def _move_to_and_aspirate(self, items: List[Labware], volume: float) -> None:
+        """
+        Move to position and perform aspiration.
+
+        For multichannel, moves to the CENTER of all tip positions.
+
+        Parameters
+        ----------
+        items : List[Labware]
+            List of items to aspirate from (1 for single channel, 8 for multichannel)
+        volume : float
+            Total volume to aspirate
+        """
+        if not items:
+            raise ValueError("No items provided")
+
+        # Calculate center position for robot movement
+        x, y = self._get_robot_xy_position(items)
+        self.move_xy(x, y)
+
+        # Use first item for height calculation (all items should be at same Z level)
+        item = items[0]
+        parent_labware = self._find_parent_labware(item)
+
+        # Determine RELATIVE height from labware BOTTOM
+        if hasattr(item, 'shape') and item.shape:
+            volume_per_tip = volume / self.tip_count
+            relative_z = calculate_dynamic_remove_height(item, volume_per_tip)
+
+
+            liquid_height = calculate_liquid_height(item)
+            print(f"  → Dynamic aspiration: {relative_z:.1f}mm from bottom "
+                  f"(liquid: {liquid_height:.1f}mm, shape: {item.shape})")
+        elif hasattr(item, 'remove_height'):
+            relative_z = item.remove_height
+            print(f"  → Fixed aspiration: {relative_z:.1f}mm from bottom")
+        elif hasattr(parent_labware, 'remove_height'):
+            relative_z = parent_labware.remove_height
+            print(f"  → Fixed aspiration: {relative_z:.1f}mm from bottom (parent)")
+        else:
+            relative_z = parent_labware.size_z * 0.8
+            print(f"  → Fallback aspiration: {relative_z:.1f}mm from bottom (80%)")
+
+        relative_z = max(relative_z, Min_Clearance)
+        pipettor_z = self._get_pipettor_z(parent_labware, relative_z)
+        self.move_z(pipettor_z)
+        self.aspirate(volume / self.tip_count)
+        self.move_z(0)
+
+    def _move_to_and_dispense(self, items: List[Labware], volume: float) -> None:
+        """
+        Move to position and perform dispense.
+
+        For multichannel, moves to the CENTER of all tip positions.
+
+        Parameters
+        ----------
+        items : List[Labware]
+            List of items to dispense to (1 for single channel, 8 for multichannel)
+        volume : float
+            Total volume to dispense
+        """
+        if not items:
+            raise ValueError("No items provided")
+
+        # Calculate center position for robot movement
+        x, y = self._get_robot_xy_position(items)
+        self.move_xy(x, y)
+
+        # Use first item for height calculation
+        item = items[0]
+        parent_labware = self._find_parent_labware(item)
+
+        # Determine RELATIVE height from labware BOTTOM
+        if hasattr(item, 'shape') and item.shape:
+            volume_per_tip = volume / self.tip_count
+            relative_z = calculate_dynamic_add_height(item, volume_per_tip)
+            liquid_height = calculate_liquid_height(item)
+            print(f"  → Dynamic dispensing: {relative_z:.1f}mm from bottom "
+                  f"(liquid: {liquid_height:.1f}mm, shape: {item.shape})")
+        elif hasattr(item, 'add_height'):
+            relative_z = item.add_height
+            print(f"  → Fixed dispensing: {relative_z:.1f}mm from bottom")
+        elif hasattr(parent_labware, 'add_height'):
+            relative_z = parent_labware.add_height
+            print(f"  → Fixed dispensing: {relative_z:.1f}mm from bottom (parent)")
+        else:
+            relative_z = parent_labware.size_z * 0.2
+            print(f"  → Fallback dispensing: {relative_z:.1f}mm from bottom (20%)")
+
+        relative_z = max(relative_z, Min_Clearance)
+        pipettor_z = self._get_pipettor_z(parent_labware, relative_z)
+        self.move_z(pipettor_z)
+        self.dispense(volume / self.tip_count)
+        self.move_z(0)
+
+    def _supports_content_management(self, labware: Labware, col: int, row: int) -> bool:
+        """Check if labware supports content tracking at this position."""
+        item = self._get_content_item(labware, col, row)
+
+        return (item is not None and
+                hasattr(item, 'content') and
+                hasattr(item, 'remove_content') and
+                hasattr(item, 'add_content') and
+                hasattr(item, 'get_total_volume'))
+
+    def _get_content_item(self, labware: Labware, col: int, row: int):
+        """
+        Get the actual item that holds content at a position.
+
+        Uses duck typing to work with any labware structure:
+        - If it has get_well_at(), it's a Plate-like structure
+        - If it has reservoir mapping methods, it's a ReservoirHolder-like structure
+        - Otherwise, the labware itself might hold content
+        """
+
+        # Try Plate-like: get_well_at(col, row)
+        if hasattr(labware, 'get_well_at'):
+            return labware.get_well_at(col, row)
+
+        # Try ReservoirHolder-like: position_to_hook_id + get_hook_to_reservoir_map
+        if hasattr(labware, 'position_to_hook_id') and hasattr(labware, 'get_hook_to_reservoir_map'):
+            hook_id = labware.position_to_hook_id(col, row)
+            return labware.get_hook_to_reservoir_map().get(hook_id)
+
+        # Direct content holder: the labware itself has content
+        return labware
+
+    def get_total_tip_volume(self, tip_index: int = None) -> float:
+        """
+        Get total volume in tip(s).
+
+        Parameters
+        ----------
+        tip_index : int, optional
+            Specific tip. If None, returns total across all tips.
+
+        Returns
+        -------
+        float
+            Total volume in µL
+        """
+        if tip_index is not None:
+            return sum(self.tip_dict[tip_index].values()) if self.tip_dict[tip_index] else 0.0
+        else:
+            # Sum across all tips
+            total = 0.0
+            for tip_content in self.tip_dict.values():
+                total += sum(tip_content.values()) if tip_content else 0.0
+            return total
+
+    def initialize_tips(self) -> None:
+        """Clear tip content when tips are discarded."""
+        self.has_tips = False
+        self.tip_dict = {i: {} for i in range(self.tip_count)}
+        print(f"  → Tips discarded, content cleared")
+
+    def _calculate_volumes(self, volume_per_well: float) -> tuple[int, int]:
+        """Helper: Calculate volume per position and max volume per aspirate."""
+        volume_per_position = int(volume_per_well * self.tip_count)
+        max_vol_per_aspirate = int(self.tip_volume * self.tip_count)
+
+        if volume_per_position <= 0:
+            raise ValueError("volume_per_well must be > 0")
+
+        return volume_per_position, max_vol_per_aspirate
+
     def _get_tip_content_summary(self) -> str:
         """Get a readable summary of tip content across all tips."""
         total_volume = self.get_total_tip_volume()
@@ -1021,139 +1258,6 @@ class PipettorPlus(Pipettor):
         else:
             return lw
 
-    def spit(self, destination: Labware, dest_col_row: tuple[int, int], volume: float) -> None:
-        """
-        Dispense from tips to a destination labware.
-
-        Works with any labware type. If labware supports content tracking, content is tracked.
-        If not, only physical movement is performed.
-
-        Parameters
-        ----------
-        destination : Labware
-            Destination labware (Plate, ReservoirHolder, or any other labware)
-        dest_col_row : tuple[int, int]
-            (Column, Row) position in destination labware
-        volume : float
-            Total volume to dispense across all tips (µL)
-        """
-        dest_col, dest_row = dest_col_row
-
-        if volume <= 0:
-            raise ValueError("Volume must be positive")
-
-        # Check we have enough volume in tips
-        total_available = self.get_total_tip_volume()
-        if total_available < volume:
-            raise ValueError(
-                f"Insufficient volume in tips. Available: {total_available}µL, Requested: {volume}µL"
-            )
-
-        # Validate based on whether destination needs separate items per tip
-        if not destination.each_tip_needs_separate_item():
-            # Reservoir: all tips dispense to same item
-            destination.validate_col_row_or_raise([dest_col], dest_row, 1)
-        else:
-            # Plate: each tip dispenses to different item
-            destination.validate_col_row_or_raise([dest_col], dest_row, self.tip_count)
-
-        if self._supports_content_management(destination, dest_col, dest_row):
-            # Track content if supported
-            self._dispense_with_content_tracking(destination, dest_col, dest_row, volume)
-            print(f"  → Dispensed {volume}µL to {destination.labware_id} at {dest_col_row}")
-            print(f"  → Tip content now: {self._get_tip_content_summary()}")
-        else:
-            # Just do physical movement without content tracking
-            self._dispense_physical_only(destination, dest_col, dest_row, volume)
-            print(f"  → Dispensed {volume}µL to {destination.labware_id} at {dest_col_row}")
-
-    def spit_all(self, destination: Labware, dest_col_row: tuple[int, int]) -> None:
-        """
-        Dispense ALL content from tips to a destination labware.
-
-        Parameters
-        ----------
-        destination : Labware
-            Destination labware
-        dest_col_row : tuple[int, int]
-            (Column, Row) position in destination labware
-        """
-        total_volume = self.get_total_tip_volume()
-
-        if total_volume <= 0:
-            raise ValueError("No content in tips to dispense")
-
-        print(f"  → Dispensing all content: {total_volume}µL")
-        self.spit(destination, dest_col_row, total_volume)
-
-    def _dispense_with_content_tracking(self, destination: Labware, col: int, row: int, volume: float) -> None:
-        """Dispense with content tracking."""
-
-        # Check if each tip needs separate destination item
-        if self.multichannel and destination.each_tip_needs_separate_item():
-            items = [self._get_content_item(destination, col, row + i)
-                     for i in range(self.tip_count)]
-            volume_per_item = volume / self.tip_count
-        else:
-            items = [self._get_content_item(destination, col, row)]
-            volume_per_item = volume
-
-        # Validate items exist
-        if any(item is None for item in items):
-            raise ValueError(f"Content item not found at position ({col}, {row})")
-
-        # Transfer content from tips to destination
-        if len(items) == 1 and self.multichannel:
-            # All tips dispense to ONE item (Reservoir)
-            item = items[0]
-            for tip_idx in range(self.tip_count):
-                tip_content = self.tip_dict[tip_idx]
-                tip_total = sum(tip_content.values()) if tip_content else 0.0
-
-                if tip_total > 0:
-                    tip_volume_to_dispense = volume / self.tip_count
-                    removal_ratio = tip_volume_to_dispense / tip_total
-
-                    for content_type in list(tip_content.keys()):
-                        remove_amount = tip_content[content_type] * removal_ratio
-                        item.add_content(content_type, remove_amount)
-                        tip_content[content_type] -= remove_amount
-                        if tip_content[content_type] <= 1e-6:
-                            del tip_content[content_type]
-        else:
-            # Each tip dispenses to its own item (Plate) OR single channel
-            for tip_idx, item in enumerate(items):
-                if item and volume_per_item > 0:
-                    tip_content = self.tip_dict[tip_idx]
-                    tip_total = sum(tip_content.values()) if tip_content else 0.0
-
-                    if tip_total <= 0:
-                        continue
-
-                    removal_ratio = volume_per_item / tip_total
-
-                    for content_type in list(tip_content.keys()):
-                        remove_amount = tip_content[content_type] * removal_ratio
-                        item.add_content(content_type, remove_amount)
-                        tip_content[content_type] -= remove_amount
-                        if tip_content[content_type] <= 1e-6:
-                            del tip_content[content_type]
-
-        self._move_to_and_dispense(items, volume)
-
-    def _dispense_physical_only(self, destination: Labware, col: int, row: int, volume: float) -> None:
-        """Dispense without content tracking."""
-
-        # Get items
-        if self.multichannel and destination.each_tip_needs_separate_item():
-            items = [self._get_content_item(destination, col, row + i)
-                     for i in range(self.tip_count)]
-        else:
-            item = self._get_content_item(destination, col, row)
-            items = [item if item else destination]
-
-        self._move_to_and_dispense(items, volume)
-        print(f"  → Note: Content tracking not available for {type(destination).__name__}")
     def _find_parent_labware(self, item: Labware) -> Labware:
         """
         Find the parent labware that contains this item.
@@ -1337,95 +1441,3 @@ class PipettorPlus(Pipettor):
                   f"spanning ({x_first:.1f},{y_first:.1f}) to ({x_last:.1f},{y_last:.1f})")
 
         return x_center, y_center
-
-    def _move_to_and_aspirate(self, items: List[Labware], volume: float) -> None:
-        """
-        Move to position and perform aspiration.
-
-        For multichannel, moves to the CENTER of all tip positions.
-
-        Parameters
-        ----------
-        items : List[Labware]
-            List of items to aspirate from (1 for single channel, 8 for multichannel)
-        volume : float
-            Total volume to aspirate
-        """
-        if not items:
-            raise ValueError("No items provided")
-
-        # Calculate center position for robot movement
-        x, y = self._calculate_multichannel_center_position(items)
-        self.move_xy(x, y)
-
-        # Use first item for height calculation (all items should be at same Z level)
-        item = items[0]
-        parent_labware = self._find_parent_labware(item)
-
-        # Determine RELATIVE height from labware BOTTOM
-        if hasattr(item, 'shape') and item.shape:
-            volume_per_tip = volume / self.tip_count
-            relative_z = calculate_dynamic_remove_height(item, volume_per_tip)
-            liquid_height = calculate_liquid_height(item)
-            print(f"  → Dynamic aspiration: {relative_z:.1f}mm from bottom "
-                  f"(liquid: {liquid_height:.1f}mm, shape: {item.shape})")
-        elif hasattr(item, 'remove_height'):
-            relative_z = item.remove_height
-            print(f"  → Fixed aspiration: {relative_z:.1f}mm from bottom")
-        elif hasattr(parent_labware, 'remove_height'):
-            relative_z = parent_labware.remove_height
-            print(f"  → Fixed aspiration: {relative_z:.1f}mm from bottom (parent)")
-        else:
-            relative_z = parent_labware.size_z * 0.8
-            print(f"  → Fallback aspiration: {relative_z:.1f}mm from bottom (80%)")
-
-        pipettor_z = self._get_pipettor_z(parent_labware, relative_z)
-        self.move_z(pipettor_z)
-        self.aspirate(volume / self.tip_count)
-        self.move_z(0)
-
-    def _move_to_and_dispense(self, items: List[Labware], volume: float) -> None:
-        """
-        Move to position and perform dispense.
-
-        For multichannel, moves to the CENTER of all tip positions.
-
-        Parameters
-        ----------
-        items : List[Labware]
-            List of items to dispense to (1 for single channel, 8 for multichannel)
-        volume : float
-            Total volume to dispense
-        """
-        if not items:
-            raise ValueError("No items provided")
-
-        # Calculate center position for robot movement
-        x, y = self._calculate_multichannel_center_position(items)
-        self.move_xy(x, y)
-
-        # Use first item for height calculation
-        item = items[0]
-        parent_labware = self._find_parent_labware(item)
-
-        # Determine RELATIVE height from labware BOTTOM
-        if hasattr(item, 'shape') and item.shape:
-            volume_per_tip = volume / self.tip_count
-            relative_z = calculate_dynamic_add_height(item, volume_per_tip)
-            liquid_height = calculate_liquid_height(item)
-            print(f"  → Dynamic dispensing: {relative_z:.1f}mm from bottom "
-                  f"(liquid: {liquid_height:.1f}mm, shape: {item.shape})")
-        elif hasattr(item, 'add_height'):
-            relative_z = item.add_height
-            print(f"  → Fixed dispensing: {relative_z:.1f}mm from bottom")
-        elif hasattr(parent_labware, 'add_height'):
-            relative_z = parent_labware.add_height
-            print(f"  → Fixed dispensing: {relative_z:.1f}mm from bottom (parent)")
-        else:
-            relative_z = parent_labware.size_z * 0.2
-            print(f"  → Fallback dispensing: {relative_z:.1f}mm from bottom (20%)")
-
-        pipettor_z = self._get_pipettor_z(parent_labware, relative_z)
-        self.move_z(pipettor_z)
-        self.dispense(volume / self.tip_count)
-        self.move_z(0)

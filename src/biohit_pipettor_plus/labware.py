@@ -1814,7 +1814,7 @@ class ReservoirHolder(Labware):
         Place multiple reservoirs from a dictionary.
 
         Parameters
-        ----------
+        ---------
         reservoir_dict : dict[int, dict]
             Dictionary where keys are ignored. Each value should contain:
             - Required: size_x, size_y, size_z
