@@ -26,18 +26,23 @@ class Deck(Serializable):
         Dictionary mapping slot IDs to Slot objects.
     labware : dict[str, Labware]
         Dictionary mapping labware IDs to Labware objects.
+    range_z : float, optional
+            Maximum vertical range of the deck (mm). This is the total Z-axis travel
+            from top (pipettor home) to bottom (deck surface).
     """
 
-    def __init__(self, range_x: tuple[int, int], range_y: tuple[int, int], deck_id: str):
+    def __init__(self, range_x: tuple[int, int], range_y: tuple[int, int], deck_id: str, range_z : float = 500):
         self.deck_id = deck_id
         self.range_x = range_x
         self.range_y = range_y
+
 
         self.used_pos_x: list[tuple] = [range_x]  # reserved x-ranges
         self.used_pos_y: list[tuple] = [range_y]  # reserved y-ranges
 
         self.slots: dict[str, Slot] = {}           # store Slot objects
         self.labware: dict[str, Labware] = {}     # global access to Labware objects
+        self.range_z = range_z
 
     def add_slots(self, slots: list[Slot]):
         """
@@ -184,6 +189,7 @@ class Deck(Serializable):
             "deck_id": self.deck_id,
             "range_x": list(self.range_x),
             "range_y": list(self.range_y),
+            "range_z": self.range_z,
             "slots": {sid: slot.to_dict() for sid, slot in self.slots.items()},
             "labware": {lid: lw.to_dict() for lid, lw in self.labware.items()},
         }
@@ -203,7 +209,12 @@ class Deck(Serializable):
         Deck
             Reconstructed Deck instance.
         """
-        deck = cls(tuple(data["range_x"]), tuple(data["range_y"]), deck_id=data["deck_id"])
+        deck = cls(
+            range_x=tuple(data["range_x"]),
+            range_y=tuple(data["range_y"]),
+            range_z=data["range_z"],
+            deck_id=data["deck_id"]
+        )
 
         # Restore slots
         for sid, sdata in data.get("slots", {}).items():

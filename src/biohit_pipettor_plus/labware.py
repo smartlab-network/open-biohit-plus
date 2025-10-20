@@ -1,5 +1,6 @@
 import sys
 import os
+from typing import Literal
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import uuid
@@ -10,6 +11,7 @@ from typing import Optional
 Pipettors_in_Multi = 8
 Default_Reservoir_Capacity = 30000
 Default_well_capacity = 1000
+Defined_shape = Literal["rectangular", "circular", "conical", "u_bottom"]
 
 
 @register_class
@@ -232,6 +234,7 @@ class Well(Labware):
             add_height: float = 5,
             remove_height: float = 5,
             suck_offset_xy: tuple[float, float] = (2, 2),
+            shape: Defined_shape = None
     ):
         """
         Initialize a Well instance.
@@ -273,6 +276,7 @@ class Well(Labware):
         self.suck_offset_xy = suck_offset_xy
         self.row = row
         self.column = column
+        self.shape = shape
 
         # Initialize content as dictionary for sophisticated tracking
         if content is None:
@@ -505,6 +509,7 @@ class Well(Labware):
                 "add_height": self.add_height,
                 "remove_height": self.remove_height,
                 "suck_offset_xy": list(self.suck_offset_xy),
+                "shape": self.shape,
             }
         )
         return base
@@ -539,7 +544,8 @@ class Well(Labware):
             remove_height=data.get("remove_height", 5),
             suck_offset_xy=tuple(data.get("suck_offset_xy", (2, 2))),
             row=data.get("row"),
-            column=data.get("column")
+            column=data.get("column"),
+            shape = data.get("shape", None)
         )
 
 @register_class
@@ -1270,7 +1276,7 @@ class Reservoir(Labware):
     def __init__(self, size_x: float, size_y: float, size_z: float, offset: tuple[float, float] = (0, 0),
                  capacity: float = Default_Reservoir_Capacity, content: dict = None,
                  hook_ids: list[int] = None, row: int = None, column: int = None,
-                 labware_id: str = None, position: tuple[float, float] = None):
+                 labware_id: str = None, position: tuple[float, float] = None, shape: Defined_shape = None):
         """
         Initialize a Reservoir instance. These are containers that store the medium to be filled in and removed from well.
 
@@ -1300,6 +1306,7 @@ class Reservoir(Labware):
         self.hook_ids = hook_ids if hook_ids is not None else []
         self.row = row
         self.column = column
+        self.shape = shape
 
         # Initialize content as dictionary for sophisticated tracking
         if content is None:
@@ -1533,6 +1540,7 @@ class Reservoir(Labware):
             "content": self.content,
             "row": self.row,
             "column": self.column,
+            "shape" : self.shape,
         })
         return base
 
@@ -1555,6 +1563,7 @@ class Reservoir(Labware):
             row=data.get("row"),
             column=data.get("column"),
             position=position,
+            shape=data.get("shape", None),
         )
 
 
