@@ -9,7 +9,7 @@ deck1 = Deck((0, 500), (0, 500), "deck1")
 
 slot1 = Slot((100, 200), (0, 50), 500, "slot1")
 slot2 = Slot((200, 300), (100, 200), 25, "slot2")
-slot3 = Slot((300, 400), (200, 250), 500, "slot3")
+slot3 = Slot((300, 400), (200, 280), 500, "slot3")
 slot4 = Slot((400, 450), (50, 100), 500, "slot4")
 slot5 = Slot((450, 500), (50, 100), 500, "slot5")
 slot6 = Slot((100, 300), (50, 100), 500, "slot6")
@@ -38,18 +38,18 @@ print(f"\nPlate created with {plate1.wells_x} x {plate1.wells_y} wells")
 
 # Updated reservoirs_data to use content as dictionary
 reservoirs_data = {
-    1: {"size_x": 30, "size_y": 20, "size_z": 10, "capacity": 30000, "content": {}},
-    2: {"size_x": 10, "size_y": 20, "size_z": 12, "capacity": 30000, "content": {"0 conc": 10000}},
-    3: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000, "content": {"1.8 conc": 100}},
-    4: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000, "content": {"5 conc": 100}},
-    5: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000, "content": {"15 conc": 100}},
-    6: {"size_x": 15, "size_y": 20, "size_z": 15, "capacity": 30000, "content": {"0 conc": 100}},
-    7: {"size_x": 35, "size_y": 20, "size_z": 15, "capacity": 30000, "content": {}},
+    1: {"size_x": 10, "size_y": 40, "size_z": 10, "capacity": 30000, "content": {}},
+    2: {"size_x": 10, "size_y": 40, "size_z": 12, "capacity": 30000, "content": {"0 conc": 10000}},
+    3: {"size_x": 15, "size_y": 40, "size_z": 15, "capacity": 30000, "content": {"1.8 conc": 100}},
+    4: {"size_x": 15, "size_y": 40, "size_z": 15, "capacity": 30000, "content": {"5 conc": 100}},
+    5: {"size_x": 15, "size_y": 40, "size_z": 15, "capacity": 30000, "content": {"15 conc": 100}},
+    6: {"size_x": 15, "size_y": 40, "size_z": 15, "capacity": 30000, "content": {"0 conc": 100}},
+    7: {"size_x": 15, "size_y": 40, "size_z": 15, "capacity": 30000, "content": {}},
 }
 
 reservoirHolder = ReservoirHolder(
     size_x=100,
-    size_y=50,
+    size_y=80,
     size_z=20,
     offset=(4, 4),
     hooks_across_x=6,

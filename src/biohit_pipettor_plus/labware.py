@@ -11,7 +11,9 @@ from typing import Optional
 Pipettors_in_Multi = 8
 Default_Reservoir_Capacity = 30000
 Default_well_capacity = 1000
+MIN_TIP_SPACING_Y = 2  # Add this (adjust value based on multipipettor used.)
 Defined_shape = Literal["rectangular", "circular", "conical", "u_bottom"]
+
 
 
 @register_class
@@ -1186,7 +1188,7 @@ class PipetteHolder(Labware):
                 if start_row in used_rows:
                     continue
 
-                status = self.check_col_start_row(col, start_row)
+                status = self.check_col_start_row_multi(col, start_row)
 
                 if status == "FULLY_AVAILABLE":
                     available_positions.append((col, start_row))
