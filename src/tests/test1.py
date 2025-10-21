@@ -1,9 +1,8 @@
-from ..biohit_pipettor_plus.deck import Deck
-from ..biohit_pipettor_plus.slot import Slot
-from ..biohit_pipettor_plus.labware import Plate, PipetteHolder, TipDropzone, ReservoirHolder, IndividualPipetteHolder, Well
-from ..biohit_pipettor_plus.serializable import Serializable
-import json
-from ..biohit_pipettor_plus.control_json import read_json, write_json
+from src.biohit_pipettor_plus.deck import Deck
+from src.biohit_pipettor_plus.slot import Slot
+from src.biohit_pipettor_plus.labware import Plate, PipetteHolder, TipDropzone, ReservoirHolder, IndividualPipetteHolder, Well
+from src.biohit_pipettor_plus.serializable import Serializable
+from src.biohit_pipettor_plus.control_json import read_json, write_json
 
 deck1 = Deck((0,500), (0,500), "deck1")
 
@@ -19,7 +18,7 @@ deck1.add_slots([slot1, slot2, slot3, slot4, slot5])
 
 #plate & well creating and checking
 example_well = Well(size_x=2, size_y=1, size_z=5, content={"water": "750", "pbs" : "250"})
-plate1 = Plate(20, 50, 50, 6, 9, (3, 5), well=example_well)
+plate1 = Plate(20, 50, 50, 6, 9, (3, 5), well=example_well, labware_id = "plate1")
 deck1.add_labware(plate1, slot_id="slot1", min_z=2)
 print(plate1.to_dict())
 
@@ -212,7 +211,9 @@ for lw_id in expected_labware:
     else:
         print(f"   ❌ {lw_id} NOT in deck!")
 
+write_json(deck1)
 print("\n" + "="*60)
 print("TESTS COMPLETE")
 print("="*60)
+
 

@@ -1,6 +1,7 @@
 import ttkbootstrap as ttk
 from .deck import Deck
 from .slot import Slot
+from .labware import Labware
 
 class Gui:
     def __init__(self,deck: Deck, master: ttk.Window = None):
@@ -17,6 +18,7 @@ class Gui:
 
         self.canvas_corners_deck = [(deck.range_x[0]*2, deck.range_y[0]*2),
                                     (deck.range_x[1]*2, deck.range_y[1]*2)]
+
         self.deck_canvas = ttk.Canvas(self.root,
                                       width=abs(self.canvas_corners_deck[0][0]-self.canvas_corners_deck[1][0]),
                                       height=abs(self.canvas_corners_deck[0][1]-self.canvas_corners_deck[1][1]),
@@ -29,6 +31,9 @@ class Gui:
                                           outline = "black", width=2)
 
         self.deck_canvas.grid(row=0, column=0, sticky="nsew")
+
+        self.actions_windows: dict[str, LabawareActionsWin] = {}
+
         self.place_slots()
         self.fill_slot_frames()
 
@@ -40,7 +45,7 @@ class Gui:
             canvas_corners_slot = [(slot.range_x[0] * 2, slot.range_y[0] * 2),
                                    (slot.range_x[1] * 2, slot.range_y[1] * 2)]
 
-            print(canvas_corners_slot)
+            print("slot: ",slot_id,"range x, y: ",slot.range_x, slot.range_y, canvas_corners_slot)
 
 
             frame = ttk.Frame(self.root,
@@ -85,6 +90,7 @@ class Gui:
             add_labware_button = ttk.Button(frame, command=lambda: self.callback_add_labware(slot_id), text="add labware")
             add_labware_button.grid(row=1, column=0, sticky="nsew", columnspan=3)
             row = 2
+            print(slot.labware_stack.items())
             for labware_id, labware_list in slot.labware_stack.items():
                 labware_label = ttk.Label(frame,
                                           text=f"{labware_id}: {labware_list[1]}",
@@ -97,14 +103,36 @@ class Gui:
                                             command=lambda: self.callback_actions(labware_id))
                 labware_button.grid(row = row, column=2)
 
+                self.actions_windows[labware_id] = LabawareActionsWin(labware=labware_list[0], top_level = ttk.Toplevel(self.root))
+
                 row += 1
 
 
-    def callback_actions(self, labwar_id: str):
-        pass
+    def callback_actions(self, labware_id: str):
+        self.actions_windows[labware_id].show_window()
 
     def slot_button_press(self, slot_id: str):
         pass
 
     def callback_add_labware(self, slot_id: str):
         pass
+
+
+class LabawareActionsWin:
+    def __init__(self, labware: Labware, top_level: ttk.Toplevel):
+        self.root = top_level
+        self.labware = labware
+        self.root.title(f"Labware actions for: {self.labware.labware_id}")
+        self.root.geometry("900x600")
+        self.is_window = True
+        self.show_window()
+
+        self.root.protocol("WM_DELETE_WINDOW", self.show_window)
+
+    def show_window(self):
+        if self.is_window:
+            self.root.withdraw()
+            self.is_window = False
+        else:
+            self.root.deiconify()
+            self.is_window = True

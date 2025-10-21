@@ -36,7 +36,4 @@ def main():
 
     # === Step 4: Alles abspeichern ===
     write_json(deck)
-
-
-
 main()

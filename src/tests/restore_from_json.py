@@ -5,8 +5,11 @@ from src.biohit_pipettor_plus.labware import *
 from src.biohit_pipettor_plus.gui import Gui
 deck1:Deck = read_json("deck_1")
 
-slots = deck1.slots
+print(deck1)
+
+"""slots = deck1.slots
 
 gui = Gui(deck=deck1)
 
-gui.root.mainloop()
+
+gui.root.mainloop()"""
