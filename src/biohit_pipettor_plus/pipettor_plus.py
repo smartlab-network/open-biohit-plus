@@ -25,10 +25,11 @@ class PipettorPlus(Pipettor):
         200: 51.0,  # 200µL tips are 51mm
         1000: 96.5,  # 1000µL tips are 96.5mm
     }
+    """
     Pipettor_length = {
         1000 : 50,  #in case they are different
         200: 50,
-    }
+    }"""
 
     def __init__(self, tip_volume: Literal[200, 1000], *, multichannel: bool,  initialize: bool = True, deck: Deck, tip_length: float = None):
         """
@@ -396,6 +397,28 @@ class PipettorPlus(Pipettor):
             f"Failed to return tip to any of the specified locations {list_col_row}. "
             f"Tip still attached to pipettor."
         )
+
+    def replace_tips(self, pipette_holder: PipetteHolder,  return_list_col_row: List[tuple[int, int]] = None,
+                     pick_list_col_row: List[tuple[int, int]] = None ) -> None:
+
+        if self.multichannel:
+            # get list of available holders
+            if not return_list_col_row:
+                return_list_col_row = pipette_holder.get_available_holder_multi()
+            # get list of occupied holders
+            if not pick_list_col_row:
+                pick_list_col_row = pipette_holder.get_occupied_holder_multi()
+
+        else:
+            if not return_list_col_row:
+                available_holders = pipette_holder.get_available_holders()
+                return_list_col_row = [(h.column, h.row) for h in available_holders]  # Convert to list of available_holders !
+            if not pick_list_col_row:
+                occupied_holders = pipette_holder.get_occupied_holders()
+                pick_list_col_row = [(h.column, h.row) for h in occupied_holders]  # Convert to list of occupied_holders!
+
+        self.return_tips(pipette_holder, list_col_row=return_list_col_row)
+        self.pick_tips(pipette_holder, list_col_row=pick_list_col_row)
 
     def discard_tips(self, tip_dropzone: Labware) -> None:
         """
@@ -768,7 +791,6 @@ class PipettorPlus(Pipettor):
 
                 if tip_content[content_type] <= 1e-6:
                     del tip_content[content_type]
-
 
     def home(self):
         self.move_z(0)
@@ -1215,15 +1237,16 @@ class PipettorPlus(Pipettor):
         }
 
     def check_tips(self) -> None:
+
         """
         Check if tip change is required. if yes, do it.
         """
 
         lw = self.find_labware_by_type("PipetteHolder")[0]  # Gets first PipetteHolder found
         if self.change_tips and not self.has_tips:
-            self.pick_multi_tips(lw)
+            self.pick_tips(lw)
         elif self.change_tips and self.has_tips:
-            self.replace_multi_tips(lw)
+            self.replace_tips(lw)
         elif not self.has_tips:
             raise ValueError("No tips loaded. Pick tips first.")
 
