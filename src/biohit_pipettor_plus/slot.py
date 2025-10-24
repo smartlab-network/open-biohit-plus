@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, List
+from typing import Dict, List
 from .labware import Labware, ReservoirHolder, PipetteHolder, Plate
 from .serializable import Serializable, register_class
 #TODO get this right
@@ -11,7 +11,7 @@ class Slot(Serializable):
     vertically with specified Z-ranges.
 
     Attributes
-    ----------
+    ---------
     range_x : tuple[float, float]
         Minimum and maximum x coordinates of the slot.
     range_y : tuple[float, float]
@@ -35,7 +35,7 @@ class Slot(Serializable):
         # Dictionary storing stacked labware: {labware_id: [Labware, (min_z, max_z)]}
         self.labware_stack: Dict[str, List[Labware, tuple[float, float]]] = {}
 
-    def place_labware(self, lw: Labware, min_z: float):
+    def _place_labware(self, lw: Labware, min_z: float):
         """
         Add a Labware object to the slot at a specific Z-range.
 
@@ -56,7 +56,7 @@ class Slot(Serializable):
             raise ValueError(f"Cannot place labware {lw.labware_id}: exceeds slot height.")
         self.labware_stack[lw.labware_id] = [lw, (min_z, max_z)]
 
-    def remove_labware(self, labware_id: str):
+    def _remove_labware(self, labware_id: str):
         """
         Remove a specific Labware from the stack.
 
@@ -68,7 +68,7 @@ class Slot(Serializable):
         if labware_id in self.labware_stack:
             del self.labware_stack[labware_id]
 
-    def allocate_position(
+    def _allocate_position(
             self,
             lw: Labware,
             x_spacing: float = None,
