@@ -1,13 +1,19 @@
 import sys
 import os
+from typing import Literal
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import uuid
 from .serializable import Serializable, register_class
 import copy
-from typing import Optional, Union
+from typing import Optional
 
 Pipettors_in_Multi = 8
+Default_Reservoir_Capacity = 30000
+Default_well_capacity = 1000
+MIN_TIP_SPACING_Y = 2  # Add this (adjust value based on multipipettor used.)
+Defined_shape = Literal["rectangular", "circular", "conical", "u_bottom"]
+
 
 
 @register_class
@@ -62,6 +68,90 @@ class Labware(Serializable):
         self.offset = offset or (0, 0)
         self.position = position or None
         self.labware_id = labware_id or f"labware_{uuid.uuid4().hex[:8]}"
+
+    def validate_col_row(self, columns: list[int], row: int, consecutive_rows: int = 1) -> tuple[bool, str]:
+        """
+        Validate column indices and row range for grid-based labware operations.
+
+        Parameters
+        ----------
+        columns : list[int]
+            List of column indices to validate
+        row : int
+            Starting row index
+        consecutive_rows : int, optional
+            Number of consecutive rows needed (default: 1). For multichannel pipette, generally 8
+
+        Returns
+        -------
+        tuple[bool, str]
+            (is_valid, error_message)
+            - is_valid: True if validation passes, False otherwise
+            - error_message: Empty string if valid, error description if invalid
+        """
+        # Check if this labware has a grid structure
+        if not hasattr(self, '_columns') or not hasattr(self, '_rows'):
+            return (False, f"{self.__class__.__name__} does not have a grid structure")
+
+        # Validate column indices
+        for col in columns:
+            if col < 0 or col >= self._columns:
+                return (False, f"Column index {col} is out of range. Valid range is 0 to {self._columns - 1}")
+
+        # Validate row range
+        if row < 0:
+            return (False, f"Row index {row} cannot be negative")
+
+        if row + consecutive_rows > self._rows:
+            return (False,
+                    f"Row index {row} is out of range. Need {consecutive_rows} consecutive row(s). Valid range is 0 to {self._rows - consecutive_rows}")
+
+        return (True, "")
+
+    def validate_col_row_or_raise(self, columns: list[int], row: int, consecutive_rows: int = 1) -> None:
+        """
+        Validate column and row, raising ValueError if invalid.
+
+        Convenience method for when you want to raise an error immediately.
+        """
+        is_valid, error_msg = self.validate_col_row(columns, row, consecutive_rows)
+        if not is_valid:
+            raise ValueError(error_msg)
+
+    def each_tip_needs_separate_item(self) -> bool:
+        """
+            For multichannel operation, does each tip need to access a separate item?
+
+                Returns
+                -------
+                bool
+                    True: Each tip needs its own item (e.g., Plate - small wells)
+                    False: All tips can share one item (e.g., ReservoirHolder - large reservoirs)
+                """
+        return True  # Default: items are small, tips need separate items. overwritten for some labwares like plate
+
+    def validate_multichannel_compatible(self, item_size_y: float) -> tuple[bool, str]:
+        """
+        Validate if an item is large enough for multichannel operation.
+
+        Parameters
+        ----------
+        item_size_y : float
+            The Y-dimension of the item to validate (e.g., reservoir, well)
+
+        Returns
+        -------
+        tuple[bool, str]
+            (is_valid, error_message)
+        """
+        if not self.each_tip_needs_separate_item():
+            min_required_y = Pipettors_in_Multi * MIN_TIP_SPACING_Y
+            if item_size_y < min_required_y:
+                return (False,
+                        f"Item size_y ({item_size_y}mm) is too small for multichannel operation. "
+                        f"Minimum required: {min_required_y}mm")
+
+        return (True, "")
 
     def to_dict(self) -> dict:
         """
@@ -119,14 +209,16 @@ class Well(Labware):
 
     Attributes
     ----------
-    content : str or None
-        Optional description of the content (e.g. "water", "buffer").
+    content : dict
+        Dictionary mapping content types to volumes (µL).
+    capacity : float
+        Maximum volume the well can hold (µL).
     add_height : float
         Height above the well bottom used when adding liquid (in mm).
     remove_height : float
         Height above the well bottom used when removing liquid (in mm).
     suck_offset_xy : tuple[float, float]
-        XY offset inside the well for pipetting (in mm).
+        XY offset inside the well for using pipettor (in mm).
     """
 
     def __init__(
@@ -140,9 +232,11 @@ class Well(Labware):
             row: int = None,
             column: int = None,
             content: dict = None,
+            capacity: float = Default_well_capacity,
             add_height: float = 5,
             remove_height: float = 5,
             suck_offset_xy: tuple[float, float] = (2, 2),
+            shape: Defined_shape = None
     ):
         """
         Initialize a Well instance.
@@ -163,9 +257,11 @@ class Well(Labware):
             row inside of plate
         column: int, optional
             column inside of plate
-            If None, position is not set.
-        content : str, optional
-            Name/type of content contained in the well.
+        content : dict, optional
+            Dictionary mapping content types to volumes (µL).
+            Example: {"PBS": 150, "water": 100}
+        capacity : float, optional
+            Maximum volume the well can hold (µL). Default is Default_well_capacity.
         add_height : float, optional
             Pipette dispensing height above bottom of the well (default = 5 mm).
         remove_height : float, optional
@@ -176,21 +272,30 @@ class Well(Labware):
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id,
                          position=position)
 
+        self.capacity = capacity
+        self.add_height = add_height
+        self.remove_height = remove_height
+        self.suck_offset_xy = suck_offset_xy
+        self.row = row
+        self.column = column
+        self.shape = shape
+
         # Initialize content as dictionary for sophisticated tracking
         if content is None:
             self.content = {}
         elif isinstance(content, dict):
             self.content = content.copy()
         else:
-            raise ValueError(f"Content must be str, dict, or None, got {type(content)}")
+            raise ValueError(f"Content must be dict or None, got {type(content)}")
 
-        self.add_height = add_height
-        self.remove_height = remove_height
-        self.suck_offset_xy = suck_offset_xy
-        self.row = row
-        self.column = column
+        # Validate inputs
+        total_volume = self.get_total_volume()
+        if total_volume > self.capacity:
+            raise ValueError(f"Total content volume ({total_volume}µL) cannot exceed capacity ({self.capacity}µL)")
+        if self.capacity < 0:
+            raise ValueError("Capacity cannot be negative")
 
-    def add_content(self, content: str, volume: float) -> None:
+    def add_content(self, content_type: str, volume: float) -> None:
         """
         Add content to the well with intelligent mixing logic.
 
@@ -203,21 +308,36 @@ class Well(Labware):
 
         Parameters
         ----------
-        content : str
+        content_type : str
             Content to add (e.g., "PBS", "water", "sample")
         volume : float
             Volume to add (µL)
+
+        Raises
+        ------
+        ValueError
+            If adding volume would exceed capacity or volume is negative
         """
-        if not content or volume <= 0:
-            return
+        if volume < 0:
+            raise ValueError("Volume to add must be positive")
+
+        if not content_type:
+            raise ValueError("Content type cannot be empty")
+
+        # Check if adding would exceed capacity
+        if self.get_total_volume() + volume > self.capacity:
+            raise ValueError(
+                f"Overflow! Adding {volume}µL would exceed capacity of {self.capacity}µL. "
+                f"Current volume: {self.get_total_volume()}µL"
+            )
 
         # Add content to dictionary
-        if content in self.content:
-            self.content[content] += volume
+        if content_type in self.content:
+            self.content[content_type] += volume
         else:
-            self.content[content] = volume
+            self.content[content_type] = volume
 
-    def remove_content(self, volume: float) -> None:
+    def remove_content(self, volume: float, return_dict: bool = False) -> Optional[dict[str, float]]:
         """
         Remove content from the well proportionally.
 
@@ -228,19 +348,35 @@ class Well(Labware):
         ----------
         volume : float
             Volume to remove (µL)
+        return_dict : bool, optional
+            If True, return a dictionary of removed content types and volumes (default: False)
+
+        Returns
+        -------
+        Optional[dict[str, float]]
+            If return_dict is True, returns dictionary mapping content types to removed volumes.
+            Otherwise, returns None.
 
         Raises
         ------
         ValueError
-            If trying to remove more volume than available
+            If trying to remove more volume than available or volume is negative
         """
+        if volume < 0:
+            raise ValueError("Volume to remove must be positive")
+
         total_volume = self.get_total_volume()
 
         if total_volume <= 0:
-            return  # Nothing to remove from empty well
+            raise ValueError("Cannot remove from empty well")
 
         if volume > total_volume:
-            raise ValueError(f"Cannot remove {volume}µL, only {total_volume}µL available")
+            raise ValueError(
+                f"Underflow! Cannot remove {volume}µL, only {total_volume}µL available"
+            )
+
+        # Dictionary to track what was removed
+        removed_content: dict[str, float] = {}
 
         # Remove proportionally from all content types (since they're mixed)
         removal_ratio = volume / total_volume
@@ -249,11 +385,17 @@ class Well(Labware):
         content_types = list(self.content.keys())
         for content_type in content_types:
             remove_amount = self.content[content_type] * removal_ratio
+            removed_content[content_type] = remove_amount
             self.content[content_type] -= remove_amount
 
-            # Clean up zero or negative volumes
-            if self.content[content_type] <= 0:
+            # Clean up zero or negative volumes (use epsilon for floating point comparison)
+            if self.content[content_type] <= 1e-6:
                 del self.content[content_type]
+
+        # Return the dictionary if requested
+        if return_dict:
+            return removed_content
+        return None
 
     def get_total_volume(self) -> float:
         """
@@ -265,6 +407,17 @@ class Well(Labware):
             Total volume in µL
         """
         return sum(self.content.values()) if self.content else 0.0
+
+    def get_available_volume(self) -> float:
+        """
+        Get the remaining capacity available in the well.
+
+        Returns
+        -------
+        float
+            Available volume in µL
+        """
+        return self.capacity - self.get_total_volume()
 
     def get_content_info(self) -> dict:
         """
@@ -279,7 +432,9 @@ class Well(Labware):
         return {
             "content_dict": self.content.copy(),
             "total_volume": total_volume,
+            "available_capacity": self.get_available_volume(),
             "is_empty": total_volume <= 0,
+            "is_full": total_volume >= self.capacity,
             "content_summary": self.get_content_summary()
         }
 
@@ -290,7 +445,7 @@ class Well(Labware):
         Returns
         -------
         str
-            Summary string like "PBS: 150µL, water: 100µL" or "empty"
+            Summary string like "PBS: 150.0µL, water: 100.0µL" or "empty"
         """
         if not self.content or self.get_total_volume() <= 0:
             return "empty"
@@ -305,10 +460,14 @@ class Well(Labware):
         """
         Get volume of specific content type.
 
-        Parameters - content_type : str
+        Parameters
+        ----------
+        content_type : str
             Type of content to query
 
-        Returns float
+        Returns
+        -------
+        float
             Volume of specified content type (0 if not present)
         """
         return self.content.get(content_type, 0.0)
@@ -329,7 +488,7 @@ class Well(Labware):
         Returns
         -------
         bool
-            True if content type is present
+            True if content type is present with volume > 0
         """
         return content_type in self.content and self.content[content_type] > 0
 
@@ -348,9 +507,11 @@ class Well(Labware):
                 "row": self.row,
                 "column": self.column,
                 "content": self.content,
+                "capacity": self.capacity,
                 "add_height": self.add_height,
                 "remove_height": self.remove_height,
                 "suck_offset_xy": list(self.suck_offset_xy),
+                "shape": self.shape,
             }
         )
         return base
@@ -367,48 +528,39 @@ class Well(Labware):
 
         Returns
         -------
-        Well
-            Reconstructed Well instance.
+        Reconstructed Well instance.
         """
-
         # Safely handle position deserialization
         position = tuple(data["position"]) if data.get("position") else None
 
-        base_obj = super()._from_dict(data)  # Labware attributes
-
-        # overwrite base_obj with correct class instantiation
-        obj = cls(
-            size_x=base_obj.size_x,
-            size_y=base_obj.size_y,
-            size_z=base_obj.size_z,
-            offset=base_obj.offset,
-            labware_id=base_obj.labware_id,
-            position=base_obj.position,
+        return cls(
+            size_x=data["size_x"],
+            size_y=data["size_y"],
+            size_z=data["size_z"],
+            offset=data["offset"],
+            labware_id=data["labware_id"],
+            position=position,
             content=data.get("content"),
+            capacity=data.get("capacity", Default_well_capacity),
             add_height=data.get("add_height", 5),
             remove_height=data.get("remove_height", 5),
             suck_offset_xy=tuple(data.get("suck_offset_xy", (2, 2))),
             row=data.get("row"),
-            column=data.get("column")
+            column=data.get("column"),
+            shape = data.get("shape", None)
         )
-        return obj
-
 
 @register_class
 class Plate(Labware):
-    """
-    Represents a Plate labware with wells.
-    Attributes
-    ----------
-    wells_x : int
-        Number of wells in X direction.
-    wells_y : int
-        Number of wells in Y direction.
-    """
 
-    # TODO for plate, isn't offset and first well part of same equation. or is offset only till corners of the plate (if yes, what is the purpose to go to corner of any labware.
-    def __init__(self, size_x, size_y, size_z, wells_x, wells_y, offset=(0, 0), well: Well = None,
-                 labware_id: str = None, position: tuple[float, float] = None):
+    def __init__(self, size_x: float,
+            size_y: float,
+            size_z: float,
+            wells_x: int,
+            wells_y: int,
+            well: Well,
+            offset: tuple[float, float] = (0, 0),
+            labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a Plate instance.
 
@@ -424,90 +576,110 @@ class Plate(Labware):
             Number of wells in X direction.
         wells_y : int
             Number of wells in Y direction.
+        well : Well
+            Template well to use for all wells in the plate.
+        offset : tuple[float, float], optional
+            Offset of the plate.
         labware_id : str, optional
             Unique ID for the plate.
+        position : tuple[float, float], optional
+            (x, y) position coordinates of the plate in millimeters.
         """
 
-        super().__init__(size_x, size_y, size_z, offset, labware_id, position)
+        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id,
+                         position=position)
 
         if wells_x <= 0 or wells_y <= 0:
             raise ValueError("wells_x and wells_y cannot be negative or 0")
 
-        self._columns = wells_x  # Store internally
+        self._columns = wells_x
         self._rows = wells_y
 
-        self.__wells: dict[str, Well or None] = {}
+        self.__wells: dict[tuple[int, int], Well] = {}
         self.well = well
 
-        if well:
-            if self._columns * well.size_x > size_x or self._rows * well.size_y > size_y:
-                raise ValueError("Well is to big for this Plate")
-            else:
-                self.place_wells()
-        else:
-            for x in range(self._columns):
-                for y in range(self._rows):
-                    self.__wells[f'{x}:{y}'] = None
+        if self._columns * well.size_x > size_x or self._rows * well.size_y > size_y:
+                raise ValueError("Well is too big for this Plate")
 
-    def get_wells(self):
-        return self.__wells
+        self.place_wells()
+
 
     def place_wells(self):
+        """Create wells across the grid using the template well."""
         for x in range(self._columns):
             for y in range(self._rows):
-                well = copy.deepcopy(self.well)  # Create a new copy
+                well = copy.deepcopy(self.well)
                 well.labware_id = f'{self.labware_id}_{x}:{y}'
-                self.__wells[well.labware_id] = well
+                well.row = y
+                well.column = x
+                self.__wells[(x, y)] = well
 
-    # TODO question existence
-    """
-    def place_unique_well(self, row, column, well: Well):
-        well_placement = f"{column}:{row}"
-        if well_placement not in self.__wells.keys():
-            raise ValueError(f"{well_placement} is not a valid well placement")
+    def get_wells(self) -> dict[tuple[int, int], Well]:  # ✅ Correct type
+        """Get all wells in the plate."""
+        return self.__wells
 
-        #need to fix this.
-        well.labware_id = well_placement
-        well.row = row
-        well.column = column
-        self.__wells[well.labware_id] = well
-    """
+    def get_well_at(self, column: int, row: int) -> Optional[Well]:
+        """
+                Get the well at a specific position.
+
+                Parameters
+                ----------
+                column : int
+                    Column index
+                row : int
+                    Row index
+
+                Returns
+                -------
+                Optional[Well]
+                    The well at the position, or None if not found
+                """
+        return self.__wells.get((column, row))
+
+    def get_wells_in_column(self, column: int) -> list[Well]:
+        """Get all wells in a specific column."""
+        wells = []
+        for row in range(self._rows):
+            well = self.get_well_at(column, row)
+            if well:
+                wells.append(well)
+        return wells
+
+    def get_wells_in_row(self, row: int) -> list[Well]:
+        """Get all wells in a specific row."""
+        wells = []
+        for col in range(self._columns):
+            well = self.get_well_at(col, row)
+            if well:
+                wells.append(well)
+        return wells
 
     def to_dict(self):
-        """
-        Serialize the Plate instance to a dictionary including wells information.
-
-        Returns
-        -------
-        dict
-            dictionary representation of the plate.
-        """
+        """Serialize the Plate instance to a dictionary."""
         base = super().to_dict()
         base.update({
             "wells_x": self.wells_x,
             "wells_y": self.wells_y,
-            "wells": {wid: well.to_dict() if well else None for wid, well in self.__wells.items()}
+            "wells": {
+                f"{col}:{row}": well.to_dict()
+                for (col, row), well in self.__wells.items()
+            }
         })
         return base
 
     @classmethod
     def _from_dict(cls, data: dict) -> "Plate":
-        """
-        Deserialize a Plate instance from a dictionary using the base Labware _from_dict.
-
-        Parameters
-        ----------
-        data : dict
-            dictionary containing plate attributes.
-
-        Returns
-        -------
-        Plate
-            Reconstructed Plate instance.
-        """
-        # Safely handle position deserialization
         position = tuple(data["position"]) if data.get("position") else None
+        wells_data = data.get("wells", {})
 
+        if not wells_data:
+            raise ValueError("Cannot deserialize Plate without wells data")
+
+        # Get the first well as a template
+        first_well_data = next(iter(wells_data.values()))
+        template_well = Serializable.from_dict(first_well_data)
+
+        # ADD: Pass well parameter!
         plate = cls(
             size_x=data["size_x"],
             size_y=data["size_y"],
@@ -516,34 +688,36 @@ class Plate(Labware):
             labware_id=data["labware_id"],
             wells_x=data["wells_x"],
             wells_y=data["wells_y"],
-            position=position, )
+            well=template_well,
+            position=position,
+        )
 
-        wells_data = data.get("wells", {})
+        # Restore wells with their actual state
         for wid, wdata in wells_data.items():
-            if wdata is None:
-                plate._Plate__wells[wid] = None
-            else:
-                plate._Plate__wells[wid] = Serializable.from_dict(wdata)
+            col, row = map(int, wid.split(':'))
+            restored_well = Serializable.from_dict(wdata)
+            plate._Plate__wells[(col, row)] = restored_well
+
         return plate
 
     @property
     def wells_x(self) -> int:
-        """Alias for grid_x"""
+        """Number of wells in X direction (columns)"""
         return self._columns
 
     @property
     def wells_y(self) -> int:
-        """Alias for grid_y"""
+        """Number of wells in Y direction (rows)"""
         return self._rows
 
     @property
     def grid_x(self) -> int:
-        """Standard grid dimension"""
+        """Standard grid dimension (columns)"""
         return self._columns
 
     @property
     def grid_y(self) -> int:
-        """Standard grid dimension"""
+        """Standard grid dimension (rows)"""
         return self._rows
 
 
@@ -569,6 +743,8 @@ class IndividualPipetteHolder(Labware):
             offset: tuple[float, float] = (0, 0),
             pipette_type: str = "P1000",
             is_occupied: bool = False,
+            row: int = None,
+            column: int = None,
             labware_id: str = None,
             position: tuple[float, float] = None
     ):
@@ -604,6 +780,8 @@ class IndividualPipetteHolder(Labware):
 
         self.pipette_type = pipette_type
         self.is_occupied = is_occupied
+        self.row = row
+        self.column = column
 
     def place_pipette(self) -> None:
         """
@@ -648,6 +826,8 @@ class IndividualPipetteHolder(Labware):
         base.update({
             "pipette_type": self.pipette_type,
             "is_occupied": self.is_occupied,
+            "row": self.row,
+            "column": self.column,
         })
         return base
 
@@ -675,32 +855,16 @@ class IndividualPipetteHolder(Labware):
             position=position,
             pipette_type=data.get("pipette_type"),
             is_occupied=data.get("is_occupied", False),
+            row=data.get("row"),
+            column=data.get("column"),
         )
 
 
 @register_class
 class PipetteHolder(Labware):
-    """
-    Represents a Pipette Holder labware that contains multiple individual holder positions.
-
-    Attributes
-    ----------
-    holders_across_x : int
-        Number of individual holder positions across X-axis.
-    holders_across_y : int
-        Number of individual holder positions across Y-axis.
-    """
-
-    def __init__(self,
-                 size_x: float,
-                 size_y: float,
-                 size_z: float,
-                 holders_across_x: int,
-                 holders_across_y: int,
-                 offset: tuple[float, float] = (0, 0),
-                 individual_holder: IndividualPipetteHolder = None,
-                 labware_id: str = None,
-                 position: tuple[float, float] = None):
+    def __init__(self, size_x: float, size_y: float, size_z: float, holders_across_x: int, holders_across_y: int,
+                 individual_holder: IndividualPipetteHolder, add_height = float, remove_height = float, offset: tuple[float, float] = (0, 0),
+                 labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a PipetteHolder instance.
 
@@ -716,11 +880,14 @@ class PipetteHolder(Labware):
             Number of individual holder positions across X-axis.
         holders_across_y : int
             Number of individual holder positions across Y-axis.
-        individual_holder : IndividualPipetteHolder, optional
-            Template for individual holder positions. If provided, copies will be created
-            for each position in the grid.
+        individual_holder : IndividualPipetteHolder
+            Template for individual holder positions. If provided, copies will be created for each position in the grid.
         labware_id : str, optional
             Unique ID for the pipette holder.
+        add_height : float
+            Height above the well bottom used when adding liquid (in mm).
+        remove_height : float
+            Height above the well bottom used when removing liquid (in mm).
         position : tuple[float, float], optional
             (x, y) position coordinates of the pipette holder in millimeters.
             If None, position is not set.
@@ -731,26 +898,19 @@ class PipetteHolder(Labware):
         if holders_across_x <= 0 or holders_across_y <= 0:
             raise ValueError("holders_across_x and holders_across_y cannot be negative or 0")
 
+        self.add_height = add_height
+        self.remove_height = remove_height
         self._columns = holders_across_x
         self._rows = holders_across_y
 
-        self.__individual_holders: dict[str, IndividualPipetteHolder] = {}
+        self.__individual_holders: dict[tuple[int, int], IndividualPipetteHolder] = {}
         self.individual_holder = individual_holder
 
-        if holders_across_y < Pipettors_in_Multi:
-            raise ValueError(f"PipetteHolder should atleast contatin{Pipettors_in_Multi} rows")
-
-        if individual_holder:
-            # Validate that individual holder fits
-            if holders_across_x * individual_holder.size_x > size_x or holders_across_y * individual_holder.size_y > size_y:
-                raise ValueError("Individual holder is too big for this PipetteHolder")
-            else:
-                self.place_individual_holders()
+        # Validate that individual holder fits
+        if holders_across_x * individual_holder.size_x > size_x or holders_across_y * individual_holder.size_y > size_y:
+            raise ValueError("Individual holder is too big for this PipetteHolder")
         else:
-            # Create empty positions
-            for x in range(self._columns):
-                for y in range(self._rows):
-                    self.__individual_holders[f'{x}:{y}'] = None
+            self.place_individual_holders()
 
     def place_individual_holders(self):
         """Create individual holder positions across the grid."""
@@ -758,14 +918,12 @@ class PipetteHolder(Labware):
             for y in range(self._rows):
                 holder = copy.deepcopy(self.individual_holder)
                 holder.labware_id = f'{self.labware_id}_{x}:{y}'
-                self.__individual_holders[holder.labware_id] = holder
+                holder.column = x
+                holder.row = y
+                self.__individual_holders[(x, y)] = holder
 
-    def get_individual_holders(self) -> dict[str, IndividualPipetteHolder]:
-        """
-        Get all individual holder positions.
-        Returns dict[str, IndividualPipetteHolder]
-            Dictionary mapping position IDs to IndividualPipetteHolder instances.
-        """
+    def get_individual_holders(self) -> dict[tuple[int, int], IndividualPipetteHolder]:  # ✅ Correct type
+        """Get all individual holder positions."""
         return self.__individual_holders
 
     def get_available_holders(self) -> list[IndividualPipetteHolder]:
@@ -792,95 +950,23 @@ class PipetteHolder(Labware):
         return [holder for holder in self.__individual_holders.values()
                 if holder and holder.is_occupied]
 
-    def place_pipettes_in_columns(self, columns: list[int]) -> None:
+    def get_holder_at(self, column: int, row: int) -> Optional[IndividualPipetteHolder]:
         """
-        Place pipettes in all positions within specified columns.
+        Get the individual holder at a specific position.
 
         Parameters
         ----------
-        columns : list[int]
-            List of column indices (0-indexed) where pipettes should be placed.
+        column : int
+            Column index
+        row : int
+            Row index
 
-        Raises
-        ------
-        ValueError
-            If any column index is out of range or if any position in the
-            specified columns is already occupied.
+        Returns
+        -------
+        Optional[IndividualPipetteHolder]
+            The holder at the position, or None if not found
         """
-        # Validate column indices
-        for col in columns:
-            if col < 0 or col >= self._columns:
-                raise ValueError(
-                    f"Column index {col} is out of range. "
-                    f"Valid range is 0 to {self._columns - 1}"
-                )
-
-        # Check if all positions are available before placing
-        for col in columns:
-            for row in range(self._rows):
-                holder_id = f'{self.labware_id}_{col}:{row}'
-                individual_holder = self.__individual_holders.get(holder_id)
-
-                if individual_holder is None:
-                    raise ValueError(
-                        f"No individual holder found at position {col}:{row}"
-                    )
-
-                if individual_holder.is_occupied:
-                    raise ValueError(
-                        f"Holder at position {col}:{row} is already occupied"
-                    )
-
-        # Place pipettes in all positions
-        for col in columns:
-            for row in range(self._rows):
-                holder_id = f'{self.labware_id}_{col}:{row}'
-                self.__individual_holders[holder_id].place_pipette()
-
-    def remove_pipettes_from_columns(self, columns: list[int]) -> None:
-        """
-        Remove pipettes from all positions within specified columns.
-
-        Parameters
-        ----------
-        columns : list[int]
-            List of column indices (0-indexed) where pipettes should be removed.
-
-        Raises
-        ------
-        ValueError
-            If any column index is out of range or if any position in the
-            specified columns is already empty.
-        """
-        # Validate column indices
-        for col in columns:
-            if col < 0 or col >= self._columns:
-                raise ValueError(
-                    f"Column index {col} is out of range. "
-                    f"Valid range is 0 to {self._columns - 1}"
-                )
-
-        # Check if all positions have pipettes before removing
-        for col in columns:
-            for row in range(self._rows):
-                holder_id = f'{self.labware_id}_{col}:{row}'
-                individual_holder = self.__individual_holders.get(holder_id)
-
-                if individual_holder is None:
-                    raise ValueError(
-                        f"No individual holder found at position {col}:{row}"
-                    )
-
-                if not individual_holder.is_occupied:
-                    raise ValueError(
-                        f"Holder at position {col}:{row} is already empty"
-                    )
-
-        # Remove pipettes from all positions
-        for col in columns:
-            for row in range(self._rows):
-                holder_id = f'{self.labware_id}_{col}:{row}'
-                self.__individual_holders[holder_id].remove_pipette()
+        return self.__individual_holders.get((column, row))
 
     def place_pipette_at(self, column: int, row: int) -> None:
         """
@@ -898,26 +984,14 @@ class PipetteHolder(Labware):
         ValueError
             If position is out of range, no holder exists, or position is occupied.
         """
-        if column < 0 or column >= self._columns:
-            raise ValueError(
-                f"Column index {column} is out of range. "
-                f"Valid range is 0 to {self._columns - 1}"
-            )
 
-        if row < 0 or row >= self._rows:
-            raise ValueError(
-                f"Row index {row} is out of range. "
-                f"Valid range is 0 to {self._rows - 1}"
-            )
-
-        holder_id = f'{self.labware_id}_{column}:{row}'
-        individual_holder = self.__individual_holders.get(holder_id)
+        self.validate_col_row_or_raise([column], row)
+        individual_holder = self.get_holder_at(column, row)
 
         if individual_holder is None:
             raise ValueError(
                 f"No individual holder found at position {column}:{row}"
             )
-
         individual_holder.place_pipette()
 
     def remove_pipette_at(self, column: int, row: int) -> None:
@@ -936,20 +1010,9 @@ class PipetteHolder(Labware):
         ValueError
             If position is out of range, no holder exists, or position is empty.
         """
-        if column < 0 or column >= self._columns:
-            raise ValueError(
-                f"Column index {column} is out of range. "
-                f"Valid range is 0 to {self._columns - 1}"
-            )
 
-        if row < 0 or row >= self._rows:
-            raise ValueError(
-                f"Row index {row} is out of range. "
-                f"Valid range is 0 to {self._rows - 1}"
-            )
-
-        holder_id = f'{self.labware_id}_{column}:{row}'
-        individual_holder = self.__individual_holders.get(holder_id)
+        self.validate_col_row_or_raise([column], row)
+        individual_holder = self.get_holder_at(column, row)
 
         if individual_holder is None:
             raise ValueError(
@@ -958,49 +1021,187 @@ class PipetteHolder(Labware):
 
         individual_holder.remove_pipette()
 
-    def get_available_columns(self) -> list[int]:
+    def place_consecutive_pipettes_multi(self, columns: list[int], row: int = 0) -> None:
         """
-        Get all columns that have at least one available (unoccupied) holder position.
+        Place pipettes in consecutive positions within specified columns for multichannel pipettor.
+
+        Parameters
+        ----------
+        columns : list[int]
+            List of column indices (0-indexed) where pipettes should be placed.
+        row : int, optional
+            Starting row index (0-indexed). Pipettes will be placed from row to row + 7.
+            Default is 0.
+
+        Raises
+        ------
+        ValueError
+            If any column index is out of range, row out of range, or if any position
+            in the specified columns is already occupied.
+        """
+
+        self.validate_col_row_or_raise(columns, row, Pipettors_in_Multi)
+
+        # Check if all positions are available before placing
+        for col in columns:
+            for i in range(Pipettors_in_Multi):
+                current_row = row + i
+                individual_holder = self.get_holder_at(col, current_row)
+
+                if individual_holder is None:
+                    raise ValueError(
+                        f"No individual holder found at position {col}:{current_row}"
+                    )
+
+                if individual_holder.is_occupied:
+                    raise ValueError(
+                        f"Holder at position {col}:{current_row} is already occupied"
+                    )
+
+        # Place pipettes in all positions
+        for col in columns:
+            for i in range(Pipettors_in_Multi):
+                current_row = row + i
+                individual_holder = self.get_holder_at(col, current_row)
+                individual_holder.place_pipette()
+
+    def remove_consecutive_pipettes_multi(self, columns: list[int], row: int = 0) -> None:
+        """
+        Remove pipettes from consecutive positions within specified columns for multichannel pipettor.
+
+        Parameters
+        ----------
+        columns : list[int]
+            List of column indices (0-indexed) where pipettes should be removed.
+        row : int, optional
+            Starting row index (0-indexed). Pipettes will be removed from row to row + 7.
+            Default is 0.
+
+        Raises
+        ------
+        ValueError
+            If any column index is out of range, row out of range, or if any position
+            in the specified columns is already empty.
+        """
+
+        self.validate_col_row_or_raise(columns, row, Pipettors_in_Multi)
+
+        # Check if all positions have pipettes before removing
+        for col in columns:
+            for i in range(Pipettors_in_Multi):
+                current_row = row + i
+                individual_holder = self.get_holder_at(col, current_row)
+
+                if individual_holder is None:
+                    raise ValueError(
+                        f"No individual holder found at position {col}:{current_row}"
+                    )
+
+                if not individual_holder.is_occupied:
+                    raise ValueError(
+                        f"Holder at position {col}:{current_row} is already empty"
+                    )
+
+        # Remove pipettes from all positions
+        for col in columns:
+            for i in range(Pipettors_in_Multi):
+                current_row = row + i
+                individual_holder = self.get_holder_at(col, current_row)
+                individual_holder.remove_pipette()
+
+    def check_col_start_row_multi(self, col: int, start_row: int) -> str:
+        """
+        Check the occupancy status of 8 consecutive positions starting from (col, start_row).
+
+        Parameters
+        ----------
+        col : int
+            Column index
+        start_row : int
+            Starting row index
 
         Returns
         -------
-        list[int]
-            List of column indices that have available positions.
+        str
+            Status of the 8 consecutive positions:
+            - "FULLY_OCCUPIED": All 8 positions exist and are occupied
+            - "FULLY_AVAILABLE": All 8 positions exist and are empty
+            - "MIXED": All 8 positions exist but have mixed occupancy
+            - "INVALID": One or more positions don't exist (out of bounds)
         """
-        available_cols = set()
+        # Check if all positions exist
+        if col < 0 or col >= self._columns:
+            return "INVALID"
+        if start_row < 0 or start_row + Pipettors_in_Multi > self._rows:
+            return "INVALID"
+
+        # Check occupancy of all 8 positions
+        occupied_count = 0
+        for i in range(Pipettors_in_Multi):
+            current_row = start_row + i
+            individual_holder = self.get_holder_at(col, current_row)
+
+            if individual_holder is None:
+                return "INVALID"
+
+            if individual_holder.is_occupied:
+                occupied_count += 1
+
+        # Determine status
+        if occupied_count == Pipettors_in_Multi:
+            return "FULLY_OCCUPIED"
+        elif occupied_count == 0:
+            return "FULLY_AVAILABLE"
+        else:
+            return "MIXED"
+
+    def get_occupied_holder_multi(self) -> list[tuple[int, int]]:
+        """
+        Get all columns with starting rows where 8 consecutive occupied positions exist.
+        No holder is reused - blocks are non-overlapping.
+        """
+        occupied_positions = []
 
         for col in range(self._columns):
-            for row in range(self._rows):
-                holder_id = f'{self.labware_id}_{col}:{row}'
-                individual_holder = self.__individual_holders.get(holder_id)
+            used_rows = set()
 
-                if individual_holder and individual_holder.is_available():
-                    available_cols.add(col)
-                    break  # Found at least one available in this column
+            for start_row in range(self._rows - Pipettors_in_Multi + 1):
+                if start_row in used_rows:
+                    continue
 
-        return sorted(list(available_cols))
+                # Use helper function instead of manual checking
+                status = self.check_col_start_row_multi(col, start_row)
 
-    def get_occupied_columns(self) -> list[int]:
+                if status == "FULLY_OCCUPIED":
+                    occupied_positions.append((col, start_row))
+                    # Mark all rows in this block as used
+                    for i in range(Pipettors_in_Multi):
+                        used_rows.add(start_row + i)
+
+        return occupied_positions
+
+    def get_available_holder_multi(self) -> list[tuple[int, int]]:
         """
-        Get all columns that have at least one occupied holder position.
-
-        Returns
-        -------
-        list[int]
-            List of column indices that have occupied positions.
+        Get all columns with starting rows where 8 consecutive available positions exist.
+        No holder is reused - blocks are non-overlapping.
         """
-        occupied_cols = set()
+        available_positions = []
 
         for col in range(self._columns):
-            for row in range(self._rows):
-                holder_id = f'{self.labware_id}_{col}:{row}'
-                individual_holder = self.__individual_holders.get(holder_id)
+            used_rows = set()
 
-                if individual_holder and individual_holder.is_occupied:
-                    occupied_cols.add(col)
-                    break  # Found at least one occupied in this column
+            for start_row in range(self._rows - Pipettors_in_Multi + 1):
+                if start_row in used_rows:
+                    continue
 
-        return sorted(list(occupied_cols))
+                status = self.check_col_start_row_multi(col, start_row)
+
+                if status == "FULLY_AVAILABLE":
+                    available_positions.append((col, start_row))
+                    for i in range(Pipettors_in_Multi):
+                        used_rows.add(start_row + i)
+
+        return available_positions
 
     def to_dict(self) -> dict:
         """
@@ -1013,54 +1214,54 @@ class PipetteHolder(Labware):
         """
         base = super().to_dict()
         base.update({
+            "add_height": self.add_height,
+            "remove_height": self.remove_height,
             "holders_across_x": self.holders_across_x,
             "holders_across_y": self.holders_across_y,
             "individual_holders": {
-                hid: holder.to_dict() if holder else None
-                for hid, holder in self.__individual_holders.items()
-            }
+            f"{col}:{row}": holder.to_dict()
+            for (col, row), holder in self.__individual_holders.items()
+        }
         })
         return base
 
     @classmethod
     def _from_dict(cls, data: dict) -> "PipetteHolder":
-        """
-        Deserialize a PipetteHolder instance from a dictionary.
-
-        Parameters
-        ----------
-        data : dict
-            Dictionary containing pipette holder attributes.
-
-        Returns
-        -------
-        PipetteHolder
-            Reconstructed PipetteHolder instance.
-        """
-        # Safely handle position deserialization
+        """Deserialize a PipetteHolder instance from a dictionary."""
         position = tuple(data["position"]) if data.get("position") else None
 
+        holders_data = data.get("individual_holders", {})
+
+        if not holders_data:
+            raise ValueError("Cannot deserialize PipetteHolder without individual_holders data")
+
+        # Get the first holder as a template
+        first_holder_data = next(iter(holders_data.values()))
+        template_holder = Serializable.from_dict(first_holder_data)
+
+        # Create the PipetteHolder with the template
         holder = cls(
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
+            add_height=data["add_height"],
+            remove_height=data["remove_height"],
             offset=data["offset"],
             labware_id=data["labware_id"],
             holders_across_x=data["holders_across_x"],
             holders_across_y=data["holders_across_y"],
+            individual_holder=template_holder,
             position=position,
         )
 
-        # Restore individual holders
-        holders_data = data.get("individual_holders", {})
+        # Restore individual holders with tuple keys
         for hid, hdata in holders_data.items():
-            if hdata is None:
-                holder._PipetteHolder__individual_holders[hid] = None
-            else:
-                holder._PipetteHolder__individual_holders[hid] = Serializable.from_dict(hdata)
+            # Parse "col:row" format from JSON
+            col, row = map(int, hid.split(':'))
+            restored_holder = Serializable.from_dict(hdata)
+            holder._PipetteHolder__individual_holders[(col, row)] = restored_holder
 
         return holder
-
     @property
     def holders_across_x(self) -> int:
         """Alias for grid_x"""
@@ -1083,101 +1284,11 @@ class PipetteHolder(Labware):
 
 
 @register_class
-class TipDropzone(Labware):
-    """
-    Represents a Tip Dropzone labware with relative drop position and height.
-
-    Attributes
-    ----------
-    drop_height_relative : float
-        Drop height relative to the labware height.
-    """
-
-    def __init__(self, size_x: float,
-                 size_y: float,
-                 size_z: float,
-                 offset: tuple[float, float] = (0, 0),
-                 drop_height_relative: float = 20,
-                 position: tuple[float, float] = None,
-                 labware_id: str = None
-                 ):
-        """
-        Initialize a TipDropzone instance.
-
-        Parameters
-        ----------
-        size_x : float
-            Width of the drop zone in millimeters.
-        size_y : float
-            Depth of the drop zone in millimeters.
-        size_z : float
-            Height of the drop zone in millimeters.
-        labware_id : str, optional
-            Unique ID for the dropzone object.
-        position : tuple[float, float], optional
-            (x, y) position coordinates of the tip dropzone in millimeters.
-            If None, position is not set.
-        drop_height_relative : float, optional
-            Height from which tips are dropped relative to the labware. Default is 20.
-        """
-        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id,
-                         position=position)
-        self.drop_height_relative = drop_height_relative
-
-    def to_dict(self) -> dict:
-        """
-        Serialize the TipDropzone instance to a dictionary, extending the base Labware fields.
-
-        Returns
-        -------
-        dict
-            dictionary representation of the tip dropzone.
-        """
-        base_dict = super().to_dict()
-        base_dict.update({
-            "drop_height_relative": self.drop_height_relative,
-        })
-        return base_dict
-
-    @classmethod
-    def _from_dict(cls, data: dict) -> "TipDropzone":
-        """
-        Deserialize a TipDropzone instance from a dictionary using the base Labware _from_dict.
-
-        Parameters
-        ----------
-        data : dict
-            dictionary containing tip dropzone attributes.
-
-        Returns
-        -------
-        TipDropzone
-            Reconstructed TipDropzone instance.
-        """
-        # Safely handle position deserialization
-        # Safely handle position deserialization
-        position = tuple(data["position"]) if data.get("position") else None
-
-        return cls(
-            size_x=data["size_x"],
-            size_y=data["size_y"],
-            size_z=data["size_z"],
-            offset=data["offset"],
-            position=position,
-            drop_height_relative=data["drop_height_relative"],
-            labware_id=data["labware_id"]
-        )
-
-
-Default_Reservoir_Capacity = 30000
-
-
-@register_class
 class Reservoir(Labware):
     def __init__(self, size_x: float, size_y: float, size_z: float, offset: tuple[float, float] = (0, 0),
-                 capacity: float = Default_Reservoir_Capacity, filled_volume: float = None,
-                 content: str = None, hook_ids: list[int] = None, labware_id: str = None,
-                 position: tuple[float, float] = None):
+                 capacity: float = Default_Reservoir_Capacity, content: dict = None,
+                 hook_ids: list[int] = None, row: int = None, column: int = None,
+                 labware_id: str = None, position: tuple[float, float] = None, shape: Defined_shape = None):
         """
         Initialize a Reservoir instance. These are containers that store the medium to be filled in and removed from well.
 
@@ -1191,10 +1302,9 @@ class Reservoir(Labware):
             Height of the reservoir in millimeters.
         capacity : float, optional
             Maximum amount of liquid that reservoir can hold. Default is Default_Reservoir_Capacity.
-        filled_volume : float, optional
-            Initial volume at the time of defining the reservoir. Default is 0 for waste and capacity for rest.
-        content : str, optional
-            Description of the reservoir content.
+        content : dict, optional
+            Dictionary mapping content types to volumes (µL).
+            Example: {"PBS": 25000, "water": 5000}
         hook_ids : list[int], optional
             List of hook locations on ReservoirHolder where this reservoir is going to be placed.
         labware_id : str, optional
@@ -1205,54 +1315,233 @@ class Reservoir(Labware):
         """
         super().__init__(size_x, size_y, size_z, offset, labware_id, position)
         self.capacity = capacity
-        self.filled_volume = filled_volume
         self.hook_ids = hook_ids if hook_ids is not None else []
+        self.row = row
+        self.column = column
+        self.shape = shape
 
-        # Default filled_volume logic: capacity for non-waste, 0 for waste
-        if filled_volume is None:
-            if content and "waste" in content.lower():
-                filled_volume = 0
-            else:
-                filled_volume = capacity
-
-        self.current_volume = filled_volume
-        self.content = content
+        # Initialize content as dictionary for sophisticated tracking
+        if content is None:
+            self.content = {}
+        elif isinstance(content, dict):
+            self.content = content.copy()
+        else:
+            raise ValueError(f"Content must be dict or None, got {type(content)}")
 
         # Validate inputs
-        if self.current_volume > self.capacity:
-            raise ValueError(f"Filled volume ({self.current_volume}) cannot exceed capacity ({self.capacity})")
-        if self.current_volume < 0:
-            raise ValueError("Filled volume cannot be negative")
+        total_volume = self.get_total_volume()
+        if total_volume > self.capacity:
+            raise ValueError(f"Total content volume ({total_volume}) cannot exceed capacity ({self.capacity})")
         if self.capacity < 0:
             raise ValueError("Capacity cannot be negative")
 
-    def add_volume(self, volume: float) -> None:
+    def add_content(self, content_type: str, volume: float) -> None:
         """
-        Add volume to the reservoir.
-        Volume to add in µL.
-        ValueError if adding volume would exceed capacity.
+        Add content to the reservoir with intelligent mixing logic.
+
+        When adding content to a reservoir:
+        - Same content type: volumes are combined
+        - Different content type: tracked separately (but physically mixed)
+
+        Note: Once liquids are mixed in a reservoir, they cannot be separated.
+        Removal is always proportional from all content types.
+
+        Parameters
+        ----------
+        content_type : str
+            Content to add (e.g., "PBS", "water", "waste")
+        volume : float
+            Volume to add (µL)
+
+        Raises
+        ------
+        ValueError
+            If adding volume would exceed capacity or volume is negative
         """
         if volume < 0:
             raise ValueError("Volume to add must be positive")
-        if self.current_volume + volume > self.capacity:
-            raise ValueError(f"Overflow! Capacity: {self.capacity} µl")
-        self.current_volume += volume
 
-    def remove_volume(self, volume: float) -> None:
+        if not content_type:
+            raise ValueError("Content type cannot be empty")
+
+        # Check if adding would exceed capacity
+        if self.get_total_volume() + volume > self.capacity:
+            raise ValueError(
+                f"Overflow! Adding {volume}µL would exceed capacity of {self.capacity}µL. "
+                f"Current volume: {self.get_total_volume()}µL"
+            )
+
+        # Add content to dictionary
+        if content_type in self.content:
+            self.content[content_type] += volume
+        else:
+            self.content[content_type] = volume
+
+    def remove_content(self, volume: float, return_dict: bool = False) -> Optional[dict[str, float]]:
         """
-        Removes volume from the reservoir.
-        Volume to remove in µL.
-        ValueError if remove volume exceed current volume.
+        Remove content from the reservoir proportionally.
+
+        When content is removed from a reservoir, it's removed proportionally from all
+        content types since they are mixed together.
+
+        Parameters
+        ----------
+        volume : float
+            Volume to remove (µL)
+        return_dict : bool, optional
+            If True, return a dictionary of removed content types and volumes (default: False)
+
+        Returns
+        -------
+        Optional[dict[str, float]]
+            If return_dict is True, returns dictionary mapping content types to removed volumes.
+            Otherwise, returns None.
+
+        Raises
+        ------
+        ValueError
+            If trying to remove more volume than available or volume is negative
         """
         if volume < 0:
             raise ValueError("Volume to remove must be positive")
-        if self.current_volume < volume:
-            raise ValueError(f"Underflow! Available: {self.current_volume} µl")
-        self.current_volume -= volume
+
+        total_volume = self.get_total_volume()
+
+        if total_volume <= 0:
+            raise ValueError("Cannot remove from empty reservoir")
+
+        if volume > total_volume:
+            raise ValueError(
+                f"Underflow! Cannot remove {volume}µL, only {total_volume}µL available"
+            )
+
+        # Dictionary to track what was removed
+        removed_content: dict[str, float] = {}
+
+        # Remove proportionally from all content types (since they're mixed)
+        removal_ratio = volume / total_volume
+
+        # Remove proportionally from each content type
+        content_types = list(self.content.keys())
+        for content_type in content_types:
+            remove_amount = self.content[content_type] * removal_ratio
+            removed_content[content_type] = remove_amount
+            self.content[content_type] -= remove_amount
+
+            # Clean up zero or negative volumes
+            if self.content[content_type] <= 1e-6:  # Use small epsilon for floating point comparison
+                del self.content[content_type]
+
+        # Return the dictionary if requested
+        if return_dict:
+            return removed_content
+        return None
+
+    def get_total_volume(self) -> float:
+        """
+        Get total volume of all content in the reservoir.
+
+        Returns
+        -------
+        float
+            Total volume in µL
+        """
+        return sum(self.content.values()) if self.content else 0.0
 
     def get_available_volume(self) -> float:
-        """Return the current available volume in µL."""
-        return self.current_volume
+        """
+        Get the remaining capacity available in the reservoir.
+
+        Returns
+        -------
+        float
+            Available volume in µL
+        """
+        return self.capacity - self.get_total_volume()
+
+    def get_content_info(self) -> dict:
+        """
+        Get current content information.
+
+        Returns
+        -------
+        dict
+            Dictionary with detailed content information
+        """
+        total_volume = self.get_total_volume()
+        return {
+            "content_dict": self.content.copy(),
+            "total_volume": total_volume,
+            "available_capacity": self.get_available_volume(),
+            "is_empty": total_volume <= 0,
+            "is_full": total_volume >= self.capacity,
+            "content_summary": self.get_content_summary()
+        }
+
+    def get_content_summary(self) -> str:
+        """
+        Get a human-readable summary of reservoir content.
+
+        Returns
+        -------
+        str
+            Summary string like "PBS: 25000µL, water: 5000µL" or "empty"
+        """
+        if not self.content or self.get_total_volume() <= 0:
+            return "empty"
+
+        parts = []
+        for content_type, volume in self.content.items():
+            parts.append(f"{content_type}: {volume:.1f}µL")
+
+        return ", ".join(parts)
+
+    def get_content_by_type(self, content_type: str) -> float:
+        """
+        Get volume of specific content type.
+
+        Parameters
+        ----------
+        content_type : str
+            Type of content to query
+
+        Returns
+        -------
+        float
+            Volume of specified content type (0 if not present)
+        """
+        return self.content.get(content_type, 0.0)
+
+    def clear_content(self) -> None:
+        """Clear all content from the reservoir."""
+        self.content = {}
+
+    def has_content_type(self, content_type: str) -> bool:
+        """
+        Check if reservoir contains specific content type.
+
+        Parameters
+        ----------
+        content_type : str
+            Type of content to check
+
+        Returns
+        -------
+        bool
+            True if content type is present
+        """
+        return content_type in self.content and self.content[content_type] > 0
+
+    def is_waste_reservoir(self) -> bool:
+        """
+        Check if this is a waste reservoir.
+
+        Returns
+        -------
+        bool
+            True if any content type contains "waste" (case-insensitive)
+        """
+        return any("waste" in ct.lower() for ct in self.content.keys())
 
     def to_dict(self) -> dict:
         """Serialize the Reservoir to a dictionary."""
@@ -1260,20 +1549,19 @@ class Reservoir(Labware):
         base.update({
             "hook_ids": self.hook_ids,
             "capacity": self.capacity,
-            "filled_volume": self.current_volume,
             "content": self.content,
+            "row": self.row,
+            "column": self.column,
+            "shape" : self.shape,
         })
         return base
 
     @classmethod
     def _from_dict(cls, data: dict) -> "Reservoir":
         """Deserialize a Reservoir instance from a dictionary."""
-
         # Safely handle position deserialization
-        position = None
+        position = tuple(data["position"]) if data.get("position") else None
 
-        if data.get("position") is not None:
-            position = tuple(data["position"])
 
         return cls(
             size_x=data["size_x"],
@@ -1283,16 +1571,18 @@ class Reservoir(Labware):
             labware_id=data["labware_id"],
             hook_ids=data.get("hook_ids", []),
             capacity=data.get("capacity", Default_Reservoir_Capacity),
-            filled_volume=data.get("filled_volume"),
             content=data.get("content"),
+            row=data.get("row"),
+            column=data.get("column"),
             position=position,
+            shape=data.get("shape", None),
         )
 
 
 @register_class
 class ReservoirHolder(Labware):
-    def __init__(self, size_x: float, size_y: float, size_z: float, hooks_across_x: int, hooks_across_y: int,
-                 offset: tuple[float, float] = (0, 0), reservoir_dict: dict[int, dict] = None,
+    def __init__(self, size_x: float, size_y: float, size_z: float, hooks_across_x: int, hooks_across_y: int, add_height: float, remove_height: float,
+                offset: tuple[float, float] = (0, 0), reservoir_dict: dict[int, dict] = None,
                  labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a ReservoirHolder instance that can hold multiple reservoirs.
@@ -1309,6 +1599,10 @@ class ReservoirHolder(Labware):
             Number of hooks along X-axis.
         hooks_across_y : int
             Number of hooks along Y-axis (rows of hooks).
+        add_height : float
+            relative height at which liquid is dispensed
+        remove_height: float
+            relative height at which liquid is aspirated
         reservoir_dict : dict[int, dict], optional
             Dictionary defining individual reservoirs and their attributes.
         labware_id : str, optional
@@ -1322,6 +1616,8 @@ class ReservoirHolder(Labware):
         if hooks_across_x <= 0 or hooks_across_y <= 0:
             raise ValueError("hooks_across_x and hooks_across_y cannot be negative or 0")
 
+        self.add_height = add_height
+        self.remove_height = remove_height
         self._columns = hooks_across_x
         self._rows = hooks_across_y
         self.total_hooks = hooks_across_x * hooks_across_y
@@ -1335,6 +1631,9 @@ class ReservoirHolder(Labware):
         # Place reservoirs to holder if provided
         if reservoir_dict:
             self.place_reservoirs(reservoir_dict)
+
+    def each_tip_needs_separate_item(self) -> bool:
+        return False  # Reservoirs are large, all tips fit in one
 
     def hook_id_to_position(self, hook_id: int) -> tuple[int, int]:
         """
@@ -1364,7 +1663,7 @@ class ReservoirHolder(Labware):
         idx = hook_id - 1
         row = idx // self._columns
         col = idx % self._columns
-        return (col, row)
+        return col, row
 
     def position_to_hook_id(self, col: int, row: int) -> int:
         """
@@ -1468,12 +1767,16 @@ class ReservoirHolder(Labware):
         if not hook_ids:
             raise ValueError("Must specify at least one hook_id")
 
-        # Check if all hook_ids are valid
+        # Check if all hook_ids are valid and available
         for hook_id in hook_ids:
+
             if hook_id not in self.__hook_to_reservoir:
                 raise ValueError(
                     f"Hook ID {hook_id} is invalid. Must be between 1 and {self.total_hooks}"
                 )
+
+            if self.__hook_to_reservoir[hook_id] is not None:
+                raise ValueError(f"Hook {hook_id} is already occupied")
 
         # Check if hooks form a valid rectangle
         is_valid, width_hooks, height_hooks = self._validate_hooks_form_rectangle(hook_ids)
@@ -1481,11 +1784,6 @@ class ReservoirHolder(Labware):
             raise ValueError(
                 f"Hook IDs {hook_ids} must form a rectangular grid"
             )
-
-        # Check if hooks are available
-        for hook_id in hook_ids:
-            if self.__hook_to_reservoir[hook_id] is not None:
-                raise ValueError(f"Hook {hook_id} is already occupied")
 
         # Calculate maximum dimensions per hook
         max_width_per_hook = self.size_x / self._columns
@@ -1514,8 +1812,18 @@ class ReservoirHolder(Labware):
                 f"holder height ({self.size_z} mm)"
             )
 
-        # Assign hook_ids and place reservoir
+        is_valid, error_msg = self.validate_multichannel_compatible(reservoir.size_y)
+        if not is_valid:
+            raise ValueError(error_msg)
+
+        # Assign hook_ids and place reservoir. also find col and row
         reservoir.hook_ids = hook_ids
+        positions = [self.hook_id_to_position(hid) for hid in hook_ids]
+        cols = [pos[0] for pos in positions]
+        rows = [pos[1] for pos in positions]
+        reservoir.column = min(cols)  # Leftmost column
+        reservoir.row = min(rows)  # Topmost row
+
         for hook_id in hook_ids:
             self.__hook_to_reservoir[hook_id] = reservoir
 
@@ -1524,11 +1832,11 @@ class ReservoirHolder(Labware):
         Place multiple reservoirs from a dictionary.
 
         Parameters
-        ----------
+        ---------
         reservoir_dict : dict[int, dict]
             Dictionary where keys are ignored. Each value should contain:
             - Required: size_x, size_y, size_z
-            - Optional: capacity, filled_volume, content, labware_id, hook_ids (list or int),
+            - Optional: capacity, content (dict), labware_id, hook_ids (list or int),
               num_hooks_x (int), num_hooks_y (int)
 
             If hook_ids is specified, the reservoir will be placed there.
@@ -1624,8 +1932,7 @@ class ReservoirHolder(Labware):
                 size_y=res["size_y"],
                 size_z=res["size_z"],
                 capacity=res.get("capacity", Default_Reservoir_Capacity),
-                filled_volume=res.get("filled_volume"),
-                content=res.get("content"),
+                content=res.get("content"),  # Now expects dict or None
                 labware_id=labware_id,
                 position=res.get("position", None),
             )
@@ -1633,38 +1940,120 @@ class ReservoirHolder(Labware):
             # Place the reservoir
             self.place_reservoir(hook_ids_to_use, reservoir)
 
-    def add_volume(self, hook_id: int, volume: float) -> None:
-        """Add volume to a reservoir at a specific hook."""
-        if hook_id not in self.__hook_to_reservoir or self.__hook_to_reservoir[hook_id] is None:
-            raise ValueError(f"No reservoir at hook {hook_id}")
-        self.__hook_to_reservoir[hook_id].add_volume(volume)
+    def remove_reservoir(self, hook_id: int) -> Reservoir:
+        """
+        Remove a reservoir from the holder.
 
-    def remove_volume(self, hook_id: int, volume: float) -> None:
-        """Remove volume from a reservoir at a specific hook."""
+        Parameters
+        ----------
+        hook_id : int
+            Any hook ID occupied by the reservoir to remove
+
+        Returns
+        -------
+        Reservoir
+            The removed reservoir
+
+        Raises
+        ------
+        ValueError
+            If no reservoir at the specified hook
+        """
+        if hook_id not in self.__hook_to_reservoir:
+            raise ValueError(f"Invalid hook_id {hook_id}")
+
+        reservoir = self.__hook_to_reservoir[hook_id]
+        if reservoir is None:
+            raise ValueError(f"No reservoir at hook {hook_id}")
+
+        # Clear all hooks occupied by this reservoir
+        for hid in reservoir.hook_ids:
+            self.__hook_to_reservoir[hid] = None
+
+        return reservoir
+
+    def add_content(self, hook_id: int, content: str, volume: float) -> None:
+        """
+        Add content to a reservoir at a specific hook.
+
+        Parameters
+        ----------
+        hook_id : int
+            Hook ID where the reservoir is located
+        content : str
+            Type of content to add (e.g., "PBS", "water")
+        volume : float
+            Volume to add (µL)
+
+        Raises
+        ------
+        ValueError
+            If no reservoir at hook or volume exceeds capacity
+        """
         if hook_id not in self.__hook_to_reservoir or self.__hook_to_reservoir[hook_id] is None:
             raise ValueError(f"No reservoir at hook {hook_id}")
-        self.__hook_to_reservoir[hook_id].remove_volume(volume)
+        self.__hook_to_reservoir[hook_id].add_content(content, volume)
+
+    def remove_content(self, hook_id: int, volume: float, return_dict: bool = False) -> Optional[dict[str, float]]:
+        """
+        Remove content from a reservoir at a specific hook.
+
+        Parameters
+        ----------
+        hook_id : int
+            Hook ID where the reservoir is located
+        volume : float
+            Volume to remove (µL)
+        return_dict : bool, optional
+            If True, return a dictionary of removed content types and volumes (default: False)
+
+        Returns
+        -------
+        Optional[dict[str, float]]
+            If return_dict is True, returns dictionary mapping content types to removed volumes.
+            Otherwise, returns None.
+
+        Raises
+        ------
+        ValueError
+            If no reservoir at hook or insufficient volume
+        """
+        if hook_id not in self.__hook_to_reservoir or self.__hook_to_reservoir[hook_id] is None:
+            raise ValueError(f"No reservoir at hook {hook_id}")
+        return self.__hook_to_reservoir[hook_id].remove_content(volume, return_dict=return_dict)
 
     def get_waste_reservoirs(self) -> list[Reservoir]:
-        """Get all unique reservoirs labeled as waste."""
+        """
+        Get all unique reservoirs that contain 'waste' in any content type.
+
+        Returns
+        -------
+        list[Reservoir]
+            List of waste reservoirs
+        """
         return [
             res for res in self.get_reservoirs()
-            if res.content and "waste" in res.content.lower()
+            if any("waste" in content_type.lower() for content_type in res.content.keys())
         ]
 
-    def get_equivalent_reservoirs(self, content: str) -> list[Reservoir]:
-        """Get all unique reservoirs with the same content."""
+    def get_reservoirs_by_content_type(self, content_type: str) -> list[Reservoir]:
+        """
+        Get all unique reservoirs that contain a specific content type.
+
+        Parameters
+        ----------
+        content_type : str
+            Content type to search for (case-insensitive)
+
+        Returns
+        -------
+        list[Reservoir]
+            List of reservoirs containing this content type
+        """
         return [
             res for res in self.get_reservoirs()
-            if res.content and res.content.lower() == content.lower()
+            if res.has_content_type(content_type)
         ]
-
-    def get_reservoir_by_content(self, content: str) -> Optional[Reservoir]:
-        """Get the first matching reservoir with the specified content."""
-        for res in self.get_reservoirs():
-            if res.content and res.content.lower() == content.lower():
-                return res
-        return None
 
     def to_dict(self) -> dict:
         """Serialize the ReservoirHolder instance to a dictionary."""
@@ -1673,9 +2062,12 @@ class ReservoirHolder(Labware):
         # Store only unique reservoirs with their hook_ids
         unique_reservoirs = {}
         for res in self.get_reservoirs():
-            unique_reservoirs[res.labware_id] = res.to_dict()
+            key = f"{res.column}:{res.row}"  # ✅ Consistent with Plate/PipetteHolder
+            unique_reservoirs[key] = res.to_dict()
 
         base.update({
+            "add_height": self.add_height,
+            "remove_height": self.remove_height,
             "hooks_across_x": self.hooks_across_x,
             "hooks_across_y": self.hooks_across_y,
             "reservoirs": unique_reservoirs,
@@ -1692,6 +2084,8 @@ class ReservoirHolder(Labware):
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
+            add_height = data["add_height"],
+            remove_height = data["remove_height"],
             offset=data["offset"],
             hooks_across_x=data["hooks_across_x"],
             hooks_across_y=data.get("hooks_across_y", 1),  # Default to 1 for backwards compatibility
@@ -1724,3 +2118,93 @@ class ReservoirHolder(Labware):
     @property
     def grid_y(self) -> int:
         return self._rows
+
+
+@register_class
+class TipDropzone(Labware):
+    """
+    Represents a Tip Dropzone labware with relative drop position and height.
+
+    Attributes
+    ----------
+    drop_height_relative : float
+        Drop height relative to the labware height.
+    """
+
+    def __init__(self, size_x: float,
+                 size_y: float,
+                 size_z: float,
+                 offset: tuple[float, float] = (0, 0),
+                 drop_height_relative: float = 20,
+                 position: tuple[float, float] = None,
+                 labware_id: str = None
+                 ):
+        """
+        Initialize a TipDropzone instance.
+
+        Parameters
+        ----------
+        size_x : float
+            Width of the drop zone in millimeters.
+        size_y : float
+            Depth of the drop zone in millimeters.
+        size_z : float
+            Height of the drop zone in millimeters.
+        labware_id : str, optional
+            Unique ID for the dropzone object.
+        position : tuple[float, float], optional
+            (x, y) position coordinates of the tip dropzone in millimeters.
+            If None, position is not set.
+        drop_height_relative : float, optional
+            Height from which tips are dropped relative to the labware. Default is 20.
+        """
+        super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id,
+                         position=position)
+        self.drop_height_relative = drop_height_relative
+
+    def to_dict(self) -> dict:
+        """
+        Serialize the TipDropzone instance to a dictionary, extending the base Labware fields.
+
+        Returns
+        -------
+        dict
+            dictionary representation of the tip dropzone.
+        """
+        base_dict = super().to_dict()
+        base_dict.update({
+            "drop_height_relative": self.drop_height_relative,
+        })
+        return base_dict
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "TipDropzone":
+        """
+        Deserialize a TipDropzone instance from a dictionary using the base Labware _from_dict.
+
+        Parameters
+        ----------
+        data : dict
+            dictionary containing tip dropzone attributes.
+
+        Returns
+        -------
+        TipDropzone
+            Reconstructed TipDropzone instance.
+        """
+        # Safely handle position deserialization
+        # Safely handle position deserialization
+        position = tuple(data["position"]) if data.get("position") else None
+
+        return cls(
+            size_x=data["size_x"],
+            size_y=data["size_y"],
+            size_z=data["size_z"],
+            offset=data["offset"],
+            position=position,
+            drop_height_relative=data["drop_height_relative"],
+            labware_id=data["labware_id"]
+        )
+
+
+
