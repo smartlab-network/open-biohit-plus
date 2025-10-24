@@ -3,7 +3,6 @@ from src.biohit_pipettor_plus.slot import Slot
 from src.biohit_pipettor_plus.deck import Deck
 from src.biohit_pipettor_plus.control_json import write_json, create_json_file
 
-
 def main():
     create_json_file()
 

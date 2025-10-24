@@ -1,4 +1,4 @@
-from .pipettor import Pipettor
+from biohit_pipettor import Pipettor
 from typing import Literal, List, Optional
 from math import ceil
 
@@ -47,7 +47,7 @@ class PipettorPlus(Pipettor):
             The deck containing slots and labware
                 """
         #super().__init__(tip_volume=tip_volume, multichannel = multichannel, initialize=initialize)
-        super().__init__(tip_volume=tip_volume, initialize=initialize)
+        super().__init__(tip_volume=tip_volume, initialize=initialize, multichannel=multichannel)
         self.multichannel = multichannel
         self._deck = deck
         self._slots: dict[str, Slot] = deck.slots
@@ -608,7 +608,7 @@ class PipettorPlus(Pipettor):
 
     def suck(self, source: Labware, source_col_row: tuple[int, int], volume: float) -> None:
         """
-        Aspirate from a source labware.
+        Aspirate from a source labware.=
 
         Works with any labware type. If labware supports content tracking, content is tracked.
         If not, only physical movement is performed.
