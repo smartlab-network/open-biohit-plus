@@ -1,23 +1,23 @@
-from .pipettor import Pipettor
+from biohit_pipettor import Pipettor
 from typing import Literal, List, Optional
 from math import ceil
 
-from .deck import Deck
-from .slot import Slot
-from .labware import Labware, Plate, Well, ReservoirHolder, Reservoir, PipetteHolder, IndividualPipetteHolder, \
+from deck import Deck
+from slot import Slot
+from labware import Labware, Plate, Well, ReservoirHolder, Reservoir, PipetteHolder, IndividualPipetteHolder, \
     TipDropzone, Pipettors_in_Multi
-from .errors import CommandFailed
+from errors import CommandFailed
 
-from .geometry import (
+from geometry import (
     calculate_liquid_height,
     calculate_dynamic_remove_height,
     calculate_dynamic_add_height
 )
 
-
 Change_Tips = 0
 MAX_BATCH_SIZE = 5
 Min_Clearance = 1
+
 
 class PipettorPlus(Pipettor):
     #todo find real dimensions. Pipettor_length, only required if diff for diff pipettors. otherwise it works
@@ -30,6 +30,7 @@ class PipettorPlus(Pipettor):
         1000 : 50,  #in case they are different
         200: 50,
     }"""
+
 
     def __init__(self, tip_volume: Literal[200, 1000], *, multichannel: bool,  initialize: bool = True, deck: Deck, tip_length: float = None):
         """
@@ -47,7 +48,7 @@ class PipettorPlus(Pipettor):
             The deck containing slots and labware
                 """
         #super().__init__(tip_volume=tip_volume, multichannel = multichannel, initialize=initialize)
-        super().__init__(tip_volume=tip_volume, initialize=initialize)
+        super().__init__(tip_volume=tip_volume, multichannel=multichannel, initialize=initialize)
         self.multichannel = multichannel
         self._deck = deck
         self._slots: dict[str, Slot] = deck.slots

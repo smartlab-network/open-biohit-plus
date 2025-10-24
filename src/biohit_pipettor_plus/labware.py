@@ -4,7 +4,7 @@ from typing import Literal
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import uuid
-from .serializable import Serializable, register_class
+from serializable import Serializable, register_class
 import copy
 from typing import Optional
 

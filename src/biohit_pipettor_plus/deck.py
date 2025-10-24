@@ -1,6 +1,6 @@
-from .slot import Slot
-from .labware import Labware
-from .serializable import Serializable, register_class
+from slot import Slot
+from labware import Labware
+from serializable import Serializable, register_class
 from typing import Optional
 
 
@@ -35,14 +35,13 @@ class Deck(Serializable):
         self.deck_id = deck_id
         self.range_x = range_x
         self.range_y = range_y
-
+        self.range_z = range_z
 
         self.used_pos_x: list[tuple] = [range_x]  # reserved x-ranges
         self.used_pos_y: list[tuple] = [range_y]  # reserved y-ranges
 
         self.slots: dict[str, Slot] = {}           # store Slot objects
         self.labware: dict[str, Labware] = {}     # global access to Labware objects
-        self.range_z = range_z
 
     def add_slots(self, slots: list[Slot]):
         """
