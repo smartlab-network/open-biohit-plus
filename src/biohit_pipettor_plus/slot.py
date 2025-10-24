@@ -1,8 +1,8 @@
 from typing import Dict, List
-from .labware import Labware, ReservoirHolder, PipetteHolder, Plate
-from .serializable import Serializable, register_class
+from labware import Labware, ReservoirHolder, PipetteHolder, Plate
+from serializable import Serializable, register_class
 #TODO get this right
-from .position import Position_allocator
+from position import Position_allocator
 
 @register_class
 class Slot(Serializable):
@@ -26,7 +26,7 @@ class Slot(Serializable):
     """
 
     def __init__(self, range_x: tuple[float, float], range_y: tuple[float, float],
-                 range_z: float, slot_id: str):
+                 range_z: float, slot_id: str) -> None:
         self.range_x = range_x
         self.range_y = range_y
         self.range_z = range_z
