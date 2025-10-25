@@ -217,8 +217,6 @@ class Well(Labware):
         Height above the well bottom used when adding liquid (in mm).
     remove_height : float
         Height above the well bottom used when removing liquid (in mm).
-    suck_offset_xy : tuple[float, float]
-        XY offset inside the well for using pipettor (in mm).
     """
 
     def __init__(
@@ -233,9 +231,6 @@ class Well(Labware):
             column: int = None,
             content: dict = None,
             capacity: float = Default_well_capacity,
-            add_height: float = 5,
-            remove_height: float = 5,
-            suck_offset_xy: tuple[float, float] = (2, 2),
             shape: Defined_shape = None
     ):
         """
@@ -261,21 +256,12 @@ class Well(Labware):
             Dictionary mapping content types to volumes (µL).
             Example: {"PBS": 150, "water": 100}
         capacity : float, optional
-            Maximum volume the well can hold (µL). Default is Default_well_capacity.
-        add_height : float, optional
-            Pipette dispensing height above bottom of the well (default = 5 mm).
-        remove_height : float, optional
-            Pipette aspiration height above bottom of the well (default = 5 mm).
-        suck_offset_xy : tuple[float, float], optional
-            XY offset from the well corner for aspiration/dispense (default = (2, 2)).
+            Maximum volume the well can hold (µL). Default is Default_well_capacity
         """
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id,
                          position=position)
 
         self.capacity = capacity
-        self.add_height = add_height
-        self.remove_height = remove_height
-        self.suck_offset_xy = suck_offset_xy
         self.row = row
         self.column = column
         self.shape = shape
@@ -508,9 +494,6 @@ class Well(Labware):
                 "column": self.column,
                 "content": self.content,
                 "capacity": self.capacity,
-                "add_height": self.add_height,
-                "remove_height": self.remove_height,
-                "suck_offset_xy": list(self.suck_offset_xy),
                 "shape": self.shape,
             }
         )
@@ -542,9 +525,6 @@ class Well(Labware):
             position=position,
             content=data.get("content"),
             capacity=data.get("capacity", Default_well_capacity),
-            add_height=data.get("add_height", 5),
-            remove_height=data.get("remove_height", 5),
-            suck_offset_xy=tuple(data.get("suck_offset_xy", (2, 2))),
             row=data.get("row"),
             column=data.get("column"),
             shape = data.get("shape", None)
@@ -558,6 +538,8 @@ class Plate(Labware):
             size_z: float,
             wells_x: int,
             wells_y: int,
+            add_height: float,
+            remove_height: float,
             well: Well,
             offset: tuple[float, float] = (0, 0),
             labware_id: str = None, position: tuple[float, float] = None):
@@ -576,6 +558,10 @@ class Plate(Labware):
             Number of wells in X direction.
         wells_y : int
             Number of wells in Y direction.
+        add_height : float
+            Height above the well bottom used when adding liquid (in mm).
+        remove_height : float
+            Height above the well bottom used when removing liquid (in mm).
         well : Well
             Template well to use for all wells in the plate.
         offset : tuple[float, float], optional
@@ -594,6 +580,8 @@ class Plate(Labware):
 
         self._columns = wells_x
         self._rows = wells_y
+        self.add_height = add_height
+        self.remove_height = remove_height
 
         self.__wells: dict[tuple[int, int], Well] = {}
         self.well = well
@@ -658,6 +646,8 @@ class Plate(Labware):
         """Serialize the Plate instance to a dictionary."""
         base = super().to_dict()
         base.update({
+            "add_height": self.add_height,
+            "remove_height": self.remove_height,
             "wells_x": self.wells_x,
             "wells_y": self.wells_y,
             "wells": {
@@ -685,6 +675,8 @@ class Plate(Labware):
             size_y=data["size_y"],
             size_z=data["size_z"],
             offset=data["offset"],
+            add_height=data["add_height"],
+            remove_height=data["remove_height"],
             labware_id=data["labware_id"],
             wells_x=data["wells_x"],
             wells_y=data["wells_y"],
@@ -1931,6 +1923,7 @@ class ReservoirHolder(Labware):
                 size_x=res["size_x"],
                 size_y=res["size_y"],
                 size_z=res["size_z"],
+                offset=res.get("offset", (0, 0)),
                 capacity=res.get("capacity", Default_Reservoir_Capacity),
                 content=res.get("content"),  # Now expects dict or None
                 labware_id=labware_id,
