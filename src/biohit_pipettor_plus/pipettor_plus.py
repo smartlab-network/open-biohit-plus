@@ -6,7 +6,7 @@ from deck import Deck
 from slot import Slot
 from labware import Labware, Plate, Well, ReservoirHolder, Reservoir, PipetteHolder, IndividualPipetteHolder, \
     TipDropzone, Pipettors_in_Multi
-from errors import CommandFailed
+from biohit_pipettor.errors import CommandFailed
 
 from geometry import (
     calculate_liquid_height,
@@ -20,15 +20,15 @@ Min_Clearance = 1
 
 
 class PipettorPlus(Pipettor):
-    #todo find real dimensions. Pipettor_length, only required if diff for diff pipettors. otherwise it works
     TIP_LENGTHS = {
-        200: 51.0,  # 200µL tips are 51mm
-        1000: 96.5,  # 1000µL tips are 96.5mm
+        200: 38,  # 200µL increase height by 38mm after being attached
+        1000: 81,  # 1000µL tips are 81mm after being attached
     }
     """
+    https://shop.sartorius.com/medias/rLINE-dispensing-module.pdf?context=bWFzdGVyfGRvY3VtZW50c3wxMDQ1NjEzfGFwcGxpY2F0aW9uL3BkZnxhRGhoTDJoaE1pODVPVEEyT0RReE9UYzJPRFl5fGFkZmZmYzFjM2UzYjAwNjI2ODA3MmVmZmYxMWU4NDExZTVlOWMyNTFjNmYzYjZmY2M3Y2ZkODgxMDEzN2U1MDg
     Pipettor_length = {
-        1000 : 50,  #in case they are different
-        200: 50,
+        200: 190,
+        1000 : 219,  
     }"""
 
 
@@ -213,6 +213,7 @@ class PipettorPlus(Pipettor):
                 x, y = holder.position
                 self.move_xy(x, y)
                 relative_z = getattr(pipette_holder, 'remove_height', pipette_holder.size_z)
+                print(relative_z)
                 pipettor_z = self._get_pipettor_z(pipette_holder, relative_z)
                 self.pick_tip(pipettor_z)
 
@@ -378,7 +379,7 @@ class PipettorPlus(Pipettor):
                 self.move_xy(x, y)
                 relative_z = getattr(pipette_holder, 'add_height', pipette_holder.size_z)
                 pipettor_z = self._get_pipettor_z(pipette_holder, relative_z)
-
+                print(f"return height is {pipettor_z}.., relative is {relative_z}")
                 self.move_z(pipettor_z)  # return_height
                 self.eject_tip()
 
@@ -1382,6 +1383,7 @@ class PipettorPlus(Pipettor):
         else:
             # No tips - full range available
             pipettor_z = deck_range_z - absolute_z
+            print(f"deck_range_z {deck_range_z} - absolute_z {absolute_z} - self.tip_length {self.tip_length}mm ")
 
             # Validation without tips
             if pipettor_z < 0:
