@@ -1,7 +1,7 @@
 import time
 import clr
 
-dll_path: str = r'C:\labhub\Repos\smartlab-network\open-biohit\src\biohit_pipettor\include\instrumentLib.dll'
+dll_path: str = r'E:\Labhub\Repos\biohit\biohit-pipettor-python\src\biohit_pipettor\include\instrumentLib.dll'
 clr.AddReference(dll_path)
 from InstrumentLib import InstrumentCls
 

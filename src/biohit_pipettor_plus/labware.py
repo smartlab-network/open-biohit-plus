@@ -4,9 +4,10 @@ from typing import Literal
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import uuid
-from .serializable import Serializable, register_class
+from serializable import Serializable, register_class
 import copy
 from typing import Optional
+
 
 Pipettors_in_Multi = 8
 Default_Reservoir_Capacity = 30000
@@ -217,8 +218,6 @@ class Well(Labware):
         Height above the well bottom used when adding liquid (in mm).
     remove_height : float
         Height above the well bottom used when removing liquid (in mm).
-    suck_offset_xy : tuple[float, float]
-        XY offset inside the well for using pipettor (in mm).
     """
 
     def __init__(
@@ -233,9 +232,6 @@ class Well(Labware):
             column: int = None,
             content: dict = None,
             capacity: float = Default_well_capacity,
-            add_height: float = 5,
-            remove_height: float = 5,
-            suck_offset_xy: tuple[float, float] = (2, 2),
             shape: Defined_shape = None
     ):
         """
@@ -261,21 +257,12 @@ class Well(Labware):
             Dictionary mapping content types to volumes (µL).
             Example: {"PBS": 150, "water": 100}
         capacity : float, optional
-            Maximum volume the well can hold (µL). Default is Default_well_capacity.
-        add_height : float, optional
-            Pipette dispensing height above bottom of the well (default = 5 mm).
-        remove_height : float, optional
-            Pipette aspiration height above bottom of the well (default = 5 mm).
-        suck_offset_xy : tuple[float, float], optional
-            XY offset from the well corner for aspiration/dispense (default = (2, 2)).
+            Maximum volume the well can hold (µL). Default is Default_well_capacity
         """
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id,
                          position=position)
 
         self.capacity = capacity
-        self.add_height = add_height
-        self.remove_height = remove_height
-        self.suck_offset_xy = suck_offset_xy
         self.row = row
         self.column = column
         self.shape = shape
@@ -508,9 +495,6 @@ class Well(Labware):
                 "column": self.column,
                 "content": self.content,
                 "capacity": self.capacity,
-                "add_height": self.add_height,
-                "remove_height": self.remove_height,
-                "suck_offset_xy": list(self.suck_offset_xy),
                 "shape": self.shape,
             }
         )
@@ -542,9 +526,6 @@ class Well(Labware):
             position=position,
             content=data.get("content"),
             capacity=data.get("capacity", Default_well_capacity),
-            add_height=data.get("add_height", 5),
-            remove_height=data.get("remove_height", 5),
-            suck_offset_xy=tuple(data.get("suck_offset_xy", (2, 2))),
             row=data.get("row"),
             column=data.get("column"),
             shape = data.get("shape", None)
@@ -559,6 +540,8 @@ class Plate(Labware):
             wells_x: int,
             wells_y: int,
             well: Well,
+            add_height: float = -3,
+            remove_height: float = -10,
             offset: tuple[float, float] = (0, 0),
             labware_id: str = None, position: tuple[float, float] = None):
         """
@@ -576,6 +559,10 @@ class Plate(Labware):
             Number of wells in X direction.
         wells_y : int
             Number of wells in Y direction.
+        add_height : float
+            Height above the well bottom used when adding liquid (in mm).
+        remove_height : float
+            Height above the well bottom used when removing liquid (in mm).
         well : Well
             Template well to use for all wells in the plate.
         offset : tuple[float, float], optional
@@ -594,6 +581,8 @@ class Plate(Labware):
 
         self._columns = wells_x
         self._rows = wells_y
+        self.add_height = add_height
+        self.remove_height = remove_height
 
         self.__wells: dict[tuple[int, int], Well] = {}
         self.well = well
@@ -658,6 +647,8 @@ class Plate(Labware):
         """Serialize the Plate instance to a dictionary."""
         base = super().to_dict()
         base.update({
+            "add_height": self.add_height,
+            "remove_height": self.remove_height,
             "wells_x": self.wells_x,
             "wells_y": self.wells_y,
             "wells": {
@@ -685,6 +676,8 @@ class Plate(Labware):
             size_y=data["size_y"],
             size_z=data["size_z"],
             offset=data["offset"],
+            add_height=data["add_height"],
+            remove_height=data["remove_height"],
             labware_id=data["labware_id"],
             wells_x=data["wells_x"],
             wells_y=data["wells_y"],
@@ -863,7 +856,7 @@ class IndividualPipetteHolder(Labware):
 @register_class
 class PipetteHolder(Labware):
     def __init__(self, size_x: float, size_y: float, size_z: float, holders_across_x: int, holders_across_y: int,
-                 individual_holder: IndividualPipetteHolder, offset: tuple[float, float] = (0, 0),
+                 individual_holder: IndividualPipetteHolder, add_height: float = -15, remove_height : float = 15, offset: tuple[float, float] = (0, 0),
                  labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a PipetteHolder instance.
@@ -884,6 +877,10 @@ class PipetteHolder(Labware):
             Template for individual holder positions. If provided, copies will be created for each position in the grid.
         labware_id : str, optional
             Unique ID for the pipette holder.
+        add_height : float
+            Height above the well bottom used when adding liquid (in mm).
+        remove_height : float
+            Height above the well bottom used when removing liquid (in mm).
         position : tuple[float, float], optional
             (x, y) position coordinates of the pipette holder in millimeters.
             If None, position is not set.
@@ -894,6 +891,8 @@ class PipetteHolder(Labware):
         if holders_across_x <= 0 or holders_across_y <= 0:
             raise ValueError("holders_across_x and holders_across_y cannot be negative or 0")
 
+        self.add_height = add_height
+        self.remove_height = remove_height
         self._columns = holders_across_x
         self._rows = holders_across_y
 
@@ -1208,6 +1207,8 @@ class PipetteHolder(Labware):
         """
         base = super().to_dict()
         base.update({
+            "add_height": self.add_height,
+            "remove_height": self.remove_height,
             "holders_across_x": self.holders_across_x,
             "holders_across_y": self.holders_across_y,
             "individual_holders": {
@@ -1236,6 +1237,8 @@ class PipetteHolder(Labware):
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
+            add_height=data["add_height"],
+            remove_height=data["remove_height"],
             offset=data["offset"],
             labware_id=data["labware_id"],
             holders_across_x=data["holders_across_x"],
@@ -1571,8 +1574,8 @@ class Reservoir(Labware):
 
 @register_class
 class ReservoirHolder(Labware):
-    def __init__(self, size_x: float, size_y: float, size_z: float, hooks_across_x: int, hooks_across_y: int,
-                 offset: tuple[float, float] = (0, 0), reservoir_dict: dict[int, dict] = None,
+    def __init__(self, size_x: float, size_y: float, size_z: float, hooks_across_x: int, hooks_across_y: int, remove_height: float = -45, add_height: float = 0,
+                offset: tuple[float, float] = (0, 0), reservoir_dict: dict[int, dict] = None,
                  labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a ReservoirHolder instance that can hold multiple reservoirs.
@@ -1589,6 +1592,10 @@ class ReservoirHolder(Labware):
             Number of hooks along X-axis.
         hooks_across_y : int
             Number of hooks along Y-axis (rows of hooks).
+        add_height : float
+            relative height at which liquid is dispensed
+        remove_height: float
+            relative height at which liquid is aspirated
         reservoir_dict : dict[int, dict], optional
             Dictionary defining individual reservoirs and their attributes.
         labware_id : str, optional
@@ -1602,6 +1609,8 @@ class ReservoirHolder(Labware):
         if hooks_across_x <= 0 or hooks_across_y <= 0:
             raise ValueError("hooks_across_x and hooks_across_y cannot be negative or 0")
 
+        self.add_height = add_height
+        self.remove_height = remove_height
         self._columns = hooks_across_x
         self._rows = hooks_across_y
         self.total_hooks = hooks_across_x * hooks_across_y
@@ -1915,10 +1924,15 @@ class ReservoirHolder(Labware):
                 size_x=res["size_x"],
                 size_y=res["size_y"],
                 size_z=res["size_z"],
+                offset=res.get("offset", (0, 0)),
                 capacity=res.get("capacity", Default_Reservoir_Capacity),
-                content=res.get("content"),  # Now expects dict or None
+                content=res.get("content", None),  
+                shape=res.get("shape", None),  
                 labware_id=labware_id,
-                position=res.get("position", None),
+                position=res.get("position", None),  
+                hook_ids=res.get("hook_ids", None),  
+                row=res.get("row", None),  
+                column=res.get("column", None),  
             )
 
             # Place the reservoir
@@ -2050,6 +2064,8 @@ class ReservoirHolder(Labware):
             unique_reservoirs[key] = res.to_dict()
 
         base.update({
+            "add_height": self.add_height,
+            "remove_height": self.remove_height,
             "hooks_across_x": self.hooks_across_x,
             "hooks_across_y": self.hooks_across_y,
             "reservoirs": unique_reservoirs,
@@ -2066,6 +2082,8 @@ class ReservoirHolder(Labware):
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
+            add_height = data["add_height"],
+            remove_height = data["remove_height"],
             offset=data["offset"],
             hooks_across_x=data["hooks_across_x"],
             hooks_across_y=data.get("hooks_across_y", 1),  # Default to 1 for backwards compatibility
@@ -2185,6 +2203,4 @@ class TipDropzone(Labware):
             drop_height_relative=data["drop_height_relative"],
             labware_id=data["labware_id"]
         )
-
-
 
