@@ -1376,7 +1376,7 @@ class PipettorPlus(Pipettor):
                 raise ValueError(
                     f"Invalid height: absolute_z={absolute_height:.1f}mm exceeds deck range={deck_range_z:.1f}mm"
                 )
-
+        print(f"{labware.labware_id}: {pipettor_z}")
         return pipettor_z
 
     def _get_robot_xy_position(self, items: List[Labware]) -> tuple[float, float]:
