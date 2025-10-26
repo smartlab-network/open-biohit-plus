@@ -1,5 +1,5 @@
 from src.biohit_pipettor_plus.control_json import read_json
-from src.biohit_pipettor_plus.gui import Gui
+from src.biohit_pipettor_plus.gui.gui import Gui
 
 gui = Gui()
 

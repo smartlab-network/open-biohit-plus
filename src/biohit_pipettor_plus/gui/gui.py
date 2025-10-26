@@ -1,10 +1,11 @@
 import ttkbootstrap as ttk
 import tkinter as tk
 from typing import Callable
-from .deck import Deck
-from .slot import Slot
-from .labware import Labware
-from .pipettor_plus import PipettorPlus
+from .well_window import WellWindow
+from src.biohit_pipettor_plus.deck import Deck
+from src.biohit_pipettor_plus.slot import Slot
+from src.biohit_pipettor_plus.labware import Labware
+from src.biohit_pipettor_plus.pipettor_plus import PipettorPlus
 
 class Gui:
     def __init__(self, deck: Deck = None, master: ttk.Window = None):
@@ -28,8 +29,6 @@ class Gui:
 
         self.custom_funcs_lists: list[list[Callable]] = []
         self.current_func_list: list[Callable] = []
-
-
 
     def create_window_build_func(self):
         """
@@ -199,6 +198,21 @@ class Gui:
         self.current_func_list.append(func)
         label_func = ttk.Label(self.third_column_frame, text = func, font = ("Helvetica", 16), anchor = "center")
         label_func.grid(row = len(self.current_func_list) - 1, column=0, sticky="nsew")
+
+    class WindowWells():
+        def __init__(self, rows, columns):
+            pass
+
+        def show(self):
+            pass
+
+        def get_list(self):
+            pass
+
+        def callback_safe(self):
+            pass
+
+
 
 gui = Gui()
 gui.root.mainloop()
