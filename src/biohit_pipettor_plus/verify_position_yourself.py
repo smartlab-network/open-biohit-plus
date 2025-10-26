@@ -13,7 +13,7 @@ def find_slot_positions():
 
     # Initialize pipettor
     deck1 = Deck((0, 500), (0, 500), range_z=300, deck_id="trial")
-    p = PipettorPlus(tip_volume=200, multichannel=False, deck=deck1)
+    p = PipettorPlus(tip_volume=1000, multichannel=True, deck=deck1)
     p.home()  # Make sure it's homed
 
     print("=" * 60)
