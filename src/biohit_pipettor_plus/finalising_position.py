@@ -10,57 +10,6 @@ from slot import Slot
 from labware import Labware, Plate, ReservoirHolder, Reservoir, PipetteHolder, TipDropzone, Well, IndividualPipetteHolder
 
 
-#to troubleshoot
-"""
-HASTIP = True
-tip_length = 38
-def _get_pipettor_z_coord(deck, labware: Labware, relative_z: float) -> float:
-
-    # Find the slot that contains this labware. essential to get min_z and max_z
-    slot_id = deck.get_slot_for_labware(labware.labware_id)
-
-    if slot_id is None:
-        raise ValueError(f"Labware {labware.labware_id} is not placed in any slot")
-
-    slot = deck.slots[slot_id]
-
-    if labware.labware_id not in slot.labware_stack:
-        raise ValueError(f"Labware {labware.labware_id} not found in slot {slot_id}")
-
-    _, (min_z, max_z) = slot.labware_stack[labware.labware_id]
-
-    absolute_height = max_z + relative_z
-    deck_range_z = deck.range_z
-
-    if absolute_height < min_z:
-        raise ValueError(f"absolute_height{absolute_height} cannot be less than min_z of labware. "
-                         f"Access to another labware denied")
-
-    if HASTIP:
-        pipettor_z = deck_range_z - absolute_height - tip_length
-
-        # Validation with tips
-        if pipettor_z < 0:
-            raise ValueError(
-                f"Cannot reach pipettor_z={pipettor_z:.1f}mm with tips attached "
-                f"(tip_length={tip_length:.1f}mm). "
-                f"deck range : {deck.range_z:.1f} "
-                f"Maximum reachable height: {deck_range_z - tip_length:.1f}mm "
-            )
-
-    else:
-        # No tips - full range available
-        pipettor_z = deck_range_z - absolute_height
-        print(f"No Tips: deck_range_z {deck_range_z} - absolute_z {absolute_height}")
-
-        # Validation without tips
-        if pipettor_z < 0:
-            raise ValueError(
-                f"Invalid height: absolute_z={absolute_height:.1f}mm exceeds deck range={deck_range_z:.1f}mm"
-            )
-
-    return pipettor_z
-    """
 deck1 = Deck((0, 265), (0, 244), range_z=141, deck_id="trial")
 
 #todo add deck offset and mirror image
