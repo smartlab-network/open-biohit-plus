@@ -2,13 +2,13 @@ from biohit_pipettor import Pipettor
 from typing import Literal, List, Optional
 from math import ceil
 
-from deck import Deck
-from slot import Slot
-from labware import Labware, Plate, Well, ReservoirHolder, Reservoir, PipetteHolder, IndividualPipetteHolder, \
+from src.biohit_pipettor_plus.deck import Deck
+from src.biohit_pipettor_plus.slot import Slot
+from src.biohit_pipettor_plus.labware import Labware, Plate, Well, ReservoirHolder, Reservoir, PipetteHolder, IndividualPipetteHolder, \
     TipDropzone, Pipettors_in_Multi
 from biohit_pipettor.errors import CommandFailed
 
-from geometry import (
+from src.biohit_pipettor_plus.geometry import (
     calculate_liquid_height,
     calculate_dynamic_remove_height,
     calculate_dynamic_add_height

@@ -7,11 +7,13 @@ class WellWindow:
     Used to set specific well settings. Each Well is represented as a Button, which can be toggled to "activate" the Well.
     After saving a list of tuples, of 2 integers which represent the Wells inside the Labware Grid.
     """
-    def __init__(self, rows: int, columns: int, labware_id: str, master: str = None, wells_list: list[tuple[int, int]] = None):
+    def __init__(self, rows: int, columns: int, labware_id: str, title: str = "", master: ttk.Window = None,
+                 wells_list: list[tuple[int, int]] = None):
+
         if master:
-            self.__root = ttk.Toplevel(title= master)
+            self.__root = ttk.Toplevel(master = master, title= title)
         else:
-            self.__root = ttk.Window(title= f"Select Wells from Labware: {labware_id}", themename="vapor")
+            self.__root = ttk.Window(title = f"Select Wells from Labware: {labware_id}", themename="vapor")
 
         self.__root.geometry("1600x1200")
         self.is_well_window = True
@@ -21,11 +23,13 @@ class WellWindow:
         self.plate_data = None
         self.wells_list = wells_list
 
+        self.safe_var = ttk.BooleanVar(value = False)
+
         #list of all generric Buttoons
         self.buttons: list[list[ttk.Button]] |list[list[None]] = [[None for _ in range(self.columns)] for _ in range(self.rows)]
 
         #Each Well can either be True or False
-        self.well_state = [[False for _ in range(self.rows)] for _ in range(self.rows)]
+        self.well_state = [[False for _ in range(self.columns)] for _ in range(self.rows)]
 
         self.row_vars = [ttk.BooleanVar() for _ in range(self.rows)]
         self.col_vars = [ttk.BooleanVar() for _ in range(self.columns)]
@@ -193,4 +197,5 @@ class WellWindow:
         pass
 
     def callback_save(self):
-        print("90")
+        self.safe_var.set(True)
+        self.show_well_window()
