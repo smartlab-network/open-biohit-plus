@@ -11,7 +11,6 @@ from biohit_pipettor.errors import CommandFailed
 from geometry import (
     calculate_liquid_height,
     calculate_dynamic_remove_height,
-    calculate_dynamic_add_height
 )
 
 Change_Tips = 0
@@ -1064,7 +1063,10 @@ class PipettorPlus(Pipettor):
         # Determine RELATIVE height from labware top
         if hasattr(item, 'shape') and item.shape:
             volume_per_tip = volume / self.tip_count
-            relative_z = calculate_dynamic_remove_height(item, volume_per_tip)
+            if parent_labware.each_tip_needs_separate_item():
+                relative_z = calculate_dynamic_remove_height(item, volume_per_tip)
+            else:
+                relative_z = calculate_dynamic_remove_height(item, volume)
             liquid_height = calculate_liquid_height(item)
 
             print(f"  → Dynamic aspiration: {relative_z:.1f}mm from bottom "
@@ -1112,13 +1114,7 @@ class PipettorPlus(Pipettor):
         parent_labware = self._find_parent_labware(item)
 
         # Determine RELATIVE height from labware BOTTOM
-        if hasattr(item, 'shape') and item.shape:
-            volume_per_tip = volume / self.tip_count
-            relative_z = calculate_dynamic_add_height(item, volume_per_tip)
-            liquid_height = calculate_liquid_height(item)
-            print(f"  → Dynamic dispensing: {relative_z:.1f}mm from bottom "
-                  f"(liquid: {liquid_height:.1f}mm, shape: {item.shape})")
-        elif hasattr(item, 'add_height'):
+        if hasattr(item, 'add_height'):
             relative_z = item.add_height
             print(f"  → Fixed dispensing: {relative_z:.1f}mm from bottom")
         elif hasattr(parent_labware, 'add_height'):

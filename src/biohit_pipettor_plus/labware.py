@@ -8,6 +8,7 @@ from serializable import Serializable, register_class
 import copy
 from typing import Optional
 
+
 Pipettors_in_Multi = 8
 Default_Reservoir_Capacity = 30000
 Default_well_capacity = 1000
@@ -855,7 +856,7 @@ class IndividualPipetteHolder(Labware):
 @register_class
 class PipetteHolder(Labware):
     def __init__(self, size_x: float, size_y: float, size_z: float, holders_across_x: int, holders_across_y: int,
-                 individual_holder: IndividualPipetteHolder, add_height: float = -15, remove_height : float = 10, offset: tuple[float, float] = (0, 0),
+                 individual_holder: IndividualPipetteHolder, add_height: float = -15, remove_height : float = 15, offset: tuple[float, float] = (0, 0),
                  labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a PipetteHolder instance.
@@ -1925,9 +1926,13 @@ class ReservoirHolder(Labware):
                 size_z=res["size_z"],
                 offset=res.get("offset", (0, 0)),
                 capacity=res.get("capacity", Default_Reservoir_Capacity),
-                content=res.get("content"),  # Now expects dict or None
+                content=res.get("content", None),  
+                shape=res.get("shape", None),  
                 labware_id=labware_id,
-                position=res.get("position", None),
+                position=res.get("position", None),  
+                hook_ids=res.get("hook_ids", None),  
+                row=res.get("row", None),  
+                column=res.get("column", None),  
             )
 
             # Place the reservoir

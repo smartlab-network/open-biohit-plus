@@ -88,13 +88,13 @@ deck1.add_labware(plate1, slot_id="slot4", min_z=0)
 
 # Updated reservoirs_data to use content as dictionary
 reservoirs_data = {
-    1: {"size_x": 16.5, "size_y": 79, "size_z": 66, "capacity": 30000, "content": {}, "shape": "u_bottom"},
-    2: {"size_x": 16.5, "size_y": 79, "size_z": 66, "capacity": 30000, "content": {"0 conc": 10000}, "shape": "rectangular"},
-    3: {"size_x": 16.5, "size_y": 79, "size_z": 66, "capacity": 30000, "content": {"1.8 conc": 100}},
-    4: {"size_x": 16.5, "size_y": 79, "size_z": 66, "capacity": 30000, "content": {"5 conc": 100}},
-    5: {"size_x": 16.5, "size_y": 79, "size_z": 66, "capacity": 30000, "content": {"15 conc": 100}},
-    6: {"size_x": 16.5, "size_y": 79, "size_z": 66, "capacity": 30000, "content": {"0 conc": 100}},
-    7: {"size_x": 16.5, "size_y": 79, "size_z": 66, "capacity": 30000, "content": {}},
+    1: {"size_x": 16.5, "size_y": 79, "size_z": 45, "capacity": 30000, "content": {}, "shape": "u_bottom"},
+    2: {"size_x": 16.5, "size_y": 79, "size_z": 45, "capacity": 30000, "content": {"0 conc": 20000}, "shape": "rectangular"},
+    3: {"size_x": 16.5, "size_y": 79, "size_z": 45, "capacity": 30000, "content": {"1.8 conc": 100}},
+    4: {"size_x": 16.5, "size_y": 79, "size_z": 45, "capacity": 30000, "content": {"5 conc": 100}},
+    5: {"size_x": 16.5, "size_y": 79, "size_z": 45, "capacity": 30000, "content": {"15 conc": 100}},
+    6: {"size_x": 16.5, "size_y": 79, "size_z": 45, "capacity": 30000, "content": {"0 conc": 100}},
+    7: {"size_x": 16.5, "size_y": 79, "size_z": 45, "capacity": 30000, "content": {}},
 }
 
 reservoirHolder = ReservoirHolder(
@@ -145,11 +145,47 @@ print(deck1.to_dict())
 p = PipettorPlus(tip_volume=200, multichannel=False, deck=deck1)
 pipette_holder.place_pipette_at(0,0)
 
+
+test_well = plate1.get_well_at(1, 1)
+reservoirs = reservoirHolder.get_reservoirs()
+test_reservoir = reservoirs[1]
 p.pick_tips(pipette_holder)
-p.add_medium(reservoirHolder, (1,0), 50, plate1, dest_col_row=[(0,1), (5,5)])
-p.remove_medium(plate1,[(1,1), (5,6)], 50, reservoirHolder, (0,0))
-p.transfer_plate_to_plate(plate1,[(1,1), (5,6)], plate1, [(5,6), (1,2)] , 100)
+#p.add_medium(reservoirHolder, (1,0), 50, plate1, dest_col_row=[(0,1), (5,5)])
+
+
+from geometry import (
+    calculate_liquid_height,
+    calculate_dynamic_remove_height,
+
+)
+
+# Test with a well from plate1
+print("\n=== TESTING WELL ===")
+print(f"Well content: {test_well.content}")
+print(f"Well shape: {test_well.shape}")
+print(f"Well size_z: {test_well.size_z}mm")
+
+liquid_height = calculate_liquid_height(test_well)
+print(f"Current liquid height: {liquid_height:.2f}mm from bottom")
+
+aspirate_height = calculate_dynamic_remove_height(test_well, volume_to_remove=100)
+print(f"Aspiration height (for 100µL): {aspirate_height:.2f}mm from top")
+
+
+
+# Test with a reservoir
+print("\n=== TESTING RESERVOIR ===")
+
+print(f"Reservoir shape: {test_reservoir.shape}")
+liquid_height = calculate_liquid_height(test_reservoir)
+print(f"Current liquid height: {liquid_height:.2f}mm from bottom")
+aspirate_height = calculate_dynamic_remove_height(test_reservoir, volume_to_remove=1000)
+print(f"Aspiration height (for 1000µL): {aspirate_height:.2f}mm from top")
+
+#p.remove_medium(plate1,[(1,1), (5,6)], 50, reservoirHolder, (0,0))
+#p.transfer_plate_to_plate(plate1,[(1,1), (5,6)], plate1, [(5,6), (1,2)] , 100)
 p.return_single_tip(pipette_holder)
+
 
 
 
