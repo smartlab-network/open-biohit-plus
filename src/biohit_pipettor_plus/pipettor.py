@@ -1,25 +1,19 @@
 import time
 import clr
 
-
-dll_path: str=r'E:\Labhub\Repos\biohit\biohit-pipettor-python\src\biohit_pipettor\include\instrumentLib.dll'
+dll_path: str = r'E:\Labhub\Repos\biohit\biohit-pipettor-python\src\biohit_pipettor\include\instrumentLib.dll'
 clr.AddReference(dll_path)
 from InstrumentLib import InstrumentCls
 
-
-
-from biohit_pipettor_plus.baseclass import Baseclass
+from biohit_pipettor.baseclass import Baseclass
 
 from biohit_pipettor.protocol import Protocol
 from biohit_pipettor.deck import Deck
 from biohit_pipettor.labware import Labware
 
-
-
 from typing import Callable, Literal, Tuple, overload
 from biohit_pipettor.clr_wrapping.instrument import InstrumentCls
 from biohit_pipettor.errors import CommandFailed, CommandNotAccepted, NotConnected
-
 
 MovementSpeed = Literal[1, 2, 3, 4, 5, 6, 7, 8, 9]
 PistonSpeed = Literal[1, 2, 3, 4, 5, 6]
@@ -28,21 +22,21 @@ TipVolume = Literal[200, 1000]
 
 class Pipettor(Baseclass):
     __instrument: InstrumentCls
-    
+
     __protocol: Protocol
     __deck: Deck
     __labware: Labware
 
-    def __init__(self, tip_volume: Literal[200, 1000]=1000, initialize: bool = False, connect: bool=False):
+    def __init__(self, tip_volume: Literal[200, 1000] = 1000, initialize: bool = False, connect: bool = False):
         """
         Interface to the Biohit Roboline pipettor
         :param initialize: If True, the device will be initialized
         """
 
         self.__instrument = InstrumentCls()
-        self.__protocol   = Protocol()
-        self.__deck       = Deck()
-        self.__labware    = Labware()
+        self.__protocol = Protocol()
+        self.__deck = Deck()
+        self.__labware = Labware()
 
         # wait until connection is established
         if connect:
@@ -54,20 +48,19 @@ class Pipettor(Baseclass):
                 raise NotConnected
 
         self.tip_volume = tip_volume
-        
+
         if initialize:
             self.initialize()
 
     @property
-    def deck(self) ->Deck:
+    def deck(self) -> Deck:
         return self.__deck
-            
+
     @property
     def is_connected(self) -> bool:
         """True if the device is connected, False otherwise"""
         return self.__instrument.IsConnected() != 0
 
-    
     @property
     def tip_volume(self) -> TipVolume:
         """The tip volume (200 or 1000 uL, can be set)"""
@@ -149,7 +142,7 @@ class Pipettor(Baseclass):
     def xy_position(self) -> Tuple[float, float]:
         """The X and Y position, in millimeters"""
         return self.x_position, self.y_position
-    
+
     @property
     def xyz_position(self) -> Tuple[float, float, float]:
         """The X, Y and Z position, in millimeters"""
@@ -170,7 +163,7 @@ class Pipettor(Baseclass):
             - move piston to volume=0
             - reset errors
             - refresh slaves
-        """                
+        """
         self.__run(self.__instrument.InitializeInstrument)
 
     def move_z(self, z: float, wait: bool = True) -> None:
@@ -331,7 +324,7 @@ class Pipettor(Baseclass):
 
     @overload
     def __poll_speed(
-        self, address: Literal["X", "Y", "Z"], inwards: bool = False
+            self, address: Literal["X", "Y", "Z"], inwards: bool = False
     ) -> Literal[1, 2, 3, 4, 5, 6, 7, 8, 9]:
         ...
 
