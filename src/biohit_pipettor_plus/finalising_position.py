@@ -79,7 +79,8 @@ example_well = Well(
     size_z=10,
     offset = (-8.5, 0.5),
     content={ "water" : 500},
-    capacity=1000
+    capacity=1000,
+    shape = "u_bottom",
 )
 
 plate1 = Plate(118.1, 65, 53, 6, 8,well=example_well, offset=(14.05, 1),  add_height= -3, remove_height = -10)
@@ -87,8 +88,8 @@ deck1.add_labware(plate1, slot_id="slot4", min_z=0)
 
 # Updated reservoirs_data to use content as dictionary
 reservoirs_data = {
-    1: {"size_x": 16.5, "size_y": 79, "size_z": 66, "capacity": 30000, "content": {}},
-    2: {"size_x": 16.5, "size_y": 79, "size_z": 66, "capacity": 30000, "content": {"0 conc": 10000}},
+    1: {"size_x": 16.5, "size_y": 79, "size_z": 66, "capacity": 30000, "content": {}, "shape": "u_bottom"},
+    2: {"size_x": 16.5, "size_y": 79, "size_z": 66, "capacity": 30000, "content": {"0 conc": 10000}, "shape": "rectangular"},
     3: {"size_x": 16.5, "size_y": 79, "size_z": 66, "capacity": 30000, "content": {"1.8 conc": 100}},
     4: {"size_x": 16.5, "size_y": 79, "size_z": 66, "capacity": 30000, "content": {"5 conc": 100}},
     5: {"size_x": 16.5, "size_y": 79, "size_z": 66, "capacity": 30000, "content": {"15 conc": 100}},
@@ -116,7 +117,7 @@ pipette_holder = PipetteHolder(
     size_x=110.2, size_y=75.2, size_z=49,
     offset=(5.6,6.1),
     holders_across_x=12, holders_across_y=8,
-    remove_height= 2,
+    remove_height= 10,
     add_height= -15,
     individual_holder=ExamplePipetteHolder
 )
@@ -138,22 +139,16 @@ print(reservoirHolder.to_dict())
 print(pipette_holder.to_dict())
 print(deck1.to_dict())
 
-"""
-print(f" plate remove height is {_get_pipettor_z_coord(deck1, plate1, relative_z= plate1.remove_height )}")
-print(f" plate add height is {_get_pipettor_z_coord(deck1, plate1, plate1.add_height)}")
-print(f" pipetteHolder remove height is {_get_pipettor_z_coord(deck1, pipette_holder, relative_z= pipette_holder.remove_height )}")
-print(f" PipetteHolder add height is {_get_pipettor_z_coord(deck1, pipette_holder, pipette_holder.add_height)}")
-print(f" RseH remove height is {_get_pipettor_z_coord(deck1, reservoirHolder, relative_z= reservoirHolder.remove_height )}")
-print(f" ResH add height is {_get_pipettor_z_coord(deck1, reservoirHolder, reservoirHolder.add_height)}")
-"""
+
+
 
 p = PipettorPlus(tip_volume=200, multichannel=False, deck=deck1)
 pipette_holder.place_pipette_at(0,0)
 
 p.pick_tips(pipette_holder)
-p.add_medium(reservoirHolder, (1,0), 250, plate1, dest_col_row=[(0,1), (5,5)])
-#p.remove_medium(plate1,[(1,1), (5,6)], 50, reservoirHolder, (0,0))
-#p.transfer_plate_to_plate(plate1,[(1,1), (5,6)], plate1, [(5,6), (1,2)] , 100)
+p.add_medium(reservoirHolder, (1,0), 50, plate1, dest_col_row=[(0,1), (5,5)])
+p.remove_medium(plate1,[(1,1), (5,6)], 50, reservoirHolder, (0,0))
+p.transfer_plate_to_plate(plate1,[(1,1), (5,6)], plate1, [(5,6), (1,2)] , 100)
 p.return_single_tip(pipette_holder)
 
 
