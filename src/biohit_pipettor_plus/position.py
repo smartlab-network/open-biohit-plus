@@ -62,7 +62,7 @@ class Position_allocator:
                 if y_spacing < 0:
                     y_spacing = 0
 
-            print(f"labware : {lw.labware_id} x_spacing: {x_spacing}, y_spacing: {y_spacing}")
+        print(f"labware : {lw.labware_id} x_spacing: {x_spacing}, y_spacing: {y_spacing}")
 
         for i in range(rows):
             for j in range(columns):

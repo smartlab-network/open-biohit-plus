@@ -4,7 +4,7 @@ import sys
 
 sys.path.append(r"/src/biohit_pipettor_plus")
 
-from pipettor_plus import PipettorPlus
+#from pipettor_plus import PipettorPlus
 from deck import Deck
 from slot import Slot
 from labware import Labware, Plate, ReservoirHolder, Reservoir, PipetteHolder, TipDropzone, Well, IndividualPipetteHolder
@@ -33,8 +33,8 @@ example_well = Well(
     shape = "u_bottom",
 )
 
-plate1 = Plate(118.1, 65, 53, 6, 8,well=example_well, offset=(14.05, 1),  add_height= -3, remove_height = -10)
-deck1.add_labware(plate1, slot_id="slot4", min_z=0)
+plate1 = Plate(118.1, 65, 53, 6, 8,well=example_well, offset=(17.05, 3),  add_height= -3, remove_height = -10)
+deck1.add_labware(plate1, slot_id="slot4", min_z=0, x_spacing=18, y_spacing=9)
 
 # Updated reservoirs_data to use content as dictionary
 reservoirs_data = {
@@ -92,14 +92,14 @@ print(deck1.to_dict())
 
 
 
-p = PipettorPlus(tip_volume=1000, multichannel=True, deck=deck1)
+#p = PipettorPlus(tip_volume=1000, multichannel=True, deck=deck1)
 pipette_holder.place_consecutive_pipettes_multi([11],0)
 
 
 test_well = plate1.get_well_at(0, 0)
 reservoirs = reservoirHolder.get_reservoirs()
 test_reservoir = reservoirs[1]
-p.pick_tips(pipette_holder)
+#p.pick_tips(pipette_holder)
 #p.add_medium(reservoirHolder, (1,0), 50, plate1, dest_col_row=[(0,1), (5,5)])
 
 
