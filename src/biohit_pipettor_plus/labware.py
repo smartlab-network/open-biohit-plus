@@ -538,9 +538,9 @@ class Plate(Labware):
             size_z: float,
             wells_x: int,
             wells_y: int,
-            add_height: float,
-            remove_height: float,
             well: Well,
+            add_height: float = -3,
+            remove_height: float = -10,
             offset: tuple[float, float] = (0, 0),
             labware_id: str = None, position: tuple[float, float] = None):
         """
@@ -855,7 +855,7 @@ class IndividualPipetteHolder(Labware):
 @register_class
 class PipetteHolder(Labware):
     def __init__(self, size_x: float, size_y: float, size_z: float, holders_across_x: int, holders_across_y: int,
-                 individual_holder: IndividualPipetteHolder, add_height = float, remove_height = float, offset: tuple[float, float] = (0, 0),
+                 individual_holder: IndividualPipetteHolder, add_height: float = -15, remove_height : float = 2, offset: tuple[float, float] = (0, 0),
                  labware_id: str = None, position: tuple[float, float] = None):
         """
         Initialize a PipetteHolder instance.
@@ -1573,7 +1573,7 @@ class Reservoir(Labware):
 
 @register_class
 class ReservoirHolder(Labware):
-    def __init__(self, size_x: float, size_y: float, size_z: float, hooks_across_x: int, hooks_across_y: int, add_height: float, remove_height: float,
+    def __init__(self, size_x: float, size_y: float, size_z: float, hooks_across_x: int, hooks_across_y: int, remove_height: float = -45, add_height: float = 0,
                 offset: tuple[float, float] = (0, 0), reservoir_dict: dict[int, dict] = None,
                  labware_id: str = None, position: tuple[float, float] = None):
         """
@@ -2198,6 +2198,4 @@ class TipDropzone(Labware):
             drop_height_relative=data["drop_height_relative"],
             labware_id=data["labware_id"]
         )
-
-
 
