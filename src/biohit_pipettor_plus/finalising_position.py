@@ -4,32 +4,17 @@ import sys
 
 sys.path.append(r"/src/biohit_pipettor_plus")
 
-
+from pipettor_plus import PipettorPlus
 from deck import Deck
 from slot import Slot
 from labware import Labware, Plate, ReservoirHolder, Reservoir, PipetteHolder, TipDropzone, Well, IndividualPipetteHolder
 
 
 #to troubleshoot
-#from pipettor_plus import PipettorPlus
+"""
 HASTIP = True
 tip_length = 38
 def _get_pipettor_z_coord(deck, labware: Labware, relative_z: float) -> float:
-    """
-    convert relative height to absolute height, passable to pipettor with and without tips
-
-    Parameters
-     ----------
-    labware : Labware
-        The labware containing the item
-    relative_z : float
-        Height relative to the labware top. positive value means away from top and neg. values means into the labware
-
-    Returns
-    -------
-    float
-        Pipettor Z coordinate (how far down pipettor moves from home position)
-    """
 
     # Find the slot that contains this labware. essential to get min_z and max_z
     slot_id = deck.get_slot_for_labware(labware.labware_id)
@@ -75,7 +60,7 @@ def _get_pipettor_z_coord(deck, labware: Labware, relative_z: float) -> float:
             )
 
     return pipettor_z
-
+    """
 deck1 = Deck((0, 265), (0, 244), range_z=141, deck_id="trial")
 
 #todo add deck offset and mirror image
@@ -147,13 +132,13 @@ tip_dropzone = TipDropzone(
     drop_height_relative=15
 )
 deck1.add_labware(tip_dropzone, slot_id="slot1", min_z=0)
-"""
+
 print(plate1.to_dict())
 print(reservoirHolder.to_dict())
 print(pipette_holder.to_dict())
 print(deck1.to_dict())
-"""
 
+"""
 print(f" plate remove height is {_get_pipettor_z_coord(deck1, plate1, relative_z= plate1.remove_height )}")
 print(f" plate add height is {_get_pipettor_z_coord(deck1, plate1, plate1.add_height)}")
 print(f" pipetteHolder remove height is {_get_pipettor_z_coord(deck1, pipette_holder, relative_z= pipette_holder.remove_height )}")
@@ -161,15 +146,16 @@ print(f" PipetteHolder add height is {_get_pipettor_z_coord(deck1, pipette_holde
 print(f" RseH remove height is {_get_pipettor_z_coord(deck1, reservoirHolder, relative_z= reservoirHolder.remove_height )}")
 print(f" ResH add height is {_get_pipettor_z_coord(deck1, reservoirHolder, reservoirHolder.add_height)}")
 """
+
 p = PipettorPlus(tip_volume=200, multichannel=False, deck=deck1)
-pipette_holder.place_pipette_at(0,1)
+pipette_holder.place_pipette_at(0,0)
 
 p.pick_tips(pipette_holder)
-#p.add_medium(reservoirHolder, (1,0), 250, plate1, dest_col_row=[(0,1), (5,5)])
+p.add_medium(reservoirHolder, (1,0), 250, plate1, dest_col_row=[(0,1), (5,5)])
 #p.remove_medium(plate1,[(1,1), (5,6)], 50, reservoirHolder, (0,0))
 #p.transfer_plate_to_plate(plate1,[(1,1), (5,6)], plate1, [(5,6), (1,2)] , 100)
 p.return_single_tip(pipette_holder)
-"""
+
 
 
 
