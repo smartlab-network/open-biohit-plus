@@ -11,7 +11,7 @@ class Deck(Serializable):
     each of which can hold multiple Labware objects stacked vertically.
 
     Attributes
-    ----------
+    ---------
     deck_id : str
         Unique identifier for the deck instance.
     range_x : tuple[int, int]
