@@ -78,7 +78,8 @@ class Deck(Serializable):
                     )
             self.slots[slot_id] = slot
 
-    def add_labware(self, labware: Labware, slot_id: str, min_z: float, x_spacing: float = None, y_spacing: float = None):
+    def add_labware(self, labware: Labware, slot_id: str, min_z: float, x_spacing: float = None,
+                    y_spacing: float = None):
         """
         Add a Labware to a specific Slot at a specific Z position.
 
@@ -96,13 +97,21 @@ class Deck(Serializable):
         TypeError
             If the object is not a Labware instance.
         ValueError
-            If the slot does not exist or labware does not fit in the slot.
+            If the slot does not exist, labware ID already exists, or labware does not fit in the slot.
         """
         if not isinstance(labware, Labware):
             raise TypeError(f"Object {labware} is not a Labware instance.")
 
         if slot_id not in self.slots:
             raise ValueError(f"Slot '{slot_id}' does not exist.")
+
+        # CHECK FOR DUPLICATE LABWARE ID
+        if labware.labware_id in self.labware:
+            existing_slot = self.get_slot_for_labware(labware.labware_id)
+            raise ValueError(
+                f"Labware ID '{labware.labware_id}' already exists in the deck "
+                f"(in slot '{existing_slot}'). Each labware must have a unique ID."
+            )
 
         slot: Slot = self.slots[slot_id]
 
@@ -115,10 +124,10 @@ class Deck(Serializable):
         # Place labware in the slot stack
         slot._place_labware(lw=labware, min_z=min_z)
 
-        #allocation position to labware on deck.
+        # allocation position to labware on deck.
         slot._allocate_position(labware, x_spacing, y_spacing)
 
-        #store in deck's global labware dict
+        # store in deck's global labware dict
         self.labware[labware.labware_id] = labware
 
     def remove_labware(self, labware: Labware, slot_id: str):
