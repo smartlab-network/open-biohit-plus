@@ -5,9 +5,9 @@ from tkinter import ttk, messagebox, filedialog, simpledialog
 import json
 
 # Import your existing classes
-from .deck import Deck
-from .slot import Slot
-from .labware import (
+from deck import Deck
+from slot import Slot
+from labware import (
     Labware, Well, Reservoir, Plate, ReservoirHolder,
     PipetteHolder, TipDropzone
 )
@@ -176,7 +176,7 @@ class EditLabwareDialog(tk.Toplevel):
         warning_frame.pack(fill=tk.X, pady=5)
         warning_label = ttk.Label(
             warning_frame,
-            text="⚠ Warning: Changing parameters may cause validation errors\nif labware no longer fits in its slot.",
+            text="âš  Warning: Changing parameters may cause validation errors\nif labware no longer fits in its slot.",
             foreground='orange',
             font=('Arial', 8)
         )
@@ -476,7 +476,7 @@ class CreateLabwareDialog(tk.Toplevel):
             self.cols_var = tk.StringVar(value="12")
             ttk.Entry(self.specific_frame, textvariable=self.cols_var, width=20).grid(row=1, column=1, pady=2)
 
-            ttk.Label(self.specific_frame, text="Well Capacity (µL):").grid(row=2, column=0, sticky='w', pady=2)
+            ttk.Label(self.specific_frame, text="Well Capacity (ÂµL):").grid(row=2, column=0, sticky='w', pady=2)
             self.capacity_var = tk.StringVar(value="1000")
             ttk.Entry(self.specific_frame, textvariable=self.capacity_var, width=20).grid(row=2, column=1, pady=2)
 
@@ -775,7 +775,7 @@ class EditLabwareDialog(tk.Toplevel):
         warning_frame.pack(fill=tk.X, pady=5)
         warning_label = ttk.Label(
             warning_frame,
-            text="⚠ Warning: Changing parameters may cause validation errors\nif labware no longer fits in its slot.",
+            text="âš  Warning: Changing parameters may cause validation errors\nif labware no longer fits in its slot.",
             foreground='orange',
             font=('Arial', 8)
         )
@@ -1107,8 +1107,9 @@ class DeckGUI:
         self.offset_x = 50
         self.offset_y = 50
 
-        # Created but not yet placed labware
+        # Created but not yet placed items
         self.unplaced_labware = []
+        self.unplaced_slots = []
 
         self.setup_ui()
         self.draw_deck()
@@ -1167,40 +1168,94 @@ class DeckGUI:
         canvas_frame.grid_rowconfigure(0, weight=1)
         canvas_frame.grid_columnconfigure(0, weight=1)
 
-        # Right panel - Controls
-        control_frame = ttk.Frame(main_frame, width=300)
-        control_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5)
-        control_frame.pack_propagate(False)
+        # Right panel - Controls with scrollbar
+        right_panel_container = ttk.Frame(main_frame, width=300)
+        right_panel_container.pack(side=tk.RIGHT, fill=tk.BOTH, padx=5, pady=5)
+        right_panel_container.pack_propagate(False)
+
+        # Create canvas and scrollbar
+        control_canvas = tk.Canvas(right_panel_container, bg='#f0f0f0', highlightthickness=0)
+        control_scrollbar = ttk.Scrollbar(right_panel_container, orient=tk.VERTICAL, command=control_canvas.yview)
+
+        # Create a frame inside the canvas to hold all the controls
+        control_frame = ttk.Frame(control_canvas)
+
+        # Configure canvas scrolling
+        control_canvas.configure(yscrollcommand=control_scrollbar.set)
+
+        # Pack scrollbar and canvas
+        control_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        control_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Create window in canvas to hold the frame
+        canvas_frame = control_canvas.create_window((0, 0), window=control_frame, anchor='nw')
+
+        # Configure scrolling region when frame size changes
+        def configure_scroll_region(event=None):
+            control_canvas.configure(scrollregion=control_canvas.bbox("all"))
+            # Make sure the frame fills the canvas width
+            canvas_width = control_canvas.winfo_width()
+            if canvas_width > 1:  # Only update if canvas has been drawn
+                control_canvas.itemconfig(canvas_frame, width=canvas_width)
+
+        control_frame.bind('<Configure>', configure_scroll_region)
+        control_canvas.bind('<Configure>', configure_scroll_region)
+
+        # Enable mousewheel scrolling
+        def on_mousewheel(event):
+            control_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        def bind_mousewheel(event):
+            control_canvas.bind_all("<MouseWheel>", on_mousewheel)
+
+        def unbind_mousewheel(event):
+            control_canvas.unbind_all("<MouseWheel>")
+
+        control_canvas.bind('<Enter>', bind_mousewheel)
+        control_canvas.bind('<Leave>', unbind_mousewheel)
 
         # Title
         ttk.Label(control_frame, text="Deck Editor", font=('Arial', 14, 'bold')).pack(pady=10)
 
         # Action Buttons
         action_frame = ttk.LabelFrame(control_frame, text="Actions", padding=10)
-        action_frame.pack(fill=tk.X, pady=5)
+        action_frame.pack(fill=tk.X, pady=5, padx=5)
 
         ttk.Button(action_frame, text="Create Slot", command=self.create_slot).pack(fill=tk.X, pady=2)
         ttk.Button(action_frame, text="Create Labware", command=self.create_labware).pack(fill=tk.X, pady=2)
 
         # Deck info
         info_frame = ttk.LabelFrame(control_frame, text="Deck Info", padding=10)
-        info_frame.pack(fill=tk.X, pady=5)
+        info_frame.pack(fill=tk.X, pady=5, padx=5)
 
         self.deck_info_label = ttk.Label(info_frame, text="", justify=tk.LEFT)
         self.deck_info_label.pack(anchor='w')
 
         # Slots list
         slots_frame = ttk.LabelFrame(control_frame, text="Slots", padding=10)
-        slots_frame.pack(fill=tk.X, pady=5)
+        slots_frame.pack(fill=tk.X, pady=5, padx=5)
 
         self.slots_listbox = tk.Listbox(slots_frame, height=6)
         self.slots_listbox.pack(fill=tk.X)
         self.slots_listbox.bind('<<ListboxSelect>>', self.on_slot_select)
         self.slots_listbox.bind('<Button-3>', self.on_slot_right_click)
 
+        # Unplaced Slots list
+        unplaced_slots_frame = ttk.LabelFrame(control_frame, text="Unplaced Slots", padding=10)
+        unplaced_slots_frame.pack(fill=tk.X, pady=5, padx=5)
+
+        self.unplaced_slots_listbox = tk.Listbox(unplaced_slots_frame, height=4)
+        self.unplaced_slots_listbox.pack(fill=tk.X)
+        self.unplaced_slots_listbox.bind('<Button-3>', self.on_unplaced_slot_right_click)
+        self.unplaced_slots_listbox.bind('<Double-Button-1>', self.on_unplaced_slot_double_click)
+
+        # Add Place Slot button
+        ttk.Button(unplaced_slots_frame, text="Place Slot", command=self.place_selected_unplaced_slot).pack(fill=tk.X,
+                                                                                                            pady=(5, 0))
+
         # Placed Labware list
         labware_frame = ttk.LabelFrame(control_frame, text="Placed Labware", padding=10)
-        labware_frame.pack(fill=tk.X, pady=5)
+        labware_frame.pack(fill=tk.X, pady=5, padx=5)
 
         self.labware_listbox = tk.Listbox(labware_frame, height=6)
         self.labware_listbox.pack(fill=tk.X)
@@ -1209,7 +1264,7 @@ class DeckGUI:
 
         # Unplaced Labware list
         unplaced_frame = ttk.LabelFrame(control_frame, text="Unplaced Labware", padding=10)
-        unplaced_frame.pack(fill=tk.X, pady=5)
+        unplaced_frame.pack(fill=tk.X, pady=5, padx=5)
 
         self.unplaced_listbox = tk.Listbox(unplaced_frame, height=4)
         self.unplaced_listbox.pack(fill=tk.X)
@@ -1222,21 +1277,21 @@ class DeckGUI:
 
         # Info panel
         self.info_frame = ttk.LabelFrame(control_frame, text="Selection Info", padding=10)
-        self.info_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        self.info_frame.pack(fill=tk.BOTH, expand=True, pady=5, padx=5)
 
         self.info_text = tk.Text(self.info_frame, height=10, wrap=tk.WORD)
         self.info_text.pack(fill=tk.BOTH, expand=True)
 
         # Control buttons
         btn_frame = ttk.Frame(control_frame)
-        btn_frame.pack(fill=tk.X, pady=5)
+        btn_frame.pack(fill=tk.X, pady=5, padx=5)
 
         ttk.Button(btn_frame, text="Refresh", command=self.draw_deck).pack(fill=tk.X, pady=2)
         ttk.Button(btn_frame, text="Clear Selection", command=self.clear_selection).pack(fill=tk.X, pady=2)
 
         # Zoom controls
         zoom_frame = ttk.Frame(control_frame)
-        zoom_frame.pack(fill=tk.X, pady=5)
+        zoom_frame.pack(fill=tk.X, pady=5, padx=5)
 
         ttk.Button(zoom_frame, text="Zoom In", command=self.zoom_in).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
         ttk.Button(zoom_frame, text="Zoom Out", command=self.zoom_out).pack(side=tk.LEFT, expand=True, fill=tk.X,
@@ -1272,6 +1327,7 @@ class DeckGUI:
         if x_max and y_max and z_max:
             self.deck = Deck(range_x=(0, x_max), range_y=(0, y_max), range_z=z_max, deck_id=deck_id)
             self.unplaced_labware = []
+            self.unplaced_slots = []
             self.draw_deck()
             messagebox.showinfo("Success", "New deck created!")
 
@@ -1281,12 +1337,10 @@ class DeckGUI:
         self.root.wait_window(dialog)
 
         if dialog.result:
-            try:
-                self.deck.add_slots([dialog.result])
-                self.draw_deck()
-                messagebox.showinfo("Success", f"Slot '{dialog.result.slot_id}' created!")
-            except ValueError as e:
-                messagebox.showerror("Error", str(e))
+            self.unplaced_slots.append(dialog.result)
+            self.update_unplaced_slots_list()
+            messagebox.showinfo("Success",
+                                f"Slot '{dialog.result.slot_id}' created!\nClick 'Place Slot' to add it to the deck.")
 
     def create_labware(self):
         """Open dialog to create new labware"""
@@ -1447,8 +1501,9 @@ class DeckGUI:
         for lw_id in self.deck.labware.keys():
             self.labware_listbox.insert(tk.END, lw_id)
 
-        # Unplaced labware
+        # Unplaced items
         self.update_unplaced_list()
+        self.update_unplaced_slots_list()
 
     def update_unplaced_list(self):
         """Update unplaced labware list"""
@@ -1585,6 +1640,65 @@ class DeckGUI:
         labware = self.unplaced_labware[selection[0]]
         self.place_labware(labware)
 
+    def update_unplaced_slots_list(self):
+        """Update unplaced slots list"""
+        self.unplaced_slots_listbox.delete(0, tk.END)
+        for slot in self.unplaced_slots:
+            self.unplaced_slots_listbox.insert(tk.END, slot.slot_id)
+
+    def on_unplaced_slot_right_click(self, event):
+        """Handle right-click on unplaced slot list"""
+        # Find which item was clicked
+        index = self.unplaced_slots_listbox.nearest(event.y)
+        if index < 0 or index >= len(self.unplaced_slots):
+            return
+
+        self.unplaced_slots_listbox.selection_clear(0, tk.END)
+        self.unplaced_slots_listbox.selection_set(index)
+        self.unplaced_slots_listbox.activate(index)
+
+        slot = self.unplaced_slots[index]
+
+        menu = tk.Menu(self.root, tearoff=0)
+        menu.add_command(label="Place on Deck", command=lambda: self.place_slot(slot))
+        menu.add_command(label="Delete", command=lambda: self.delete_unplaced_slot(slot))
+        menu.post(event.x_root, event.y_root)
+
+    def on_unplaced_slot_double_click(self, event):
+        """Handle double-click on unplaced slot list"""
+        selection = self.unplaced_slots_listbox.curselection()
+        if selection:
+            slot = self.unplaced_slots[selection[0]]
+            self.place_slot(slot)
+
+    def place_selected_unplaced_slot(self):
+        """Place the selected unplaced slot"""
+        selection = self.unplaced_slots_listbox.curselection()
+        if not selection:
+            messagebox.showinfo("No Selection", "Please select an unplaced slot to place.")
+            return
+
+        slot = self.unplaced_slots[selection[0]]
+        self.place_slot(slot)
+
+    def place_slot(self, slot):
+        """Place an unplaced slot on the deck"""
+        try:
+            self.deck.add_slots([slot])
+            self.unplaced_slots.remove(slot)
+            self.update_unplaced_slots_list()
+            self.draw_deck()
+            messagebox.showinfo("Success", f"Slot '{slot.slot_id}' placed on deck!")
+        except ValueError as e:
+            messagebox.showerror("Error", str(e))
+
+    def delete_unplaced_slot(self, slot):
+        """Delete unplaced slot"""
+        result = messagebox.askyesno("Confirm", f"Delete slot '{slot.slot_id}'?")
+        if result:
+            self.unplaced_slots.remove(slot)
+            self.update_unplaced_slots_list()
+
     def delete_unplaced_labware(self, labware):
         """Delete unplaced labware"""
         result = messagebox.askyesno("Confirm", f"Delete labware '{labware.labware_id}'?")
@@ -1695,7 +1809,7 @@ class DeckGUI:
                 slot.range_x[1] <= self.deck.range_x[1] and
                 self.deck.range_y[0] <= slot.range_y[0] and
                 slot.range_y[1] <= self.deck.range_y[1]):
-            errors.append(f"⚠ Slot extends outside deck boundaries\n"
+            errors.append(f"âš  Slot extends outside deck boundaries\n"
                           f"   Deck: X{self.deck.range_x}, Y{self.deck.range_y}\n"
                           f"   Slot: X{slot.range_x}, Y{slot.range_y}")
 
@@ -1704,7 +1818,7 @@ class DeckGUI:
             if other_id == slot.slot_id:
                 continue
             if self.deck._overlaps(slot, other_slot):
-                errors.append(f"⚠ Slot overlaps with slot '{other_id}'")
+                errors.append(f"âš  Slot overlaps with slot '{other_id}'")
 
         # Check if all labware in this slot still fit
         for lw_id, (lw, z_range) in slot.labware_stack.items():
@@ -1714,13 +1828,13 @@ class DeckGUI:
             fits_xy = (abs(slot.range_x[1] - slot.range_x[0]) >= lw.size_x and
                        abs(slot.range_y[1] - slot.range_y[0]) >= lw.size_y)
             if not fits_xy:
-                errors.append(f"⚠ Labware '{lw_id}' no longer fits in X/Y dimensions\n"
+                errors.append(f"âš  Labware '{lw_id}' no longer fits in X/Y dimensions\n"
                               f"   Slot: {abs(slot.range_x[1] - slot.range_x[0]):.1f} x {abs(slot.range_y[1] - slot.range_y[0]):.1f} mm\n"
                               f"   Labware: {lw.size_x:.1f} x {lw.size_y:.1f} mm")
 
             # Check Z fit
             if max_z > slot.range_z:
-                errors.append(f"⚠ Labware '{lw_id}' exceeds slot Z height\n"
+                errors.append(f"âš  Labware '{lw_id}' exceeds slot Z height\n"
                               f"   Slot Z: {slot.range_z} mm\n"
                               f"   Labware needs: {max_z} mm")
 
@@ -1743,14 +1857,14 @@ class DeckGUI:
             fits_xy = (abs(slot.range_x[1] - slot.range_x[0]) >= labware.size_x and
                        abs(slot.range_y[1] - slot.range_y[0]) >= labware.size_y)
             if not fits_xy:
-                errors.append(f"⚠ Labware no longer fits in slot '{slot_id}' (X/Y too large)\n"
+                errors.append(f"âš  Labware no longer fits in slot '{slot_id}' (X/Y too large)\n"
                               f"   Slot: {abs(slot.range_x[1] - slot.range_x[0]):.1f} x {abs(slot.range_y[1] - slot.range_y[0]):.1f} mm\n"
                               f"   Labware: {labware.size_x:.1f} x {labware.size_y:.1f} mm")
 
             # Check Z fit
             new_max_z = min_z + labware.size_z
             if new_max_z > slot.range_z:
-                errors.append(f"⚠ Labware exceeds slot '{slot_id}' Z height\n"
+                errors.append(f"âš  Labware exceeds slot '{slot_id}' Z height\n"
                               f"   Slot Z: {slot.range_z} mm\n"
                               f"   Labware needs: {new_max_z} mm (min_z={min_z} + size_z={labware.size_z})")
 
@@ -1864,10 +1978,11 @@ class DeckGUI:
         )
         if filename:
             try:
-                # Save both deck and unplaced labware
+                # Save deck and all unplaced items
                 data = {
                     'deck': self.deck.to_dict(),
-                    'unplaced_labware': [lw.to_dict() for lw in self.unplaced_labware]
+                    'unplaced_labware': [lw.to_dict() for lw in self.unplaced_labware],
+                    'unplaced_slots': [slot.to_dict() for slot in self.unplaced_slots]
                 }
                 with open(filename, 'w') as f:
                     json.dump(data, f, indent=2)
@@ -1899,6 +2014,12 @@ class DeckGUI:
                 if 'unplaced_labware' in data:
                     for lw_data in data['unplaced_labware']:
                         self.unplaced_labware.append(Serializable.from_dict(lw_data))
+
+                # Load unplaced slots if present
+                self.unplaced_slots = []
+                if 'unplaced_slots' in data:
+                    for slot_data in data['unplaced_slots']:
+                        self.unplaced_slots.append(Serializable.from_dict(slot_data))
 
                 self.draw_deck()
                 messagebox.showinfo("Success", f"Deck loaded from {filename}")
