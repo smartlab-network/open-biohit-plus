@@ -15,7 +15,6 @@ from labware import (
 
 class CreateLowLevelLabwareDialog(tk.Toplevel):
     """Dialog for creating low-level labware components (Well, Reservoir, IndividualPipetteHolder)"""
-
     def __init__(self, parent, initial_type=None):
         super().__init__(parent)
         self.title("Create Low-Level Labware")
@@ -281,7 +280,7 @@ class CreateLowLevelLabwareDialog(tk.Toplevel):
                 )
 
             elif comp_type == "Reservoir":
-                capacity = float(self.capacity_var.get())
+                capacity = float(self.capacity_var.get() or 30000)
                 shape = self.shape_var.get() or None
 
                 # Build content dictionary from user inputs
@@ -1175,8 +1174,8 @@ class DeckGUI:
         self.available_individual_holders = []
 
         # View toggles for slots and labware
-        self.slot_view_mode = tk.StringVar(value="placed")  # "placed" or "unplaced"
-        self.labware_view_mode = tk.StringVar(value="placed")  # "placed" or "unplaced"
+        self.slot_view_mode = tk.StringVar(value="unplaced")  # "placed" or "unplaced"
+        self.labware_view_mode = tk.StringVar(value="unplaced")  # "placed" or "unplaced"
 
         self.setup_ui()
         #Force the GUI to render and calculate widget dimensions (size of the canvas)
@@ -1388,9 +1387,8 @@ class DeckGUI:
         # update this dynamically
         self.update_labware_buttons()
 
-
         # Canvas bindings
-        self.canvas.bind("<Button-1>", self.on_canvas_click)
+        self.canvas.bind("<Button-1>", self.on_canvas_fallback_click)
         self.canvas.bind("<B1-Motion>", self.on_canvas_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_canvas_release)
         self.canvas.bind("<Button-3>", self.on_canvas_right_click)
@@ -1978,21 +1976,29 @@ class DeckGUI:
         self.canvas.tag_bind(f'labware_{lw_id}', '<Button-1>',
                              lambda e, lid=lw_id: self.select_labware(lid))
     # Event handlers
-    def on_canvas_click(self, event):
-        """Handle canvas click"""
+    def on_canvas_fallback_click(self, event):
+        """Used for clearing selection or starting drag on placed labware."""
         item = self.canvas.find_closest(event.x, event.y)[0]
         tags = self.canvas.gettags(item)
 
-        if 'slot' in tags:
-            slot_id = [t for t in tags if t != 'slot' and not t.startswith('slot_') and t != 'current'][0]
-            self.select_slot(slot_id)
-        elif 'labware' in tags:
-            lw_id = [t for t in tags if t != 'labware' and not t.startswith('labware_') and t != 'current'][0]
-            self.select_labware(lw_id)
-            self.dragging = lw_id
-            self.drag_data["x"] = event.x
-            self.drag_data["y"] = event.y
+        # Check if the clicked item has *any* bound ID tag (slot or labware)
+        is_identified_item = any(t.startswith('slot_') or t.startswith('labware_') for t in tags)
+
+        if is_identified_item:
+            # If the item has an ID tag, it means the binding in draw_X was already run.
+            # We only need to check if it's placed labware to enable dragging.
+
+            # Since you have the labware ID in the tag 'labware_ID', you can extract it:
+            labware_tag = next((t for t in tags if t.startswith('labware_')), None)
+
+            if labware_tag:
+                lw_id = labware_tag.split('_', 1)[1]
+                if lw_id in self.deck.labware:  # Ensure it is a placed item
+                    self.dragging = lw_id
+                    self.drag_data["x"] = event.x
+                    self.drag_data["y"] = event.y
         else:
+            # If no ID tag is present (clicked on grid, boundary, or background)
             self.clear_selection()
 
     def on_canvas_drag(self, event):
@@ -2465,37 +2471,44 @@ class DeckGUI:
 
     def clear_selection(self):
         """
-        Clears the current selection on the canvas and resets item styles.
-        It also ensures the information panel is cleared by explicitly calling the update function.
+        Clears the current selection on the canvas, listboxes, and resets item styles.
+        It ensures the information panel is cleared by explicitly calling the update function.
         """
+
+        # --- 1. Canvas Selection (Handles Placed Items) ---
         if self.selected_item:
             item_type, item_id = self.selected_item
+            # The tag system here needs to be robust, but we'll use your existing pattern
             tag = f'{item_type}_{item_id}'
 
-            # 1. Find all canvas items associated with the previously selected tag
+            # Find all canvas items associated with the previously selected tag and reset style
             for item in self.canvas.find_withtag(tag):
                 item_type = self.canvas.type(item)
 
-                # 2. Reset SHAPE items (Rectangle, Oval, Polygon)
+                # Reset SHAPE items (Rectangle, Oval, Polygon)
                 if item_type in ('rectangle', 'oval', 'polygon'):
-                    # Reset shape style: width=2, outline='blue' (default style)
                     self.canvas.itemconfig(item, width=2, outline='blue')
 
-                # 3. Reset TEXT items (The label)
+                # Reset TEXT items (The label)
                 elif item_type == 'text':
-                    # Reset text color (using fill) to black or a neutral color, and font
                     self.canvas.itemconfig(item, fill='black', font=('Arial', 10, 'normal'))
 
-                # 4. Optional: handle line items if present
+                # Optional: handle line items if present
                 elif item_type == 'line':
                     self.canvas.itemconfig(item, width=2, fill='blue')
 
-            # Clear the information panel text by calling the display function with an empty string
-            # This is the critical step to ensure the visible text widget is blanked.
-            self.update_info_in_both_tabs("")
-
-            # Clear the internal selection tracking state
+            # Clear the internal canvas selection tracking state
             self.selected_item = None
+
+        # --- 2. Listbox Selections (Handles Unplaced Items) ---
+        # This ensures that if an unplaced item was selected, it is unselected now.
+        self.slots_listbox.selection_clear(0, tk.END)
+        self.labware_listbox.selection_clear(0, tk.END)
+
+        # --- 3. Clear Information Panel (MUST ALWAYS HAPPEN) ---
+        # This call is now outside the 'if self.selected_item:' block,
+        # guaranteeing the info panel is cleared regardless of selection origin.
+        self.update_info_in_both_tabs("")
 
     def zoom_in(self):
         """Zoom in"""
