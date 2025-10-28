@@ -1095,6 +1095,41 @@ class AddLabwareToSlotDialog(tk.Toplevel):
         self.result = None
         self.destroy()
 
+class CollapsibleFrame(ttk.Frame):
+    """A frame that can be collapsed/expanded by clicking on its title."""
+    def __init__(self, parent, text, **kw):
+        super().__init__(parent, **kw)
+
+        # Title bar
+        self.title_frame = ttk.Frame(self)
+        self.title_frame.pack(fill="x", expand=False)
+
+        self.toggle_btn = ttk.Label(self.title_frame, text="▶", width=2)
+        self.toggle_btn.pack(side="left", padx=5)
+
+        self.title_lbl = ttk.Label(self.title_frame, text=text, font=("Arial", 14, "bold"))
+        self.title_lbl.pack(side="left", pady=2)
+
+        # Content frame (initially hidden)
+        self.content_frame = ttk.Frame(self)
+        self.content_frame.pack(fill="both", expand=True)
+        self.content_frame.pack_forget()  # start collapsed
+
+        # Bind click
+        self.title_frame.bind("<Button-1>", self.toggle)
+        self.toggle_btn.bind("<Button-1>", self.toggle)
+        self.title_lbl.bind("<Button-1>", self.toggle)
+
+        self.is_expanded = False
+
+    def toggle(self, event=None):
+        if self.is_expanded:
+            self.content_frame.pack_forget()
+            self.toggle_btn.config(text="▶")
+        else:
+            self.content_frame.pack(fill="both", expand=True)
+            self.toggle_btn.config(text="▼")
+        self.is_expanded = not self.is_expanded
 
 class DeckGUI:
     def __init__(self, deck=None):
@@ -1235,11 +1270,18 @@ class DeckGUI:
         deck_canvas.bind('<Leave>', unbind_deck_mousewheel)
 
         # Deck info
-        info_frame = ttk.LabelFrame(control_frame, text="Deck Info", padding=10)
-        info_frame.pack(fill=tk.X, pady=5, padx=5)
+        self.deck_info_collapsible = CollapsibleFrame(control_frame, text="Deck Info")
+        self.deck_info_collapsible.pack(fill=tk.X, pady=5, padx=5)
 
-        self.deck_info_label = ttk.Label(info_frame, text="", justify=tk.LEFT)
-        self.deck_info_label.pack(anchor='w')
+        # Content inside collapsible frame
+        self.deck_info_label = ttk.Label(
+            self.deck_info_collapsible.content_frame,
+            text="",
+            justify=tk.LEFT,
+            padding=10
+        )
+        self.deck_info_label.pack(fill=tk.X, anchor='w')
+        self.deck_info_collapsible.toggle()
 
         # Info panel
         self.info_frame = ttk.LabelFrame(control_frame, text="Selection Info", padding=10)
@@ -1254,6 +1296,8 @@ class DeckGUI:
 
         ttk.Button(btn_frame, text="Refresh", command=self.draw_deck).pack(fill=tk.X, pady=2)
         ttk.Button(btn_frame, text="Clear Selection", command=self.clear_selection).pack(fill=tk.X, pady=2)
+
+
 
         # ===== SLOTS SECTION WITH TOGGLE =====
         slots_main_frame = ttk.LabelFrame(control_frame, text="Slots", padding=10)
@@ -1378,6 +1422,11 @@ class DeckGUI:
                 text="Delete",
                 command=self.delete_selected_unplaced_slot
             ).pack(fill=tk.X, pady=2)
+            ttk.Button(
+                self.slots_button_frame,
+                text="Create Slot",
+                command=self.create_slot
+            ).pack(fill=tk.X, pady=2)
 
     def update_labware_buttons(self):
         """Update buttons based on current labware view mode"""
@@ -1441,30 +1490,21 @@ class DeckGUI:
     def create_create_tab(self):
         """Create the Create tab"""
         create_tab = ttk.Frame(self.right_panel_notebook)
-        self.right_panel_notebook.add(create_tab, text="Create")
+        self.right_panel_notebook.add(create_tab, text="Labware")
 
         # Create tab content
         create_content = ttk.Frame(create_tab, padding=20)
         create_content.pack(fill=tk.BOTH, expand=True)
 
         # Title
-        ttk.Label(create_content, text="Create New Items", font=('Arial', 14, 'bold')).pack(pady=(0, 20))
-
-        # Create Slot section
-        slot_section = ttk.LabelFrame(create_content, text="Slot", padding=15)
-        slot_section.pack(fill=tk.X, pady=10)
-
-        ttk.Label(slot_section, text="Create a new slot to place on the deck",
-                  wraplength=250, justify=tk.LEFT).pack(pady=(0, 10))
-        ttk.Button(slot_section, text="Create Slot", command=self.create_slot,
-                   width=20).pack()
+        ttk.Label(create_content, text="Create New Labware", font=('Arial', 14, 'bold')).pack(pady=(0, 20))
 
         # Create Low-Level Labware section
         low_level_section = ttk.LabelFrame(create_content, text="Low-Level Labware", padding=15)
         low_level_section.pack(fill=tk.X, pady=10)
 
         ttk.Label(low_level_section,
-                  text="Create components used in labware\n like Well & Reservoir)",
+                  text="Create components used in labware\n like Well, Individual Pipette Holder, and Reservoir)",
                   wraplength=250, justify=tk.LEFT).pack(pady=(0, 10))
         ttk.Button(low_level_section, text="Create Low-Level Lw", command=self.create_low_level_labware,
                    width=20).pack()
@@ -1474,7 +1514,7 @@ class DeckGUI:
         labware_section.pack(fill=tk.X, pady=10)
 
         ttk.Label(labware_section,
-                  text="Create labware like (Plate, ReservoirHolder, PipetteHolder, TipDropzone)",
+                  text="Create labware like Plate, ReservoirHolder, PipetteHolder, TipDropzone",
                   wraplength=250, justify=tk.LEFT).pack(pady=(0, 10))
         ttk.Button(labware_section, text="Create Labware", command=self.create_labware,
                    width=20).pack()
@@ -1562,7 +1602,7 @@ class DeckGUI:
             if self.slot_view_mode.get() == "unplaced":
                 self.update_slots_list()
             messagebox.showinfo("Success",
-                                f"Slot '{dialog.result.slot_id}' created!\nSwitch to 'Unplaced' view and click 'Place Slot' to add it to the deck.")
+                                f"Slot created!\nclick 'Place Slot' to add it to the deck.")
 
     def place_labware(self, labware):
         """Place unplaced labware on deck"""
