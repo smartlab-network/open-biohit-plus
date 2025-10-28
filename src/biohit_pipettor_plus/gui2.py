@@ -1303,10 +1303,7 @@ class DeckGUI:
         )
         self.deck_info_label.pack(fill=tk.X, anchor='w')
         self.deck_info_collapsible.toggle()
-
-
         self._add_common_controls(deck_editor_tab)
-
 
         # ===== SLOTS SECTION WITH TOGGLE =====
         slots_main_frame = ttk.LabelFrame(control_frame, text="Slots", padding=10)
