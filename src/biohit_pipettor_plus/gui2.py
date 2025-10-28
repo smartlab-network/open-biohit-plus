@@ -37,11 +37,21 @@ class CreateLowLevelLabwareDialog(tk.Toplevel):
         type_frame = ttk.LabelFrame(main_frame, text="Component Type", padding="10")
         type_frame.pack(fill=tk.X, pady=5)
 
-        default_type = self.initial_type if self.initial_type in ["Well", "Reservoir", "IndividualPipetteHolder"] else "Well"
-        self.component_type = tk.StringVar(value=default_type)
-        types = ["Well", "Reservoir", "IndividualPipetteHolder"]
+        all_types = ["Well", "Reservoir", "IndividualPipetteHolder"]
 
-        for comp_type in types:
+        if self.initial_type and self.initial_type in all_types:
+            # Lock the options if a type was passed in (e.g., from Plate creation)
+            types_to_show = [self.initial_type]
+            default_type = self.initial_type
+            type_frame.config(text=f"Component Type (Locked to {self.initial_type})")
+        else:
+            # Show all options if opening independently
+            types_to_show = all_types
+            default_type = self.initial_type if self.initial_type in all_types else "Well"
+
+        self.component_type = tk.StringVar(value=default_type)
+
+        for comp_type in types_to_show:  # Use the restricted list
             ttk.Radiobutton(
                 type_frame,
                 text=comp_type,
@@ -400,7 +410,7 @@ class SelectOrCreateComponentDialog(tk.Toplevel):
     def on_create_new(self):
         """Create a new component"""
         # 1. Open the component creation dialog
-        dialog = CreateLowLevelLabwareDialog(self)
+        dialog = CreateLowLevelLabwareDialog(self, initial_type=self.component_type)
         self.wait_window(dialog)
 
         if dialog.result:
@@ -1685,7 +1695,6 @@ class DeckGUI:
 
         if dialog.result:
             component = dialog.result
-
             # 2. Add to appropriate list and show success message
             if isinstance(component, Well):
                 self.available_wells.append(component)
@@ -1712,6 +1721,8 @@ class DeckGUI:
         self.root.wait_window(dialog)
 
         if dialog.result:
+            new_labware = dialog.result
+            print(new_labware.to_dict())
             # Store newly created component if needed
             if isinstance(dialog.result, Plate) and dialog.selected_well:
                 if dialog.selected_well not in self.available_wells:
@@ -2040,7 +2051,7 @@ class DeckGUI:
 
         menu.post(event.x_root, event.y_root)
 
-    def on_slot_select(self, event):
+    def on_slot_select(self, event = None):
         """Handle slot listbox selection"""
         selection = self.slots_listbox.curselection()
         if selection:
@@ -2079,7 +2090,7 @@ class DeckGUI:
         if self.slot_view_mode.get() == "unplaced":
             self.place_selected_unplaced_slot()
 
-    def on_labware_select(self, event):
+    def on_labware_select(self, event = None):
         """Handle labware listbox selection"""
         selection = self.labware_listbox.curselection()
         if selection:
@@ -2405,55 +2416,86 @@ class DeckGUI:
         self.update_info_in_both_tabs(info)
 
     def select_labware(self, lw_id):
-        """Highlight and show info for labware"""
+        """Highlight and show info for placed labware."""
         self.clear_selection()
         self.selected_item = ('labware', lw_id)
 
         items = self.canvas.find_withtag(f'labware_{lw_id}')
 
-        # --- FIX THE SELECTION LOOP ---
+        # Iterate through all canvas items tagged with this labware ID
         for item in items:
             item_type = self.canvas.type(item)
 
-            # 1. Configuration for SHAPE items (Rectangle, Oval, Polygon)
-            if item_type in ('rectangle', 'oval', 'polygon'):
+            # 1. Configuration for SHAPE items (Rectangle, Oval, etc.)
+            if item_type in ('rectangle', 'oval', 'polygon', 'line'):
+                # Use 'outline' and 'width' to highlight the border
                 self.canvas.itemconfig(item, width=4, outline='darkred')
 
-            # 2. Configuration for TEXT items (the label)
+            # 2. Configuration for TEXT items (The label)
             elif item_type == 'text':
-                # Use 'fill' to change text color, not 'outline'
+                # Use 'fill' to change the text color
                 self.canvas.itemconfig(item, fill='darkred', font=('Arial', 10, 'bold'))
 
-            # Optional: You might also have 'line' items, which use 'fill' for color
-            elif item_type == 'line':
-                self.canvas.itemconfig(item, width=4, fill='darkred')
-        # --- END FIX ---
-
+        # Retrieve the labware object for detailed display
         lw = self.deck.labware[lw_id]
         slot_id = self.deck.get_slot_for_labware(lw_id)
 
-        # ... (rest of your info string generation remains the same) ...
-
+        # Generate the detailed information string
         info = f"Labware: {lw_id}\n\n"
-        # ... (rest of info generation) ...
+        info += f"Type: {lw.__class__.__name__}\n"
+        info += f"Size X: {lw.size_x} mm\n"
+        info += f"Size Y: {lw.size_y} mm\n"
+        info += f"Size Z: {lw.size_z} mm\n"
+        info += f"Offset: {lw.offset}\n"
+        info += f"Position: {lw.position}\n"
+        info += f"Slot: {slot_id if slot_id else 'None'}\n"
+
+        # Add type-specific info
+        if isinstance(lw, Plate):
+            info += f"\nRows: {lw._rows}\n"
+            info += f"Columns: {lw._columns}\n"
+        elif isinstance(lw, ReservoirHolder):
+            info += f"\nHooks X: {lw.hooks_across_x}\n"
+            info += f"Hooks Y: {lw.hooks_across_y}\n"
+        elif isinstance(lw, PipetteHolder):
+            info += f"\nHolders X: {lw.holders_across_x}\n"
+            info += f"\nHolders Y: {lw.holders_across_y}\n"
 
         self.update_info_in_both_tabs(info)
 
     def clear_selection(self):
-        """Clear selection"""
+        """
+        Clears the current selection on the canvas and resets item styles.
+        It also ensures the information panel is cleared by explicitly calling the update function.
+        """
         if self.selected_item:
             item_type, item_id = self.selected_item
-            if item_type == 'slot':
-                items = self.canvas.find_withtag(f'slot_{item_id}')
-                for item in items:
-                    self.canvas.itemconfig(item, width=2, outline='blue')
-            elif item_type == 'labware':
-                items = self.canvas.find_withtag(f'labware_{item_id}')
-                for item in items:
-                    self.canvas.itemconfig(item, width=2, outline='red')
+            tag = f'{item_type}_{item_id}'
 
-        self.selected_item = None
-        self.update_info_in_both_tabs("")
+            # 1. Find all canvas items associated with the previously selected tag
+            for item in self.canvas.find_withtag(tag):
+                item_type = self.canvas.type(item)
+
+                # 2. Reset SHAPE items (Rectangle, Oval, Polygon)
+                if item_type in ('rectangle', 'oval', 'polygon'):
+                    # Reset shape style: width=2, outline='blue' (default style)
+                    self.canvas.itemconfig(item, width=2, outline='blue')
+
+                # 3. Reset TEXT items (The label)
+                elif item_type == 'text':
+                    # Reset text color (using fill) to black or a neutral color, and font
+                    self.canvas.itemconfig(item, fill='black', font=('Arial', 10, 'normal'))
+
+                # 4. Optional: handle line items if present
+                elif item_type == 'line':
+                    self.canvas.itemconfig(item, width=2, fill='blue')
+
+            # Clear the information panel text by calling the display function with an empty string
+            # This is the critical step to ensure the visible text widget is blanked.
+            self.update_info_in_both_tabs("")
+
+            # Clear the internal selection tracking state
+            self.selected_item = None
 
     def zoom_in(self):
         """Zoom in"""
