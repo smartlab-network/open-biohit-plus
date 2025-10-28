@@ -1490,7 +1490,7 @@ class DeckGUI:
     def create_create_tab(self):
         """Create the Create tab"""
         create_tab = ttk.Frame(self.right_panel_notebook)
-        self.right_panel_notebook.add(create_tab, text="Labware")
+        self.right_panel_notebook.add(create_tab, text="Create Labware")
 
         # Create tab content
         create_content = ttk.Frame(create_tab, padding=20)
@@ -1504,7 +1504,7 @@ class DeckGUI:
         low_level_section.pack(fill=tk.X, pady=10)
 
         ttk.Label(low_level_section,
-                  text="Create components used in labware\n like Well, Individual Pipette Holder, and Reservoir)",
+                  text="For components used in \n labware: Well, Individual Pipette Holder, and Reservoir)",
                   wraplength=250, justify=tk.LEFT).pack(pady=(0, 10))
         ttk.Button(low_level_section, text="Create Low-Level Lw", command=self.create_low_level_labware,
                    width=20).pack()
@@ -1514,7 +1514,7 @@ class DeckGUI:
         labware_section.pack(fill=tk.X, pady=10)
 
         ttk.Label(labware_section,
-                  text="Create labware like Plate, ReservoirHolder, PipetteHolder, TipDropzone",
+                  text="For labwares: Plate, ReservoirHolder, PipetteHolder, TipDropzone",
                   wraplength=250, justify=tk.LEFT).pack(pady=(0, 10))
         ttk.Button(labware_section, text="Create Labware", command=self.create_labware,
                    width=20).pack()
