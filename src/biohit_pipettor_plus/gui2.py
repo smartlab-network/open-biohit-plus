@@ -1,4 +1,4 @@
-# gui2.py - Enhanced Tkinter GUI for Deck Editor
+# gui2.py - Enhanced Tkinter GUI for Deck Editor with Low-Level Labware Support
 
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
@@ -9,19 +9,18 @@ from deck import Deck
 from slot import Slot
 from labware import (
     Labware, Well, Reservoir, Plate, ReservoirHolder,
-    PipetteHolder, TipDropzone
+    PipetteHolder, TipDropzone, IndividualPipetteHolder
 )
 
 
-class EditSlotDialog(tk.Toplevel):
-    """Dialog for editing existing slots"""
+class CreateLowLevelLabwareDialog(tk.Toplevel):
+    """Dialog for creating low-level labware components (Well, Reservoir, IndividualPipetteHolder)"""
 
-    def __init__(self, parent, slot):
+    def __init__(self, parent):
         super().__init__(parent)
-        self.title(f"Edit Slot - {slot.slot_id}")
-        self.geometry("400x300")
+        self.title("Create Low-Level Labware")
+        self.geometry("550x800")
         self.result = None
-        self.slot = slot
 
         # Make dialog modal
         self.transient(parent)
@@ -33,308 +32,62 @@ class EditSlotDialog(tk.Toplevel):
         main_frame = ttk.Frame(self, padding="10")
         main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Slot Parameters
-        params_frame = ttk.LabelFrame(main_frame, text="Slot Parameters", padding="10")
-        params_frame.pack(fill=tk.BOTH, expand=True, pady=5)
-
-        # Slot ID (read-only)
-        ttk.Label(params_frame, text="Slot ID:").grid(row=0, column=0, sticky='w', pady=5)
-        ttk.Label(params_frame, text=self.slot.slot_id, font=('Arial', 10, 'bold')).grid(row=0, column=1, sticky='w',
-                                                                                         pady=5)
-        ttk.Label(params_frame, text="(Cannot change ID)", font=('Arial', 8, 'italic'), foreground='gray').grid(row=0,
-                                                                                                                column=2,
-                                                                                                                sticky='w',
-                                                                                                                padx=5)
-
-        # Range X
-        ttk.Label(params_frame, text="Range X Min (mm):").grid(row=1, column=0, sticky='w', pady=5)
-        self.x_min_var = tk.StringVar(value=str(self.slot.range_x[0]))
-        ttk.Entry(params_frame, textvariable=self.x_min_var, width=25).grid(row=1, column=1, pady=5, columnspan=2)
-
-        ttk.Label(params_frame, text="Range X Max (mm):").grid(row=2, column=0, sticky='w', pady=5)
-        self.x_max_var = tk.StringVar(value=str(self.slot.range_x[1]))
-        ttk.Entry(params_frame, textvariable=self.x_max_var, width=25).grid(row=2, column=1, pady=5, columnspan=2)
-
-        # Range Y
-        ttk.Label(params_frame, text="Range Y Min (mm):").grid(row=3, column=0, sticky='w', pady=5)
-        self.y_min_var = tk.StringVar(value=str(self.slot.range_y[0]))
-        ttk.Entry(params_frame, textvariable=self.y_min_var, width=25).grid(row=3, column=1, pady=5, columnspan=2)
-
-        ttk.Label(params_frame, text="Range Y Max (mm):").grid(row=4, column=0, sticky='w', pady=5)
-        self.y_max_var = tk.StringVar(value=str(self.slot.range_y[1]))
-        ttk.Entry(params_frame, textvariable=self.y_max_var, width=25).grid(row=4, column=1, pady=5, columnspan=2)
-
-        # Range Z
-        ttk.Label(params_frame, text="Range Z (mm):").grid(row=5, column=0, sticky='w', pady=5)
-        self.z_var = tk.StringVar(value=str(self.slot.range_z))
-        ttk.Entry(params_frame, textvariable=self.z_var, width=25).grid(row=5, column=1, pady=5, columnspan=2)
-
-        # Buttons
-        btn_frame = ttk.Frame(main_frame)
-        btn_frame.pack(fill=tk.X, pady=10)
-
-        ttk.Button(btn_frame, text="Save Changes", command=self.on_save).pack(side=tk.RIGHT, padx=5)
-        ttk.Button(btn_frame, text="Cancel", command=self.on_cancel).pack(side=tk.RIGHT)
-
-    def on_save(self):
-        """Save changes to slot"""
-        try:
-            x_min = float(self.x_min_var.get())
-            x_max = float(self.x_max_var.get())
-            y_min = float(self.y_min_var.get())
-            y_max = float(self.y_max_var.get())
-            z = float(self.z_var.get())
-
-            if x_max <= x_min or y_max <= y_min:
-                messagebox.showerror("Error", "Max values must be greater than min values")
-                return
-
-            # Update slot in place
-            self.slot.range_x = (x_min, x_max)
-            self.slot.range_y = (y_min, y_max)
-            self.slot.range_z = z
-
-            self.result = True
-            self.destroy()
-
-        except ValueError as e:
-            messagebox.showerror("Invalid Input", f"Please check your inputs:\n{str(e)}")
-
-    def on_cancel(self):
-        """Cancel dialog"""
-        self.result = None
-        self.destroy()
-
-
-class EditLabwareDialog(tk.Toplevel):
-    """Dialog for editing existing labware"""
-
-    def __init__(self, parent, labware):
-        super().__init__(parent)
-        self.title(f"Edit Labware - {labware.labware_id}")
-        self.geometry("500x650")
-        self.result = None
-        self.labware = labware
-
-        # Make dialog modal
-        self.transient(parent)
-        self.grab_set()
-
-        self.create_widgets()
-
-    def create_widgets(self):
-        main_frame = ttk.Frame(self, padding="10")
-        main_frame.pack(fill=tk.BOTH, expand=True)
-
-        # Labware Type (read-only)
-        type_frame = ttk.LabelFrame(main_frame, text="Labware Type (Cannot Change)", padding="10")
+        # Type Selection
+        type_frame = ttk.LabelFrame(main_frame, text="Component Type", padding="10")
         type_frame.pack(fill=tk.X, pady=5)
 
-        ttk.Label(type_frame, text=self.labware.__class__.__name__,
-                  font=('Arial', 12, 'bold')).pack(anchor='w')
+        self.component_type = tk.StringVar(value="Well")
+        types = ["Well", "Reservoir", "IndividualPipetteHolder"]
+
+        for comp_type in types:
+            ttk.Radiobutton(
+                type_frame,
+                text=comp_type,
+                variable=self.component_type,
+                value=comp_type,
+                command=self.on_type_change
+            ).pack(anchor='w')
 
         # Basic Parameters
         basic_frame = ttk.LabelFrame(main_frame, text="Basic Parameters", padding="10")
         basic_frame.pack(fill=tk.X, pady=5)
 
-        # Labware ID (read-only)
+        # ID
         ttk.Label(basic_frame, text="Labware ID:").grid(row=0, column=0, sticky='w', pady=2)
-        id_label = ttk.Label(basic_frame, text=self.labware.labware_id, font=('Arial', 9, 'bold'))
-        id_label.grid(row=0, column=1, sticky='w', pady=2)
+        self.id_var = tk.StringVar()
+        ttk.Entry(basic_frame, textvariable=self.id_var, width=30).grid(row=0, column=1, pady=2)
+        ttk.Label(basic_frame, text="(optional)", font=('Arial', 12, 'italic'), foreground='gray').grid(row=0, column=2,
+                                                                                                        sticky='w',
+                                                                                                        padx=5)
 
         # Dimensions
         ttk.Label(basic_frame, text="Size X (mm):").grid(row=1, column=0, sticky='w', pady=2)
-        self.size_x_var = tk.StringVar(value=str(self.labware.size_x))
+        self.size_x_var = tk.StringVar()
         ttk.Entry(basic_frame, textvariable=self.size_x_var, width=30).grid(row=1, column=1, pady=2)
 
         ttk.Label(basic_frame, text="Size Y (mm):").grid(row=2, column=0, sticky='w', pady=2)
-        self.size_y_var = tk.StringVar(value=str(self.labware.size_y))
+        self.size_y_var = tk.StringVar()
         ttk.Entry(basic_frame, textvariable=self.size_y_var, width=30).grid(row=2, column=1, pady=2)
 
         ttk.Label(basic_frame, text="Size Z (mm):").grid(row=3, column=0, sticky='w', pady=2)
-        self.size_z_var = tk.StringVar(value=str(self.labware.size_z))
+        self.size_z_var = tk.StringVar()
         ttk.Entry(basic_frame, textvariable=self.size_z_var, width=30).grid(row=3, column=1, pady=2)
 
         # Offset
         ttk.Label(basic_frame, text="Offset X (mm):").grid(row=4, column=0, sticky='w', pady=2)
-        self.offset_x_var = tk.StringVar(value=str(self.labware.offset[0]))
+        self.offset_x_var = tk.StringVar(value="0.0")
         ttk.Entry(basic_frame, textvariable=self.offset_x_var, width=30).grid(row=4, column=1, pady=2)
 
         ttk.Label(basic_frame, text="Offset Y (mm):").grid(row=5, column=0, sticky='w', pady=2)
-        self.offset_y_var = tk.StringVar(value=str(self.labware.offset[1]))
+        self.offset_y_var = tk.StringVar(value="0.0")
         ttk.Entry(basic_frame, textvariable=self.offset_y_var, width=30).grid(row=5, column=1, pady=2)
 
         # Type-Specific Parameters Frame
         self.specific_frame = ttk.LabelFrame(main_frame, text="Type-Specific Parameters", padding="10")
         self.specific_frame.pack(fill=tk.BOTH, expand=True, pady=5)
 
-        # Create type-specific fields
+        # Initialize type-specific fields
         self.create_specific_fields()
-
-        # Warning label
-        warning_frame = ttk.Frame(main_frame)
-        warning_frame.pack(fill=tk.X, pady=5)
-        warning_label = ttk.Label(
-            warning_frame,
-            text="âš  Warning: Changing parameters may cause validation errors\nif labware no longer fits in its slot.",
-            foreground='orange',
-            font=('Arial', 8)
-        )
-        warning_label.pack()
-
-        # Buttons
-        btn_frame = ttk.Frame(main_frame)
-        btn_frame.pack(fill=tk.X, pady=10)
-
-        ttk.Button(btn_frame, text="Save Changes", command=self.on_save).pack(side=tk.RIGHT, padx=5)
-        ttk.Button(btn_frame, text="Cancel", command=self.on_cancel).pack(side=tk.RIGHT)
-
-    def create_specific_fields(self):
-        """Create fields specific to the labware type"""
-        # Clear existing widgets
-        for widget in self.specific_frame.winfo_children():
-            widget.destroy()
-
-        lw = self.labware
-
-        if isinstance(lw, Plate):
-            ttk.Label(self.specific_frame, text="Rows:").grid(row=0, column=0, sticky='w', pady=2)
-            self.rows_var = tk.StringVar(value=str(lw._rows))
-            rows_entry = ttk.Entry(self.specific_frame, textvariable=self.rows_var, width=20)
-            rows_entry.grid(row=0, column=1, pady=2)
-            rows_entry.config(state='readonly')  # Don't allow changing grid structure
-
-            ttk.Label(self.specific_frame, text="Columns:").grid(row=1, column=0, sticky='w', pady=2)
-            self.cols_var = tk.StringVar(value=str(lw._columns))
-            cols_entry = ttk.Entry(self.specific_frame, textvariable=self.cols_var, width=20)
-            cols_entry.grid(row=1, column=1, pady=2)
-            cols_entry.config(state='readonly')  # Don't allow changing grid structure
-
-            ttk.Label(self.specific_frame, text="(Grid structure cannot be changed)",
-                      font=('Arial', 8, 'italic'), foreground='gray').grid(row=2, column=0, columnspan=2, pady=2)
-
-        elif isinstance(lw, ReservoirHolder):
-            ttk.Label(self.specific_frame, text="Hooks Across X:").grid(row=0, column=0, sticky='w', pady=2)
-            self.hooks_x_var = tk.StringVar(value=str(lw.hooks_across_x))
-            hooks_x_entry = ttk.Entry(self.specific_frame, textvariable=self.hooks_x_var, width=20)
-            hooks_x_entry.grid(row=0, column=1, pady=2)
-            hooks_x_entry.config(state='readonly')
-
-            ttk.Label(self.specific_frame, text="Hooks Across Y:").grid(row=1, column=0, sticky='w', pady=2)
-            self.hooks_y_var = tk.StringVar(value=str(lw.hooks_across_y))
-            hooks_y_entry = ttk.Entry(self.specific_frame, textvariable=self.hooks_y_var, width=20)
-            hooks_y_entry.grid(row=1, column=1, pady=2)
-            hooks_y_entry.config(state='readonly')
-
-            ttk.Label(self.specific_frame, text="(Grid structure cannot be changed)",
-                      font=('Arial', 8, 'italic'), foreground='gray').grid(row=2, column=0, columnspan=2, pady=2)
-
-        elif isinstance(lw, PipetteHolder):
-            ttk.Label(self.specific_frame, text="Zones Across X:").grid(row=0, column=0, sticky='w', pady=2)
-            self.zones_x_var = tk.StringVar(value=str(lw.zones_across_x))
-            zones_x_entry = ttk.Entry(self.specific_frame, textvariable=self.zones_x_var, width=20)
-            zones_x_entry.grid(row=0, column=1, pady=2)
-            zones_x_entry.config(state='readonly')
-
-            ttk.Label(self.specific_frame, text="Zones Across Y:").grid(row=1, column=0, sticky='w', pady=2)
-            self.zones_y_var = tk.StringVar(value=str(lw.zones_across_y))
-            zones_y_entry = ttk.Entry(self.specific_frame, textvariable=self.zones_y_var, width=20)
-            zones_y_entry.grid(row=1, column=1, pady=2)
-            zones_y_entry.config(state='readonly')
-
-            ttk.Label(self.specific_frame, text="(Grid structure cannot be changed)",
-                      font=('Arial', 8, 'italic'), foreground='gray').grid(row=2, column=0, columnspan=2, pady=2)
-
-        elif isinstance(lw, TipDropzone):
-            ttk.Label(self.specific_frame, text="Drop Height (mm):").grid(row=0, column=0, sticky='w', pady=2)
-            self.drop_height_var = tk.StringVar(value=str(lw.drop_height_relative))
-            ttk.Entry(self.specific_frame, textvariable=self.drop_height_var, width=20).grid(row=0, column=1, pady=2)
-
-    def on_save(self):
-        """Save changes to the labware object"""
-        try:
-            # Get basic parameters
-            size_x = float(self.size_x_var.get())
-            size_y = float(self.size_y_var.get())
-            size_z = float(self.size_z_var.get())
-            offset_x = float(self.offset_x_var.get())
-            offset_y = float(self.offset_y_var.get())
-            offset = (offset_x, offset_y)
-
-            # Update labware in place
-            self.labware.size_x = size_x
-            self.labware.size_y = size_y
-            self.labware.size_z = size_z
-            self.labware.offset = offset
-
-            # Update type-specific parameters
-            if isinstance(self.labware, TipDropzone):
-                self.labware.drop_height_relative = float(self.drop_height_var.get())
-
-            # Note: Grid structure (rows/columns/hooks/zones) cannot be changed
-
-            self.result = True
-            self.destroy()
-
-        except ValueError as e:
-            messagebox.showerror("Invalid Input", f"Please check your inputs:\n{str(e)}")
-
-    def on_cancel(self):
-        """Cancel dialog"""
-        self.result = None
-        self.destroy()
-
-
-class CreateSlotDialog(tk.Toplevel):
-    """Dialog for creating new slots"""
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.title("Create New Slot")
-        self.geometry("400x300")
-        self.result = None
-
-        # Make dialog modal
-        self.transient(parent)
-        self.grab_set()
-
-        self.create_widgets()
-
-    def create_widgets(self):
-        main_frame = ttk.Frame(self, padding="10")
-        main_frame.pack(fill=tk.BOTH, expand=True)
-
-        # Slot Parameters
-        params_frame = ttk.LabelFrame(main_frame, text="Slot Parameters", padding="10")
-        params_frame.pack(fill=tk.BOTH, expand=True, pady=5)
-
-        # Slot ID
-        ttk.Label(params_frame, text="Slot ID:").grid(row=0, column=0, sticky='w', pady=5)
-        self.id_var = tk.StringVar()
-        ttk.Entry(params_frame, textvariable=self.id_var, width=25).grid(row=0, column=1, pady=5)
-
-        # Range X
-        ttk.Label(params_frame, text="Range X Min (mm):").grid(row=1, column=0, sticky='w', pady=5)
-        self.x_min_var = tk.StringVar(value="0")
-        ttk.Entry(params_frame, textvariable=self.x_min_var, width=25).grid(row=1, column=1, pady=5)
-
-        ttk.Label(params_frame, text="Range X Max (mm):").grid(row=2, column=0, sticky='w', pady=5)
-        self.x_max_var = tk.StringVar(value="150")
-        ttk.Entry(params_frame, textvariable=self.x_max_var, width=25).grid(row=2, column=1, pady=5)
-
-        # Range Y
-        ttk.Label(params_frame, text="Range Y Min (mm):").grid(row=3, column=0, sticky='w', pady=5)
-        self.y_min_var = tk.StringVar(value="0")
-        ttk.Entry(params_frame, textvariable=self.y_min_var, width=25).grid(row=3, column=1, pady=5)
-
-        ttk.Label(params_frame, text="Range Y Max (mm):").grid(row=4, column=0, sticky='w', pady=5)
-        self.y_max_var = tk.StringVar(value="100")
-        ttk.Entry(params_frame, textvariable=self.y_max_var, width=25).grid(row=4, column=1, pady=5)
-
-        # Range Z
-        ttk.Label(params_frame, text="Range Z (mm):").grid(row=5, column=0, sticky='w', pady=5)
-        self.z_var = tk.StringVar(value="100")
-        ttk.Entry(params_frame, textvariable=self.z_var, width=25).grid(row=5, column=1, pady=5)
 
         # Buttons
         btn_frame = ttk.Frame(main_frame)
@@ -343,31 +96,232 @@ class CreateSlotDialog(tk.Toplevel):
         ttk.Button(btn_frame, text="Create", command=self.on_create).pack(side=tk.RIGHT, padx=5)
         ttk.Button(btn_frame, text="Cancel", command=self.on_cancel).pack(side=tk.RIGHT)
 
+    def create_specific_fields(self):
+        """Create fields specific to the selected component type"""
+        # Clear existing widgets
+        for widget in self.specific_frame.winfo_children():
+            widget.destroy()
+
+        comp_type = self.component_type.get()
+
+        if comp_type == "Well":
+            ttk.Label(self.specific_frame, text="Capacity (µL):").grid(row=0, column=0, sticky='w', pady=2)
+            self.capacity_var = tk.StringVar(value="1000")
+            ttk.Entry(self.specific_frame, textvariable=self.capacity_var, width=20).grid(row=0, column=1, pady=2)
+            ttk.Label(self.specific_frame, text="(optional, default: 1000)",font=('Arial', 12, 'italic'), foreground='gray').grid(row=0, column=2, sticky='w', padx=5)
+
+            ttk.Label(self.specific_frame, text="Shape:").grid(row=1, column=0, sticky='w', pady=2)
+            self.shape_var = tk.StringVar()
+            shape_combo = ttk.Combobox(self.specific_frame, textvariable=self.shape_var,
+                                       values=["", "rectangular", "circular", "conical", "u_bottom"],
+                                       state='readonly', width=17)
+            shape_combo.grid(row=1, column=1, pady=2)
+            ttk.Label(self.specific_frame, text="(optional)",font=('Arial', 12, 'italic'), foreground='gray').grid(row=1, column=2, sticky='w', padx=5)
+
+            # Content section
+            ttk.Separator(self.specific_frame, orient='horizontal').grid(row=2, column=0, columnspan=3, sticky='ew',
+                                                                         pady=10)
+
+            ttk.Label(self.specific_frame, text="Initial Content (Optional):",
+                      font=('Arial', 12, 'bold')).grid(row=3, column=0, columnspan=3, sticky='w', pady=(5, 2))
+            ttk.Label(self.specific_frame, text="Add up to 4 content types:",
+                      font=('Arial', 12, 'italic'), foreground='gray').grid(row=4, column=0, columnspan=3, sticky='w')
+
+            # Header
+            ttk.Label(self.specific_frame, text="Content Type",
+                      font=('Arial', 12, 'bold')).grid(row=5, column=0, sticky='w', padx=(0, 5))
+            ttk.Label(self.specific_frame, text="Volume (µL)",
+                      font=('Arial', 12, 'bold')).grid(row=5, column=1, sticky='w')
+
+            # Create 4 content entry rows
+            self.well_content_types = []
+            self.well_content_volumes = []
+
+            for i in range(4):
+                content_type_var = tk.StringVar()
+                volume_var = tk.StringVar()
+
+                ttk.Entry(self.specific_frame, textvariable=content_type_var, width=15).grid(
+                    row=6 + i, column=0, sticky='w', pady=2, padx=(0, 5))
+                ttk.Entry(self.specific_frame, textvariable=volume_var, width=15).grid(
+                    row=6 + i, column=1, sticky='w', pady=2)
+
+                self.well_content_types.append(content_type_var)
+                self.well_content_volumes.append(volume_var)
+
+        elif comp_type == "Reservoir":
+            ttk.Label(self.specific_frame, text="Capacity (µL):").grid(row=0, column=0, sticky='w', pady=2)
+            self.capacity_var = tk.StringVar(value="30000")
+            ttk.Entry(self.specific_frame, textvariable=self.capacity_var, width=20).grid(row=0, column=1, pady=2)
+            ttk.Label(self.specific_frame, text="(optional, default: 30000µL)", font=('Arial', 12, 'italic'),
+                      foreground='gray').grid(row=0, column=2, sticky='w', padx=5)
+
+            ttk.Label(self.specific_frame, text="Shape:").grid(row=1, column=0, sticky='w', pady=2)
+            self.shape_var = tk.StringVar()
+            shape_combo = ttk.Combobox(self.specific_frame, textvariable=self.shape_var,
+                                       values=["", "rectangular", "circular", "conical", "u_bottom"],
+                                       state='readonly', width=17)
+            shape_combo.grid(row=1, column=1, pady=2)
+            ttk.Label(self.specific_frame, text="(optional)", font=('Arial', 12, 'italic'), foreground='gray').grid(
+                row=1, column=2, sticky='w', padx=5)
+
+            # Content section
+            ttk.Separator(self.specific_frame, orient='horizontal').grid(row=2, column=0, columnspan=3, sticky='ew',
+                                                                         pady=10)
+
+            ttk.Label(self.specific_frame, text="Initial Content (Optional):",
+                      font=('Arial', 12, 'bold')).grid(row=3, column=0, columnspan=3, sticky='w', pady=(5, 2))
+            ttk.Label(self.specific_frame, text="Add up to 4 content types:",
+                      font=('Arial', 12, 'italic'), foreground='gray').grid(row=4, column=0, columnspan=3, sticky='w')
+
+            # Header
+            ttk.Label(self.specific_frame, text="Content Type",
+                      font=('Arial', 12, 'bold')).grid(row=5, column=0, sticky='w', padx=(0, 5))
+            ttk.Label(self.specific_frame, text="Volume (µL)",
+                      font=('Arial', 12, 'bold')).grid(row=5, column=1, sticky='w')
+
+            # Create 4 content entry rows
+            self.reservoir_content_types = []
+            self.reservoir_content_volumes = []
+
+            for i in range(4):
+                content_type_var = tk.StringVar()
+                volume_var = tk.StringVar()
+
+                ttk.Entry(self.specific_frame, textvariable=content_type_var, width=15).grid(
+                    row=6 + i, column=0, sticky='w', pady=2, padx=(0, 5))
+                ttk.Entry(self.specific_frame, textvariable=volume_var, width=15).grid(
+                    row=6 + i, column=1, sticky='w', pady=2)
+
+                self.reservoir_content_types.append(content_type_var)
+                self.reservoir_content_volumes.append(volume_var)
+
+        elif comp_type == "IndividualPipetteHolder":
+            ttk.Label(self.specific_frame, text="Is Occupied:").grid(row=0, column=0, sticky='w', pady=2)
+            self.is_occupied_var = tk.BooleanVar(value=True)
+            ttk.Checkbutton(self.specific_frame, variable=self.is_occupied_var).grid(row=0, column=1, sticky='w', pady=2)
+            ttk.Label(
+                self.specific_frame,
+                text="(optional, default: true)",
+                font=('Arial', 12, 'italic'),
+                foreground='gray'
+            ).grid(row=0, column=2, sticky='w', padx=5)
+
+    def on_type_change(self):
+        """Handle component type change"""
+        self.create_specific_fields()
+
     def on_create(self):
-        """Create the slot object"""
+        """Create the low-level labware component"""
         try:
-            slot_id = self.id_var.get()
-            if not slot_id:
-                messagebox.showerror("Error", "Slot ID is required")
-                return
+            # Get basic parameters
+            labware_id = self.id_var.get() or None
+            size_x = float(self.size_x_var.get())
+            size_y = float(self.size_y_var.get())
+            size_z = float(self.size_z_var.get())
+            offset_x = float(self.offset_x_var.get() or "0.0")
+            offset_y = float(self.offset_y_var.get() or "0.0")
+            offset = (offset_x, offset_y)
 
-            x_min = float(self.x_min_var.get())
-            x_max = float(self.x_max_var.get())
-            y_min = float(self.y_min_var.get())
-            y_max = float(self.y_max_var.get())
-            z = float(self.z_var.get())
+            # Create component based on type
+            comp_type = self.component_type.get()
 
-            if x_max <= x_min or y_max <= y_min:
-                messagebox.showerror("Error", "Max values must be greater than min values")
-                return
+            if comp_type == "Well":
+                capacity = float(self.capacity_var.get() or 1000)
+                shape = self.shape_var.get() or None
 
-            self.result = Slot(
-                range_x=(x_min, x_max),
-                range_y=(y_min, y_max),
-                range_z=z,
-                slot_id=slot_id
-            )
+                # Build content dictionary from user inputs
+                content = {}
+                for i in range(4):
+                    content_type = self.well_content_types[i].get().strip()
+                    volume_str = self.well_content_volumes[i].get().strip()
 
+                    if content_type and volume_str:  # Both must be filled
+                        try:
+                            volume = float(volume_str)
+                            if volume < 0:
+                                messagebox.showerror("Error", f"Volume for '{content_type}' cannot be negative")
+                                return
+                            content[content_type] = volume
+                        except ValueError:
+                            messagebox.showerror("Error", f"Invalid volume for '{content_type}': {volume_str}")
+                            return
+                    elif content_type or volume_str:  # Only one filled
+                        messagebox.showerror("Error", "Both content type and volume must be provided together")
+                        return
+
+                # Validate total volume doesn't exceed capacity
+                total_volume = sum(content.values())
+                if total_volume > capacity:
+                    messagebox.showerror("Error",
+                                         f"Total content volume ({total_volume}µL) exceeds capacity ({capacity}µL)")
+                    return
+
+                self.result = Well(
+                    size_x=size_x,
+                    size_y=size_y,
+                    size_z=size_z,
+                    offset=offset,
+                    labware_id=labware_id,
+                    capacity=capacity,
+                    shape=shape,
+                    content=content if content else None
+                )
+
+            elif comp_type == "Reservoir":
+                capacity = float(self.capacity_var.get())
+                shape = self.shape_var.get() or None
+
+                # Build content dictionary from user inputs
+                content = {}
+                for i in range(4):
+                    content_type = self.reservoir_content_types[i].get().strip()
+                    volume_str = self.reservoir_content_volumes[i].get().strip()
+
+                    if content_type and volume_str:  # Both must be filled
+                        try:
+                            volume = float(volume_str)
+                            if volume < 0:
+                                messagebox.showerror("Error", f"Volume for '{content_type}' cannot be negative")
+                                return
+                            content[content_type] = volume
+                        except ValueError:
+                            messagebox.showerror("Error", f"Invalid volume for '{content_type}': {volume_str}")
+                            return
+                    elif content_type or volume_str:  # Only one filled
+                        messagebox.showerror("Error", "Both content type and volume must be provided together")
+                        return
+
+                # Validate total volume doesn't exceed capacity
+                total_volume = sum(content.values())
+                if total_volume > capacity:
+                    messagebox.showerror("Error",
+                                         f"Total content volume ({total_volume}µL) exceeds capacity ({capacity}µL)")
+                    return
+
+                self.result = Reservoir(
+                    size_x=size_x,
+                    size_y=size_y,
+                    size_z=size_z,
+                    offset=offset,
+                    labware_id=labware_id,
+                    capacity=capacity,
+                    shape=shape,
+                    content=content if content else None
+                )
+
+            elif comp_type == "IndividualPipetteHolder":
+                is_occupied = self.is_occupied_var.get()
+
+                self.result = IndividualPipetteHolder(
+                    size_x=size_x,
+                    size_y=size_y,
+                    size_z=size_z,
+                    offset=offset,
+                    labware_id=labware_id,
+                    is_occupied=is_occupied
+                )
+            print(self.result.to_dict())
             self.destroy()
 
         except ValueError as e:
@@ -379,14 +333,104 @@ class CreateSlotDialog(tk.Toplevel):
         self.destroy()
 
 
-class CreateLabwareDialog(tk.Toplevel):
-    """Dialog for creating new labware"""
+class SelectOrCreateComponentDialog(tk.Toplevel):
+    """Dialog for selecting or creating a low-level component"""
 
-    def __init__(self, parent):
+    def __init__(self, parent, component_type, available_components):
+        super().__init__(parent)
+        self.title(f"Select or Create {component_type}")
+        self.geometry("400x500")
+        self.result = None
+        self.component_type = component_type
+        self.available_components = available_components
+
+        # Make dialog modal
+        self.transient(parent)
+        self.grab_set()
+
+        self.create_widgets()
+
+    def create_widgets(self):
+        main_frame = ttk.Frame(self, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Instructions
+        ttk.Label(
+            main_frame,
+            text=f"Select an existing {self.component_type} or create a new one:",
+            wraplength=380
+        ).pack(pady=(0, 10))
+
+        # List frame
+        list_frame = ttk.LabelFrame(main_frame, text=f"Available {self.component_type}s", padding="10")
+        list_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+
+        # Listbox with scrollbar
+        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL)
+        self.listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set)
+        scrollbar.config(command=self.listbox.yview)
+
+        self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Populate listbox
+        for comp in self.available_components:
+            display_text = f"{comp.labware_id} ({comp.size_x}x{comp.size_y}x{comp.size_z})"
+            self.listbox.insert(tk.END, display_text)
+
+        # Buttons
+        btn_frame = ttk.Frame(main_frame)
+        btn_frame.pack(fill=tk.X, pady=10)
+
+        ttk.Button(btn_frame, text="Select", command=self.on_select).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(btn_frame, text="Create New", command=self.on_create_new).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(btn_frame, text="Cancel", command=self.on_cancel).pack(side=tk.RIGHT)
+
+    def on_select(self):
+        """Select an existing component"""
+        selection = self.listbox.curselection()
+        if not selection:
+            messagebox.showwarning("No Selection", f"Please select a {self.component_type}")
+            return
+
+        self.result = self.available_components[selection[0]]
+        self.destroy()
+
+    def on_create_new(self):
+        """Create a new component"""
+        dialog = CreateLowLevelLabwareDialog(self)
+        self.wait_window(dialog)
+
+        if dialog.result:
+            # Add to available components and return it
+            self.available_components.append(dialog.result)
+            self.result = dialog.result
+            self.destroy()
+
+    def on_cancel(self):
+        """Cancel dialog"""
+        self.result = None
+        self.destroy()
+
+
+class CreateLabwareDialog(tk.Toplevel):
+    """Dialog for creating new labware (Plate, ReservoirHolder, PipetteHolder, TipDropzone)"""
+
+    def __init__(self, parent, available_wells, available_reservoirs, available_individual_holders):
         super().__init__(parent)
         self.title("Create New Labware")
-        self.geometry("500x600")
+        self.geometry("500x700")
         self.result = None
+
+        # Store available low-level components
+        self.available_wells = available_wells
+        self.available_reservoirs = available_reservoirs
+        self.available_individual_holders = available_individual_holders
+
+        # Selected components
+        self.selected_well = None
+        self.selected_reservoir = None
+        self.selected_individual_holder = None
 
         # Make dialog modal
         self.transient(parent)
@@ -402,8 +446,8 @@ class CreateLabwareDialog(tk.Toplevel):
         type_frame = ttk.LabelFrame(main_frame, text="Labware Type", padding="10")
         type_frame.pack(fill=tk.X, pady=5)
 
-        self.labware_type = tk.StringVar(value="Labware")
-        types = ["Labware", "Plate", "ReservoirHolder", "PipetteHolder", "TipDropzone"]
+        self.labware_type = tk.StringVar(value="Plate")
+        types = ["Plate", "ReservoirHolder", "PipetteHolder", "TipDropzone"]
 
         for lw_type in types:
             ttk.Radiobutton(
@@ -422,18 +466,21 @@ class CreateLabwareDialog(tk.Toplevel):
         ttk.Label(basic_frame, text="Labware ID:").grid(row=0, column=0, sticky='w', pady=2)
         self.id_var = tk.StringVar()
         ttk.Entry(basic_frame, textvariable=self.id_var, width=30).grid(row=0, column=1, pady=2)
+        ttk.Label(basic_frame, text="(optional)", font=('Arial', 12, 'italic'), foreground='gray').grid(row=0, column=2,
+                                                                                                        sticky='w',
+                                                                                                        padx=5)
 
         # Dimensions
         ttk.Label(basic_frame, text="Size X (mm):").grid(row=1, column=0, sticky='w', pady=2)
-        self.size_x_var = tk.StringVar(value="127.76")
+        self.size_x_var = tk.StringVar()
         ttk.Entry(basic_frame, textvariable=self.size_x_var, width=30).grid(row=1, column=1, pady=2)
 
         ttk.Label(basic_frame, text="Size Y (mm):").grid(row=2, column=0, sticky='w', pady=2)
-        self.size_y_var = tk.StringVar(value="85.48")
+        self.size_y_var = tk.StringVar()
         ttk.Entry(basic_frame, textvariable=self.size_y_var, width=30).grid(row=2, column=1, pady=2)
 
         ttk.Label(basic_frame, text="Size Z (mm):").grid(row=3, column=0, sticky='w', pady=2)
-        self.size_z_var = tk.StringVar(value="14.22")
+        self.size_z_var = tk.StringVar()
         ttk.Entry(basic_frame, textvariable=self.size_z_var, width=30).grid(row=3, column=1, pady=2)
 
         # Offset
@@ -468,111 +515,183 @@ class CreateLabwareDialog(tk.Toplevel):
         lw_type = self.labware_type.get()
 
         if lw_type == "Plate":
-            ttk.Label(self.specific_frame, text="Rows:").grid(row=0, column=0, sticky='w', pady=2)
-            self.rows_var = tk.StringVar(value="8")
+            ttk.Label(self.specific_frame, text="Rows (wells in Y):").grid(row=0, column=0, sticky='w', pady=2)
+            self.rows_var = tk.StringVar()
             ttk.Entry(self.specific_frame, textvariable=self.rows_var, width=20).grid(row=0, column=1, pady=2)
 
-            ttk.Label(self.specific_frame, text="Columns:").grid(row=1, column=0, sticky='w', pady=2)
-            self.cols_var = tk.StringVar(value="12")
+            ttk.Label(self.specific_frame, text="Columns (wells in X):").grid(row=1, column=0, sticky='w', pady=2)
+            self.cols_var = tk.StringVar()
             ttk.Entry(self.specific_frame, textvariable=self.cols_var, width=20).grid(row=1, column=1, pady=2)
 
-            ttk.Label(self.specific_frame, text="Well Capacity (ÂµL):").grid(row=2, column=0, sticky='w', pady=2)
-            self.capacity_var = tk.StringVar(value="1000")
-            ttk.Entry(self.specific_frame, textvariable=self.capacity_var, width=20).grid(row=2, column=1, pady=2)
+            ttk.Label(self.specific_frame, text="Add Height (mm):").grid(row=2, column=0, sticky='w', pady=2)
+            self.add_height_var = tk.StringVar()
+            ttk.Entry(self.specific_frame, textvariable=self.add_height_var, width=20).grid(row=2, column=1, pady=2)
+
+            ttk.Label(self.specific_frame, text="Remove Height (mm):").grid(row=3, column=0, sticky='w', pady=2)
+            self.remove_height_var = tk.StringVar()
+            ttk.Entry(self.specific_frame, textvariable=self.remove_height_var, width=20).grid(row=3, column=1, pady=2)
+
+            # Well selection
+            well_frame = ttk.Frame(self.specific_frame)
+            well_frame.grid(row=4, column=0, columnspan=2, pady=(10, 0), sticky='ew')
+
+            self.well_label = ttk.Label(well_frame, text="Well: Not selected", foreground='red')
+            self.well_label.pack(side=tk.LEFT)
+
+            ttk.Button(well_frame, text="Select/Create Well",
+                       command=self.select_well).pack(side=tk.RIGHT)
 
         elif lw_type == "ReservoirHolder":
             ttk.Label(self.specific_frame, text="Hooks Across X:").grid(row=0, column=0, sticky='w', pady=2)
-            self.hooks_x_var = tk.StringVar(value="12")
+            self.hooks_x_var = tk.StringVar()
             ttk.Entry(self.specific_frame, textvariable=self.hooks_x_var, width=20).grid(row=0, column=1, pady=2)
 
             ttk.Label(self.specific_frame, text="Hooks Across Y:").grid(row=1, column=0, sticky='w', pady=2)
             self.hooks_y_var = tk.StringVar(value="1")
             ttk.Entry(self.specific_frame, textvariable=self.hooks_y_var, width=20).grid(row=1, column=1, pady=2)
 
-        elif lw_type == "PipetteHolder":
-            ttk.Label(self.specific_frame, text="Zones Across X:").grid(row=0, column=0, sticky='w', pady=2)
-            self.zones_x_var = tk.StringVar(value="12")
-            ttk.Entry(self.specific_frame, textvariable=self.zones_x_var, width=20).grid(row=0, column=1, pady=2)
+            ttk.Label(self.specific_frame, text="Add Height (mm):").grid(row=2, column=0, sticky='w', pady=2)
+            self.add_height_var = tk.StringVar()
+            ttk.Entry(self.specific_frame, textvariable=self.add_height_var, width=20).grid(row=2, column=1, pady=2)
 
-            ttk.Label(self.specific_frame, text="Zones Across Y:").grid(row=1, column=0, sticky='w', pady=2)
-            self.zones_y_var = tk.StringVar(value="1")
-            ttk.Entry(self.specific_frame, textvariable=self.zones_y_var, width=20).grid(row=1, column=1, pady=2)
+            ttk.Label(self.specific_frame, text="Remove Height (mm):").grid(row=3, column=0, sticky='w', pady=2)
+            self.remove_height_var = tk.StringVar()
+            ttk.Entry(self.specific_frame, textvariable=self.remove_height_var, width=20).grid(row=3, column=1, pady=2)
+
+            # Note about reservoirs
+            ttk.Label(self.specific_frame, text="Note: Reservoirs can be added after creation",
+                      font=('Arial', 8, 'italic'), foreground='gray').grid(row=4, column=0, columnspan=2, pady=(10, 0))
+
+        elif lw_type == "PipetteHolder":
+            ttk.Label(self.specific_frame, text="Holders Across X:").grid(row=0, column=0, sticky='w', pady=2)
+            self.holders_x_var = tk.StringVar()
+            ttk.Entry(self.specific_frame, textvariable=self.holders_x_var, width=20).grid(row=0, column=1, pady=2)
+
+            ttk.Label(self.specific_frame, text="Holders Across Y:").grid(row=1, column=0, sticky='w', pady=2)
+            self.holders_y_var = tk.StringVar()
+            ttk.Entry(self.specific_frame, textvariable=self.holders_y_var, width=20).grid(row=1, column=1, pady=2)
+
+            ttk.Label(self.specific_frame, text="Add Height (mm):").grid(row=2, column=0, sticky='w', pady=2)
+            self.add_height_var = tk.StringVar()
+            ttk.Entry(self.specific_frame, textvariable=self.add_height_var, width=20).grid(row=2, column=1, pady=2)
+
+            ttk.Label(self.specific_frame, text="Remove Height (mm):").grid(row=3, column=0, sticky='w', pady=2)
+            self.remove_height_var = tk.StringVar()
+            ttk.Entry(self.specific_frame, textvariable=self.remove_height_var, width=20).grid(row=3, column=1, pady=2)
+
+            # Individual holder selection
+            holder_frame = ttk.Frame(self.specific_frame)
+            holder_frame.grid(row=4, column=0, columnspan=2, pady=(10, 0), sticky='ew')
+
+            self.holder_label = ttk.Label(holder_frame, text="IndividualPipetteHolder: Not selected", foreground='red')
+            self.holder_label.pack(side=tk.LEFT)
+
+            ttk.Button(holder_frame, text="Select/Create Holder",
+                       command=self.select_individual_holder).pack(side=tk.RIGHT)
 
         elif lw_type == "TipDropzone":
             ttk.Label(self.specific_frame, text="Drop Height (mm):").grid(row=0, column=0, sticky='w', pady=2)
-            self.drop_height_var = tk.StringVar(value="20")
+            self.drop_height_var = tk.StringVar()
             ttk.Entry(self.specific_frame, textvariable=self.drop_height_var, width=20).grid(row=0, column=1, pady=2)
 
     def on_type_change(self):
         """Handle labware type change"""
         self.create_specific_fields()
 
+    def select_well(self):
+        """Open dialog to select or create a Well"""
+        dialog = SelectOrCreateComponentDialog(self, "Well", self.available_wells)
+        self.wait_window(dialog)
+
+        if dialog.result:
+            self.selected_well = dialog.result
+            self.well_label.config(text=f"Well: {self.selected_well.labware_id}", foreground='green')
+
+    def select_individual_holder(self):
+        """Open dialog to select or create an IndividualPipetteHolder"""
+        dialog = SelectOrCreateComponentDialog(self, "IndividualPipetteHolder", self.available_individual_holders)
+        self.wait_window(dialog)
+
+        if dialog.result:
+            self.selected_individual_holder = dialog.result
+            self.holder_label.config(text=f"Holder: {self.selected_individual_holder.labware_id}", foreground='green')
+
     def on_create(self):
-        """Create the labware object"""
+        """Create the labware"""
         try:
             # Get basic parameters
             labware_id = self.id_var.get() or None
             size_x = float(self.size_x_var.get())
             size_y = float(self.size_y_var.get())
             size_z = float(self.size_z_var.get())
-            offset_x = float(self.offset_x_var.get())
-            offset_y = float(self.offset_y_var.get())
+            offset_x = float(self.offset_x_var.get() or "0.0")
+            offset_y = float(self.offset_y_var.get() or "0.0")
             offset = (offset_x, offset_y)
 
-            # Create labware based on type
             lw_type = self.labware_type.get()
 
-            if lw_type == "Labware":
-                self.result = Labware(
-                    size_x=size_x,
-                    size_y=size_y,
-                    size_z=size_z,
-                    offset=offset,
-                    labware_id=labware_id
-                )
+            if lw_type == "Plate":
+                if not self.selected_well:
+                    messagebox.showerror("Error", "Please select or create a Well")
+                    return
 
-            elif lw_type == "Plate":
                 rows = int(self.rows_var.get())
                 cols = int(self.cols_var.get())
-                capacity = float(self.capacity_var.get())
+                add_height = float(self.add_height_var.get())
+                remove_height = float(self.remove_height_var.get())
 
                 self.result = Plate(
+                    wells_y=rows,
+                    wells_x=cols,
                     size_x=size_x,
                     size_y=size_y,
                     size_z=size_z,
                     offset=offset,
-                    rows=rows,
-                    columns=cols,
                     labware_id=labware_id,
-                    well_capacity=capacity
+                    well=self.selected_well,
+                    add_height=add_height,
+                    remove_height=remove_height
                 )
 
             elif lw_type == "ReservoirHolder":
                 hooks_x = int(self.hooks_x_var.get())
                 hooks_y = int(self.hooks_y_var.get())
+                add_height = float(self.add_height_var.get())
+                remove_height = float(self.remove_height_var.get())
 
                 self.result = ReservoirHolder(
+                    hooks_across_x=hooks_x,
+                    hooks_across_y=hooks_y,
                     size_x=size_x,
                     size_y=size_y,
                     size_z=size_z,
                     offset=offset,
-                    hooks_across_x=hooks_x,
-                    hooks_across_y=hooks_y,
-                    labware_id=labware_id
+                    labware_id=labware_id,
+                    add_height=add_height,
+                    remove_height=remove_height
                 )
 
             elif lw_type == "PipetteHolder":
-                zones_x = int(self.zones_x_var.get())
-                zones_y = int(self.zones_y_var.get())
+                if not self.selected_individual_holder:
+                    messagebox.showerror("Error", "Please select or create an IndividualPipetteHolder")
+                    return
+
+                holders_x = int(self.holders_x_var.get())
+                holders_y = int(self.holders_y_var.get())
+                add_height = float(self.add_height_var.get())
+                remove_height = float(self.remove_height_var.get())
 
                 self.result = PipetteHolder(
+                    holders_across_x=holders_x,
+                    holders_across_y=holders_y,
                     size_x=size_x,
                     size_y=size_y,
                     size_z=size_z,
                     offset=offset,
-                    zones_across_x=zones_x,
-                    zones_across_y=zones_y,
-                    labware_id=labware_id
+                    labware_id=labware_id,
+                    individual_holder=self.selected_individual_holder,
+                    add_height=add_height,
+                    remove_height=remove_height
                 )
 
             elif lw_type == "TipDropzone":
@@ -583,8 +702,8 @@ class CreateLabwareDialog(tk.Toplevel):
                     size_y=size_y,
                     size_z=size_z,
                     offset=offset,
-                    drop_height_relative=drop_height,
-                    labware_id=labware_id
+                    labware_id=labware_id,
+                    drop_height_relative=drop_height
                 )
 
             self.destroy()
@@ -598,15 +717,15 @@ class CreateLabwareDialog(tk.Toplevel):
         self.destroy()
 
 
-class CreateSlotDialog(tk.Toplevel):
-    """Dialog for creating new slots"""
+class EditSlotDialog(tk.Toplevel):
+    """Dialog for editing an existing slot"""
 
-    def __init__(self, parent, slot=None):
+    def __init__(self, parent, slot):
         super().__init__(parent)
-        self.title("Edit Slot" if slot else "Create New Slot")
-        self.geometry("400x300")
+        self.title(f"Edit Slot: {slot.slot_id}")
+        self.geometry("400x400")
+        self.slot = slot
         self.result = None
-        self.slot = slot  # If editing existing slot
 
         # Make dialog modal
         self.transient(parent)
@@ -618,57 +737,48 @@ class CreateSlotDialog(tk.Toplevel):
         main_frame = ttk.Frame(self, padding="10")
         main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Slot Parameters
+        # Parameters frame
         params_frame = ttk.LabelFrame(main_frame, text="Slot Parameters", padding="10")
-        params_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        params_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Slot ID
+        # Slot ID (read-only display)
         ttk.Label(params_frame, text="Slot ID:").grid(row=0, column=0, sticky='w', pady=5)
-        self.id_var = tk.StringVar(value=self.slot.slot_id if self.slot else "")
-        id_entry = ttk.Entry(params_frame, textvariable=self.id_var, width=25)
-        id_entry.grid(row=0, column=1, pady=5)
-        if self.slot:
-            id_entry.config(state='readonly')  # Can't change ID when editing
+        ttk.Label(params_frame, text=self.slot.slot_id, font=('Arial', 10, 'bold')).grid(row=0, column=1, sticky='w',
+                                                                                         pady=5)
 
         # Range X
         ttk.Label(params_frame, text="Range X Min (mm):").grid(row=1, column=0, sticky='w', pady=5)
-        self.x_min_var = tk.StringVar(value=str(self.slot.range_x[0]) if self.slot else "0")
+        self.x_min_var = tk.StringVar(value=str(self.slot.range_x[0]))
         ttk.Entry(params_frame, textvariable=self.x_min_var, width=25).grid(row=1, column=1, pady=5)
 
         ttk.Label(params_frame, text="Range X Max (mm):").grid(row=2, column=0, sticky='w', pady=5)
-        self.x_max_var = tk.StringVar(value=str(self.slot.range_x[1]) if self.slot else "150")
+        self.x_max_var = tk.StringVar(value=str(self.slot.range_x[1]))
         ttk.Entry(params_frame, textvariable=self.x_max_var, width=25).grid(row=2, column=1, pady=5)
 
         # Range Y
         ttk.Label(params_frame, text="Range Y Min (mm):").grid(row=3, column=0, sticky='w', pady=5)
-        self.y_min_var = tk.StringVar(value=str(self.slot.range_y[0]) if self.slot else "0")
+        self.y_min_var = tk.StringVar(value=str(self.slot.range_y[0]))
         ttk.Entry(params_frame, textvariable=self.y_min_var, width=25).grid(row=3, column=1, pady=5)
 
         ttk.Label(params_frame, text="Range Y Max (mm):").grid(row=4, column=0, sticky='w', pady=5)
-        self.y_max_var = tk.StringVar(value=str(self.slot.range_y[1]) if self.slot else "100")
+        self.y_max_var = tk.StringVar(value=str(self.slot.range_y[1]))
         ttk.Entry(params_frame, textvariable=self.y_max_var, width=25).grid(row=4, column=1, pady=5)
 
         # Range Z
         ttk.Label(params_frame, text="Range Z (mm):").grid(row=5, column=0, sticky='w', pady=5)
-        self.z_var = tk.StringVar(value=str(self.slot.range_z) if self.slot else "100")
+        self.z_var = tk.StringVar(value=str(self.slot.range_z))
         ttk.Entry(params_frame, textvariable=self.z_var, width=25).grid(row=5, column=1, pady=5)
 
         # Buttons
         btn_frame = ttk.Frame(main_frame)
         btn_frame.pack(fill=tk.X, pady=10)
 
-        btn_text = "Save" if self.slot else "Create"
-        ttk.Button(btn_frame, text=btn_text, command=self.on_create).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(btn_frame, text="Save", command=self.on_save).pack(side=tk.RIGHT, padx=5)
         ttk.Button(btn_frame, text="Cancel", command=self.on_cancel).pack(side=tk.RIGHT)
 
-    def on_create(self):
-        """Create or update the slot object"""
+    def on_save(self):
+        """Save changes to slot"""
         try:
-            slot_id = self.id_var.get()
-            if not slot_id:
-                messagebox.showerror("Error", "Slot ID is required")
-                return
-
             x_min = float(self.x_min_var.get())
             x_max = float(self.x_max_var.get())
             y_min = float(self.y_min_var.get())
@@ -679,198 +789,10 @@ class CreateSlotDialog(tk.Toplevel):
                 messagebox.showerror("Error", "Max values must be greater than min values")
                 return
 
-            if self.slot:
-                # Editing existing slot - update in place
-                self.slot.range_x = (x_min, x_max)
-                self.slot.range_y = (y_min, y_max)
-                self.slot.range_z = z
-                self.result = self.slot
-            else:
-                # Creating new slot
-                self.result = Slot(
-                    range_x=(x_min, x_max),
-                    range_y=(y_min, y_max),
-                    range_z=z,
-                    slot_id=slot_id
-                )
-
-            self.destroy()
-
-        except ValueError as e:
-            messagebox.showerror("Invalid Input", f"Please check your inputs:\n{str(e)}")
-
-    def on_cancel(self):
-        """Cancel dialog"""
-        self.result = None
-        self.destroy()
-
-
-class EditLabwareDialog(tk.Toplevel):
-    """Dialog for editing existing labware"""
-
-    def __init__(self, parent, labware):
-        super().__init__(parent)
-        self.title(f"Edit Labware - {labware.labware_id}")
-        self.geometry("500x600")
-        self.result = None
-        self.labware = labware
-
-        # Make dialog modal
-        self.transient(parent)
-        self.grab_set()
-
-        self.create_widgets()
-
-    def create_widgets(self):
-        main_frame = ttk.Frame(self, padding="10")
-        main_frame.pack(fill=tk.BOTH, expand=True)
-
-        # Labware Type (read-only)
-        type_frame = ttk.LabelFrame(main_frame, text="Labware Type (Cannot Change)", padding="10")
-        type_frame.pack(fill=tk.X, pady=5)
-
-        ttk.Label(type_frame, text=self.labware.__class__.__name__,
-                  font=('Arial', 12, 'bold')).pack(anchor='w')
-
-        # Basic Parameters
-        basic_frame = ttk.LabelFrame(main_frame, text="Basic Parameters", padding="10")
-        basic_frame.pack(fill=tk.X, pady=5)
-
-        # Labware ID (read-only)
-        ttk.Label(basic_frame, text="Labware ID:").grid(row=0, column=0, sticky='w', pady=2)
-        id_label = ttk.Label(basic_frame, text=self.labware.labware_id, font=('Arial', 9, 'bold'))
-        id_label.grid(row=0, column=1, sticky='w', pady=2)
-
-        # Dimensions
-        ttk.Label(basic_frame, text="Size X (mm):").grid(row=1, column=0, sticky='w', pady=2)
-        self.size_x_var = tk.StringVar(value=str(self.labware.size_x))
-        ttk.Entry(basic_frame, textvariable=self.size_x_var, width=30).grid(row=1, column=1, pady=2)
-
-        ttk.Label(basic_frame, text="Size Y (mm):").grid(row=2, column=0, sticky='w', pady=2)
-        self.size_y_var = tk.StringVar(value=str(self.labware.size_y))
-        ttk.Entry(basic_frame, textvariable=self.size_y_var, width=30).grid(row=2, column=1, pady=2)
-
-        ttk.Label(basic_frame, text="Size Z (mm):").grid(row=3, column=0, sticky='w', pady=2)
-        self.size_z_var = tk.StringVar(value=str(self.labware.size_z))
-        ttk.Entry(basic_frame, textvariable=self.size_z_var, width=30).grid(row=3, column=1, pady=2)
-
-        # Offset
-        ttk.Label(basic_frame, text="Offset X (mm):").grid(row=4, column=0, sticky='w', pady=2)
-        self.offset_x_var = tk.StringVar(value=str(self.labware.offset[0]))
-        ttk.Entry(basic_frame, textvariable=self.offset_x_var, width=30).grid(row=4, column=1, pady=2)
-
-        ttk.Label(basic_frame, text="Offset Y (mm):").grid(row=5, column=0, sticky='w', pady=2)
-        self.offset_y_var = tk.StringVar(value=str(self.labware.offset[1]))
-        ttk.Entry(basic_frame, textvariable=self.offset_y_var, width=30).grid(row=5, column=1, pady=2)
-
-        # Type-Specific Parameters Frame
-        self.specific_frame = ttk.LabelFrame(main_frame, text="Type-Specific Parameters", padding="10")
-        self.specific_frame.pack(fill=tk.BOTH, expand=True, pady=5)
-
-        # Create type-specific fields
-        self.create_specific_fields()
-
-        # Warning label
-        warning_frame = ttk.Frame(main_frame)
-        warning_frame.pack(fill=tk.X, pady=5)
-        warning_label = ttk.Label(
-            warning_frame,
-            text="âš  Warning: Changing parameters may cause validation errors\nif labware no longer fits in its slot.",
-            foreground='orange',
-            font=('Arial', 8)
-        )
-        warning_label.pack()
-
-        # Buttons
-        btn_frame = ttk.Frame(main_frame)
-        btn_frame.pack(fill=tk.X, pady=10)
-
-        ttk.Button(btn_frame, text="Save Changes", command=self.on_save).pack(side=tk.RIGHT, padx=5)
-        ttk.Button(btn_frame, text="Cancel", command=self.on_cancel).pack(side=tk.RIGHT)
-
-    def create_specific_fields(self):
-        """Create fields specific to the labware type"""
-        # Clear existing widgets
-        for widget in self.specific_frame.winfo_children():
-            widget.destroy()
-
-        lw = self.labware
-
-        if isinstance(lw, Plate):
-            ttk.Label(self.specific_frame, text="Rows:").grid(row=0, column=0, sticky='w', pady=2)
-            self.rows_var = tk.StringVar(value=str(lw._rows))
-            rows_entry = ttk.Entry(self.specific_frame, textvariable=self.rows_var, width=20)
-            rows_entry.grid(row=0, column=1, pady=2)
-            rows_entry.config(state='readonly')  # Don't allow changing grid structure
-
-            ttk.Label(self.specific_frame, text="Columns:").grid(row=1, column=0, sticky='w', pady=2)
-            self.cols_var = tk.StringVar(value=str(lw._columns))
-            cols_entry = ttk.Entry(self.specific_frame, textvariable=self.cols_var, width=20)
-            cols_entry.grid(row=1, column=1, pady=2)
-            cols_entry.config(state='readonly')  # Don't allow changing grid structure
-
-            ttk.Label(self.specific_frame, text="(Grid structure cannot be changed)",
-                      font=('Arial', 8, 'italic'), foreground='gray').grid(row=2, column=0, columnspan=2, pady=2)
-
-        elif isinstance(lw, ReservoirHolder):
-            ttk.Label(self.specific_frame, text="Hooks Across X:").grid(row=0, column=0, sticky='w', pady=2)
-            self.hooks_x_var = tk.StringVar(value=str(lw.hooks_across_x))
-            hooks_x_entry = ttk.Entry(self.specific_frame, textvariable=self.hooks_x_var, width=20)
-            hooks_x_entry.grid(row=0, column=1, pady=2)
-            hooks_x_entry.config(state='readonly')
-
-            ttk.Label(self.specific_frame, text="Hooks Across Y:").grid(row=1, column=0, sticky='w', pady=2)
-            self.hooks_y_var = tk.StringVar(value=str(lw.hooks_across_y))
-            hooks_y_entry = ttk.Entry(self.specific_frame, textvariable=self.hooks_y_var, width=20)
-            hooks_y_entry.grid(row=1, column=1, pady=2)
-            hooks_y_entry.config(state='readonly')
-
-            ttk.Label(self.specific_frame, text="(Grid structure cannot be changed)",
-                      font=('Arial', 8, 'italic'), foreground='gray').grid(row=2, column=0, columnspan=2, pady=2)
-
-        elif isinstance(lw, PipetteHolder):
-            ttk.Label(self.specific_frame, text="Zones Across X:").grid(row=0, column=0, sticky='w', pady=2)
-            self.zones_x_var = tk.StringVar(value=str(lw.zones_across_x))
-            zones_x_entry = ttk.Entry(self.specific_frame, textvariable=self.zones_x_var, width=20)
-            zones_x_entry.grid(row=0, column=1, pady=2)
-            zones_x_entry.config(state='readonly')
-
-            ttk.Label(self.specific_frame, text="Zones Across Y:").grid(row=1, column=0, sticky='w', pady=2)
-            self.zones_y_var = tk.StringVar(value=str(lw.zones_across_y))
-            zones_y_entry = ttk.Entry(self.specific_frame, textvariable=self.zones_y_var, width=20)
-            zones_y_entry.grid(row=1, column=1, pady=2)
-            zones_y_entry.config(state='readonly')
-
-            ttk.Label(self.specific_frame, text="(Grid structure cannot be changed)",
-                      font=('Arial', 8, 'italic'), foreground='gray').grid(row=2, column=0, columnspan=2, pady=2)
-
-        elif isinstance(lw, TipDropzone):
-            ttk.Label(self.specific_frame, text="Drop Height (mm):").grid(row=0, column=0, sticky='w', pady=2)
-            self.drop_height_var = tk.StringVar(value=str(lw.drop_height_relative))
-            ttk.Entry(self.specific_frame, textvariable=self.drop_height_var, width=20).grid(row=0, column=1, pady=2)
-
-    def on_save(self):
-        """Save changes to the labware object"""
-        try:
-            # Get basic parameters
-            size_x = float(self.size_x_var.get())
-            size_y = float(self.size_y_var.get())
-            size_z = float(self.size_z_var.get())
-            offset_x = float(self.offset_x_var.get())
-            offset_y = float(self.offset_y_var.get())
-            offset = (offset_x, offset_y)
-
-            # Update labware in place
-            self.labware.size_x = size_x
-            self.labware.size_y = size_y
-            self.labware.size_z = size_z
-            self.labware.offset = offset
-
-            # Update type-specific parameters
-            if isinstance(self.labware, TipDropzone):
-                self.labware.drop_height_relative = float(self.drop_height_var.get())
-
-            # Note: Grid structure (rows/columns/hooks/zones) cannot be changed
+            # Update slot
+            self.slot.range_x = (x_min, x_max)
+            self.slot.range_y = (y_min, y_max)
+            self.slot.range_z = z
 
             self.result = True
             self.destroy()
@@ -880,17 +802,18 @@ class EditLabwareDialog(tk.Toplevel):
 
     def on_cancel(self):
         """Cancel dialog"""
-        self.result = None
+        self.result = False
         self.destroy()
 
 
-class CreateSlotDialog(tk.Toplevel):
-    """Dialog for creating new slots"""
+class EditLabwareDialog(tk.Toplevel):
+    """Dialog for editing labware dimensions and offset"""
 
-    def __init__(self, parent):
+    def __init__(self, parent, labware):
         super().__init__(parent)
-        self.title("Create New Slot")
-        self.geometry("400x300")
+        self.title(f"Edit Labware: {labware.labware_id}")
+        self.geometry("400x400")
+        self.labware = labware
         self.result = None
 
         # Make dialog modal
@@ -903,9 +826,95 @@ class CreateSlotDialog(tk.Toplevel):
         main_frame = ttk.Frame(self, padding="10")
         main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Slot Parameters
-        params_frame = ttk.LabelFrame(main_frame, text="Slot Parameters", padding="10")
+        # Info
+        info_frame = ttk.LabelFrame(main_frame, text="Labware Info", padding="10")
+        info_frame.pack(fill=tk.X, pady=5)
+
+        ttk.Label(info_frame, text=f"ID: {self.labware.labware_id}").pack(anchor='w')
+        ttk.Label(info_frame, text=f"Type: {self.labware.__class__.__name__}").pack(anchor='w')
+
+        # Parameters frame
+        params_frame = ttk.LabelFrame(main_frame, text="Edit Parameters", padding="10")
         params_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+
+        # Dimensions
+        ttk.Label(params_frame, text="Size X (mm):").grid(row=0, column=0, sticky='w', pady=5)
+        self.size_x_var = tk.StringVar(value=str(self.labware.size_x))
+        ttk.Entry(params_frame, textvariable=self.size_x_var, width=25).grid(row=0, column=1, pady=5)
+
+        ttk.Label(params_frame, text="Size Y (mm):").grid(row=1, column=0, sticky='w', pady=5)
+        self.size_y_var = tk.StringVar(value=str(self.labware.size_y))
+        ttk.Entry(params_frame, textvariable=self.size_y_var, width=25).grid(row=1, column=1, pady=5)
+
+        ttk.Label(params_frame, text="Size Z (mm):").grid(row=2, column=0, sticky='w', pady=5)
+        self.size_z_var = tk.StringVar(value=str(self.labware.size_z))
+        ttk.Entry(params_frame, textvariable=self.size_z_var, width=25).grid(row=2, column=1, pady=5)
+
+        # Offset
+        ttk.Label(params_frame, text="Offset X (mm):").grid(row=3, column=0, sticky='w', pady=5)
+        self.offset_x_var = tk.StringVar(value=str(self.labware.offset[0]))
+        ttk.Entry(params_frame, textvariable=self.offset_x_var, width=25).grid(row=3, column=1, pady=5)
+
+        ttk.Label(params_frame, text="Offset Y (mm):").grid(row=4, column=0, sticky='w', pady=5)
+        self.offset_y_var = tk.StringVar(value=str(self.labware.offset[1]))
+        ttk.Entry(params_frame, textvariable=self.offset_y_var, width=25).grid(row=4, column=1, pady=5)
+
+        # Buttons
+        btn_frame = ttk.Frame(main_frame)
+        btn_frame.pack(fill=tk.X, pady=10)
+
+        ttk.Button(btn_frame, text="Save", command=self.on_save).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(btn_frame, text="Cancel", command=self.on_cancel).pack(side=tk.RIGHT)
+
+    def on_save(self):
+        """Save changes to labware"""
+        try:
+            size_x = float(self.size_x_var.get())
+            size_y = float(self.size_y_var.get())
+            size_z = float(self.size_z_var.get())
+            offset_x = float(self.offset_x_var.get())
+            offset_y = float(self.offset_y_var.get())
+
+            # Update labware
+            self.labware.size_x = size_x
+            self.labware.size_y = size_y
+            self.labware.size_z = size_z
+            self.labware.offset = (offset_x, offset_y)
+
+            self.result = True
+            self.destroy()
+
+        except ValueError as e:
+            messagebox.showerror("Invalid Input", f"Please check your inputs:\n{str(e)}")
+
+    def on_cancel(self):
+        """Cancel dialog"""
+        self.result = False
+        self.destroy()
+
+
+class CreateSlotDialog(tk.Toplevel):
+    """Dialog for creating a new slot"""
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title("Create New Slot")
+        self.geometry("400x400")
+        self.result = None
+
+        # Make dialog modal
+        self.transient(parent)
+        self.grab_set()
+
+        self.create_widgets()
+
+    def create_widgets(self):
+        main_frame = ttk.Frame(self, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Parameters frame
+        params_frame = ttk.LabelFrame(main_frame, text="Slot Parameters", padding="10")
+        params_frame.pack(fill=tk.BOTH, expand=True)
 
         # Slot ID
         ttk.Label(params_frame, text="Slot ID:").grid(row=0, column=0, sticky='w', pady=5)
@@ -984,7 +993,7 @@ class AddLabwareToSlotDialog(tk.Toplevel):
     def __init__(self, parent, deck, labware):
         super().__init__(parent)
         self.title(f"Add {labware.labware_id} to Slot")
-        self.geometry("350x250")
+        self.geometry("450x450")
         self.deck = deck
         self.labware = labware
         self.result = None
@@ -1111,6 +1120,15 @@ class DeckGUI:
         self.unplaced_labware = []
         self.unplaced_slots = []
 
+        # Storage for low-level labware components
+        self.available_wells = []
+        self.available_reservoirs = []
+        self.available_individual_holders = []
+
+        # View toggles for slots and labware
+        self.slot_view_mode = tk.StringVar(value="placed")  # "placed" or "unplaced"
+        self.labware_view_mode = tk.StringVar(value="placed")  # "placed" or "unplaced"
+
         self.setup_ui()
         self.draw_deck()
 
@@ -1127,12 +1145,6 @@ class DeckGUI:
         file_menu.add_command(label="Load Deck", command=self.load_deck)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.quit)
-
-        # Edit menu
-        edit_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Edit", menu=edit_menu)
-        edit_menu.add_command(label="Create Slot", command=self.create_slot)
-        edit_menu.add_command(label="Create Labware", command=self.create_labware)
 
         # View menu
         view_menu = tk.Menu(menubar, tearoff=0)
@@ -1168,61 +1180,59 @@ class DeckGUI:
         canvas_frame.grid_rowconfigure(0, weight=1)
         canvas_frame.grid_columnconfigure(0, weight=1)
 
-        # Right panel - Controls with scrollbar
+        # Right panel - Tabbed interface
         right_panel_container = ttk.Frame(main_frame, width=300)
         right_panel_container.pack(side=tk.RIGHT, fill=tk.BOTH, padx=5, pady=5)
         right_panel_container.pack_propagate(False)
 
-        # Create canvas and scrollbar
-        control_canvas = tk.Canvas(right_panel_container, bg='#f0f0f0', highlightthickness=0)
-        control_scrollbar = ttk.Scrollbar(right_panel_container, orient=tk.VERTICAL, command=control_canvas.yview)
+        # Create notebook (tabs) for right panel
+        self.right_panel_notebook = ttk.Notebook(right_panel_container)
+        self.right_panel_notebook.pack(fill=tk.BOTH, expand=True)
+
+        # ===== TAB 1: DECK EDITOR =====
+        deck_editor_tab = ttk.Frame(self.right_panel_notebook)
+        self.right_panel_notebook.add(deck_editor_tab, text="Deck Editor")
+
+        # Create canvas and scrollbar for deck editor tab
+        deck_canvas = tk.Canvas(deck_editor_tab, bg='#f0f0f0', highlightthickness=0)
+        deck_scrollbar = ttk.Scrollbar(deck_editor_tab, orient=tk.VERTICAL, command=deck_canvas.yview)
 
         # Create a frame inside the canvas to hold all the controls
-        control_frame = ttk.Frame(control_canvas)
+        control_frame = ttk.Frame(deck_canvas)
 
         # Configure canvas scrolling
-        control_canvas.configure(yscrollcommand=control_scrollbar.set)
+        deck_canvas.configure(yscrollcommand=deck_scrollbar.set)
 
         # Pack scrollbar and canvas
-        control_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        control_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        deck_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        deck_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # Create window in canvas to hold the frame
-        canvas_frame = control_canvas.create_window((0, 0), window=control_frame, anchor='nw')
+        deck_canvas_window = deck_canvas.create_window((0, 0), window=control_frame, anchor='nw')
 
         # Configure scrolling region when frame size changes
-        def configure_scroll_region(event=None):
-            control_canvas.configure(scrollregion=control_canvas.bbox("all"))
+        def configure_deck_scroll_region(event=None):
+            deck_canvas.configure(scrollregion=deck_canvas.bbox("all"))
             # Make sure the frame fills the canvas width
-            canvas_width = control_canvas.winfo_width()
+            canvas_width = deck_canvas.winfo_width()
             if canvas_width > 1:  # Only update if canvas has been drawn
-                control_canvas.itemconfig(canvas_frame, width=canvas_width)
+                deck_canvas.itemconfig(deck_canvas_window, width=canvas_width)
 
-        control_frame.bind('<Configure>', configure_scroll_region)
-        control_canvas.bind('<Configure>', configure_scroll_region)
+        control_frame.bind('<Configure>', configure_deck_scroll_region)
+        deck_canvas.bind('<Configure>', configure_deck_scroll_region)
 
         # Enable mousewheel scrolling
-        def on_mousewheel(event):
-            control_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        def on_deck_mousewheel(event):
+            deck_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
-        def bind_mousewheel(event):
-            control_canvas.bind_all("<MouseWheel>", on_mousewheel)
+        def bind_deck_mousewheel(event):
+            deck_canvas.bind_all("<MouseWheel>", on_deck_mousewheel)
 
-        def unbind_mousewheel(event):
-            control_canvas.unbind_all("<MouseWheel>")
+        def unbind_deck_mousewheel(event):
+            deck_canvas.unbind_all("<MouseWheel>")
 
-        control_canvas.bind('<Enter>', bind_mousewheel)
-        control_canvas.bind('<Leave>', unbind_mousewheel)
-
-        # Title
-        ttk.Label(control_frame, text="Deck Editor", font=('Arial', 14, 'bold')).pack(pady=10)
-
-        # Action Buttons
-        action_frame = ttk.LabelFrame(control_frame, text="Actions", padding=10)
-        action_frame.pack(fill=tk.X, pady=5, padx=5)
-
-        ttk.Button(action_frame, text="Create Slot", command=self.create_slot).pack(fill=tk.X, pady=2)
-        ttk.Button(action_frame, text="Create Labware", command=self.create_labware).pack(fill=tk.X, pady=2)
+        deck_canvas.bind('<Enter>', bind_deck_mousewheel)
+        deck_canvas.bind('<Leave>', unbind_deck_mousewheel)
 
         # Deck info
         info_frame = ttk.LabelFrame(control_frame, text="Deck Info", padding=10)
@@ -1230,50 +1240,6 @@ class DeckGUI:
 
         self.deck_info_label = ttk.Label(info_frame, text="", justify=tk.LEFT)
         self.deck_info_label.pack(anchor='w')
-
-        # Slots list
-        slots_frame = ttk.LabelFrame(control_frame, text="Slots", padding=10)
-        slots_frame.pack(fill=tk.X, pady=5, padx=5)
-
-        self.slots_listbox = tk.Listbox(slots_frame, height=6)
-        self.slots_listbox.pack(fill=tk.X)
-        self.slots_listbox.bind('<<ListboxSelect>>', self.on_slot_select)
-        self.slots_listbox.bind('<Button-3>', self.on_slot_right_click)
-
-        # Unplaced Slots list
-        unplaced_slots_frame = ttk.LabelFrame(control_frame, text="Unplaced Slots", padding=10)
-        unplaced_slots_frame.pack(fill=tk.X, pady=5, padx=5)
-
-        self.unplaced_slots_listbox = tk.Listbox(unplaced_slots_frame, height=4)
-        self.unplaced_slots_listbox.pack(fill=tk.X)
-        self.unplaced_slots_listbox.bind('<Button-3>', self.on_unplaced_slot_right_click)
-        self.unplaced_slots_listbox.bind('<Double-Button-1>', self.on_unplaced_slot_double_click)
-
-        # Add Place Slot button
-        ttk.Button(unplaced_slots_frame, text="Place Slot", command=self.place_selected_unplaced_slot).pack(fill=tk.X,
-                                                                                                            pady=(5, 0))
-
-        # Placed Labware list
-        labware_frame = ttk.LabelFrame(control_frame, text="Placed Labware", padding=10)
-        labware_frame.pack(fill=tk.X, pady=5, padx=5)
-
-        self.labware_listbox = tk.Listbox(labware_frame, height=6)
-        self.labware_listbox.pack(fill=tk.X)
-        self.labware_listbox.bind('<<ListboxSelect>>', self.on_labware_select)
-        self.labware_listbox.bind('<Button-3>', self.on_labware_right_click)
-
-        # Unplaced Labware list
-        unplaced_frame = ttk.LabelFrame(control_frame, text="Unplaced Labware", padding=10)
-        unplaced_frame.pack(fill=tk.X, pady=5, padx=5)
-
-        self.unplaced_listbox = tk.Listbox(unplaced_frame, height=4)
-        self.unplaced_listbox.pack(fill=tk.X)
-        self.unplaced_listbox.bind('<Button-3>', self.on_unplaced_right_click)
-        self.unplaced_listbox.bind('<Double-Button-1>', self.on_unplaced_double_click)
-
-        # Add Place button
-        ttk.Button(unplaced_frame, text="Place on Slot", command=self.place_selected_unplaced).pack(fill=tk.X,
-                                                                                                    pady=(5, 0))
 
         # Info panel
         self.info_frame = ttk.LabelFrame(control_frame, text="Selection Info", padding=10)
@@ -1289,6 +1255,82 @@ class DeckGUI:
         ttk.Button(btn_frame, text="Refresh", command=self.draw_deck).pack(fill=tk.X, pady=2)
         ttk.Button(btn_frame, text="Clear Selection", command=self.clear_selection).pack(fill=tk.X, pady=2)
 
+        # ===== SLOTS SECTION WITH TOGGLE =====
+        slots_main_frame = ttk.LabelFrame(control_frame, text="Slots", padding=10)
+        slots_main_frame.pack(fill=tk.X, pady=5, padx=5)
+
+        # View mode selector
+        view_selector_frame = ttk.Frame(slots_main_frame)
+        view_selector_frame.pack(fill=tk.X, pady=(0, 5))
+
+        ttk.Radiobutton(
+            view_selector_frame,
+            text="Placed",
+            variable=self.slot_view_mode,
+            value="placed",
+            command=self.update_slots_list
+        ).pack(side=tk.LEFT, padx=5)
+
+        ttk.Radiobutton(
+            view_selector_frame,
+            text="Unplaced",
+            variable=self.slot_view_mode,
+            value="unplaced",
+            command=self.update_slots_list
+        ).pack(side=tk.LEFT, padx=5)
+
+        # Single listbox for both placed and unplaced
+        self.slots_listbox = tk.Listbox(slots_main_frame, height=6)
+        self.slots_listbox.pack(fill=tk.X)
+        self.slots_listbox.bind('<<ListboxSelect>>', self.on_slot_select)
+        self.slots_listbox.bind('<Button-3>', self.on_slot_right_click)
+        self.slots_listbox.bind('<Double-Button-1>', self.on_slot_double_click)
+
+        # Buttons frame that changes based on view mode
+        self.slots_button_frame = ttk.Frame(slots_main_frame)
+        self.slots_button_frame.pack(fill=tk.X, pady=(5, 0))
+
+        # We'll update this dynamically
+        self.update_slots_buttons()
+
+        # ===== LABWARE SECTION WITH TOGGLE =====
+        labware_main_frame = ttk.LabelFrame(control_frame, text="Labware", padding=10)
+        labware_main_frame.pack(fill=tk.X, pady=5, padx=5)
+
+        # View mode selector
+        labware_view_selector_frame = ttk.Frame(labware_main_frame)
+        labware_view_selector_frame.pack(fill=tk.X, pady=(0, 5))
+
+        ttk.Radiobutton(
+            labware_view_selector_frame,
+            text="Placed",
+            variable=self.labware_view_mode,
+            value="placed",
+            command=self.update_labware_list
+        ).pack(side=tk.LEFT, padx=5)
+
+        ttk.Radiobutton(
+            labware_view_selector_frame,
+            text="Unplaced",
+            variable=self.labware_view_mode,
+            value="unplaced",
+            command=self.update_labware_list
+        ).pack(side=tk.LEFT, padx=5)
+
+        # Single listbox for both placed and unplaced
+        self.labware_listbox = tk.Listbox(labware_main_frame, height=6)
+        self.labware_listbox.pack(fill=tk.X)
+        self.labware_listbox.bind('<<ListboxSelect>>', self.on_labware_select)
+        self.labware_listbox.bind('<Button-3>', self.on_labware_right_click)
+        self.labware_listbox.bind('<Double-Button-1>', self.on_labware_double_click)
+
+        # Buttons frame that changes based on view mode
+        self.labware_button_frame = ttk.Frame(labware_main_frame)
+        self.labware_button_frame.pack(fill=tk.X, pady=(5, 0))
+
+        # We'll update this dynamically
+        self.update_labware_buttons()
+
         # Zoom controls
         zoom_frame = ttk.Frame(control_frame)
         zoom_frame.pack(fill=tk.X, pady=5, padx=5)
@@ -1302,6 +1344,182 @@ class DeckGUI:
         self.canvas.bind("<B1-Motion>", self.on_canvas_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_canvas_release)
         self.canvas.bind("<Button-3>", self.on_canvas_right_click)
+
+        # Create the Create tab in the right panel
+        self.create_create_tab()
+
+    def update_slots_buttons(self):
+        """Update buttons based on current slot view mode"""
+        # Clear existing buttons
+        for widget in self.slots_button_frame.winfo_children():
+            widget.destroy()
+
+        if self.slot_view_mode.get() == "placed":
+            # Show "Unplace Slot" button for placed slots
+            ttk.Button(
+                self.slots_button_frame,
+                text="Unplace Slot",
+                command=self.unplace_selected_slot
+            ).pack(fill=tk.X, pady=2)
+        else:
+            # Show "Place Slot", "Edit", and "Delete" buttons for unplaced slots
+            ttk.Button(
+                self.slots_button_frame,
+                text="Place Slot",
+                command=self.place_selected_unplaced_slot
+            ).pack(fill=tk.X, pady=2)
+            ttk.Button(
+                self.slots_button_frame,
+                text="Edit",
+                command=self.edit_selected_unplaced_slot
+            ).pack(fill=tk.X, pady=2)
+            ttk.Button(
+                self.slots_button_frame,
+                text="Delete",
+                command=self.delete_selected_unplaced_slot
+            ).pack(fill=tk.X, pady=2)
+
+    def update_labware_buttons(self):
+        """Update buttons based on current labware view mode"""
+        # Clear existing buttons
+        for widget in self.labware_button_frame.winfo_children():
+            widget.destroy()
+
+        if self.labware_view_mode.get() == "placed":
+            # Show "Unplace Labware" button for placed labware
+            ttk.Button(
+                self.labware_button_frame,
+                text="Unplace Labware",
+                command=self.unplace_selected_labware
+            ).pack(fill=tk.X, pady=2)
+        else:
+            # Show "Place on Slot", "Edit", and "Delete" buttons for unplaced labware
+            ttk.Button(
+                self.labware_button_frame,
+                text="Place on Slot",
+                command=self.place_selected_unplaced
+            ).pack(fill=tk.X, pady=2)
+            ttk.Button(
+                self.labware_button_frame,
+                text="Edit",
+                command=self.edit_selected_unplaced_labware
+            ).pack(fill=tk.X, pady=2)
+            ttk.Button(
+                self.labware_button_frame,
+                text="Delete",
+                command=self.delete_selected_unplaced_labware
+            ).pack(fill=tk.X, pady=2)
+
+    def update_slots_list(self):
+        """Update the slots listbox based on current view mode"""
+        self.slots_listbox.delete(0, tk.END)
+        self.update_slots_buttons()
+
+        if self.slot_view_mode.get() == "placed":
+            # Show placed slots
+            for slot_id in sorted(self.deck.slots.keys()):
+                self.slots_listbox.insert(tk.END, slot_id)
+        else:
+            # Show unplaced slots
+            for slot in self.unplaced_slots:
+                self.slots_listbox.insert(tk.END, slot.slot_id)
+
+    def update_labware_list(self):
+        """Update the labware listbox based on current view mode"""
+        self.labware_listbox.delete(0, tk.END)
+        self.update_labware_buttons()
+
+        if self.labware_view_mode.get() == "placed":
+            # Show placed labware
+            for lw_id in sorted(self.deck.labware.keys()):
+                self.labware_listbox.insert(tk.END, lw_id)
+        else:
+            # Show unplaced labware
+            for lw in self.unplaced_labware:
+                self.labware_listbox.insert(tk.END, lw.labware_id)
+
+    def create_create_tab(self):
+        """Create the Create tab"""
+        create_tab = ttk.Frame(self.right_panel_notebook)
+        self.right_panel_notebook.add(create_tab, text="Create")
+
+        # Create tab content
+        create_content = ttk.Frame(create_tab, padding=20)
+        create_content.pack(fill=tk.BOTH, expand=True)
+
+        # Title
+        ttk.Label(create_content, text="Create New Items", font=('Arial', 14, 'bold')).pack(pady=(0, 20))
+
+        # Create Slot section
+        slot_section = ttk.LabelFrame(create_content, text="Slot", padding=15)
+        slot_section.pack(fill=tk.X, pady=10)
+
+        ttk.Label(slot_section, text="Create a new slot to place on the deck",
+                  wraplength=250, justify=tk.LEFT).pack(pady=(0, 10))
+        ttk.Button(slot_section, text="Create Slot", command=self.create_slot,
+                   width=20).pack()
+
+        # Create Low-Level Labware section
+        low_level_section = ttk.LabelFrame(create_content, text="Low-Level Labware", padding=15)
+        low_level_section.pack(fill=tk.X, pady=10)
+
+        ttk.Label(low_level_section,
+                  text="Create components used in labware\n like Well & Reservoir)",
+                  wraplength=250, justify=tk.LEFT).pack(pady=(0, 10))
+        ttk.Button(low_level_section, text="Create Low-Level Lw", command=self.create_low_level_labware,
+                   width=20).pack()
+
+        # Create Labware section
+        labware_section = ttk.LabelFrame(create_content, text="Labware", padding=15)
+        labware_section.pack(fill=tk.X, pady=10)
+
+        ttk.Label(labware_section,
+                  text="Create labware like (Plate, ReservoirHolder, PipetteHolder, TipDropzone)",
+                  wraplength=250, justify=tk.LEFT).pack(pady=(0, 10))
+        ttk.Button(labware_section, text="Create Labware", command=self.create_labware,
+                   width=20).pack()
+
+    def create_low_level_labware(self):
+        """Open dialog to create low-level labware components"""
+        dialog = CreateLowLevelLabwareDialog(self.root)
+        self.root.wait_window(dialog)
+
+        if dialog.result:
+            component = dialog.result
+
+            # Add to appropriate list
+            if isinstance(component, Well):
+                self.available_wells.append(component)
+                messagebox.showinfo("Success",
+                                    f"Well '{component.labware_id}' created!\nYou can now use it when creating a Plate.")
+            elif isinstance(component, Reservoir):
+                self.available_reservoirs.append(component)
+                messagebox.showinfo("Success",
+                                    f"Reservoir '{component.labware_id}' created!\nYou can now use it when creating a ReservoirHolder.")
+            elif isinstance(component, IndividualPipetteHolder):
+                self.available_individual_holders.append(component)
+                messagebox.showinfo("Success",
+                                    f"IndividualPipetteHolder '{component.labware_id}' created!\nYou can now use it when creating a PipetteHolder.")
+
+    def create_labware(self):
+        """Open dialog to create new labware"""
+        dialog = CreateLabwareDialog(self.root, self.available_wells, self.available_reservoirs,
+                                     self.available_individual_holders)
+        self.root.wait_window(dialog)
+
+        if dialog.result:
+            # Store newly created component if needed
+            if isinstance(dialog.result, Plate) and dialog.selected_well:
+                if dialog.selected_well not in self.available_wells:
+                    self.available_wells.append(dialog.selected_well)
+            elif isinstance(dialog.result, PipetteHolder) and dialog.selected_individual_holder:
+                if dialog.selected_individual_holder not in self.available_individual_holders:
+                    self.available_individual_holders.append(dialog.selected_individual_holder)
+
+            self.unplaced_labware.append(dialog.result)
+            self.update_labware_list()
+            messagebox.showinfo("Success",
+                                f"Labware '{dialog.result.labware_id}' created!\nSwitch to 'Unplaced' view to place it on a slot.")
 
     def update_deck_info(self):
         """Update deck info display"""
@@ -1328,6 +1546,9 @@ class DeckGUI:
             self.deck = Deck(range_x=(0, x_max), range_y=(0, y_max), range_z=z_max, deck_id=deck_id)
             self.unplaced_labware = []
             self.unplaced_slots = []
+            self.available_wells = []
+            self.available_reservoirs = []
+            self.available_individual_holders = []
             self.draw_deck()
             messagebox.showinfo("Success", "New deck created!")
 
@@ -1338,20 +1559,10 @@ class DeckGUI:
 
         if dialog.result:
             self.unplaced_slots.append(dialog.result)
-            self.update_unplaced_slots_list()
+            if self.slot_view_mode.get() == "unplaced":
+                self.update_slots_list()
             messagebox.showinfo("Success",
-                                f"Slot '{dialog.result.slot_id}' created!\nClick 'Place Slot' to add it to the deck.")
-
-    def create_labware(self):
-        """Open dialog to create new labware"""
-        dialog = CreateLabwareDialog(self.root)
-        self.root.wait_window(dialog)
-
-        if dialog.result:
-            self.unplaced_labware.append(dialog.result)
-            self.update_unplaced_list()
-            messagebox.showinfo("Success",
-                                f"Labware '{dialog.result.labware_id}' created!\nRight-click to place it on a slot.")
+                                f"Slot '{dialog.result.slot_id}' created!\nSwitch to 'Unplaced' view and click 'Place Slot' to add it to the deck.")
 
     def place_labware(self, labware):
         """Place unplaced labware on deck"""
@@ -1421,96 +1632,92 @@ class DeckGUI:
             if lw.position:
                 self.draw_labware(lw_id, lw)
 
-        # Update lists
-        self.update_listboxes()
+        # Update lists and info
+        self.update_slots_list()
+        self.update_labware_list()
         self.update_deck_info()
 
     def draw_grid(self):
         """Draw background grid"""
-        step = 50  # mm
+        grid_spacing = 50  # mm
 
+        # Vertical lines
         x = self.deck.range_x[0]
         while x <= self.deck.range_x[1]:
             x1, y1 = self.mm_to_canvas(x, self.deck.range_y[0])
             x2, y2 = self.mm_to_canvas(x, self.deck.range_y[1])
-            self.canvas.create_line(x1, y1, x2, y2, fill='lightgray', tags='grid')
-            x += step
+            self.canvas.create_line(x1, y1, x2, y2, fill='lightgray', dash=(2, 4), tags='grid')
+            x += grid_spacing
 
+        # Horizontal lines
         y = self.deck.range_y[0]
         while y <= self.deck.range_y[1]:
             x1, y1 = self.mm_to_canvas(self.deck.range_x[0], y)
             x2, y2 = self.mm_to_canvas(self.deck.range_x[1], y)
-            self.canvas.create_line(x1, y1, x2, y2, fill='lightgray', tags='grid')
-            y += step
+            self.canvas.create_line(x1, y1, x2, y2, fill='lightgray', dash=(2, 4), tags='grid')
+            y += grid_spacing
 
     def draw_slot(self, slot_id, slot):
-        """Draw a single slot"""
+        """Draw a slot"""
         x1, y1 = self.mm_to_canvas(slot.range_x[0], slot.range_y[0])
         x2, y2 = self.mm_to_canvas(slot.range_x[1], slot.range_y[1])
 
-        rect_id = self.canvas.create_rectangle(
+        # Draw slot rectangle
+        self.canvas.create_rectangle(
             x1, y1, x2, y2,
-            fill='lightblue', outline='blue', width=2,
-            tags=('slot', slot_id)
+            outline='blue',
+            width=2,
+            fill='lightblue',
+            stipple='gray50',
+            tags=f'slot_{slot_id}'
         )
 
-        # Label
-        cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+        # Draw slot label
+        cx = (x1 + x2) / 2
+        cy = (y1 + y2) / 2
         self.canvas.create_text(
-            cx, cy, text=slot_id,
+            cx, cy,
+            text=slot_id,
             font=('Arial', 10, 'bold'),
-            tags=('slot_label', slot_id)
+            tags=f'slot_{slot_id}'
         )
 
-        self.canvas.addtag_withtag(f'slot_{slot_id}', rect_id)
+        # Make clickable
+        self.canvas.tag_bind(f'slot_{slot_id}', '<Button-1>',
+                             lambda e, sid=slot_id: self.select_slot(sid))
 
     def draw_labware(self, lw_id, lw):
-        """Draw a single labware"""
+        """Draw labware"""
         if not lw.position:
             return
 
-        x, y = lw.position
-        x1, y1 = self.mm_to_canvas(x, y)
-        x2, y2 = self.mm_to_canvas(x + lw.size_x, y + lw.size_y)
+        x1, y1 = self.mm_to_canvas(lw.position[0], lw.position[1])
+        x2, y2 = self.mm_to_canvas(lw.position[0] + lw.size_x, lw.position[1] + lw.size_y)
 
-        rect_id = self.canvas.create_rectangle(
+        # Draw labware rectangle
+        self.canvas.create_rectangle(
             x1, y1, x2, y2,
-            fill='lightcoral', outline='red', width=2,
-            tags=('labware', lw_id)
+            outline='red',
+            width=2,
+            fill='lightcoral',
+            stipple='gray25',
+            tags=f'labware_{lw_id}'
         )
 
-        # Label
-        cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+        # Draw labware label
+        cx = (x1 + x2) / 2
+        cy = (y1 + y2) / 2
         self.canvas.create_text(
-            cx, cy, text=lw_id,
-            font=('Arial', 9),
-            tags=('labware_label', lw_id)
+            cx, cy,
+            text=f"{lw_id}\n{lw.__class__.__name__}",
+            font=('Arial', 8),
+            tags=f'labware_{lw_id}'
         )
 
-        self.canvas.addtag_withtag(f'labware_{lw_id}', rect_id)
-
-    def update_listboxes(self):
-        """Update all listboxes"""
-        # Slots
-        self.slots_listbox.delete(0, tk.END)
-        for slot_id in self.deck.slots.keys():
-            self.slots_listbox.insert(tk.END, slot_id)
-
-        # Placed labware
-        self.labware_listbox.delete(0, tk.END)
-        for lw_id in self.deck.labware.keys():
-            self.labware_listbox.insert(tk.END, lw_id)
-
-        # Unplaced items
-        self.update_unplaced_list()
-        self.update_unplaced_slots_list()
-
-    def update_unplaced_list(self):
-        """Update unplaced labware list"""
-        self.unplaced_listbox.delete(0, tk.END)
-        for lw in self.unplaced_labware:
-            self.unplaced_listbox.insert(tk.END, f"{lw.labware_id} ({lw.__class__.__name__})")
-
+        # Make clickable
+        self.canvas.tag_bind(f'labware_{lw_id}', '<Button-1>',
+                             lambda e, lid=lw_id: self.select_labware(lid))
+    # Event handlers
     def on_canvas_click(self, event):
         """Handle canvas click"""
         item = self.canvas.find_closest(event.x, event.y)[0]
@@ -1584,287 +1791,322 @@ class DeckGUI:
 
         menu.post(event.x_root, event.y_root)
 
+    def on_slot_select(self, event):
+        """Handle slot listbox selection"""
+        selection = self.slots_listbox.curselection()
+        if selection:
+            slot_id_or_index = selection[0]
+            if self.slot_view_mode.get() == "placed":
+                # Get slot_id from placed slots
+                slot_id = self.slots_listbox.get(slot_id_or_index)
+                self.select_slot(slot_id)
+            else:
+                # Get slot from unplaced slots list
+                if slot_id_or_index < len(self.unplaced_slots):
+                    slot = self.unplaced_slots[slot_id_or_index]
+                    self.show_unplaced_slot_info(slot)
+
     def on_slot_right_click(self, event):
-        """Handle right-click on slot list"""
+        """Handle right click on slot"""
+        # Get selection
         selection = self.slots_listbox.curselection()
         if not selection:
             return
 
-        slot_id = self.slots_listbox.get(selection[0])
-
+        # Create context menu based on view mode
         menu = tk.Menu(self.root, tearoff=0)
-        menu.add_command(label=f"Edit Slot", command=lambda: self.edit_slot_dialog(slot_id))
-        menu.add_command(label=f"Remove Slot", command=lambda: self.remove_slot_dialog(slot_id))
+
+        if self.slot_view_mode.get() == "placed":
+            menu.add_command(label="Unplace Slot", command=self.unplace_selected_slot)
+        else:
+            menu.add_command(label="Place Slot", command=self.place_selected_unplaced_slot)
+            menu.add_command(label="Edit", command=self.edit_selected_unplaced_slot)
+            menu.add_command(label="Delete", command=self.delete_selected_unplaced_slot)
+
         menu.post(event.x_root, event.y_root)
 
+    def on_slot_double_click(self, event):
+        """Handle double click on slot"""
+        if self.slot_view_mode.get() == "unplaced":
+            self.place_selected_unplaced_slot()
+
+    def on_labware_select(self, event):
+        """Handle labware listbox selection"""
+        selection = self.labware_listbox.curselection()
+        if selection:
+            lw_id_or_index = selection[0]
+            if self.labware_view_mode.get() == "placed":
+                # Get lw_id from placed labware
+                lw_id = self.labware_listbox.get(lw_id_or_index)
+                self.select_labware(lw_id)
+            else:
+                # Get labware from unplaced labware list
+                if lw_id_or_index < len(self.unplaced_labware):
+                    lw = self.unplaced_labware[lw_id_or_index]
+                    self.show_unplaced_labware_info(lw)
+
     def on_labware_right_click(self, event):
-        """Handle right-click on placed labware list"""
+        """Handle right click on labware"""
+        # Get selection
         selection = self.labware_listbox.curselection()
         if not selection:
             return
 
-        lw_id = self.labware_listbox.get(selection[0])
-
+        # Create context menu based on view mode
         menu = tk.Menu(self.root, tearoff=0)
-        menu.add_command(label=f"Edit Labware", command=lambda: self.edit_labware_dialog(lw_id))
-        menu.add_command(label=f"Remove Labware", command=lambda: self.remove_labware_dialog(lw_id))
+
+        if self.labware_view_mode.get() == "placed":
+            menu.add_command(label="Unplace Labware", command=self.unplace_selected_labware)
+        else:
+            menu.add_command(label="Place on Slot", command=self.place_selected_unplaced)
+            menu.add_command(label="Edit", command=self.edit_selected_unplaced_labware)
+            menu.add_command(label="Delete", command=self.delete_selected_unplaced_labware)
+
         menu.post(event.x_root, event.y_root)
 
-    def on_unplaced_right_click(self, event):
-        """Handle right-click on unplaced labware list"""
-        selection = self.unplaced_listbox.curselection()
+    def on_labware_double_click(self, event):
+        """Handle double click on labware"""
+        if self.labware_view_mode.get() == "unplaced":
+            self.place_selected_unplaced()
+
+    def show_unplaced_slot_info(self, slot):
+        """Show info for an unplaced slot"""
+        info = f"Slot: {slot.slot_id}\n\n"
+        info += f"Range X: {slot.range_x}\n"
+        info += f"Range Y: {slot.range_y}\n"
+        info += f"Range Z: {slot.range_z}\n\n"
+        info += "Status: Unplaced"
+
+        self.info_text.delete(1.0, tk.END)
+        self.info_text.insert(1.0, info)
+
+    def show_unplaced_labware_info(self, lw):
+        """Show info for unplaced labware"""
+        info = f"Labware: {lw.labware_id}\n\n"
+        info += f"Type: {lw.__class__.__name__}\n"
+        info += f"Size X: {lw.size_x} mm\n"
+        info += f"Size Y: {lw.size_y} mm\n"
+        info += f"Size Z: {lw.size_z} mm\n"
+        info += f"Offset: {lw.offset}\n\n"
+        info += "Status: Unplaced"
+
+        # Add type-specific info
+        if isinstance(lw, Plate):
+            info += f"\nRows: {lw._rows}\n"
+            info += f"Columns: {lw._columns}\n"
+        elif isinstance(lw, ReservoirHolder):
+            info += f"\nHooks X: {lw.hooks_across_x}\n"
+            info += f"Hooks Y: {lw.hooks_across_y}\n"
+        elif isinstance(lw, PipetteHolder):
+            info += f"\nHolders X: {lw.holders_across_x}\n"
+            info += f"Holders Y: {lw.holders_across_y}\n"
+
+        self.info_text.delete(1.0, tk.END)
+        self.info_text.insert(1.0, info)
+
+    # Slot management methods
+    def place_selected_unplaced_slot(self):
+        """Place selected unplaced slot on deck"""
+        selection = self.slots_listbox.curselection()
         if not selection:
+            messagebox.showwarning("No Selection", "Please select a slot to place")
             return
 
-        labware = self.unplaced_labware[selection[0]]
+        slot = self.unplaced_slots[selection[0]]
 
-        menu = tk.Menu(self.root, tearoff=0)
-        menu.add_command(label="Place on Slot", command=lambda: self.place_labware(labware))
-        menu.add_command(label="Delete", command=lambda: self.delete_unplaced_labware(labware))
-        menu.post(event.x_root, event.y_root)
+        # Check if slot ID already exists
+        if slot.slot_id in self.deck.slots:
+            messagebox.showerror("Error", f"Slot '{slot.slot_id}' already exists on deck")
+            return
 
-    def on_unplaced_double_click(self, event):
-        """Handle double-click on unplaced labware list"""
-        selection = self.unplaced_listbox.curselection()
-        if selection:
-            labware = self.unplaced_labware[selection[0]]
-            self.place_labware(labware)
+        # Check if slot fits within deck boundaries
+        errors = self.validate_slot_placement(slot)
+        if errors:
+            messagebox.showerror("Placement Error", "\n".join(errors))
+            return
 
-    def place_selected_unplaced(self):
-        """Place the selected unplaced labware"""
-        selection = self.unplaced_listbox.curselection()
+        # Add slot to deck
+        self.deck.add_slots([slot])
+        self.unplaced_slots.remove(slot)
+
+        self.draw_deck()
+        messagebox.showinfo("Success", f"Slot '{slot.slot_id}' placed on deck!")
+
+    def unplace_selected_slot(self):
+        """Remove selected placed slot from deck"""
+        selection = self.slots_listbox.curselection()
         if not selection:
-            messagebox.showinfo("No Selection", "Please select an unplaced labware to place.")
+            messagebox.showwarning("No Selection", "Please select a slot to unplace")
+            return
+
+        slot_id = self.slots_listbox.get(selection[0])
+
+        # Check if slot has labware
+        slot = self.deck.slots[slot_id]
+
+        # First, unplace all labware in this slot
+        labware_in_slot = list(slot.labware_stack.keys())  # Make a copy of the keys
+        if labware_in_slot:
+            for lw_id in labware_in_slot:
+                lw = self.deck.labware[lw_id]
+                # Remove from deck
+                self.deck.remove_labware(lw, slot_id)
+                # Add to unplaced
+                self.unplaced_labware.append(lw)
+
+            messagebox.showinfo("Info",
+                                f"Automatically unplaced {len(labware_in_slot)} labware item(s) from slot '{slot_id}'.")
+
+        # Remove from deck and add to unplaced
+        self.unplaced_slots.append(slot)
+        del self.deck.slots[slot_id]
+
+        self.draw_deck()
+        messagebox.showinfo("Success", f"Slot '{slot_id}' removed from deck!")
+
+    def edit_selected_unplaced_slot(self):
+        """Edit selected unplaced slot"""
+        selection = self.slots_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("No Selection", "Please select a slot to edit")
+            return
+
+        slot = self.unplaced_slots[selection[0]]
+
+        dialog = EditSlotDialog(self.root, slot)
+        self.root.wait_window(dialog)
+
+        if dialog.result:
+            self.update_slots_list()
+            messagebox.showinfo("Success", f"Slot '{slot.slot_id}' updated!")
+
+    def delete_selected_unplaced_slot(self):
+        """Delete selected unplaced slot"""
+        selection = self.slots_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("No Selection", "Please select a slot to delete")
+            return
+
+        slot = self.unplaced_slots[selection[0]]
+
+        if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete slot '{slot.slot_id}'?"):
+            self.unplaced_slots.remove(slot)
+            self.update_slots_list()
+            messagebox.showinfo("Success", f"Slot '{slot.slot_id}' deleted!")
+
+    # Labware management methods
+    def place_selected_unplaced(self):
+        """Place selected unplaced labware"""
+        selection = self.labware_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("No Selection", "Please select labware to place")
             return
 
         labware = self.unplaced_labware[selection[0]]
         self.place_labware(labware)
 
-    def update_unplaced_slots_list(self):
-        """Update unplaced slots list"""
-        self.unplaced_slots_listbox.delete(0, tk.END)
-        for slot in self.unplaced_slots:
-            self.unplaced_slots_listbox.insert(tk.END, slot.slot_id)
-
-    def on_unplaced_slot_right_click(self, event):
-        """Handle right-click on unplaced slot list"""
-        # Find which item was clicked
-        index = self.unplaced_slots_listbox.nearest(event.y)
-        if index < 0 or index >= len(self.unplaced_slots):
-            return
-
-        self.unplaced_slots_listbox.selection_clear(0, tk.END)
-        self.unplaced_slots_listbox.selection_set(index)
-        self.unplaced_slots_listbox.activate(index)
-
-        slot = self.unplaced_slots[index]
-
-        menu = tk.Menu(self.root, tearoff=0)
-        menu.add_command(label="Place on Deck", command=lambda: self.place_slot(slot))
-        menu.add_command(label="Delete", command=lambda: self.delete_unplaced_slot(slot))
-        menu.post(event.x_root, event.y_root)
-
-    def on_unplaced_slot_double_click(self, event):
-        """Handle double-click on unplaced slot list"""
-        selection = self.unplaced_slots_listbox.curselection()
-        if selection:
-            slot = self.unplaced_slots[selection[0]]
-            self.place_slot(slot)
-
-    def place_selected_unplaced_slot(self):
-        """Place the selected unplaced slot"""
-        selection = self.unplaced_slots_listbox.curselection()
+    def unplace_selected_labware(self):
+        """Remove selected placed labware from deck"""
+        selection = self.labware_listbox.curselection()
         if not selection:
-            messagebox.showinfo("No Selection", "Please select an unplaced slot to place.")
+            messagebox.showwarning("No Selection", "Please select labware to unplace")
             return
 
-        slot = self.unplaced_slots[selection[0]]
-        self.place_slot(slot)
-
-    def place_slot(self, slot):
-        """Place an unplaced slot on the deck"""
-        try:
-            self.deck.add_slots([slot])
-            self.unplaced_slots.remove(slot)
-            self.update_unplaced_slots_list()
-            self.draw_deck()
-            messagebox.showinfo("Success", f"Slot '{slot.slot_id}' placed on deck!")
-        except ValueError as e:
-            messagebox.showerror("Error", str(e))
-
-    def delete_unplaced_slot(self, slot):
-        """Delete unplaced slot"""
-        result = messagebox.askyesno("Confirm", f"Delete slot '{slot.slot_id}'?")
-        if result:
-            self.unplaced_slots.remove(slot)
-            self.update_unplaced_slots_list()
-
-    def delete_unplaced_labware(self, labware):
-        """Delete unplaced labware"""
-        result = messagebox.askyesno("Confirm", f"Delete labware '{labware.labware_id}'?")
-        if result:
-            self.unplaced_labware.remove(labware)
-            self.update_unplaced_list()
-
-    def remove_slot_dialog(self, slot_id):
-        """Remove slot from deck"""
-        # Check if slot has labware
-        slot = self.deck.slots[slot_id]
-        if slot.labware_stack:
-            messagebox.showerror("Error", f"Slot '{slot_id}' contains labware. Remove labware first.")
-            return
-
-        result = messagebox.askyesno("Confirm", f"Remove slot '{slot_id}'?")
-        if result:
-            del self.deck.slots[slot_id]
-            self.draw_deck()
-
-    def remove_labware_dialog(self, lw_id):
-        """Remove labware from deck"""
-        result = messagebox.askyesno("Confirm", f"Remove labware '{lw_id}'?")
-        if result:
-            slot_id = self.deck.get_slot_for_labware(lw_id)
-            if slot_id:
-                lw = self.deck.labware[lw_id]
-                self.deck.remove_labware(lw, slot_id)
-                self.draw_deck()
-
-    def edit_slot_dialog(self, slot_id):
-        """Edit an existing slot"""
-        if slot_id not in self.deck.slots:
-            messagebox.showerror("Error", f"Slot '{slot_id}' not found")
-            return
-
-        slot = self.deck.slots[slot_id]
-        dialog = EditSlotDialog(self.root, slot)
-        self.root.wait_window(dialog)
-
-        if dialog.result:
-            # Validate the edited slot
-            errors = self.validate_slot_edit(slot)
-
-            if errors:
-                # Restore would require keeping old values, so show error and let user try again
-                error_msg = "Cannot save changes:\n\n" + "\n".join(errors)
-                error_msg += "\n\nPlease adjust the parameters and try again."
-                messagebox.showerror("Validation Error", error_msg)
-                # Re-open dialog for corrections
-                self.edit_slot_dialog(slot_id)
-            else:
-                # Success! Redraw
-                self.draw_deck()
-                messagebox.showinfo("Success", f"Slot '{slot_id}' updated successfully!")
-
-    def edit_labware_dialog(self, lw_id):
-        """Edit an existing labware"""
-        if lw_id not in self.deck.labware:
-            messagebox.showerror("Error", f"Labware '{lw_id}' not found")
-            return
-
+        lw_id = self.labware_listbox.get(selection[0])
         labware = self.deck.labware[lw_id]
 
-        # Store old values for restoration if validation fails
-        old_size_x = labware.size_x
-        old_size_y = labware.size_y
-        old_size_z = labware.size_z
-        old_offset = labware.offset
-        old_drop_height = labware.drop_height_relative if isinstance(labware, TipDropzone) else None
+        # Remove from deck
+        slot_id = self.deck.get_slot_for_labware(lw_id)
+        if slot_id:
+            self.deck.slots[slot_id]._remove_labware(lw_id)
+
+        del self.deck.labware[lw_id]
+        labware.position = None
+
+        # Add to unplaced
+        self.unplaced_labware.append(labware)
+
+        self.draw_deck()
+        messagebox.showinfo("Success", f"Labware '{lw_id}' removed from deck!")
+
+    def edit_selected_unplaced_labware(self):
+        """Edit selected unplaced labware"""
+        selection = self.labware_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("No Selection", "Please select labware to edit")
+            return
+
+        labware = self.unplaced_labware[selection[0]]
 
         dialog = EditLabwareDialog(self.root, labware)
         self.root.wait_window(dialog)
 
         if dialog.result:
-            # Validate the edited labware
-            errors = self.validate_labware_edit(labware)
+            self.update_labware_list()
+            messagebox.showinfo("Success", f"Labware '{labware.labware_id}' updated!")
 
-            if errors:
-                # Restore old values
-                labware.size_x = old_size_x
-                labware.size_y = old_size_y
-                labware.size_z = old_size_z
-                labware.offset = old_offset
-                if old_drop_height is not None:
-                    labware.drop_height_relative = old_drop_height
+    def delete_selected_unplaced_labware(self):
+        """Delete selected unplaced labware"""
+        selection = self.labware_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("No Selection", "Please select labware to delete")
+            return
 
-                error_msg = "Cannot save changes:\n\n" + "\n".join(errors)
-                error_msg += "\n\nChanges have been reverted."
-                messagebox.showerror("Validation Error", error_msg)
-            else:
-                # Success! Recalculate position and redraw
-                slot_id = self.deck.get_slot_for_labware(lw_id)
-                if slot_id:
-                    slot = self.deck.slots[slot_id]
-                    # Reallocate position with new dimensions
-                    slot._allocate_position(labware, None, None)
+        labware = self.unplaced_labware[selection[0]]
 
-                self.draw_deck()
-                messagebox.showinfo("Success", f"Labware '{lw_id}' updated successfully!")
+        if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete labware '{labware.labware_id}'?"):
+            self.unplaced_labware.remove(labware)
+            self.update_labware_list()
+            messagebox.showinfo("Success", f"Labware '{labware.labware_id}' deleted!")
 
-    def validate_slot_edit(self, slot):
-        """Validate edited slot - returns list of error messages"""
+    def validate_slot_placement(self, slot):
+        """Validate that a slot can be placed on the deck"""
         errors = []
 
-        # Check if slot is still within deck boundaries
-        if not (self.deck.range_x[0] <= slot.range_x[0] and
-                slot.range_x[1] <= self.deck.range_x[1] and
-                self.deck.range_y[0] <= slot.range_y[0] and
-                slot.range_y[1] <= self.deck.range_y[1]):
-            errors.append(f"âš  Slot extends outside deck boundaries\n"
-                          f"   Deck: X{self.deck.range_x}, Y{self.deck.range_y}\n"
-                          f"   Slot: X{slot.range_x}, Y{slot.range_y}")
+        # Check if slot fits within deck boundaries
+        if slot.range_x[0] < self.deck.range_x[0] or slot.range_x[1] > self.deck.range_x[1]:
+            errors.append(f"⚠ Slot X range ({slot.range_x}) exceeds deck X range ({self.deck.range_x})")
 
-        # Check overlap with other slots
-        for other_id, other_slot in self.deck.slots.items():
-            if other_id == slot.slot_id:
-                continue
-            if self.deck._overlaps(slot, other_slot):
-                errors.append(f"âš  Slot overlaps with slot '{other_id}'")
+        if slot.range_y[0] < self.deck.range_y[0] or slot.range_y[1] > self.deck.range_y[1]:
+            errors.append(f"⚠ Slot Y range ({slot.range_y}) exceeds deck Y range ({self.deck.range_y})")
 
-        # Check if all labware in this slot still fit
-        for lw_id, (lw, z_range) in slot.labware_stack.items():
-            min_z, max_z = z_range
+        if slot.range_z > self.deck.range_z:
+            errors.append(f"⚠ Slot Z range ({slot.range_z}) exceeds deck Z range ({self.deck.range_z})")
 
-            # Check XY fit
-            fits_xy = (abs(slot.range_x[1] - slot.range_x[0]) >= lw.size_x and
-                       abs(slot.range_y[1] - slot.range_y[0]) >= lw.size_y)
-            if not fits_xy:
-                errors.append(f"âš  Labware '{lw_id}' no longer fits in X/Y dimensions\n"
-                              f"   Slot: {abs(slot.range_x[1] - slot.range_x[0]):.1f} x {abs(slot.range_y[1] - slot.range_y[0]):.1f} mm\n"
-                              f"   Labware: {lw.size_x:.1f} x {lw.size_y:.1f} mm")
-
-            # Check Z fit
-            if max_z > slot.range_z:
-                errors.append(f"âš  Labware '{lw_id}' exceeds slot Z height\n"
-                              f"   Slot Z: {slot.range_z} mm\n"
-                              f"   Labware needs: {max_z} mm")
+        # Check for overlap with existing slots
+        for existing_slot_id, existing_slot in self.deck.slots.items():
+            if self.slots_overlap(slot, existing_slot):
+                errors.append(f"⚠ Slot overlaps with existing slot '{existing_slot_id}'")
 
         return errors
 
-    def validate_labware_edit(self, labware):
-        """Validate edited labware - returns list of error messages"""
+    def slots_overlap(self, slot1, slot2):
+        """Check if two slots overlap"""
+        x_overlap = not (slot1.range_x[1] <= slot2.range_x[0] or slot1.range_x[0] >= slot2.range_x[1])
+        y_overlap = not (slot1.range_y[1] <= slot2.range_y[0] or slot1.range_y[0] >= slot2.range_y[1])
+        return x_overlap and y_overlap
+
+    def validate_labware_placement(self, labware, slot_id, min_z):
+        """Validate labware placement in a slot"""
         errors = []
 
-        # Find which slot this labware is in
-        slot_id = self.deck.get_slot_for_labware(labware.labware_id)
+        slot = self.deck.slots.get(slot_id)
+        if not slot:
+            errors.append(f"⚠ Slot '{slot_id}' does not exist")
+            return errors
 
-        if slot_id:
-            slot = self.deck.slots[slot_id]
-            lw_data = slot.labware_stack[labware.labware_id]
-            lw, z_range = lw_data
-            min_z, max_z = z_range
+        # Check if labware exists in deck
+        lw_id = labware.labware_id
+        if lw_id not in self.deck.labware:
+            return errors
 
-            # Check XY fit
-            fits_xy = (abs(slot.range_x[1] - slot.range_x[0]) >= labware.size_x and
-                       abs(slot.range_y[1] - slot.range_y[0]) >= labware.size_y)
-            if not fits_xy:
-                errors.append(f"âš  Labware no longer fits in slot '{slot_id}' (X/Y too large)\n"
-                              f"   Slot: {abs(slot.range_x[1] - slot.range_x[0]):.1f} x {abs(slot.range_y[1] - slot.range_y[0]):.1f} mm\n"
-                              f"   Labware: {labware.size_x:.1f} x {labware.size_y:.1f} mm")
-
-            # Check Z fit
+        # Get labware data from slot
+        lw_data = slot.labware_stack.get(lw_id)
+        if lw_data:
+            # Check Z height
             new_max_z = min_z + labware.size_z
             if new_max_z > slot.range_z:
-                errors.append(f"âš  Labware exceeds slot '{slot_id}' Z height\n"
+                errors.append(f"⚠ Labware exceeds slot '{slot_id}' Z height\n"
                               f"   Slot Z: {slot.range_z} mm\n"
                               f"   Labware needs: {new_max_z} mm (min_z={min_z} + size_z={labware.size_z})")
 
@@ -1924,8 +2166,8 @@ class DeckGUI:
             info += f"\nHooks X: {lw.hooks_across_x}\n"
             info += f"Hooks Y: {lw.hooks_across_y}\n"
         elif isinstance(lw, PipetteHolder):
-            info += f"\nZones X: {lw.zones_across_x}\n"
-            info += f"Zones Y: {lw.zones_across_y}\n"
+            info += f"\nHolders X: {lw.holders_across_x}\n"
+            info += f"\nHolders Y: {lw.holders_across_y}\n"
 
         self.info_text.delete(1.0, tk.END)
         self.info_text.insert(1.0, info)
@@ -1946,20 +2188,6 @@ class DeckGUI:
         self.selected_item = None
         self.info_text.delete(1.0, tk.END)
 
-    def on_slot_select(self, event):
-        """Handle slot listbox selection"""
-        selection = self.slots_listbox.curselection()
-        if selection:
-            slot_id = self.slots_listbox.get(selection[0])
-            self.select_slot(slot_id)
-
-    def on_labware_select(self, event):
-        """Handle labware listbox selection"""
-        selection = self.labware_listbox.curselection()
-        if selection:
-            lw_id = self.labware_listbox.get(selection[0])
-            self.select_labware(lw_id)
-
     def zoom_in(self):
         """Zoom in"""
         self.scale *= 1.2
@@ -1978,11 +2206,14 @@ class DeckGUI:
         )
         if filename:
             try:
-                # Save deck and all unplaced items
+                # Save deck and all unplaced items including low-level components
                 data = {
                     'deck': self.deck.to_dict(),
                     'unplaced_labware': [lw.to_dict() for lw in self.unplaced_labware],
-                    'unplaced_slots': [slot.to_dict() for slot in self.unplaced_slots]
+                    'unplaced_slots': [slot.to_dict() for slot in self.unplaced_slots],
+                    'available_wells': [well.to_dict() for well in self.available_wells],
+                    'available_reservoirs': [res.to_dict() for res in self.available_reservoirs],
+                    'available_individual_holders': [holder.to_dict() for holder in self.available_individual_holders]
                 }
                 with open(filename, 'w') as f:
                     json.dump(data, f, indent=2)
@@ -2021,6 +2252,22 @@ class DeckGUI:
                     for slot_data in data['unplaced_slots']:
                         self.unplaced_slots.append(Serializable.from_dict(slot_data))
 
+                # Load low-level components if present
+                self.available_wells = []
+                if 'available_wells' in data:
+                    for well_data in data['available_wells']:
+                        self.available_wells.append(Serializable.from_dict(well_data))
+
+                self.available_reservoirs = []
+                if 'available_reservoirs' in data:
+                    for res_data in data['available_reservoirs']:
+                        self.available_reservoirs.append(Serializable.from_dict(res_data))
+
+                self.available_individual_holders = []
+                if 'available_individual_holders' in data:
+                    for holder_data in data['available_individual_holders']:
+                        self.available_individual_holders.append(Serializable.from_dict(holder_data))
+
                 self.draw_deck()
                 messagebox.showinfo("Success", f"Deck loaded from {filename}")
             except Exception as e:
@@ -2036,10 +2283,9 @@ if __name__ == "__main__":
     # Create a sample deck for testing
     deck = Deck(range_x=(0, 500), range_y=(0, 400), deck_id="test_deck", range_z=500)
 
-    # You can add some initial slots if desired
-    # slot1 = Slot(range_x=(50, 200), range_y=(50, 200), range_z=100, slot_id="A1")
-    # deck.add_slots([slot1])
-
     # Run GUI
     gui = DeckGUI(deck)
     gui.run()
+
+    # Draw slot label
+    cx = (x1 + x2) / 2
