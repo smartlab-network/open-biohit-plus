@@ -1163,9 +1163,30 @@ class DeckGUI:
         # View toggles for slots and labware
         self.slot_view_mode = tk.StringVar(value="placed")  # "placed" or "unplaced"
         self.labware_view_mode = tk.StringVar(value="placed")  # "placed" or "unplaced"
+        self.selection_var = tk.StringVar(value="Nothing selected")
 
         self.setup_ui()
         self.draw_deck()
+
+    def _add_common_controls(self, parent_frame: ttk.Frame) -> None:
+        """Add Refresh / Clear Selection / ONE GLOBAL Selection-Box to *parent_frame*."""
+        btn_frame = ttk.Frame(parent_frame)
+        btn_frame.pack(fill=tk.X, pady=5, padx=5)
+
+        ttk.Button(btn_frame, text="Refresh", command=self.draw_deck).pack(
+            side=tk.LEFT, expand=True, fill=tk.X, padx=2
+        )
+        ttk.Button(btn_frame, text="Clear Selection", command=self.clear_selection).pack(
+            side=tk.LEFT, expand=True, fill=tk.X, padx=2
+        )
+
+        # ONE GLOBAL read-only entry (uses the StringVar created in __init__)
+        sel_entry = ttk.Entry(btn_frame, textvariable=self.selection_var, state="readonly")
+        sel_entry.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+
+    def _update_selection_display(self, text: str) -> None:
+        """Update the ONE GLOBAL selection box."""
+        self.selection_var.set(text)
 
     def setup_ui(self):
         # Menu bar
@@ -1283,20 +1304,8 @@ class DeckGUI:
         self.deck_info_label.pack(fill=tk.X, anchor='w')
         self.deck_info_collapsible.toggle()
 
-        # Info panel
-        self.info_frame = ttk.LabelFrame(control_frame, text="Selection Info", padding=10)
-        self.info_frame.pack(fill=tk.BOTH, expand=True, pady=5, padx=5)
 
-        self.info_text = tk.Text(self.info_frame, height=10, wrap=tk.WORD)
-        self.info_text.pack(fill=tk.BOTH, expand=True)
-
-        # Control buttons
-        btn_frame = ttk.Frame(control_frame)
-        btn_frame.pack(fill=tk.X, pady=5, padx=5)
-
-        ttk.Button(btn_frame, text="Refresh", command=self.draw_deck).pack(fill=tk.X, pady=2)
-        ttk.Button(btn_frame, text="Clear Selection", command=self.clear_selection).pack(fill=tk.X, pady=2)
-
+        self._add_common_controls(deck_editor_tab)
 
 
         # ===== SLOTS SECTION WITH TOGGLE =====
@@ -1375,6 +1384,7 @@ class DeckGUI:
         # We'll update this dynamically
         self.update_labware_buttons()
 
+
         # Zoom controls
         zoom_frame = ttk.Frame(control_frame)
         zoom_frame.pack(fill=tk.X, pady=5, padx=5)
@@ -1382,6 +1392,7 @@ class DeckGUI:
         ttk.Button(zoom_frame, text="Zoom In", command=self.zoom_in).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
         ttk.Button(zoom_frame, text="Zoom Out", command=self.zoom_out).pack(side=tk.LEFT, expand=True, fill=tk.X,
                                                                             padx=2)
+
 
         # Canvas bindings
         self.canvas.bind("<Button-1>", self.on_canvas_click)
@@ -1518,6 +1529,7 @@ class DeckGUI:
                   wraplength=250, justify=tk.LEFT).pack(pady=(0, 10))
         ttk.Button(labware_section, text="Create Labware", command=self.create_labware,
                    width=20).pack()
+        self._add_common_controls(create_tab)
 
     def create_low_level_labware(self):
         """Open dialog to create low-level labware components"""
@@ -1832,19 +1844,16 @@ class DeckGUI:
         menu.post(event.x_root, event.y_root)
 
     def on_slot_select(self, event):
-        """Handle slot listbox selection"""
         selection = self.slots_listbox.curselection()
         if selection:
-            slot_id_or_index = selection[0]
+            idx = selection[0]
             if self.slot_view_mode.get() == "placed":
-                # Get slot_id from placed slots
-                slot_id = self.slots_listbox.get(slot_id_or_index)
-                self.select_slot(slot_id)
+                slot_id = self.slots_listbox.get(idx)
+                self.select_slot(slot_id)  # updates box
             else:
-                # Get slot from unplaced slots list
-                if slot_id_or_index < len(self.unplaced_slots):
-                    slot = self.unplaced_slots[slot_id_or_index]
-                    self.show_unplaced_slot_info(slot)
+                slot = self.unplaced_slots[idx]
+                self.show_unplaced_slot_info(slot)
+                self._update_selection_display(f"Unplaced Slot: {slot.slot_id}")
 
     def on_slot_right_click(self, event):
         """Handle right click on slot"""
@@ -1871,19 +1880,16 @@ class DeckGUI:
             self.place_selected_unplaced_slot()
 
     def on_labware_select(self, event):
-        """Handle labware listbox selection"""
         selection = self.labware_listbox.curselection()
         if selection:
-            lw_id_or_index = selection[0]
+            idx = selection[0]
             if self.labware_view_mode.get() == "placed":
-                # Get lw_id from placed labware
-                lw_id = self.labware_listbox.get(lw_id_or_index)
-                self.select_labware(lw_id)
+                lw_id = self.labware_listbox.get(idx)
+                self.select_labware(lw_id)                    # updates box
             else:
-                # Get labware from unplaced labware list
-                if lw_id_or_index < len(self.unplaced_labware):
-                    lw = self.unplaced_labware[lw_id_or_index]
-                    self.show_unplaced_labware_info(lw)
+                lw = self.unplaced_labware[idx]
+                self.show_unplaced_labware_info(lw)
+                self._update_selection_display(f"Unplaced Labware: {lw.labware_id}")
 
     def on_labware_right_click(self, event):
         """Handle right click on labware"""
@@ -2177,6 +2183,8 @@ class DeckGUI:
         self.info_text.delete(1.0, tk.END)
         self.info_text.insert(1.0, info)
 
+        self._update_selection_display(f"Slot: {slot_id}")
+
     def select_labware(self, lw_id):
         """Highlight and show info for labware"""
         self.clear_selection()
@@ -2187,7 +2195,7 @@ class DeckGUI:
             self.canvas.itemconfig(item, width=4, outline='darkred')
 
         lw = self.deck.labware[lw_id]
-        slot_id = self.deck.get_slot_for_labware(lw_id)
+        slot_id = self.deck.get_slot_for_labware(lw_id) or "None"
 
         info = f"Labware: {lw_id}\n\n"
         info += f"Type: {lw.__class__.__name__}\n"
@@ -2196,7 +2204,7 @@ class DeckGUI:
         info += f"Size Z: {lw.size_z} mm\n"
         info += f"Offset: {lw.offset}\n"
         info += f"Position: {lw.position}\n"
-        info += f"Slot: {slot_id if slot_id else 'None'}\n"
+        info += f"Slot: {slot_id}\n"
 
         # Add type-specific info
         if isinstance(lw, Plate):
@@ -2207,10 +2215,12 @@ class DeckGUI:
             info += f"Hooks Y: {lw.hooks_across_y}\n"
         elif isinstance(lw, PipetteHolder):
             info += f"\nHolders X: {lw.holders_across_x}\n"
-            info += f"\nHolders Y: {lw.holders_across_y}\n"
+            info += f"Holders Y: {lw.holders_across_y}\n"
 
         self.info_text.delete(1.0, tk.END)
         self.info_text.insert(1.0, info)
+
+        self._update_selection_display(f"Labware: {lw_id}")
 
     def clear_selection(self):
         """Clear selection"""
@@ -2227,6 +2237,7 @@ class DeckGUI:
 
         self.selected_item = None
         self.info_text.delete(1.0, tk.END)
+        self._update_selection_display("Nothing selected")
 
     def zoom_in(self):
         """Zoom in"""
