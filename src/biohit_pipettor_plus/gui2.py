@@ -486,7 +486,6 @@ class CreateLabwareDialog(tk.Toplevel):
         ttk.Label(basic_frame, text="(optional)", font=('Arial', 12, 'italic'), foreground='gray').grid(row=0, column=2,
                                                                                                         sticky='w',
                                                                                                         padx=5)
-
         # Dimensions
         ttk.Label(basic_frame, text="Size X (mm):").grid(row=1, column=0, sticky='w', pady=2)
         self.size_x_var = tk.StringVar()
@@ -1338,7 +1337,6 @@ class DeckGUI:
         self.slots_listbox = tk.Listbox(slots_main_frame, height=6)
         self.slots_listbox.pack(fill=tk.X)
         self.slots_listbox.bind('<<ListboxSelect>>', self.on_slot_select)
-        self.slots_listbox.bind('<Button-3>', self.on_slot_right_click)
         self.slots_listbox.bind('<Double-Button-1>', self.on_slot_double_click)
 
         # Buttons frame that changes based on view mode
@@ -1377,7 +1375,6 @@ class DeckGUI:
         self.labware_listbox = tk.Listbox(labware_main_frame, height=6)
         self.labware_listbox.pack(fill=tk.X)
         self.labware_listbox.bind('<<ListboxSelect>>', self.on_labware_select)
-        self.labware_listbox.bind('<Button-3>', self.on_labware_right_click)
         self.labware_listbox.bind('<Double-Button-1>', self.on_labware_double_click)
 
         # Buttons frame that changes based on view mode
@@ -1389,9 +1386,7 @@ class DeckGUI:
 
         # Canvas bindings
         self.canvas.bind("<Button-1>", self.on_canvas_fallback_click)
-        self.canvas.bind("<B1-Motion>", self.on_canvas_drag)
-        self.canvas.bind("<ButtonRelease-1>", self.on_canvas_release)
-        self.canvas.bind("<Button-3>", self.on_canvas_right_click)
+        self.canvas.bind("<Triple-Button-1>", self.on_canvas_triple_click)
 
         # Create the Create tab in the right panel
         self.create_create_tab()
@@ -1499,7 +1494,7 @@ class DeckGUI:
     def create_create_tab(self):
         """Create the Create tab"""
         create_tab = ttk.Frame(self.right_panel_notebook)
-        self.right_panel_notebook.add(create_tab, text="Create Labware")
+        self.right_panel_notebook.add(create_tab, text="Low level settings")
 
         # Create canvas and scrollbar for create tab
         create_canvas = tk.Canvas(create_tab, bg='#f0f0f0', highlightthickness=0)
@@ -1555,9 +1550,6 @@ class DeckGUI:
         ttk.Button(create_btn_frame, text="Clear Selection", command=self.clear_selection).pack(fill=tk.X, pady=2)
 
         # === CREATE SECTIONS ===
-        # Title
-        ttk.Label(create_control_frame, text="Create New Labware", font=('Arial', 14, 'bold')).pack(pady=(10, 20),
-                                                                                                    padx=5)
         # Low-Level Labware section
         low_level_section = ttk.LabelFrame(create_control_frame, text="Low-Level Labware", padding=15)
         low_level_section.pack(fill=tk.X, pady=10, padx=5)
@@ -2001,61 +1993,44 @@ class DeckGUI:
             # If no ID tag is present (clicked on grid, boundary, or background)
             self.clear_selection()
 
-    def on_canvas_drag(self, event):
-        """Handle dragging labware"""
-        if self.dragging and self.dragging in self.deck.labware:
-            dx = event.x - self.drag_data["x"]
-            dy = event.y - self.drag_data["y"]
-
-            items = self.canvas.find_withtag(f'labware_{self.dragging}')
-            for item in items:
-                self.canvas.move(item, dx, dy)
-
-            labels = self.canvas.find_withtag(self.dragging)
-            for label in labels:
-                if 'labware_label' in self.canvas.gettags(label):
-                    self.canvas.move(label, dx, dy)
-
-            self.drag_data["x"] = event.x
-            self.drag_data["y"] = event.y
-
-    def on_canvas_release(self, event):
-        """Handle mouse release"""
-        if self.dragging:
-            lw = self.deck.labware[self.dragging]
-            items = self.canvas.find_withtag(f'labware_{self.dragging}')
-            if items:
-                coords = self.canvas.coords(items[0])
-                new_x, new_y = self.canvas_to_mm(coords[0], coords[1])
-                lw.position = (new_x, new_y)
-                print(f"Moved {self.dragging} to {lw.position}")
-
-            self.dragging = None
-
-    def on_canvas_right_click(self, event):
-        """Show context menu on canvas"""
+    def on_canvas_triple_click(self, event):
+        """Show context menu on canvas (FIXED)"""
         item = self.canvas.find_closest(event.x, event.y)[0]
         tags = self.canvas.gettags(item)
 
+        # 1. Initialize variables
+        lw_id = None
+        slot_id = None
+
+        # 2. Extract ID based on known prefixes (Robust Logic)
+        for t in tags:
+            if t.startswith('labware_'):
+                # Extract the ID after the first underscore
+                lw_id = t.split('_', 1)[1]
+            elif t.startswith('slot_'):
+                # Extract the ID after the first underscore
+                slot_id = t.split('_', 1)[1]
+
         menu = tk.Menu(self.root, tearoff=0)
 
-        if 'labware' in tags:
-            lw_id = [t for t in tags if t != 'labware' and not t.startswith('labware_') and t != 'current'][0]
-            menu.add_command(label=f"Edit {lw_id}",
-                             command=lambda: self.edit_labware_dialog(lw_id))
-            menu.add_command(label=f"Remove {lw_id}",
-                             command=lambda: self.remove_labware_dialog(lw_id))
-            menu.add_separator()
+        # 3. Populate Menu based on found ID
+        if lw_id:
             menu.add_command(label=f"Info",
                              command=lambda: self.select_labware(lw_id))
-        elif 'slot' in tags:
-            slot_id = [t for t in tags if t != 'slot' and not t.startswith('slot_') and t != 'current'][0]
-            menu.add_command(label=f"Edit Slot {slot_id}",
-                             command=lambda: self.edit_slot_dialog(slot_id))
-            menu.add_command(label=f"Remove Slot {slot_id}",
-                             command=lambda: self.remove_slot_dialog(slot_id))
+            menu.add_separator()
+            menu.add_command(label=f"Remove {lw_id}",
+                             command=lambda: self.unplace_selected_labware(lw_id))
 
-        menu.post(event.x_root, event.y_root)
+        elif slot_id:
+            menu.add_command(label=f"Info",
+                             command=lambda: self.select_slot(slot_id))
+            menu.add_separator()
+            menu.add_command(label=f"Remove Slot {slot_id}",
+                             command=lambda: self.unplace_selected_slot(slot_id))
+
+        # 4. Display Menu only if commands were added
+        if menu.index(tk.END) is not None:
+            menu.post(event.x_root, event.y_root)
 
     def on_slot_select(self, event = None):
         """Handle slot listbox selection"""
@@ -2071,25 +2046,6 @@ class DeckGUI:
                 if slot_id_or_index < len(self.unplaced_slots):
                     slot = self.unplaced_slots[slot_id_or_index]
                     self.show_unplaced_slot_info(slot)
-
-    def on_slot_right_click(self, event):
-        """Handle right click on slot"""
-        # Get selection
-        selection = self.slots_listbox.curselection()
-        if not selection:
-            return
-
-        # Create context menu based on view mode
-        menu = tk.Menu(self.root, tearoff=0)
-
-        if self.slot_view_mode.get() == "placed":
-            menu.add_command(label="Unplace Slot", command=self.unplace_selected_slot)
-        else:
-            menu.add_command(label="Place Slot", command=self.place_selected_unplaced_slot)
-            menu.add_command(label="Edit", command=self.edit_selected_unplaced_slot)
-            menu.add_command(label="Delete", command=self.delete_selected_unplaced_slot)
-
-        menu.post(event.x_root, event.y_root)
 
     def on_slot_double_click(self, event):
         """Handle double click on slot"""
@@ -2110,25 +2066,6 @@ class DeckGUI:
                 if lw_id_or_index < len(self.unplaced_labware):
                     lw = self.unplaced_labware[lw_id_or_index]
                     self.show_unplaced_labware_info(lw)
-
-    def on_labware_right_click(self, event):
-        """Handle right click on labware"""
-        # Get selection
-        selection = self.labware_listbox.curselection()
-        if not selection:
-            return
-
-        # Create context menu based on view mode
-        menu = tk.Menu(self.root, tearoff=0)
-
-        if self.labware_view_mode.get() == "placed":
-            menu.add_command(label="Unplace Labware", command=self.unplace_selected_labware)
-        else:
-            menu.add_command(label="Place on Slot", command=self.place_selected_unplaced)
-            menu.add_command(label="Edit", command=self.edit_selected_unplaced_labware)
-            menu.add_command(label="Delete", command=self.delete_selected_unplaced_labware)
-
-        menu.post(event.x_root, event.y_root)
 
     def on_labware_double_click(self, event):
         """Handle double click on labware"""
@@ -2196,37 +2133,91 @@ class DeckGUI:
         self.draw_deck()
         messagebox.showinfo("Success", f"Slot '{slot.slot_id}' placed on deck!")
 
-    def unplace_selected_slot(self):
-        """Remove selected placed slot from deck"""
-        selection = self.slots_listbox.curselection()
-        if not selection:
-            messagebox.showwarning("No Selection", "Please select a slot to unplace")
+    def unplace_selected_slot(self, slot_id=None):
+        """
+        Removes a placed slot from the deck and makes it an unplaced slot.
+        Can be called by button (no ID) or by canvas menu (with ID).
+        """
+        # Check PLACED listbox selection first
+        if slot_id is None:
+            selection = self.slots_listbox.curselection()
+            if not selection:
+                messagebox.showwarning("Selection Error", "Please select a PLACED slot.")
+                return
+
+            item_text = self.slots_listbox.get(selection[0])
+            slot_id = item_text.split(' (')[0]
+
+        if slot_id not in self.deck.slots:
+            messagebox.showwarning("Error", f"Slot {slot_id} not found on deck.")
             return
 
-        slot_id = self.slots_listbox.get(selection[0])
+        slot = self.deck.slots[slot_id]  # Get the slot object first
 
-        # Check if slot has labware
-        slot = self.deck.slots[slot_id]
+        #UNPLACE ALL LABWARE IN THIS SLOT
+        labware_to_unplace = list(slot.labware_stack.keys())  # Get a copy of the keys
 
-        # First, unplace all labware in this slot
-        labware_in_slot = list(slot.labware_stack.keys())  # Make a copy of the keys
-        if labware_in_slot:
-            for lw_id in labware_in_slot:
-                lw = self.deck.labware[lw_id]
-                # Remove from deck
-                self.deck.remove_labware(lw, slot_id)
-                # Add to unplaced
-                self.unplaced_labware.append(lw)
+        for lw_id in labware_to_unplace:
+            if lw_id in self.deck.labware:
+                # 1. Pop Labware from the Deck's global placed registry
+                labware = self.deck.labware.pop(lw_id)
+                labware.position = None
 
-            messagebox.showinfo("Info",
-                                f"Automatically unplaced {len(labware_in_slot)} labware item(s) from slot '{slot_id}'.")
+                # 2. Add Labware to the unplaced list
+                self.unplaced_labware.append(labware)
 
-        # Remove from deck and add to unplaced
+                # 3. Clear Labware canvas items
+                self.canvas.delete(f'labware_{lw_id}')
+
+        # Note: The slot's internal stack (slot.labware_stack) is implicitly cleared
+        # when the slot object is removed from the deck below.
+
+        self.deck.slots.pop(slot_id)
+        slot.position = None  # Ensure the object state is unplaced
         self.unplaced_slots.append(slot)
-        del self.deck.slots[slot_id]
+        self.canvas.delete(f'slot_{slot_id}')
 
-        self.draw_deck()
-        messagebox.showinfo("Success", f"Slot '{slot_id}' removed from deck!")
+        # 4. Clear selection state (updates info panel)
+        self.clear_selection()
+        self.update_labware_list()
+        self.update_slots_list()
+
+        if labware_to_unplace:
+            lw_list = ", ".join(labware_to_unplace)
+            messagebox.showinfo("Unplaced", f"Slot {slot_id} and contained labware ({lw_list}) unplaced successfully.")
+        else:
+            messagebox.showinfo("Unplaced", f"Slot {slot_id} unplaced successfully.")
+        return  #  processed
+
+    def unplace_selected_labware(self, lw_id = None):
+        """Removes a placed labware from the deck and makes it an unplaced labware."""
+
+        # Check PLACED listbox selection first
+        if lw_id is None:
+            selection = self.labware_listbox.curselection()
+            if not selection:
+                messagebox.showwarning("Selection Error", "Please select a PLACED slot.")
+                return
+
+            # Get item text (e.g., "Plate1 (Placed) - Plate")
+            item_text = self.labware_listbox.get(selection[0])
+            lw_id = item_text.split(' (')[0]
+
+        # Proceed only if it's a PLACED item
+        if lw_id not in self.deck.labware:
+            messagebox.showwarning("Selection Error", "Please select a PLACED labware.")
+            return
+
+        labware = self.deck.labware.pop(lw_id)
+        labware.position = None  # Ensure the object state is unplaced
+
+        # 1. Add labware to the list of unplaced labware
+        self.unplaced_labware.append(labware)
+        self.canvas.delete(f'labware_{lw_id}')
+        self.clear_selection()
+        self.update_labware_list()
+        messagebox.showinfo("Unplaced", f"Labware {lw_id} unplaced successfully.")
+        return  # Successfully processed
 
     def edit_selected_unplaced_slot(self):
         """Edit selected unplaced slot and re-select it automatically."""
@@ -2273,30 +2264,6 @@ class DeckGUI:
 
         labware = self.unplaced_labware[selection[0]]
         self.place_labware(labware)
-
-    def unplace_selected_labware(self):
-        """Remove selected placed labware from deck"""
-        selection = self.labware_listbox.curselection()
-        if not selection:
-            messagebox.showwarning("No Selection", "Please select labware to unplace")
-            return
-
-        lw_id = self.labware_listbox.get(selection[0])
-        labware = self.deck.labware[lw_id]
-
-        # Remove from deck
-        slot_id = self.deck.get_slot_for_labware(lw_id)
-        if slot_id:
-            self.deck.slots[slot_id]._remove_labware(lw_id)
-
-        del self.deck.labware[lw_id]
-        labware.position = None
-
-        # Add to unplaced
-        self.unplaced_labware.append(labware)
-
-        self.draw_deck()
-        messagebox.showinfo("Success", f"Labware '{lw_id}' removed from deck!")
 
     def edit_selected_unplaced_labware(self):
         """Edit selected unplaced labware"""
@@ -2388,9 +2355,14 @@ class DeckGUI:
     def select_slot(self, slot_id):
         """Highlight and show info for a slot"""
         self.clear_selection()
+        self.labware_listbox.selection_clear(0, tk.END)
+
+        tag = f'slot_{slot_id}'
         self.selected_item = ('slot', slot_id)
 
-        items = self.canvas.find_withtag(f'slot_{slot_id}')
+        items = self.canvas.find_withtag(tag)
+        listbox = self.slots_listbox  # Correctly assigns the single listbox
+        listbox.selection_clear(0, tk.END)
 
         # --- FIX THE SELECTION LOOP ---
         for item in items:
@@ -2408,9 +2380,10 @@ class DeckGUI:
             # Optional: handle line items if your drawing logic uses them for slots
             elif item_type == 'line':
                 self.canvas.itemconfig(item, width=4, fill='darkblue')
-        # --- END FIX ---
 
-        slot = self.deck.slots[slot_id]
+
+        slot = self.deck.slots.get(slot_id)
+        if slot is None: return
         info = f"Slot: {slot_id}\n\n"
         info += f"Range X: {slot.range_x}\n"
         info += f"Range Y: {slot.range_y}\n"
@@ -2421,12 +2394,28 @@ class DeckGUI:
 
         self.update_info_in_both_tabs(info)
 
+        listbox = self.slots_listbox
+        listbox.selection_clear(0, tk.END)
+
+         # 2. Find the index of the item (which is just the ID in your current update_slots_list)
+        search_text = slot_id  # In placed mode, the list item is just 'A1'
+        for i in range(listbox.size()):
+            if listbox.get(i) == search_text:
+                listbox.selection_set(i)
+                listbox.activate(i)
+                listbox.see(i)
+                break
+
     def select_labware(self, lw_id):
         """Highlight and show info for placed labware."""
         self.clear_selection()
+        self.slots_listbox.selection_clear(0, tk.END)
         self.selected_item = ('labware', lw_id)
 
         items = self.canvas.find_withtag(f'labware_{lw_id}')
+
+        lw = self.deck.labware.get(lw_id)  # Use .get() for safety
+        if lw is None: return
 
         # Iterate through all canvas items tagged with this labware ID
         for item in items:
@@ -2443,7 +2432,6 @@ class DeckGUI:
                 self.canvas.itemconfig(item, fill='darkred', font=('Arial', 10, 'bold'))
 
         # Retrieve the labware object for detailed display
-        lw = self.deck.labware[lw_id]
         slot_id = self.deck.get_slot_for_labware(lw_id)
 
         # Generate the detailed information string
@@ -2468,6 +2456,20 @@ class DeckGUI:
             info += f"\nHolders Y: {lw.holders_across_y}\n"
 
         self.update_info_in_both_tabs(info)
+
+        listbox = self.labware_listbox
+
+        # 1. Clear any old selections in the PLACED listbox
+        listbox.selection_clear(0, tk.END)
+
+        # 2. Find the index of the item
+        search_text = lw_id  # In placed mode, the list item is just 'Plate1'
+        for i in range(listbox.size()):
+            if listbox.get(i) == search_text:
+                listbox.selection_set(i)
+                listbox.activate(i)
+                listbox.see(i)
+                break
 
     def clear_selection(self):
         """
@@ -2502,8 +2504,8 @@ class DeckGUI:
 
         # --- 2. Listbox Selections (Handles Unplaced Items) ---
         # This ensures that if an unplaced item was selected, it is unselected now.
-        self.slots_listbox.selection_clear(0, tk.END)
-        self.labware_listbox.selection_clear(0, tk.END)
+        #self.slots_listbox.selection_clear(0, tk.END)
+        #self.labware_listbox.selection_clear(0, tk.END)
 
         # --- 3. Clear Information Panel (MUST ALWAYS HAPPEN) ---
         # This call is now outside the 'if self.selected_item:' block,
@@ -2599,7 +2601,6 @@ class DeckGUI:
         """Start the GUI"""
         self.root.mainloop()
 
-
 # Main entry point
 if __name__ == "__main__":
     # Create a sample deck for testing
@@ -2608,6 +2609,3 @@ if __name__ == "__main__":
     # Run GUI
     gui = DeckGUI(deck)
     gui.run()
-
-    # Draw slot label
-    cx = (x1 + x2) / 2
