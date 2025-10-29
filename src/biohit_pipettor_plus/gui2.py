@@ -436,7 +436,7 @@ class CreateLabwareDialog(tk.Toplevel):
     def __init__(self, parent, available_wells, available_reservoirs, available_individual_holders):
         super().__init__(parent)
         self.title("Create New Labware")
-        self.geometry("500x700")
+        self.geometry("600x700")
         self.result = None
 
         # Store available low-level components
@@ -482,31 +482,36 @@ class CreateLabwareDialog(tk.Toplevel):
         # Labware ID
         ttk.Label(basic_frame, text="Labware ID:").grid(row=0, column=0, sticky='w', pady=2)
         self.id_var = tk.StringVar()
-        ttk.Entry(basic_frame, textvariable=self.id_var, width=30).grid(row=0, column=1, pady=2)
+        ttk.Entry(basic_frame, textvariable=self.id_var, width = 20).grid(row=0, column=1, pady=2)
         ttk.Label(basic_frame, text="(optional)", font=('Arial', 12, 'italic'), foreground='gray').grid(row=0, column=2,
                                                                                                         sticky='w',
                                                                                                         padx=5)
         # Dimensions
         ttk.Label(basic_frame, text="Size X (mm):").grid(row=1, column=0, sticky='w', pady=2)
         self.size_x_var = tk.StringVar()
-        ttk.Entry(basic_frame, textvariable=self.size_x_var, width=30).grid(row=1, column=1, pady=2)
+        ttk.Entry(basic_frame, textvariable=self.size_x_var, width = 20).grid(row=1, column=1, pady=2)
 
         ttk.Label(basic_frame, text="Size Y (mm):").grid(row=2, column=0, sticky='w', pady=2)
         self.size_y_var = tk.StringVar()
-        ttk.Entry(basic_frame, textvariable=self.size_y_var, width=30).grid(row=2, column=1, pady=2)
+        ttk.Entry(basic_frame, textvariable=self.size_y_var, width = 20).grid(row=2, column=1, pady=2)
 
         ttk.Label(basic_frame, text="Size Z (mm):").grid(row=3, column=0, sticky='w', pady=2)
         self.size_z_var = tk.StringVar()
-        ttk.Entry(basic_frame, textvariable=self.size_z_var, width=30).grid(row=3, column=1, pady=2)
+        ttk.Entry(basic_frame, textvariable=self.size_z_var, width = 20).grid(row=3, column=1, pady=2)
 
         # Offset
         ttk.Label(basic_frame, text="Offset X (mm):").grid(row=4, column=0, sticky='w', pady=2)
         self.offset_x_var = tk.StringVar(value="0.0")
-        ttk.Entry(basic_frame, textvariable=self.offset_x_var, width=30).grid(row=4, column=1, pady=2)
+        ttk.Entry(basic_frame, textvariable=self.offset_x_var, width = 20).grid(row=4, column=1, pady=2)
 
         ttk.Label(basic_frame, text="Offset Y (mm):").grid(row=5, column=0, sticky='w', pady=2)
         self.offset_y_var = tk.StringVar(value="0.0")
-        ttk.Entry(basic_frame, textvariable=self.offset_y_var, width=30).grid(row=5, column=1, pady=2)
+        ttk.Entry(basic_frame, textvariable=self.offset_y_var, width = 20).grid(row=5, column=1, pady=2)
+
+        ttk.Label(basic_frame, text="Can be stacked upon:").grid(row=6, column=0, sticky='w', pady=2)
+        self.can_be_stacked_upon_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(basic_frame, variable=self.can_be_stacked_upon_var).grid(row=6, column=1, sticky='w', pady=2)
+        ttk.Label(basic_frame, text="(optional, default: Unselected = False)", font=('Arial', 12, 'italic'),foreground='gray').grid(row=6, column=2, sticky='w', padx=5)
 
         # Type-Specific Parameters Frame
         self.specific_frame = ttk.LabelFrame(main_frame, text="Type-Specific Parameters", padding="10")
@@ -643,6 +648,7 @@ class CreateLabwareDialog(tk.Toplevel):
             offset_x = float(self.offset_x_var.get() or "0.0")
             offset_y = float(self.offset_y_var.get() or "0.0")
             offset = (offset_x, offset_y)
+            can_be_stacked_upon = self.can_be_stacked_upon_var.get()
 
             lw_type = self.labware_type.get()
 
@@ -666,6 +672,7 @@ class CreateLabwareDialog(tk.Toplevel):
                     labware_id=labware_id,
                     well=self.selected_well,
                     add_height=add_height,
+                    can_be_stacked_upon=can_be_stacked_upon,
                     remove_height=remove_height
                 )
 
@@ -684,7 +691,8 @@ class CreateLabwareDialog(tk.Toplevel):
                     offset=offset,
                     labware_id=labware_id,
                     add_height=add_height,
-                    remove_height=remove_height
+                    remove_height=remove_height,
+                    can_be_stacked_upon=can_be_stacked_upon
                 )
 
             elif lw_type == "PipetteHolder":
@@ -707,7 +715,8 @@ class CreateLabwareDialog(tk.Toplevel):
                     labware_id=labware_id,
                     individual_holder=self.selected_individual_holder,
                     add_height=add_height,
-                    remove_height=remove_height
+                    remove_height=remove_height,
+                    can_be_stacked_upon=can_be_stacked_upon
                 )
 
             elif lw_type == "TipDropzone":
@@ -719,7 +728,8 @@ class CreateLabwareDialog(tk.Toplevel):
                     size_z=size_z,
                     offset=offset,
                     labware_id=labware_id,
-                    drop_height_relative=drop_height
+                    drop_height_relative=drop_height,
+                    can_be_stacked_upon=can_be_stacked_upon
                 )
 
             self.destroy()
@@ -826,7 +836,7 @@ class EditLabwareDialog(tk.Toplevel):
     def __init__(self, parent, labware):
         super().__init__(parent)
         self.title(f"Edit Labware: {labware.labware_id}")
-        self.geometry("400x400")
+        self.geometry("500x500")
         self.labware = labware
         self.result = None
 
@@ -873,6 +883,12 @@ class EditLabwareDialog(tk.Toplevel):
         self.offset_y_var = tk.StringVar(value=str(self.labware.offset[1]))
         ttk.Entry(params_frame, textvariable=self.offset_y_var, width=25).grid(row=4, column=1, pady=5)
 
+        ttk.Label(params_frame, text="Can be stacked upon:").grid(row=5, column=0, sticky='w', pady=2)
+        self.can_be_stacked_upon_var = tk.BooleanVar(value=self.labware.can_be_stacked_upon)
+        ttk.Checkbutton(params_frame, variable=self.can_be_stacked_upon_var).grid(row=5, column=1, sticky='w', pady=2)
+        ttk.Label(params_frame, text="(optional, default: Unselected = False)", font=('Arial', 12, 'italic'),
+                  foreground='gray').grid(row=6, column=0, sticky='w', padx=5)
+
         # Buttons
         btn_frame = ttk.Frame(main_frame)
         btn_frame.pack(fill=tk.X, pady=10)
@@ -888,12 +904,14 @@ class EditLabwareDialog(tk.Toplevel):
             size_z = float(self.size_z_var.get())
             offset_x = float(self.offset_x_var.get())
             offset_y = float(self.offset_y_var.get())
+            can_stacked_upon = bool(self.can_be_stacked_upon_var.get())
 
             # Update labware
             self.labware.size_x = size_x
             self.labware.size_y = size_y
             self.labware.size_z = size_z
             self.labware.offset = (offset_x, offset_y)
+            self.labware.can_be_stacked_upon = can_stacked_upon
 
             self.result = True
             self.destroy()
