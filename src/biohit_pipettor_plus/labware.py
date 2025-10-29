@@ -45,7 +45,7 @@ class Labware(Serializable):
         Labware.registry[cls.__name__] = cls
 
     def __init__(self, size_x: float, size_y: float, size_z: float, offset: tuple[float, float] = (0.0, 0.0),
-                 labware_id: str = None, position: tuple[float, float] = None):
+                 labware_id: str = None, position: tuple[float, float] = None, can_be_stacked_upon :bool = False):
         """
         Initialize a Labware instance.
 
@@ -66,8 +66,9 @@ class Labware(Serializable):
         self.size_x = size_x
         self.size_y = size_y
         self.size_z = size_z
-        self.offset = offset or (0, 0)
-        self.position = position or None
+        self.offset = offset
+        self.position = position
+        self.can_be_stacked_upon = can_be_stacked_upon
         self.labware_id = labware_id or f"labware_{uuid.uuid4().hex[:8]}"
 
     def validate_col_row(self, columns: list[int], row: int, consecutive_rows: int = 1) -> tuple[bool, str]:
@@ -170,6 +171,7 @@ class Labware(Serializable):
             "size_y": self.size_y,
             "size_z": self.size_z,
             "offset": self.offset,
+            "can_be_stacked_upon": self.can_be_stacked_upon,
             "position": list(self.position) if self.position else None,
         }
 
@@ -197,6 +199,7 @@ class Labware(Serializable):
             size_y=data["size_y"],
             size_z=data["size_z"],
             offset=data["offset"],
+            can_be_stacked_upon=data["can_be_stacked_upon"],
             labware_id=data["labware_id"],
             position=position
         )
@@ -227,6 +230,7 @@ class Well(Labware):
             size_z: float,
             offset: tuple[float, float] = (0, 0),
             position: tuple[float, float] = None,
+            can_be_stacked_upon: bool = False,
             labware_id: str = None,
             row: int = None,
             column: int = None,
@@ -260,7 +264,7 @@ class Well(Labware):
             Maximum volume the well can hold (µL). Default is Default_well_capacity
         """
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id,
-                         position=position)
+                         position=position, can_be_stacked_upon=can_be_stacked_upon,)
 
         self.capacity = capacity
         self.row = row
@@ -523,6 +527,7 @@ class Well(Labware):
             size_z=data["size_z"],
             offset=data["offset"],
             labware_id=data["labware_id"],
+            can_be_stacked_upon=data.get("can_be_stacked_upon", False),
             position=position,
             content=data.get("content"),
             capacity=data.get("capacity", Default_well_capacity),
@@ -543,7 +548,9 @@ class Plate(Labware):
             add_height: float = -3,
             remove_height: float = -10,
             offset: tuple[float, float] = (0, 0),
-            labware_id: str = None, position: tuple[float, float] = None):
+            labware_id: str = None,
+            position: tuple[float, float] = None,
+            can_be_stacked_upon: bool = False):
         """
         Initialize a Plate instance.
 
@@ -574,7 +581,7 @@ class Plate(Labware):
         """
 
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id,
-                         position=position)
+                         position=position, can_be_stacked_upon=can_be_stacked_upon)
 
         if wells_x <= 0 or wells_y <= 0:
             raise ValueError("wells_x and wells_y cannot be negative or 0")
@@ -681,6 +688,7 @@ class Plate(Labware):
             labware_id=data["labware_id"],
             wells_x=data["wells_x"],
             wells_y=data["wells_y"],
+            can_be_stacked_upon=data.get("can_be_stacked_upon", False),
             well=template_well,
             position=position,
         )
@@ -724,8 +732,6 @@ class IndividualPipetteHolder(Labware):
     ----------
     is_occupied : bool
         Whether this holder position currently contains a pipette.
-    pipette_type : str or None
-        Type/model of pipette that can be stored here (e.g., "P1000", "P200").
     """
 
     def __init__(
@@ -734,11 +740,11 @@ class IndividualPipetteHolder(Labware):
             size_y: float,
             size_z: float,
             offset: tuple[float, float] = (0, 0),
-            pipette_type: str = "P1000",
-            is_occupied: bool = False,
+            is_occupied: bool = True,
             row: int = None,
             column: int = None,
             labware_id: str = None,
+            can_be_stacked_upon: bool = False,
             position: tuple[float, float] = None
     ):
         """
@@ -752,8 +758,6 @@ class IndividualPipetteHolder(Labware):
             Depth of the individual holder position in millimeters.
         size_z : float
             Height of the individual holder position in millimeters.
-        pipette_type : str, optional
-            Type of pipette this holder is designed for (e.g., "P1000", "P200").
         is_occupied : bool, optional
             Whether a pipette is currently stored here. Default is False.
         labware_id : str, optional
@@ -768,10 +772,10 @@ class IndividualPipetteHolder(Labware):
             size_z=size_z,
             offset=offset,
             labware_id=labware_id,
-            position=position
+            position=position,
+            can_be_stacked_upon=can_be_stacked_upon
         )
 
-        self.pipette_type = pipette_type
         self.is_occupied = is_occupied
         self.row = row
         self.column = column
@@ -817,7 +821,6 @@ class IndividualPipetteHolder(Labware):
         """
         base = super().to_dict()
         base.update({
-            "pipette_type": self.pipette_type,
             "is_occupied": self.is_occupied,
             "row": self.row,
             "column": self.column,
@@ -845,8 +848,8 @@ class IndividualPipetteHolder(Labware):
             size_z=data["size_z"],
             offset=data["offset"],
             labware_id=data["labware_id"],
+            can_be_stacked_upon=data.get("can_be_stacked_upon", False),
             position=position,
-            pipette_type=data.get("pipette_type"),
             is_occupied=data.get("is_occupied", False),
             row=data.get("row"),
             column=data.get("column"),
@@ -857,7 +860,7 @@ class IndividualPipetteHolder(Labware):
 class PipetteHolder(Labware):
     def __init__(self, size_x: float, size_y: float, size_z: float, holders_across_x: int, holders_across_y: int,
                  individual_holder: IndividualPipetteHolder, add_height: float = -15, remove_height : float = 15, offset: tuple[float, float] = (0, 0),
-                 labware_id: str = None, position: tuple[float, float] = None):
+                 labware_id: str = None, position: tuple[float, float] = None, can_be_stacked_upon: bool = False,):
         """
         Initialize a PipetteHolder instance.
 
@@ -886,7 +889,7 @@ class PipetteHolder(Labware):
             If None, position is not set.
         """
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id,
-                         position=position)
+                         position=position, can_be_stacked_upon=can_be_stacked_upon)
 
         if holders_across_x <= 0 or holders_across_y <= 0:
             raise ValueError("holders_across_x and holders_across_y cannot be negative or 0")
@@ -915,7 +918,7 @@ class PipetteHolder(Labware):
                 holder.row = y
                 self.__individual_holders[(x, y)] = holder
 
-    def get_individual_holders(self) -> dict[tuple[int, int], IndividualPipetteHolder]:  # ✅ Correct type
+    def get_individual_holders(self) -> dict[tuple[int, int], IndividualPipetteHolder]:
         """Get all individual holder positions."""
         return self.__individual_holders
 
@@ -1218,6 +1221,8 @@ class PipetteHolder(Labware):
         })
         return base
 
+
+
     @classmethod
     def _from_dict(cls, data: dict) -> "PipetteHolder":
         """Deserialize a PipetteHolder instance from a dictionary."""
@@ -1237,6 +1242,7 @@ class PipetteHolder(Labware):
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
+            can_be_stacked_upon = ["can_be_stacked_upon"],
             add_height=data["add_height"],
             remove_height=data["remove_height"],
             offset=data["offset"],
@@ -1278,10 +1284,10 @@ class PipetteHolder(Labware):
 
 @register_class
 class Reservoir(Labware):
-    def __init__(self, size_x: float, size_y: float, size_z: float, offset: tuple[float, float] = (0, 0),
-                 capacity: float = Default_Reservoir_Capacity, content: dict = None,
+    def __init__(self, size_x: float, size_y: float, size_z: float, offset: tuple[float, float] = (0, 0), labware_id: str = None, position: tuple[float, float] = None,
+                 can_be_stacked_upon: bool = False, capacity: float = Default_Reservoir_Capacity, content: dict = None,
                  hook_ids: list[int] = None, row: int = None, column: int = None,
-                 labware_id: str = None, position: tuple[float, float] = None, shape: Defined_shape = None):
+                shape: Defined_shape = None):
         """
         Initialize a Reservoir instance. These are containers that store the medium to be filled in and removed from well.
 
@@ -1306,7 +1312,7 @@ class Reservoir(Labware):
             (x, y) position coordinates of the reservoir in millimeters.
             If None, position is not set.
         """
-        super().__init__(size_x, size_y, size_z, offset, labware_id, position)
+        super().__init__(size_x, size_y, size_z, offset, labware_id, position, can_be_stacked_upon=can_be_stacked_upon)
         self.capacity = capacity
         self.hook_ids = hook_ids if hook_ids is not None else []
         self.row = row
@@ -1561,6 +1567,7 @@ class Reservoir(Labware):
             size_y=data["size_y"],
             size_z=data["size_z"],
             offset=data["offset"],
+            can_be_stacked_upon=data.get("can_be_stacked_upon", False),
             labware_id=data["labware_id"],
             hook_ids=data.get("hook_ids", []),
             capacity=data.get("capacity", Default_Reservoir_Capacity),
@@ -1576,7 +1583,7 @@ class Reservoir(Labware):
 class ReservoirHolder(Labware):
     def __init__(self, size_x: float, size_y: float, size_z: float, hooks_across_x: int, hooks_across_y: int, remove_height: float = -45, add_height: float = 0,
                 offset: tuple[float, float] = (0, 0), reservoir_dict: dict[int, dict] = None,
-                 labware_id: str = None, position: tuple[float, float] = None):
+                 labware_id: str = None, position: tuple[float, float] = None, can_be_stacked_upon: bool = False):
         """
         Initialize a ReservoirHolder instance that can hold multiple reservoirs.
 
@@ -1604,7 +1611,7 @@ class ReservoirHolder(Labware):
             (x, y) position coordinates of the ReservoirHolder in millimeters.
             If None, position is not set.
         """
-        super().__init__(size_x, size_y, size_z, offset, labware_id, position)
+        super().__init__(size_x, size_y, size_z, offset, labware_id, position, can_be_stacked_upon=can_be_stacked_upon)
 
         if hooks_across_x <= 0 or hooks_across_y <= 0:
             raise ValueError("hooks_across_x and hooks_across_y cannot be negative or 0")
@@ -2082,6 +2089,7 @@ class ReservoirHolder(Labware):
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
+            can_be_stacked_upon=data.get("can_be_stacked_upon", False),
             add_height = data["add_height"],
             remove_height = data["remove_height"],
             offset=data["offset"],
@@ -2132,6 +2140,7 @@ class TipDropzone(Labware):
     def __init__(self, size_x: float,
                  size_y: float,
                  size_z: float,
+                 can_be_stacked_upon: bool = False,
                  offset: tuple[float, float] = (0, 0),
                  drop_height_relative: float = 20,
                  position: tuple[float, float] = None,
@@ -2157,7 +2166,7 @@ class TipDropzone(Labware):
             Height from which tips are dropped relative to the labware. Default is 20.
         """
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id,
-                         position=position)
+                         position=position, can_be_stacked_upon=can_be_stacked_upon)
         self.drop_height_relative = drop_height_relative
 
     def to_dict(self) -> dict:
@@ -2199,6 +2208,7 @@ class TipDropzone(Labware):
             size_y=data["size_y"],
             size_z=data["size_z"],
             offset=data["offset"],
+            can_be_stacked_upon=data.get("can_be_stacked_upon", False),
             position=position,
             drop_height_relative=data["drop_height_relative"],
             labware_id=data["labware_id"]
