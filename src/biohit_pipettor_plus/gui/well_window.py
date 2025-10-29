@@ -196,6 +196,9 @@ class WellWindow:
     def update_single_button_state(self):
         pass
 
+    def define_callback(self):
+        pass
+
     def callback_save(self):
         self.safe_var.set(True)
         self.show_well_window()

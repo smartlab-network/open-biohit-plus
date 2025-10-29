@@ -1,6 +1,6 @@
 from src.biohit_pipettor_plus.deck import Deck
 from src.biohit_pipettor_plus.slot import Slot
-from src.biohit_pipettor_plus.labware import Labware, Plate, IndividualPipetteHolder, PipetteHolder, Well, TipDropzone
+from src.biohit_pipettor_plus.labware import Labware, Plate, IndividualPipetteHolder, PipetteHolder, Well, TipDropzone, ReservoirHolder
 from src.biohit_pipettor_plus.control_json import write_json
 
 
@@ -69,6 +69,16 @@ plate3 = Plate(
     position=(0.0, 0.0)
 )
 
+reservoir_holder = ReservoirHolder(
+    size_x=126,
+    size_y=81.0,
+    size_z=14.0,
+    hooks_across_x=6,
+    hooks_across_y=4,
+    add_height=20,
+    remove_height=20,
+    labware_id = "reservoir_holder_1")
+
 # --- IndividualPipetteHolder-Template ---
 individual_holder = IndividualPipetteHolder(
     size_x=10.0,
@@ -112,10 +122,11 @@ tip_dropzone = TipDropzone(size_x= 100, size_y = 120, size_z=50, labware_id = "t
 # --- Labware in Slots platzieren (mit Höhenprüfung) ---
 deck.slots["Slot_1"]._place_labware(plate1, min_z=0.0)
 deck.slots["Slot_2"]._place_labware(plate2, min_z=0.0)
-deck.slots["Slot_3"]._place_labware(plate3, min_z=0.0)
+deck.slots["Slot_3"]._place_labware(reservoir_holder, min_z=0.0)
 deck.slots["Slot_4"]._place_labware(pipette_holder, min_z=0.0)
 deck.slots["Slot_5"]._place_labware(pipette_holder_2, min_z=0.0)
 deck.slots["Slot_6"]._place_labware(tip_dropzone, min_z=0)
+
 
 # --- Übersicht ausgeben ---
 print(f"Deck: {deck.deck_id}")
