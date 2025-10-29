@@ -1804,12 +1804,12 @@ class DeckGUI:
             new_slot = dialog.result
             self.unplaced_slots.append(new_slot)
 
-        if self.slot_view_mode.get() == "unplaced":
-            self.update_slots_list()
-            self.select_newly_created_slot(new_slot)
+            if self.slot_view_mode.get() == "unplaced":
+                self.update_slots_list()
+                self.select_newly_created_slot(new_slot)
 
-        messagebox.showinfo("Success",
-                            f"Slot created!\nclick 'Place Slot' to add it to the deck.")
+            messagebox.showinfo("Success",
+                                f"Slot created!\nclick 'Place Slot' to add it to the deck.")
 
     def select_newly_created_slot(self, slot_component):
         """Selects the newly created Slot in the main Slots listbox."""
@@ -2036,14 +2036,14 @@ class DeckGUI:
             menu.add_command(label=f"Info",
                              command=lambda: self.select_labware(lw_id))
             menu.add_separator()
-            menu.add_command(label=f"Remove {lw_id}",
+            menu.add_command(label=f"Unplace {lw_id}",
                              command=lambda: self.unplace_selected_labware(lw_id))
 
         elif slot_id:
             menu.add_command(label=f"Info",
                              command=lambda: self.select_slot(slot_id))
             menu.add_separator()
-            menu.add_command(label=f"Remove Slot {slot_id}",
+            menu.add_command(label=f"Unplace Slot {slot_id}",
                              command=lambda: self.unplace_selected_slot(slot_id))
 
         # 4. Display Menu only if commands were added
@@ -2170,72 +2170,73 @@ class DeckGUI:
             messagebox.showwarning("Error", f"Slot {slot_id} not found on deck.")
             return
 
-        slot = self.deck.slots[slot_id]  # Get the slot object first
+        #Ask for confirmation before removing
+        if not messagebox.askyesno("Confirm Unplace Slot", f"Are you sure you want to unplace slot '{slot_id}'? "
+                                                           f"Any labware inside will also be unplaced."):
+            return
+        # call deck function to remove the slot and all contained labware
+        try:
+            slot, unplaced_labware_list = self.deck.remove_slot(slot_id, unplace_labware=True)
 
-        #UNPLACE ALL LABWARE IN THIS SLOT
-        labware_to_unplace = list(slot.labware_stack.keys())  # Get a copy of the keys
+        except ValueError as e:
+            messagebox.showerror("Removal Error", str(e))
+            return
 
-        for lw_id in labware_to_unplace:
-            if lw_id in self.deck.labware:
-                # 1. Pop Labware from the Deck's global placed registry
-                labware = self.deck.labware.pop(lw_id)
-                labware.position = None
+        #Handle the unplaced labware returned from the deck
+        for labware in unplaced_labware_list:
+            self.unplaced_labware.append(labware)
+            self.canvas.delete(f'labware_{labware.labware_id}')
 
-                # 2. Add Labware to the unplaced list
-                self.unplaced_labware.append(labware)
-
-                # 3. Clear Labware canvas items
-                self.canvas.delete(f'labware_{lw_id}')
-
-        # Note: The slot's internal stack (slot.labware_stack) is implicitly cleared
-        # when the slot object is removed from the deck below.
-
-        self.deck.slots.pop(slot_id)
-        slot.position = None  # Ensure the object state is unplaced
+        # B. Handle the unplaced slot
         self.unplaced_slots.append(slot)
         self.canvas.delete(f'slot_{slot_id}')
 
-        # 4. Clear selection state (updates info panel)
+        # C. Update the GUI views
         self.clear_selection()
         self.update_labware_list()
         self.update_slots_list()
 
-        if labware_to_unplace:
-            lw_list = ", ".join(labware_to_unplace)
+        # D. Show success message
+        if unplaced_labware_list:
+            lw_list = ", ".join([lw.labware_id for lw in unplaced_labware_list])
             messagebox.showinfo("Unplaced", f"Slot {slot_id} and contained labware ({lw_list}) unplaced successfully.")
         else:
             messagebox.showinfo("Unplaced", f"Slot {slot_id} unplaced successfully.")
-        return  #  processed
+        return
 
-    def unplace_selected_labware(self, lw_id = None):
+    def unplace_selected_labware(self, lw_id=None):
         """Removes a placed labware from the deck and makes it an unplaced labware."""
 
-        # Check PLACED listbox selection first
         if lw_id is None:
             selection = self.labware_listbox.curselection()
             if not selection:
-                messagebox.showwarning("Selection Error", "Please select a PLACED slot.")
+                messagebox.showwarning("Selection Error", "Please select a PLACED labware.")
                 return
 
             # Get item text (e.g., "Plate1 (Placed) - Plate")
+            # CRITICAL: This line assumes the listbox content is correct.
             item_text = self.labware_listbox.get(selection[0])
-            lw_id = item_text.split(' (')[0]
+            lw_id = item_text.split(' (')[0]  # Extracts "Plate1"
 
-        # Proceed only if it's a PLACED item
         if lw_id not in self.deck.labware:
             messagebox.showwarning("Selection Error", "Please select a PLACED labware.")
             return
 
-        labware = self.deck.labware.pop(lw_id)
-        labware.position = None  # Ensure the object state is unplaced
+        try:
+            # ⭐ NEW: Use the updated deck function to perform the unplace operation
+            labware = self.deck.remove_labware(lw_id)
 
-        # 1. Add labware to the list of unplaced labware
+        except ValueError as e:
+            messagebox.showerror("Removal Error", str(e))
+            return  # Exit if removal fails
+
+        # 3. Final GUI Updates
         self.unplaced_labware.append(labware)
         self.canvas.delete(f'labware_{lw_id}')
         self.clear_selection()
         self.update_labware_list()
         messagebox.showinfo("Unplaced", f"Labware {lw_id} unplaced successfully.")
-        return  # Successfully processed
+        return
 
     def edit_selected_unplaced_slot(self):
         """Edit selected unplaced slot and re-select it automatically."""
