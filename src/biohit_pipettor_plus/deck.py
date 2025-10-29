@@ -78,6 +78,38 @@ class Deck(Serializable):
                     )
             self.slots[slot_id] = slot
 
+    def remove_slot(self, slot_id: str):
+        """
+        Remove a Slot from the Deck safely.
+
+        Parameters
+        ----------
+        slot_id : str
+            The ID of the slot to remove.
+
+        Raises
+        ------
+        ValueError
+            If the slot does not exist or contains labware.
+        """
+        # Check if slot exists
+        if slot_id not in self.slots:
+            raise ValueError(f"Slot '{slot_id}' does not exist in the deck.")
+
+        slot = self.slots[slot_id]
+
+        # Check if slot has any labware stacked
+        if slot.labware_stack:
+            labware_ids = list(slot.labware_stack.keys())
+            raise ValueError(
+                f"Cannot remove slot '{slot_id}' because it still contains labware: {labware_ids}. "
+                f"Remove all labware first using remove_labware()."
+            )
+
+        # Remove slot from deck
+        del self.slots[slot_id]
+        print(f"✓ Removed slot '{slot_id}' from deck.")
+
     def add_labware(self, labware: Labware, slot_id: str, min_z: float, x_spacing: float = None,
                     y_spacing: float = None):
         """
@@ -114,12 +146,6 @@ class Deck(Serializable):
             )
 
         slot: Slot = self.slots[slot_id]
-
-        if not slot.is_compatible_labware(lw=labware, min_z=min_z):
-            raise ValueError(
-                f"Labware '{labware.labware_id}' does not fit in slot '{slot_id}' "
-                f"at min_z={min_z}."
-            )
 
         # Place labware in the slot stack
         slot._place_labware(lw=labware, min_z=min_z)
