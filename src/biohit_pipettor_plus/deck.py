@@ -78,37 +78,57 @@ class Deck(Serializable):
                     )
             self.slots[slot_id] = slot
 
-    def remove_slot(self, slot_id: str):
+    def remove_slot(self, slot_id: str, unplace_labware: bool = False):
         """
-        Remove a Slot from the Deck safely.
+        Remove a Slot from the Deck.
 
         Parameters
         ----------
         slot_id : str
             The ID of the slot to remove.
+        unplace_labware : bool
+            If True, unplace (remove) all labware contained within the slot first.
+            If False (default), raise an error if the slot contains labware.
 
-        Raises
-        ------
-        ValueError
-            If the slot does not exist or contains labware.
+        Returns
+        -------
+        list[Labware]
+            A list of Labware objects that were unplaced (if unplace_labware is True).
         """
         # Check if slot exists
         if slot_id not in self.slots:
             raise ValueError(f"Slot '{slot_id}' does not exist in the deck.")
 
         slot = self.slots[slot_id]
+        unplaced_labware_list = []
 
         # Check if slot has any labware stacked
         if slot.labware_stack:
-            labware_ids = list(slot.labware_stack.keys())
-            raise ValueError(
-                f"Cannot remove slot '{slot_id}' because it still contains labware: {labware_ids}. "
-                f"Remove all labware first using remove_labware()."
-            )
+            if not unplace_labware:
+                labware_ids = list(slot.labware_stack.keys())
+                raise ValueError(
+                    f"Cannot remove slot '{slot_id}' because it still contains labware: {labware_ids}. "
+                    f"Use remove_slot(..., unplace_labware=True) to proceed."
+                )
+            else:
+                # UNPLACE ALL CONTAINED LABWARE
+                lw_ids_to_remove = list(slot.labware_stack.keys())  # Must copy
+                lw_ids_to_remove.reverse() #ensures sequential removal
 
-        # Remove slot from deck
+                for lw_id in lw_ids_to_remove:
+                    # Use the new remove_labware function
+                    labware = self.remove_labware(lw_id)
+                    unplaced_labware_list.append(labware)
+
+                # The slot's labware_stack is now guaranteed to be empty due to remove_labware calls.
+
+        # Remove slot from deck's registry
         del self.slots[slot_id]
+
+        # Reset slot position
+        slot.position = None
         print(f"✓ Removed slot '{slot_id}' from deck.")
+        return slot, unplaced_labware_list  # Return the slot and any unplaced labware
 
     def add_labware(self, labware: Labware, slot_id: str, min_z: float, x_spacing: float = None,
                     y_spacing: float = None):
@@ -156,41 +176,51 @@ class Deck(Serializable):
         # store in deck's global labware dict
         self.labware[labware.labware_id] = labware
 
-    def remove_labware(self, labware: Labware, slot_id: str):
-
-        #check if slot_id is right
-        if slot_id not in self.slots:
-            raise ValueError(f"Slot '{slot_id}' does not exist.")
-
-        slot = self.slots[slot_id]
-
-        #checks if labware in slot_id
-        if labware.labware_id not in self.labware:
+    def remove_labware(self, labware_id: str) -> Labware:
+        """
+        Remove a Labware from its Slot and the Deck.
+        ENFORCES THE RULE that only the topmost labware in a slot's stack can be removed.
+        Returns the Labware object for reuse or deletion.
+        """
+        if labware_id not in self.labware:
             raise ValueError(
-                f"Labware '{labware.labware_id}' not found in deck. "
+                f"Labware '{labware_id}' not found in deck. "
                 f"Cannot remove labware that was never added."
             )
 
-        # Check if labware is in the specified slot
-        if labware.labware_id not in slot.labware_stack:
-            # Find where it actually is
-            actual_slot_id = self.get_slot_for_labware(labware.labware_id)
-            if actual_slot_id:
-                raise ValueError(
-                    f"Labware '{labware.labware_id}' is not in slot '{slot_id}'. "
-                    f"It's actually in slot '{actual_slot_id}'."
-                )
-            else:
-                raise ValueError(
-                    f"Labware '{labware.labware_id}' is not in any slot."
-                )
+        labware = self.labware[labware_id]
 
-        slot._remove_labware(labware.labware_id)
+        # Find the actual slot containing the labware
+        slot_id = self.get_slot_for_labware(labware_id)
 
-        # Remove from global labware registry
-        del self.labware[labware.labware_id]
+        if not slot_id:
+            raise ValueError(f"Internal error: Labware '{labware_id}' is placed but has no slot association.")
+
+        slot = self.slots[slot_id]
+
+        #topmost level removal
+        stack_keys = list(slot.labware_stack.keys())
+        if not stack_keys:
+            # Should not happen if get_slot_for_labware worked, but safe to check
+            raise ValueError(f"Internal error: Slot '{slot_id}' is unexpectedly empty.")
+
+        topmost_lw_id = stack_keys[-1]
+        if labware_id != topmost_lw_id:
+            # If the requested labware is NOT the topmost item, raise an error.
+            raise ValueError(
+                f"Cannot remove labware '{labware_id}'. It is not the topmost item in slot '{slot_id}'. "
+                f"The topmost labware is '{topmost_lw_id}', which must be removed first."
+            )
+
+        # 1. Call the slot's internal removal method and Remove from global labware registry
+        slot._remove_labware(labware_id)
+        del self.labware[labware_id]
+
+        # 2. Reset labware state
         labware.position = None
-        print(f"✓ Removed '{labware.labware_id}' from slot '{slot_id}'")
+        print(f"✓ Removed '{labware_id}' from slot '{slot_id}'")
+        return labware  # Return the object to the caller (GUI)
+
 
     def _is_within_range(self, slot: Slot) -> bool:
         return (

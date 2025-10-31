@@ -8,7 +8,7 @@ from position import Position_allocator
 class Slot(Serializable):
     """
     Represents a single slot on a Deck. A slot can hold multiple Labware objects stacked
-    vertically with specified Z-ranges.
+    vertically with specified Z-ranges
 
     Attributes
     ---------

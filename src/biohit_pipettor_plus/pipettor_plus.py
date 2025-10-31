@@ -1,4 +1,44 @@
-from biohit_pipettor import Pipettor
+try:
+    from biohit_pipettor import Pipettor
+    from biohit_pipettor.errors import CommandFailed
+
+    HARDWARE_AVAILABLE = True
+
+except ImportError:
+    print("⚠️  Hardware not available - running in simulation mode")
+    HARDWARE_AVAILABLE = False
+
+
+    # Create a mock Pipettor class for testing
+    class Pipettor:
+        def __init__(self, *args, **kwargs):
+            print("Mock Pipettor initialized")
+
+        def move_xy(self, x, y):
+            print(f"Mock: move_xy({x}, {y})")
+
+        def move_z(self, z):
+            print(f"Mock: move_z({z})")
+
+        def aspirate(self, volume):
+            print(f"Mock: aspirate({volume})")
+
+        def dispense(self, volume):
+            print(f"Mock: dispense({volume})")
+
+        def pick_tip(self, z):
+            print(f"Mock: pick_tip({z})")
+
+        def eject_tip(self):
+            print("Mock: eject_tip()")
+
+
+    # Mock the CommandFailed exception too
+    class CommandFailed(Exception):
+        """Mock exception for when hardware commands fail"""
+        pass
+
+#from biohit_pipettor import Pipettor
 from typing import Literal, List, Optional
 from math import ceil
 
@@ -6,7 +46,7 @@ from deck import Deck
 from slot import Slot
 from labware import Labware, Plate, Well, ReservoirHolder, Reservoir, PipetteHolder, IndividualPipetteHolder, \
     TipDropzone, Pipettors_in_Multi
-from biohit_pipettor.errors import CommandFailed
+#from biohit_pipettor.errors import CommandFailed
 
 from geometry import (
     calculate_liquid_height,
@@ -45,7 +85,6 @@ class PipettorPlus(Pipettor):
         deck : Deck
             The deck containing slots and labware
                 """
-        #super().__init__(tip_volume=tip_volume, multichannel = multichannel, initialize=initialize)
         super().__init__(tip_volume=tip_volume, multichannel=multichannel, initialize=initialize)
         self.multichannel = multichannel
         self._deck = deck
