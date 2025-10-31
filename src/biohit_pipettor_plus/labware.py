@@ -12,10 +12,8 @@ from typing import Optional
 Pipettors_in_Multi = 8
 Default_Reservoir_Capacity = 30000
 Default_well_capacity = 1000
-MIN_TIP_SPACING_Y = 2  # Add this (adjust value based on multipipettor used.)
+Spacing_Between_Adjacent_Pipettor = 2  # Add this (adjust value based on multipipettor used.)
 Defined_shape = Literal["rectangular", "circular", "conical", "u_bottom"]
-
-
 
 @register_class
 class Labware(Serializable):
@@ -147,7 +145,7 @@ class Labware(Serializable):
             (is_valid, error_message)
         """
         if not self.each_tip_needs_separate_item():
-            min_required_y = Pipettors_in_Multi * MIN_TIP_SPACING_Y
+            min_required_y = Pipettors_in_Multi * Spacing_Between_Adjacent_Pipettor
             if item_size_y < min_required_y:
                 return (False,
                         f"Item size_y ({item_size_y}mm) is too small for multichannel operation. "
@@ -720,7 +718,6 @@ class Plate(Labware):
     def grid_y(self) -> int:
         """Standard grid dimension (rows)"""
         return self._rows
-
 
 @register_class
 class IndividualPipetteHolder(Labware):
@@ -1517,16 +1514,7 @@ class Reservoir(Labware):
 
     def has_content_type(self, content_type: str) -> bool:
         """
-        Check if reservoir contains specific content type.
-
-        Parameters
-        ----------
-        content_type : str
-            Type of content to check
-
-        Returns
-        -------
-        bool
+        Check if reservoir contains specific content type.l
             True if content type is present
         """
         return content_type in self.content and self.content[content_type] > 0
@@ -1577,7 +1565,6 @@ class Reservoir(Labware):
             position=position,
             shape=data.get("shape", None),
         )
-
 
 @register_class
 class ReservoirHolder(Labware):
@@ -1933,13 +1920,13 @@ class ReservoirHolder(Labware):
                 size_z=res["size_z"],
                 offset=res.get("offset", (0, 0)),
                 capacity=res.get("capacity", Default_Reservoir_Capacity),
-                content=res.get("content", None),  
-                shape=res.get("shape", None),  
+                content=res.get("content", None),
+                shape=res.get("shape", None),
                 labware_id=labware_id,
-                position=res.get("position", None),  
-                hook_ids=res.get("hook_ids", None),  
-                row=res.get("row", None),  
-                column=res.get("column", None),  
+                position=res.get("position", None),
+                hook_ids=res.get("hook_ids", None),
+                row=res.get("row", None),
+                column=res.get("column", None),
             )
 
             # Place the reservoir
@@ -2124,7 +2111,6 @@ class ReservoirHolder(Labware):
     @property
     def grid_y(self) -> int:
         return self._rows
-
 
 @register_class
 class TipDropzone(Labware):
