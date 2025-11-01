@@ -11,22 +11,17 @@ from src.biohit_pipettor_plus.pipettor_plus import PipettorPlus
 class FunctionWindow:
     def __init__(self, deck: Deck, master: ttk.Window = None):
         if isinstance(master, ttk.Window):
-            self.root = ttk.Toplevel(master)
+            self.window_build_func = ttk.Toplevel(master)
         else:
-            self.root = ttk.Window(themename="solar")
-            self.root.geometry("1400x800")
+            self.window_build_func = ttk.Window(themename="solar")
+
+        self.window_build_func.geometry("1400x800")
 
         self.deck = deck
-        #TODO review self.pipettor
-        #self.pipettor = PipettorPlus(deck = self.deck, multichannel=False, tip_volume=200)
+        self.pipettor = PipettorPlus(deck = self.deck, multichannel=False, tip_volume=200)
 
-        #window for creating custom functions
-        #self.window_build_func = ttk.Toplevel(self.root)
-        self.window_build_func = self.root
-        self.window_build_func.geometry("1400x800")
         self.set_grid_settings_func_win()
         self.create_window_build_func()
-        #self.window_build_func.withdraw()
 
         self.custom_funcs_dict: dict[str, list[Callable]] = {}
         self.current_func_list: list[Callable] = []
@@ -152,8 +147,6 @@ class FunctionWindow:
         for i in range(12):
             self.window_build_func.rowconfigure(i, weight=1)
 
-    def build_function_list(self):
-        pass
 
     def callback_save_button(self):
         name = self.entry_name.get()
@@ -194,103 +187,7 @@ class FunctionWindow:
             button.grid(column=0, row=start_row, sticky="nsew", pady=5, padx=5)
             start_row += 1
 
-    def callback_button_params(self, func_str: str, labware_obj: Labware, part: str = "second", **kwargs):
-        """
-        Handle user-selected labware and delegate to the appropriate callback.
-
-        Parameters
-        ----------
-        func_str : str
-            The name of the selected function (e.g., "pick_tips", "add_medium").
-        labware_obj : Labware
-            The Labware object chosen by the user (e.g., Plate, PipetteHolder).
-        **kwargs : dict
-            Additional parameters required by specific functions (e.g., volume, destination lists).
-        """
-
-        # --- Dispatcher pattern for different functions ---
-        if func_str == "pick_tips":
-            self.callback_pick_tips(
-                func_str=func_str,
-                part=part,
-                labware_obj=labware_obj,
-                **kwargs
-            )
-
-        elif func_str == "return_tips":
-            self.callback_return_tips(
-                func_str=func_str,
-                part=part,
-                labware_obj=labware_obj,
-                **kwargs
-            )
-
-        elif func_str == "replace_tip":
-            self.callback_replace_tips(
-                func_str=func_str,
-                part=part,
-                labware_obj=labware_obj,
-                **kwargs
-            )
-
-        elif func_str == "discard_tips":
-            self.callback_discard_tips(
-                func_str=func_str,
-                part=part,
-                labware_obj=labware_obj,
-                **kwargs
-            )
-
-        elif func_str == "add_medium":
-            self.callback_add_medium(
-                func_str=func_str,
-                part=part,
-                labware_obj=labware_obj,
-                **kwargs
-            )
-
-        elif func_str == "remove_medium":
-            self.callback_remove_medium(
-                func_str=func_str,
-                part=part,
-                labware_obj=labware_obj,
-                **kwargs
-            )
-
-        elif func_str == "transfer_plate_to_plate":
-            self.callback_transfer_plate_to_plate(
-                func_str=func_str,
-                part=part,
-                labware_obj=labware_obj,
-                **kwargs
-            )
-
-        elif func_str == "home":
-            self.callback_home(func_str = func_str,
-                               **kwargs)
-
-        elif func_str == "suck":
-            self.callback_suck(func_str = func_str,
-                                part=part,
-                                labware_obj=labware_obj,
-                               **kwargs)
-
-        elif func_str == "spit":
-            self.callback_spit(func_str = func_str,
-                                part=part,
-                                labware_obj=labware_obj,
-                               **kwargs)
-
-        elif func_str == "spit_all":
-            self.callback_spit_all(func_str = func_str,
-                                part=part,
-                                labware_obj=labware_obj,
-                               **kwargs)
-
-        else:
-            print(f"[WARN] Unknown function: {func_str}")
-
-    def add_current_function(self, func: Callable, func_str: str, labware_id):
+    def add_current_function(self, func: Callable, func_str: str, labware_id: str):
         self.current_func_list.append(func)
 
         label_func = ttk.Label(self.third_column_frame, text=f"{func_str}: {labware_id}", font=("Helvetica", 16), anchor="center")
@@ -305,356 +202,585 @@ class FunctionWindow:
     """
     callback functions for buttons
     """
-    def callback_pick_tips(self, func_str: str, part: str = "first", labware_obj: PipetteHolder = None):
-        if part == "first":
-            self.clear_grid(self.second_column_frame)
-            self.display_possible_labware(labware_type=PipetteHolder, func_str = func_str, start_row=0)
-        else:
-            window = WellWindow(rows = labware_obj.holders_across_y,
-                                columns=labware_obj.holders_across_x,
-                                labware_id=labware_obj.labware_id, master = self.window_build_func,
-                                title=f"pick specific tips from: {labware_obj.labware_id}")
 
-            self.window_build_func.wait_variable(window.safe_var)
-            well_states = window.well_state
-            list_return = []
-
-            #interpret well states from WellWindow as list of tuple(represent Well grid) for PipettorPlus
-            for row in range(len(well_states)):
-                for column in range(len(well_states[row])):
-                    if well_states[row][column]:
-                        list_return.append((row, column))
-            del window
-
-            #func = self.pipettor.pick_tips(pipette_holder=labware_obj, list_col_row=list_return)
-            self.add_current_function(func_str = func_str, func = lambda: print("test"),
-                                      labware_id = labware_obj.labware_id)
-
-    def callback_return_tips(self, func_str: str, part: bool = "first", labware_obj: PipetteHolder = None):
+    def callback_pick_tips(self, func_str: str, part: str = "first", labware_obj: PipetteHolder = None, **kwargs):
         """
-        Handle the 'Return Tips' function selection.
-        Essentially mirrors 'Pick Tips' but returns tips instead.
+        Handle the 'Pick Tips' process.
+
+        Parameters
+        ----------
+        func_str : str
+            The string identifier of the function.
+        part : str, optional
+            Which part of the callback is currently active ("first", "second").
+        labware_obj : PipetteHolder, optional
+            The selected PipetteHolder object.
+        **kwargs : dict
+            Additional context information passed between recursive callback calls.
         """
         if part == "first":
             self.clear_grid(self.second_column_frame)
-            self.display_possible_labware(labware_type=PipetteHolder, func_str=func_str, start_row=0)
-        else:
+            self.display_possible_labware(
+                labware_type=PipetteHolder,
+                next_callback=self.callback_pick_tips,
+                func_str=func_str,
+                part="second",
+                **kwargs
+            )
+        elif part == "second" and labware_obj is not None:
             window = WellWindow(
                 rows=labware_obj.holders_across_y,
                 columns=labware_obj.holders_across_x,
                 labware_id=labware_obj.labware_id,
                 master=self.window_build_func,
-                title=f"return specific tips tok: {labware_obj.labware_id}")
-
+                title=f"Pick tips from: {labware_obj.labware_id}"
+            )
             self.window_build_func.wait_variable(window.safe_var)
-            well_states = window.well_state
-            #interpret well states from WellWindow as list of tuple(represent Well grid) for PipettorPlus
-            list_return = [
-                (r, c)
-                for r, row in enumerate(well_states)
-                for c, active in enumerate(row)
-                if active
-            ]
+            list_return = [(r, c) for r, row in enumerate(window.well_state) for c, active in enumerate(row) if active]
             del window
 
-            #func = self.pipettor.return_tips(labware_obj, list_return)
-            self.add_current_function(
-                func_str=func_str,
-                func=lambda: print("Returning tips to", labware_obj.labware_id, list_return),
-                labware_id=labware_obj.labware_id
-            )
+            func = lambda lw=labware_obj, lr=list_return: self.pipettor.pick_tips(pipette_holder=lw, list_col_row=lr)
+            self.add_current_function(func_str=func_str, func=func, labware_id=labware_obj.labware_id)
 
-    def callback_replace_tips(self, func_str: str, part: str = "first", labware_obj: PipetteHolder = None):
+    def callback_return_tips(self, func_str: str, part: str = "first", labware_obj: PipetteHolder = None, **kwargs):
         """
-        Handle the 'Replace Tips' function selection.
-        Requires a PipetteHolder and generates both pick- and return-lists.
+        Handle the 'Return Tips' process.
+
+        Parameters
+        ----------
+        func_str : str
+        part : str
+        labware_obj : PipetteHolder
+        **kwargs : dict
         """
         if part == "first":
             self.clear_grid(self.second_column_frame)
-            self.display_possible_labware(labware_type=PipetteHolder, func_str=func_str, start_row=0)
-
-        elif part == "second":
-            window = WellWindow(
-                rows=labware_obj.holders_across_x,
-                columns=labware_obj.holders_across_y,
-                labware_id=labware_obj.labware_id,
-                master=self.window_build_func,
-                title=f"pick from: {labware_obj.labware_id}"
+            self.display_possible_labware(
+                labware_type=PipetteHolder,
+                next_callback=self.callback_return_tips,
+                func_str=func_str,
+                part="second",
+                **kwargs
             )
-            self.window_build_func.wait_variable(window.safe_var)
-            wells = window.well_state
-            list_pick = [(r, c) for r, row in enumerate(wells) for c, v in enumerate(row) if v]
-            del window
-
+        elif part == "second" and labware_obj is not None:
             window = WellWindow(
                 rows=labware_obj.holders_across_y,
                 columns=labware_obj.holders_across_x,
                 labware_id=labware_obj.labware_id,
                 master=self.window_build_func,
-                title=f"return to: {labware_obj.labware_id}"
+                title=f"Return tips to: {labware_obj.labware_id}"
             )
             self.window_build_func.wait_variable(window.safe_var)
-            wells = window.well_state
-            list_return = [(r, c) for r, row in enumerate(wells) for c, v in enumerate(row) if v]
-
+            list_return = [(r, c) for r, row in enumerate(window.well_state) for c, active in enumerate(row) if active]
             del window
 
-            #func = self.pipettor.replace_tips(labware_obj, return_list_col_row=list_return, pick_list_col_row=list_pick)
-            self.add_current_function(
-                func_str=func_str,
-                func=lambda: print("Replacing tips on", labware_obj.labware_id, list_return, list_pick),
-                labware_id=labware_obj.labware_id
-            )
+            func = lambda lw=labware_obj, lr=list_return: self.pipettor.return_tips(labware_obj=lw, list_return=lr)
+            self.add_current_function(func_str=func_str, func=func, labware_id=labware_obj.labware_id)
 
-    def callback_discard_tips(self, func_str: str, part: str = "first", labware_obj: Labware = None):
+    def callback_replace_tips(self, func_str: str, part: str = "first", labware_obj: PipetteHolder = None, **kwargs):
         """
-        Handle the 'Discard Tips' function.
-        Requires selecting a TipDropzone labware.
-        """
-        if part == "first":
-            self.clear_grid(self.second_column_frame)
-            self.display_possible_labware(labware_type=TipDropzone, func_str=func_str, start_row=0)
+        Handle 'Replace Tips' process.
 
-        else:
-            self.add_current_function(
-                func_str=func_str,
-                func=lambda: print("Discarding tips into", labware_obj.labware_id),
-                labware_id=labware_obj.labware_id
-            )
+        Requires selection of both pick and return wells.
 
-    # --------------------------------------------------------------------------
-    # LIQUID HANDLING FUNCTIONS
-    # --------------------------------------------------------------------------
-
-    def callback_add_medium(self, func_str: str, part: str = "first", labware_obj: ReservoirHolder or Plate = None):
-        """
-        Handle the 'Add Medium' function.
-        Requires selecting Reservoir, destination plate, and well lists.
+        Parameters
+        ----------
+        func_str : str
+        part : str
+        labware_obj : PipetteHolder
+        **kwargs : dict
         """
         if part == "first":
             self.clear_grid(self.second_column_frame)
-            self.display_possible_labware(labware_type=ReservoirHolder, func_str=func_str, start_row=0, part = "second")
+            self.display_possible_labware(
+                labware_type=PipetteHolder,
+                next_callback=self.callback_replace_tips,
+                func_str=func_str,
+                part="second",
+                **kwargs
+            )
+        elif part == "second" and labware_obj is not None:
+            # Pick wells
+            window = WellWindow(
+                rows=labware_obj.holders_across_y,
+                columns=labware_obj.holders_across_x,
+                labware_id=labware_obj.labware_id,
+                master=self.window_build_func,
+                title=f"Pick tips from: {labware_obj.labware_id}"
+            )
+            self.window_build_func.wait_variable(window.safe_var)
+            list_pick = [(r, c) for r, row in enumerate(window.well_state) for c, active in enumerate(row) if active]
+            del window
 
-        elif part == "second":
+            # Return wells
+            window = WellWindow(
+                rows=labware_obj.holders_across_y,
+                columns=labware_obj.holders_across_x,
+                labware_id=labware_obj.labware_id,
+                master=self.window_build_func,
+                title=f"Return tips to: {labware_obj.labware_id}"
+            )
+            self.window_build_func.wait_variable(window.safe_var)
+            list_return = [(r, c) for r, row in enumerate(window.well_state) for c, active in enumerate(row) if active]
+            del window
+
+            func = lambda lw=labware_obj, lr=list_return, lp=list_pick: self.pipettor.replace_tips(
+                labware_obj=lw, return_list_col_row=lr, pick_list_col_row=lp
+            )
+            self.add_current_function(func_str=func_str, func=func, labware_id=labware_obj.labware_id)
+
+    def callback_discard_tips(self, func_str: str, part: str = "first", labware_obj: TipDropzone = None, **kwargs):
+        """
+        Handle 'Discard Tips' process.
+
+        Parameters
+        ----------
+        func_str : str
+        part : str
+        labware_obj : TipDropzone
+        **kwargs : dict
+        """
+        if part == "first":
+            self.clear_grid(self.second_column_frame)
+            self.display_possible_labware(
+                labware_type=TipDropzone,
+                next_callback=self.callback_discard_tips,
+                func_str=func_str,
+                part="second",
+                **kwargs
+            )
+        elif part == "second" and labware_obj is not None:
+            func = lambda lw=labware_obj: print(
+                f"Discarding tips into {lw.labware_id}")  # replace with self.pipettor method
+            self.add_current_function(func_str=func_str, func=func, labware_id=labware_obj.labware_id)
+
+    def callback_add_medium(self, func_str: str, part: str = "first", labware_obj: ReservoirHolder or Plate = None,
+                            **kwargs):
+        """
+        Handle 'Add Medium' process: select source reservoir, destination plate, and wells.
+
+        Parameters
+        ----------
+        func_str : str
+        part : str
+        labware_obj : ReservoirHolder or Plate
+        **kwargs : dict
+        """
+        if part == "first":
+            self.clear_grid(self.second_column_frame)
+            self.display_possible_labware(
+                labware_type=ReservoirHolder,
+                next_callback=self.callback_add_medium,
+                func_str=func_str,
+                part="second",
+                **kwargs
+            )
+        elif part == "second" and labware_obj is not None:
+            # Pick source wells
             window = WellWindow(
                 rows=labware_obj.hooks_across_y,
                 columns=labware_obj.hooks_across_x,
                 labware_id=labware_obj.labware_id,
                 master=self.window_build_func,
-                title=f"Choos Reservoir source: {labware_obj.labware_id}"
+                title=f"Choose source wells: {labware_obj.labware_id}"
             )
-
             self.window_build_func.wait_variable(window.safe_var)
-            wells = window.well_state
-            self.curr_reservoir_holder = labware_obj
-            self.curr_list_source = [(r, c) for r, row in enumerate(wells) for c, v in enumerate(row) if v]
-
+            kwargs["source_labware"] = labware_obj
+            kwargs["source_positions"] = [(r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row)
+                                          if v]
             del window
 
             self.clear_grid(self.second_column_frame)
-            self.display_possible_labware(labware_type=Plate, func_str=func_str, start_row=0, part="third")
-
-        elif part == "third":
-            self.curr_plate = labware_obj
-            labware_obj: Plate
-            window = WellWindow(
-                rows=labware_obj._rows,
-                columns=labware_obj._columns,
-                labware_id=labware_obj.labware_id,
-                master=self.window_build_func,
-                title=f"Choos Reservoir source: {labware_obj.labware_id}"
-            )
-
-            self.window_build_func.wait_variable(window.safe_var)
-            wells = window.well_state
-            self.curr_list_destination = [(r, c) for r, row in enumerate(wells) for c, v in enumerate(row) if v]
-            del window
-
-            self.clear_grid(self.second_column_frame)
-
-            #creater enter Entry, for entering Volume per Well
-            label = ttk.Label(self.second_column_frame, text="Enter Volume per Well")
-            label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
-
-            text_var = ttk.StringVar(value = "5")
-            entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
-            entry.grid(row=1, column=0, sticky="nsew", pady=5, padx=5)
-
-            def callback_enter_button():
-                if not text_var.get().isdigit():
-                    return
-                #TODO rewatch this self.pipettor function, source_col_row is supposed to be a tuple.
-
-                """self.pipettor.add_medium(source = self.curr_reservoir_holder, source_col_row=self.curr_list_source,
-                                         destination=self.curr_plate,
-                                         dest_col_row=self.curr_list_destination)
-            """
-                self.add_current_function(
+            self.display_possible_labware(
+                labware_type=Plate,
+                next_callback=self.callback_add_medium,
                 func_str=func_str,
-                func=lambda: print("Discarding tips into", labware_obj.labware_id),
-                labware_id=labware_obj.labware_id)
-
-            button = ttk.Button(self.second_column_frame, text="Enter", command=callback_enter_button)
-            button.grid(row = 2, column = 0, sticky="nsew", pady=5, padx=5)
-
-    def callback_remove_medium(self, func_str: str, part: str = "first", labware_obj: ReservoirHolder = None):
-        """
-        Handle the 'Remove Medium' function.
-        Similar to add_medium but reverses source and destination lists.
-        """
-        if part == "first":
-
-            self.clear_grid(self.second_column_frame)
-            self.display_possible_labware(labware_type=Plate, func_str=func_str, start_row=0, part="second")
-
-        elif part == "second":
-            self.curr_plate = labware_obj
-
-            labware_obj: Plate
+                part="third",
+                **kwargs
+            )
+        elif part == "third" and labware_obj is not None:
+            # Pick destination wells and volume
             window = WellWindow(
                 rows=labware_obj._rows,
                 columns=labware_obj._columns,
                 labware_id=labware_obj.labware_id,
                 master=self.window_build_func,
-                title=f"Choos Reservoir source: {labware_obj.labware_id}"
+                title=f"Choose destination wells: {labware_obj.labware_id}"
             )
-
             self.window_build_func.wait_variable(window.safe_var)
-            wells = window.well_state
-            self.curr_list_destination = [(r, c) for r, row in enumerate(wells) for c, v in enumerate(row) if v]
+            kwargs["dest_labware"] = labware_obj
+            kwargs["dest_positions"] = [(r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if
+                                        v]
             del window
 
             self.clear_grid(self.second_column_frame)
-
-            # creater enter Entry, for entering Volume per Well
+            # volume entry
             label = ttk.Label(self.second_column_frame, text="Enter Volume per Well")
             label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
-
             text_var = ttk.StringVar(value="5")
             entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
             entry.grid(row=1, column=0, sticky="nsew", pady=5, padx=5)
 
-            def callback_remove_button():
-                if not text_var.get().isdigit():
+            def callback_enter_button():
+                try:
+                    volume = float(text_var.get())
+                except ValueError:
                     return
-                # TODO rewatch this self.pipettor function, source_col_row is supposed to be a tuple.
 
-                self.curr_volume =  float(text_var.get())
-
+                func = lambda kwargs=kwargs, vol=volume: self.pipettor.add_medium(
+                    source=kwargs["source_labware"],
+                    source_col_row=kwargs["source_positions"],
+                    destination=kwargs["dest_labware"],
+                    dest_col_row=kwargs["dest_positions"]
+                )
+                self.add_current_function(func_str=func_str, func=func, labware_id=kwargs["dest_labware"].labware_id)
                 self.clear_grid(self.second_column_frame)
-                self.display_possible_labware(labware_type=ReservoirHolder, func_str=func_str, start_row=0, part="third")
 
-            button = ttk.Button(self.second_column_frame, text="Enter", command=callback_remove_button)
+            button = ttk.Button(self.second_column_frame, text="Enter", command=callback_enter_button)
             button.grid(row=2, column=0, sticky="nsew", pady=5, padx=5)
 
-        elif part == "third":
+    def callback_remove_medium(self, func_str: str, part: str = "first", labware_obj: Plate = None, **kwargs):
+        """
+        Handle 'Remove Medium' process: select source plate, destination reservoir, wells, and volume.
+
+        Parameters
+        ----------
+        func_str : str
+        part : str
+        labware_obj : Plate
+        **kwargs : dict
+        """
+        if part == "first":
+            self.clear_grid(self.second_column_frame)
+            self.display_possible_labware(
+                labware_type=Plate,
+                next_callback=self.callback_remove_medium,
+                func_str=func_str,
+                part="second",
+                **kwargs
+            )
+        elif part == "second" and labware_obj is not None:
+            window = WellWindow(
+                rows=labware_obj._rows,
+                columns=labware_obj._columns,
+                labware_id=labware_obj.labware_id,
+                master=self.window_build_func,
+                title=f"Select source wells: {labware_obj.labware_id}"
+            )
+            self.window_build_func.wait_variable(window.safe_var)
+            kwargs["source_labware"] = labware_obj
+            kwargs["source_positions"] = [(r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row)
+                                          if v]
+            del window
+
+            self.clear_grid(self.second_column_frame)
+            self.display_possible_labware(
+                labware_type=ReservoirHolder,
+                next_callback=self.callback_remove_medium,
+                func_str=func_str,
+                part="third",
+                **kwargs
+            )
+        elif part == "third" and labware_obj is not None:
             window = WellWindow(
                 rows=labware_obj.hooks_across_y,
                 columns=labware_obj.hooks_across_x,
                 labware_id=labware_obj.labware_id,
                 master=self.window_build_func,
-                title=f"Choose Reservoir destination: {labware_obj.labware_id}"
+                title=f"Select destination wells: {labware_obj.labware_id}"
             )
             self.window_build_func.wait_variable(window.safe_var)
-
-            wells = window.well_state
-            self.curr_reservoir_holder = labware_obj
-            self.curr_list_destination = [(r, c) for r, row in enumerate(wells) for c, v in enumerate(row) if v]
-
-            del window
-
-            """func = self.pipettor.remove_medium(source = self.curr_plate,
-                                               destination=self.curr_reservoir_holder, 
-                                               source_col_row=self.curr_list_source,
-                                               destination_col_row=self.curr_list_destination,
-                                               volume_per_well=self.curr_volume)"""
-
-            self.add_current_function(
-                func_str=func_str,
-                func=lambda: print("Discarding tips into", labware_obj.labware_id),
-                labware_id=labware_obj.labware_id)
-
-    def callback_transfer_plate_to_plate(self, func_str: str, part: str = "first", labware_obj: Plate = None):
-        """
-        Handle 'Transfer Plate to Plate' function.
-        Requires source plate, destination plate, and corresponding well lists.
-        """
-        if part == "first":
-            self.clear_grid(self.second_column_frame)
-            self.display_possible_labware(labware_type=Plate, func_str=func_str, start_row=0)
-
-        elif part == "second":
-            self.curr_plate = labware_obj
-            window = WellWindow(
-                rows=labware_obj._rows,
-                columns=labware_obj._columns,
-                labware_id=labware_obj.labware_id,
-                master=self.window_build_func,
-                title=f"Source Plate: {labware_obj.labware_id}")
-
-            self.window_build_func.wait_variable(window.safe_var)
-            well_states = window.well_state
-            # interpret well states from WellWindow as list of tuple(represent Well grid) for PipettorPlus
-            self.curr_list_source = [
-                (r, c)
-                for r, row in enumerate(well_states)
-                for c, active in enumerate(row)
-                if active
-            ]
+            kwargs["dest_labware"] = labware_obj
+            kwargs["dest_positions"] = [(r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if
+                                        v]
             del window
 
             self.clear_grid(self.second_column_frame)
-            self.display_possible_labware(labware_type=Plate, func_str=func_str, start_row=0, part = "third")
-
-        elif part == "third":
-            window = WellWindow(
-                rows=labware_obj._rows,
-                columns=labware_obj._columns,
-                labware_id=labware_obj.labware_id,
-                master=self.window_build_func,
-                title=f"Destination Plate: {labware_obj.labware_id}")
-
-            self.window_build_func.wait_variable(window.safe_var)
-            well_states = window.well_state
-            # interpret well states from WellWindow as list of tuple(represent Well grid) for PipettorPlus
-            self.curr_list_source = [
-                (r, c)
-                for r, row in enumerate(well_states)
-                for c, active in enumerate(row)
-                if active
-            ]
-            del window
-            self.clear_grid(self.second_column_frame)
-
-            # creater enter Entry, for entering Volume per Well
-            label = ttk.Label(self.second_column_frame, text="Enter Volume per Well in mm")
+            label = ttk.Label(self.second_column_frame, text="Enter Volume per Well")
             label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
-
             text_var = ttk.StringVar(value="5")
             entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
             entry.grid(row=1, column=0, sticky="nsew", pady=5, padx=5)
 
             def callback_enter_button():
-                if not text_var.get().isdigit():
+                try:
+                    volume = float(text_var.get())
+                except ValueError:
                     return
-
-                self.curr_volume = float(text_var.get())
-                # TODO rewatch this self.pipettor function, source_col_row is supposed to be a tuple.
-                """
-                func= self.pipettor.transfer_plate_to_plate(source=self.curr_plate, 
-                                                        source_col_row=self.curr_list_source,
-                                                        destination=labware_obj,
-                                                        dest_col_row=self.curr_list_source,
-                                                        volume_per_well=self.curr_volume)
-                """
-                self.add_current_function(
-                    func_str=func_str,
-                    func=lambda: print("test func for plate to plate", labware_obj.labware_id),
-                    labware_id=labware_obj.labware_id)
+                func = lambda kwargs=kwargs, vol=volume: self.pipettor.remove_medium(
+                    source=kwargs["source_labware"],
+                    destination=kwargs["dest_labware"],
+                    source_col_row=kwargs["source_positions"],
+                    destination_col_row=kwargs["dest_positions"],
+                    volume_per_well=vol
+                )
+                self.add_current_function(func_str=func_str, func=func, labware_id=kwargs["dest_labware"].labware_id)
                 self.clear_grid(self.second_column_frame)
 
             button = ttk.Button(self.second_column_frame, text="Enter", command=callback_enter_button)
             button.grid(row=2, column=0, sticky="nsew", pady=5, padx=5)
+
+    def callback_transfer_plate_to_plate(self, func_str: str, part: str = "first", labware_obj: Plate = None, **kwargs):
+        """
+        Handle 'Transfer Plate to Plate': select source plate, destination plate, wells, and volume.
+
+        Parameters
+        ----------
+        func_str : str
+        part : str
+        labware_obj : Plate
+        **kwargs : dict
+        """
+        if part == "first":
+            self.clear_grid(self.second_column_frame)
+            self.display_possible_labware(
+                labware_type=Plate,
+                next_callback=self.callback_transfer_plate_to_plate,
+                func_str=func_str,
+                part="second",
+                **kwargs
+            )
+        elif part == "second" and labware_obj is not None:
+            window = WellWindow(
+                rows=labware_obj._rows,
+                columns=labware_obj._columns,
+                labware_id=labware_obj.labware_id,
+                master=self.window_build_func,
+                title=f"Select source wells: {labware_obj.labware_id}"
+            )
+            self.window_build_func.wait_variable(window.safe_var)
+            kwargs["source_labware"] = labware_obj
+            kwargs["source_positions"] = [(r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row)
+                                          if v]
+            del window
+
+            self.clear_grid(self.second_column_frame)
+            self.display_possible_labware(
+                labware_type=Plate,
+                next_callback=self.callback_transfer_plate_to_plate,
+                func_str=func_str,
+                part="third",
+                **kwargs
+            )
+        elif part == "third" and labware_obj is not None:
+            window = WellWindow(
+                rows=labware_obj._rows,
+                columns=labware_obj._columns,
+                labware_id=labware_obj.labware_id,
+                master=self.window_build_func,
+                title=f"Select destination wells: {labware_obj.labware_id}"
+            )
+            self.window_build_func.wait_variable(window.safe_var)
+            kwargs["dest_labware"] = labware_obj
+            kwargs["dest_positions"] = [(r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if
+                                        v]
+            del window
+
+            self.clear_grid(self.second_column_frame)
+            label = ttk.Label(self.second_column_frame, text="Enter Volume per Well")
+            label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
+            text_var = ttk.StringVar(value="5")
+            entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
+            entry.grid(row=1, column=0, sticky="nsew", pady=5, padx=5)
+
+            def callback_enter_button():
+                try:
+                    volume = float(text_var.get())
+                except ValueError:
+                    return
+                func = lambda kwargs=kwargs, vol=volume: self.pipettor.transfer_plate_to_plate(
+                    source=kwargs["source_labware"],
+                    source_col_row=kwargs["source_positions"],
+                    destination=kwargs["dest_labware"],
+                    dest_col_row=kwargs["dest_positions"],
+                    volume_per_well=vol
+                )
+                self.add_current_function(func_str=func_str, func=func, labware_id=kwargs["dest_labware"].labware_id)
+                self.clear_grid(self.second_column_frame)
+
+            button = ttk.Button(self.second_column_frame, text="Enter", command=callback_enter_button)
+            button.grid(row=2, column=0, sticky="nsew", pady=5, padx=5)
+
+    def callback_suck(self, func_str: str, part: str = "first", labware_obj: Labware = None, **kwargs):
+        """
+        Handle pipettor 'suck' operation: select labware wells and volume.
+
+        Parameters
+        ----------
+        func_str : str
+        part : str
+        labware_obj : Labware
+        **kwargs : dict
+        """
+        if part == "first":
+            self.clear_grid(self.second_column_frame)
+            self.display_possible_labware(
+                labware_type=Labware,
+                next_callback=self.callback_suck,
+                func_str=func_str,
+                part="second",
+                **kwargs
+            )
+        elif part == "second" and labware_obj is not None:
+            # Determine rows/columns based on labware type
+            if isinstance(labware_obj, ReservoirHolder):
+                rows, columns = labware_obj.hooks_across_y, labware_obj.hooks_across_x
+            elif isinstance(labware_obj, PipetteHolder):
+                rows, columns = labware_obj.holders_across_y, labware_obj.holders_across_x
+            elif isinstance(labware_obj, Plate):
+                rows, columns = labware_obj._rows, labware_obj._columns
+            else:
+                return
+
+            window = WellWindow(
+                rows=rows,
+                columns=columns,
+                labware_id=labware_obj.labware_id,
+                master=self.window_build_func,
+                title=f"Select wells to suck from: {labware_obj.labware_id}"
+            )
+            self.window_build_func.wait_variable(window.safe_var)
+            kwargs["labware_obj"] = labware_obj
+            kwargs["positions"] = [(r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v]
+            del window
+
+            self.clear_grid(self.second_column_frame)
+            label = ttk.Label(self.second_column_frame, text="Enter Volume per Well")
+            label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
+            text_var = ttk.StringVar(value="5")
+            entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
+            entry.grid(row=1, column=0, sticky="nsew", pady=5, padx=5)
+
+            def callback_enter_button():
+                try:
+                    volume = float(text_var.get())
+                except ValueError:
+                    return
+                func = lambda kwargs=kwargs, vol=volume: self.pipettor.suck(
+                    source=kwargs["labware_obj"],
+                    source_col_row=kwargs["positions"],
+                    volume=vol
+                )
+                self.add_current_function(func_str=func_str, func=func, labware_id=kwargs["labware_obj"].labware_id)
+                self.clear_grid(self.second_column_frame)
+
+            button = ttk.Button(self.second_column_frame, text="Enter", command=callback_enter_button)
+            button.grid(row=2, column=0, sticky="nsew", pady=5, padx=5)
+
+    def callback_spit(self, func_str: str, part: str = "first", labware_obj: Labware = None, **kwargs):
+        """
+        Handle pipettor 'spit' operation: select labware wells and volume.
+
+        Parameters
+        ----------
+        func_str : str
+        part : str
+        labware_obj : Labware
+        **kwargs : dict
+        """
+        if part == "first":
+            self.clear_grid(self.second_column_frame)
+            self.display_possible_labware(
+                labware_type=Labware,
+                next_callback=self.callback_spit,
+                func_str=func_str,
+                part="second",
+                **kwargs
+            )
+        elif part == "second" and labware_obj is not None:
+            # Determine rows/columns based on labware type
+            if isinstance(labware_obj, ReservoirHolder):
+                rows, columns = labware_obj.hooks_across_y, labware_obj.hooks_across_x
+            elif isinstance(labware_obj, PipetteHolder):
+                rows, columns = labware_obj.holders_across_y, labware_obj.holders_across_x
+            elif isinstance(labware_obj, Plate):
+                rows, columns = labware_obj._rows, labware_obj._columns
+            else:
+                return
+
+            window = WellWindow(
+                rows=rows,
+                columns=columns,
+                labware_id=labware_obj.labware_id,
+                master=self.window_build_func,
+                title=f"Select wells to spit into: {labware_obj.labware_id}"
+            )
+            self.window_build_func.wait_variable(window.safe_var)
+            kwargs["labware_obj"] = labware_obj
+            kwargs["positions"] = [(r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v]
+            del window
+
+            self.clear_grid(self.second_column_frame)
+            label = ttk.Label(self.second_column_frame, text="Enter Volume per Well")
+            label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
+            text_var = ttk.StringVar(value="5")
+            entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
+            entry.grid(row=1, column=0, sticky="nsew", pady=5, padx=5)
+
+            def callback_enter_button():
+                try:
+                    volume = float(text_var.get())
+                except ValueError:
+                    return
+                func = lambda kwargs=kwargs, vol=volume: self.pipettor.spit(
+                    destination=kwargs["labware_obj"],
+                    dest_col_row=kwargs["positions"],
+                    volume=vol
+                )
+                self.add_current_function(func_str=func_str, func=func, labware_id=kwargs["labware_obj"].labware_id)
+                self.clear_grid(self.second_column_frame)
+
+            button = ttk.Button(self.second_column_frame, text="Enter", command=callback_enter_button)
+            button.grid(row=2, column=0, sticky="nsew", pady=5, padx=5)
+
+    def callback_spit_all(self, func_str: str, part: str = "first", labware_obj: Labware = None, **kwargs):
+        """
+        Handle pipettor 'spit all' operation: select labware wells.
+
+        Parameters
+        ----------
+        func_str : str
+        part : str
+        labware_obj : Labware
+        **kwargs : dict
+        """
+        if part == "first":
+            self.clear_grid(self.second_column_frame)
+            self.display_possible_labware(
+                labware_type=Labware,
+                next_callback=self.callback_spit_all,
+                func_str=func_str,
+                part="second",
+                **kwargs
+            )
+        elif part == "second" and labware_obj is not None:
+            if isinstance(labware_obj, ReservoirHolder):
+                rows, columns = labware_obj.hooks_across_y, labware_obj.hooks_across_x
+            elif isinstance(labware_obj, PipetteHolder):
+                rows, columns = labware_obj.holders_across_y, labware_obj.holders_across_x
+            elif isinstance(labware_obj, Plate):
+                rows, columns = labware_obj._rows, labware_obj._columns
+            else:
+                return
+
+            window = WellWindow(
+                rows=rows,
+                columns=columns,
+                labware_id=labware_obj.labware_id,
+                master=self.window_build_func,
+                title=f"Select wells to spit all into: {labware_obj.labware_id}"
+            )
+            self.window_build_func.wait_variable(window.safe_var)
+            kwargs["labware_obj"] = labware_obj
+            kwargs["positions"] = [(r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v]
+            del window
+
+            func = lambda kwargs=kwargs: self.pipettor.spit_all(
+                destination=kwargs["labware_obj"],
+                dest_col_row=kwargs["positions"]
+            )
+            self.add_current_function(func_str=func_str, func=func, labware_id=kwargs["labware_obj"].labware_id)
+            self.clear_grid(self.second_column_frame)
 
 
     # --------------------------------------------------------------------------
@@ -664,189 +790,9 @@ class FunctionWindow:
     def callback_home(self, func_str: str):
         """Send pipettor to home position."""
         self.clear_grid(self.second_column_frame)
-        #func = lambda: self.pipettor.home()
+        func = lambda: self.pipettor.home()
         self.add_current_function(
             func_str=func_str,
-            func=lambda: print("Homing pipettor"),
-            labware_id=None
+            func=func,
+            labware_id="Home"
         )
-
-    def callback_suck(self, func_str: str, labware_obj: Labware= None, part: str = "first"):
-        """Perform pipettor suction."""
-        if part == "first":
-            self.clear_grid(self.second_column_frame)
-            self.display_possible_labware(labware_type=Labware, func_str=func_str, start_row=0)
-        else:
-            if isinstance(labware_obj, ReservoirHolder):
-                rows = labware_obj.hooks_across_y
-                columns = labware_obj.hooks_across_x
-
-            elif isinstance(labware_obj, PipetteHolder):
-                rows = labware_obj.holders_across_y
-                columns = labware_obj.holders_across_x
-
-            elif isinstance(labware_obj, Plate):
-                rows = labware_obj._rows
-                columns = labware_obj._columns
-
-            else:
-                return
-
-            window = WellWindow(
-                rows=rows,
-                columns=columns,
-                labware_id=labware_obj.labware_id,
-                master=self.window_build_func,
-                title=f"Choose Labware, to suck from: {labware_obj.labware_id}")
-
-            self.window_build_func.wait_variable(window.safe_var)
-            well_states = window.well_state
-            # interpret well states from WellWindow as list of tuple(represent Well grid) for PipettorPlus
-            list_return = [
-                (r, c)
-                for r, row in enumerate(well_states)
-                for c, active in enumerate(row)
-                if active
-            ]
-            del window
-
-            # creater enter Entry, for entering Volume per Well
-            label = ttk.Label(self.second_column_frame, text="Enter Volume per Well in mm")
-            label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
-
-            text_var = ttk.StringVar(value="5")
-            entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
-            entry.grid(row=1, column=0, sticky="nsew", pady=5, padx=5)
-
-            def callback_enter_button():
-                value = text_var.get()
-                try:
-                    float_volume = float(value)
-                except ValueError:
-                    return
-
-                #func = self.pipettor.suck(source=labware_obj, source_col_row=list_return, volume=float_volume)
-                self.add_current_function(
-                    func_str=func_str,
-                    func=lambda: print("callback suck", labware_obj.labware_id),
-                    labware_id=labware_obj.labware_id)
-
-                self.clear_grid(self.second_column_frame)
-
-            button = ttk.Button(self.second_column_frame, text="Enter", command=callback_enter_button)
-            button.grid(row=2, column=0, sticky="nsew", pady=5, padx=5)
-
-    def callback_spit(self, func_str: str, labware_obj: Labware = None, part: str = "first"):
-        """Perform pipettor dispense."""
-        if part == "first":
-            self.clear_grid(self.second_column_frame)
-            self.display_possible_labware(labware_type=Labware, func_str=func_str, start_row=0)
-        else:
-            if isinstance(labware_obj, ReservoirHolder):
-                rows = labware_obj.hooks_across_y
-                columns = labware_obj.hooks_across_x
-
-            elif isinstance(labware_obj, PipetteHolder):
-                rows = labware_obj.holders_across_y
-                columns = labware_obj.holders_across_x
-
-            elif isinstance(labware_obj, Plate):
-                rows = labware_obj._rows
-                columns = labware_obj._columns
-
-            else:
-                return
-
-            window = WellWindow(
-                rows=rows,
-                columns=columns,
-                labware_id=labware_obj.labware_id,
-                master=self.window_build_func,
-                title=f"Choose Labware, to suck from: {labware_obj.labware_id}")
-
-            self.window_build_func.wait_variable(window.safe_var)
-            well_states = window.well_state
-
-            # interpret well states from WellWindow as list of tuple(represent Well grid) for PipettorPlus
-            list_return = [
-                (r, c)
-                for r, row in enumerate(well_states)
-                for c, active in enumerate(row)
-                if active
-            ]
-            del window
-
-            # creater enter Entry, for entering Volume per Well
-            label = ttk.Label(self.second_column_frame, text="Enter Volume per Well in mm")
-            label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
-
-            text_var = ttk.StringVar(value="5")
-            entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
-            entry.grid(row=1, column=0, sticky="nsew", pady=5, padx=5)
-
-            def callback_enter_button():
-                value = text_var.get()
-                try:
-                    float_volume = float(value)
-                except ValueError:
-                    return
-
-                #func = self.pipettor.spit(destination=labware_obj, dest_col_row=list_return, volume=float_volume)
-                self.add_current_function(
-                    func_str=func_str,
-                    func=lambda: print("callback suck", labware_obj.labware_id),
-                    labware_id=labware_obj.labware_id)
-
-                self.clear_grid(self.second_column_frame)
-
-            button = ttk.Button(self.second_column_frame, text="Enter", command=callback_enter_button)
-            button.grid(row=2, column=0, sticky="nsew", pady=5, padx=5)
-
-    def callback_spit_all(self, func_str: str, labware_obj: Labware = None, part: str = "first"):
-        """Perform pipettor dispense (spit all)."""
-        if part == "first":
-            self.clear_grid(self.second_column_frame)
-            self.display_possible_labware(labware_type=Labware, func_str=func_str, start_row=0)
-        else:
-            if isinstance(labware_obj, ReservoirHolder):
-                rows = labware_obj.hooks_across_y
-                columns = labware_obj.hooks_across_x
-
-            elif isinstance(labware_obj, PipetteHolder):
-                rows = labware_obj.holders_across_y
-                columns = labware_obj.holders_across_x
-
-            elif isinstance(labware_obj, Plate):
-                rows = labware_obj._rows
-                columns = labware_obj._columns
-
-            else:
-                return
-
-            window = WellWindow(
-                rows=rows,
-                columns=columns,
-                labware_id=labware_obj.labware_id,
-                master=self.window_build_func,
-                title=f"Choose Labware, to suck from: {labware_obj.labware_id}")
-
-            self.window_build_func.wait_variable(window.safe_var)
-            well_states = window.well_state
-
-            # interpret well states from WellWindow as list of tuple(represent Well grid) for PipettorPlus
-            list_return = [
-                (r, c)
-                for r, row in enumerate(well_states)
-                for c, active in enumerate(row)
-                if active
-            ]
-            del window
-
-            #func = self.pipettor.spit_all(destination=labware_obj, dest_col_row=list_return)
-            self.add_current_function(
-                func_str=func_str,
-                func=lambda: print("callback suck", labware_obj.labware_id),
-                labware_id=labware_obj.labware_id)
-
-            self.clear_grid(self.second_column_frame)
-
