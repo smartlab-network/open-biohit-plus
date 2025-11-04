@@ -1,14 +1,14 @@
 from typing import Dict, List
-from .labware import Labware, ReservoirHolder, PipetteHolder, Plate
-from .serializable import Serializable, register_class
+from labware import Labware, ReservoirHolder, PipetteHolder, Plate
+from serializable import Serializable, register_class
 #TODO get this right
-from .position import Position_allocator
+from position import Position_allocator
 
 @register_class
 class Slot(Serializable):
     """
     Represents a single slot on a Deck. A slot can hold multiple Labware objects stacked
-    vertically with specified Z-ranges.
+    vertically with specified Z-ranges
 
     Attributes
     ---------
@@ -26,7 +26,7 @@ class Slot(Serializable):
     """
 
     def __init__(self, range_x: tuple[float, float], range_y: tuple[float, float],
-                 range_z: float, slot_id: str):
+                 range_z: float, slot_id: str) -> None:
         self.range_x = range_x
         self.range_y = range_y
         self.range_z = range_z
@@ -51,9 +51,8 @@ class Slot(Serializable):
         ValueError
             If the Labware exceeds the slot's Z range.
         """
+        self.is_compatible_labware(lw=lw, min_z=min_z)
         max_z = min_z + lw.size_z
-        if max_z > self.range_z:
-            raise ValueError(f"Cannot place labware {lw.labware_id}: exceeds slot height.")
         self.labware_stack[lw.labware_id] = [lw, (min_z, max_z)]
 
     def _remove_labware(self, labware_id: str):
@@ -103,26 +102,61 @@ class Slot(Serializable):
                     lw._columns,
                 )
 
-    def is_compatible_labware(self, lw: Labware, min_z: float) -> bool:
+    def is_compatible_labware(self, lw: Labware, min_z: float) -> None:
         """
-        Check if a Labware object fits within X, Y, and Z dimensions of the slot.
-
-        Parameters
-        ----------
-        lw : Labware
-            Labware object to check.
-        min_z : float
-            Minimum Z position where the Labware would be placed.
-
-        Returns
-        -------
-        bool
-            True if the labware fits, False otherwise.
+        Checks if a Labware object can be placed at the given Z position, raising
+        a ValueError if any constraint (XY fit, Z range, stacking, or overlap) is violated.
         """
-        fits_xy = (abs(self.range_x[1] - self.range_x[0]) >= lw.size_x
-                   and abs(self.range_y[1] - self.range_y[0]) >= lw.size_y)
-        fits_z = min_z + lw.size_z <= self.range_z
-        return fits_xy and fits_z
+        slot_width = abs(self.range_x[1] - self.range_x[0])
+        slot_depth = abs(self.range_y[1] - self.range_y[0])
+        max_z_new = min_z + lw.size_z
+
+        # --- 1 & 2. Basic XY Fit & Z-Range Check (Remains the same) ---
+        if lw.size_x > slot_width or lw.size_y > slot_depth:
+            raise ValueError(
+                f"Labware '{lw.labware_id}' (Size X:{lw.size_x}, Y:{lw.size_y}) "
+                f"is too large for slot '{self.slot_id}' (Size X:{slot_width}, Y:{slot_depth})."
+            )
+
+        if max_z_new > self.range_z:
+            raise ValueError(
+                f"Placement of Labware '{lw.labware_id}' at min_z={min_z} "
+                f"exceeds the slot's total height capacity ({self.range_z})."
+            )
+
+        # --- 3. Stacking Constraint Check (UPDATED LOGIC) ---
+        if self.labware_stack:
+            top_lw = None
+            max_z_seen = -1.0
+
+            # Find the existing labware that occupies the highest Z-level.
+            for existing_lw, (min_z_exist, max_z_exist) in self.labware_stack.values():
+                if max_z_exist > max_z_seen:
+                    max_z_seen = max_z_exist
+                    top_lw = existing_lw
+
+            # Use getattr to safely check the property, defaulting to False
+            # if the attribute is missing (which matches the default behavior of blocking stacking).
+            can_stack_upon = getattr(top_lw, 'can_be_stacked_upon', False)
+
+            if not can_stack_upon:
+                # If can_be_stacked_upon is False, raise an error.
+                raise ValueError(
+                    f"Stacking error in slot '{self.slot_id}': Labware '{top_lw.labware_id}' "
+                    f"is not designed to have other labware placed on top of it (can_be_stacked_upon=False)."
+                )
+
+            # --- 4. Z-Overlap Check (Remains the same) ---
+            for existing_lw, (min_z_exist, max_z_exist) in self.labware_stack.values():
+                if max_z_exist > min_z and min_z_exist < max_z_new:
+                    raise ValueError(
+                        f"Z-Overlap error in slot '{self.slot_id}': Placement range Z:[{min_z}, {max_z_new}] "
+                        f"overlaps with existing labware '{existing_lw.labware_id}' Z-range:[{min_z_exist}, {max_z_exist}]."
+                    )
+
+        # If all checks pass, the function returns silently (None).
+        return
+
 
     def to_dict(self) -> dict:
         """
