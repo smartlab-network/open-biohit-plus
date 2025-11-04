@@ -202,7 +202,6 @@ class Labware(Serializable):
             position=position
         )
 
-
 @register_class
 class Well(Labware):
     """
@@ -852,7 +851,6 @@ class IndividualPipetteHolder(Labware):
             column=data.get("column"),
         )
 
-
 @register_class
 class PipetteHolder(Labware):
     def __init__(self, size_x: float, size_y: float, size_z: float, holders_across_x: int, holders_across_y: int,
@@ -1278,7 +1276,6 @@ class PipetteHolder(Labware):
         """Standard grid dimension"""
         return self._rows
 
-
 @register_class
 class Reservoir(Labware):
     def __init__(self, size_x: float, size_y: float, size_z: float, offset: tuple[float, float] = (0, 0), labware_id: str = None, position: tuple[float, float] = None,
@@ -1568,8 +1565,8 @@ class Reservoir(Labware):
 
 @register_class
 class ReservoirHolder(Labware):
-    def __init__(self, size_x: float, size_y: float, size_z: float, hooks_across_x: int, hooks_across_y: int, remove_height: float = -45, add_height: float = 0,
-                offset: tuple[float, float] = (0, 0), reservoir_dict: dict[int, dict] = None,
+    def __init__(self, size_x: float, size_y: float, size_z: float, hooks_across_x: int, hooks_across_y: int, reservoir_template: Reservoir = None,
+                remove_height: float = -45, add_height: float = 0, offset: tuple[float, float] = (0, 0),
                  labware_id: str = None, position: tuple[float, float] = None, can_be_stacked_upon: bool = False):
         """
         Initialize a ReservoirHolder instance that can hold multiple reservoirs.
@@ -1590,8 +1587,8 @@ class ReservoirHolder(Labware):
             relative height at which liquid is dispensed
         remove_height: float
             relative height at which liquid is aspirated
-        reservoir_dict : dict[int, dict], optional
-            Dictionary defining individual reservoirs and their attributes.
+        reservoir_template : reservoir
+            example or individual reservoir that will be placed across all hooks.
         labware_id : str, optional
             Unique ID for the holder.
         position : tuple[float, float], optional
@@ -1616,8 +1613,8 @@ class ReservoirHolder(Labware):
         }
 
         # Place reservoirs to holder if provided
-        if reservoir_dict:
-            self.place_reservoirs(reservoir_dict)
+        if reservoir_template is not None:
+            self.place_reservoirs(reservoir_template)
 
     def each_tip_needs_separate_item(self) -> bool:
         return False  # Reservoirs are large, all tips fit in one
@@ -1675,6 +1672,7 @@ class ReservoirHolder(Labware):
 
         return row * self._columns + col + 1
 
+#todo fix it
     def get_reservoirs(self) -> list[Reservoir]:
         """Return list of all unique reservoirs (no duplicates)."""
         seen_ids = set()
@@ -1754,6 +1752,7 @@ class ReservoirHolder(Labware):
         if not hook_ids:
             raise ValueError("Must specify at least one hook_id")
 
+
         # Check if all hook_ids are valid and available
         for hook_id in hook_ids:
 
@@ -1811,23 +1810,16 @@ class ReservoirHolder(Labware):
         reservoir.column = min(cols)  # Leftmost column
         reservoir.row = min(rows)  # Topmost row
 
+        reservoir.labware_id = f"{self.labware_id}_{reservoir.column}:{reservoir.row}"
+
         for hook_id in hook_ids:
             self.__hook_to_reservoir[hook_id] = reservoir
 
-    def place_reservoirs(self, reservoir_dict: dict[int, dict]) -> None:
+    def place_reservoirs(self, reservoir_template: Reservoir) -> None:
         """
-        Place multiple reservoirs from a dictionary.
+        allocate duplicate reservoir to all available hooks, unless specific hook id specified
 
-        Parameters
-        ---------
-        reservoir_dict : dict[int, dict]
-            Dictionary where keys are ignored. Each value should contain:
-            - Required: size_x, size_y, size_z
-            - Optional: capacity, content (dict), labware_id, hook_ids (list or int),
-              num_hooks_x (int), num_hooks_y (int)
-
-            If hook_ids is specified, the reservoir will be placed there.
-            If num_hooks_x and/or num_hooks_y are specified, will allocate that many hooks.
+            If hook_ids is specified, the reservoir will be placed there, given that position is empty
             Otherwise, calculates required hooks based on dimensions and allocates automatically.
 
         Raises
@@ -1836,101 +1828,75 @@ class ReservoirHolder(Labware):
             If a specified hook_id is occupied, insufficient space, or
             reservoir parameters are invalid.
         """
-        for res in reservoir_dict.values():
-            # Determine which hooks to use
-            specified_hooks = res.get("hook_ids")
-            num_hooks_x = res.get("num_hooks_x", 1)
-            num_hooks_y = res.get("num_hooks_y", 1)
+        template = reservoir_template
+        if template.hook_ids:
+            hook_ids_to_use = template.hook_ids
+            reservoir_copy = copy.deepcopy(template)
+            self.place_reservoir(hook_ids_to_use, reservoir_copy)
 
-            if specified_hooks is not None:
-                # User specified exact hooks - convert to list if needed
-                if isinstance(specified_hooks, int):
-                    hook_ids_to_use = [specified_hooks]
-                else:
-                    hook_ids_to_use = specified_hooks
-            else:
-                # Auto-allocate hooks in a rectangle
-                max_width_per_hook = self.size_x / self._columns
-                max_height_per_hook = self.size_y / self._rows
-                reservoir_width = res["size_x"]
-                reservoir_height = res["size_y"]
+        else:
 
-                # Calculate minimum hooks needed based on dimensions
-                min_hooks_x = int(reservoir_width / max_width_per_hook)
-                if reservoir_width % max_width_per_hook > 0:
-                    min_hooks_x += 1
+            max_width_per_hook = self.size_x / self._columns
+            max_height_per_hook = self.size_y / self._rows
 
-                min_hooks_y = int(reservoir_height / max_height_per_hook)
-                if reservoir_height % max_height_per_hook > 0:
-                    min_hooks_y += 1
+            reservoir_width = template.size_x
+            reservoir_height = template.size_y
 
-                # Use the larger of calculated or requested
-                hooks_x = max(min_hooks_x, num_hooks_x)
-                hooks_y = max(min_hooks_y, num_hooks_y)
+            # Calculate minimum hooks needed based on dimensions
+            min_hooks_x = int(reservoir_width / max_width_per_hook)
+            if reservoir_width % max_width_per_hook > 0: min_hooks_x += 1
 
-                # Find available rectangular region
-                available = set(self.get_available_hooks())
+            min_hooks_y = int(reservoir_height / max_height_per_hook)
+            if reservoir_height % max_height_per_hook > 0: min_hooks_y += 1
+
+            hooks_x = min_hooks_x
+            hooks_y = min_hooks_y
+
+            # raises error if not even one placement is possible.
+            if hooks_x > self._columns or hooks_y > self._rows:
+                raise ValueError(
+                    f"Placement Error: Required reservoir size is {hooks_x}x{hooks_y} hooks, "
+                    f"but the ReservoirHolder is only {self._columns}x{self._rows}."
+                )
+
+            while True:
                 hook_ids_to_use = None
 
+                # Re-check available hooks for each placement attempt
+                available = set(self.get_available_hooks())
+
+                # Find the *first* available rectangular region of size hooks_x x hooks_y
                 for start_row in range(self._rows - hooks_y + 1):
                     for start_col in range(self._columns - hooks_x + 1):
-                        # Check if this rectangle is available
+
+                        # Check if this rectangular block (starting at start_row, start_col)
+                        # is entirely available (not occupied)
                         candidate_hooks = []
-                        valid = True
+                        is_available = True
+
                         for r in range(start_row, start_row + hooks_y):
                             for c in range(start_col, start_col + hooks_x):
                                 hook_id = self.position_to_hook_id(c, r)
                                 if hook_id not in available:
-                                    valid = False
+                                    is_available = False
                                     break
                                 candidate_hooks.append(hook_id)
-                            if not valid:
+                            if not is_available:
                                 break
 
-                        if valid:
+                        if is_available:
                             hook_ids_to_use = candidate_hooks
                             break
                     if hook_ids_to_use:
                         break
 
+                # If we couldn't find a spot, we exit the loop
                 if hook_ids_to_use is None:
-                    raise ValueError(
-                        f"Cannot find {hooks_x}×{hooks_y} rectangular region of "
-                        f"available hooks for reservoir"
-                    )
+                    break
 
-            # Generate position-based labware_id if not provided
-            labware_id = res.get("labware_id")
-            if labware_id is None:
-                # Get all positions for this reservoir's hooks
-                positions = [self.hook_id_to_position(hid) for hid in hook_ids_to_use]
-                cols = [pos[0] for pos in positions]
-                rows = [pos[1] for pos in positions]
-
-                # Use a corner  (min row, min col)
-                min_col = min(cols)
-                min_row = min(rows)
-
-                labware_id = f"{self.labware_id}_{min_col}:{min_row}"
-
-            # Create Reservoir instance
-            reservoir = Reservoir(
-                size_x=res["size_x"],
-                size_y=res["size_y"],
-                size_z=res["size_z"],
-                offset=res.get("offset", (0, 0)),
-                capacity=res.get("capacity", Default_Reservoir_Capacity),
-                content=res.get("content", None),
-                shape=res.get("shape", None),
-                labware_id=labware_id,
-                position=res.get("position", None),
-                hook_ids=res.get("hook_ids", None),
-                row=res.get("row", None),
-                column=res.get("column", None),
-            )
-
-            # Place the reservoir
-            self.place_reservoir(hook_ids_to_use, reservoir)
+                # --- Placement Execution for the Found Spot ---
+                reservoir_copy = copy.deepcopy(template)
+                self.place_reservoir(hook_ids_to_use, reservoir_copy)
 
     def remove_reservoir(self, hook_id: int) -> Reservoir:
         """
@@ -2083,6 +2049,7 @@ class ReservoirHolder(Labware):
             hooks_across_x=data["hooks_across_x"],
             hooks_across_y=data.get("hooks_across_y", 1),  # Default to 1 for backwards compatibility
             labware_id=data["labware_id"],
+            reservoir_template=None,
             position=position,
         )
 

@@ -4,9 +4,11 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
 import json
 
+import copy
 # Import your existing classes
 from deck import Deck
 from slot import Slot
+from serializable import Serializable
 from labware import (
     Labware, Well, Reservoir, Plate, ReservoirHolder,
     PipetteHolder, TipDropzone, IndividualPipetteHolder
@@ -447,7 +449,7 @@ class CreateLabwareDialog(tk.Toplevel):
         self.selected_well = None
         self.selected_reservoir = None
         self.selected_individual_holder = None
-        self.configured_reservoir_dict = None
+        self.configured_reservoir_template = None
 
         # Make dialog modal
         self.transient(parent)
@@ -456,24 +458,32 @@ class CreateLabwareDialog(tk.Toplevel):
         self.create_widgets()
 
     def launch_mapping_dialog(self):
-        """Open the mapping dialog based on hooks x/y inputs."""
-        try:
-            hooks_x = int(self.hooks_x_var.get())
-            hooks_y = int(self.hooks_y_var.get())
-        except ValueError:
-            messagebox.showerror("Input Error", "Hooks Across X and Y must be valid integers.")
-            return
+        """Open the template configuration dialog."""
+        # No need to check hooks_x/y here; the holder takes those separately.
 
-        dialog = ReservoirMappingDialog(self, self.available_reservoirs, hooks_x, hooks_y)
+        # Use the new dialog
+        dialog = ConfigureReservoirTemplateDialog(self, self.available_reservoirs)
         self.wait_window(dialog)
 
-        if dialog.result_dict:
-            self.configured_reservoir_dict = dialog.result_dict
-            count = len(self.configured_reservoir_dict)
-            self.reservoir_config_label.config(text=f"{count} unique Reservoir(s) mapped", foreground='green')
+        if dialog.result:
+            self.configured_reservoir_template = dialog.result  # Store the template OBJECT
+
+            # The template object may have num_hooks_x/y or hook_ids set for auto-allocation
+
+            is_explicit = hasattr(self.configured_reservoir_template,
+                                  'hook_ids') and self.configured_reservoir_template.hook_ids
+
+            if is_explicit:
+                config_summary = f"Explicit Hooks: {len(self.configured_reservoir_template.hook_ids)} specified"
+            else:
+                hx = getattr(self.configured_reservoir_template, 'num_hooks_x', 'Auto-size')
+                hy = getattr(self.configured_reservoir_template, 'num_hooks_y', 'Auto-size')
+                config_summary = f"Auto-allocate: {hx}x{hy} hooks"
+
+            self.reservoir_config_label.config(text=config_summary, foreground='green')
         else:
-            self.configured_reservoir_dict = None
-            self.reservoir_config_label.config(text="None mapped", foreground='red')
+            self.configured_reservoir_template = None
+            self.reservoir_config_label.config(text="None configured", foreground='red')
 
     def create_widgets(self):
         main_frame = ttk.Frame(self, padding="10")
@@ -704,10 +714,10 @@ class CreateLabwareDialog(tk.Toplevel):
                 )
 
             elif lw_type == "ReservoirHolder":
-                # 1. Enforce validation: Must have a configuration
-                if not self.configured_reservoir_dict:
+                # 1. Enforce validation: Must have a configured template
+                if self.configured_reservoir_template is None:
                     messagebox.showerror("Error",
-                                         "ReservoirHolder must be configured with at least one Reservoir. Please click 'Map/Configure Reservoirs'.")
+                                         "ReservoirHolder must have a configured template. Please click 'Map/Configure Reservoirs'.")
                     return
 
                 # 2. Parse geometry
@@ -728,8 +738,8 @@ class CreateLabwareDialog(tk.Toplevel):
                     add_height=add_height,
                     remove_height=remove_height,
                     can_be_stacked_upon=can_be_stacked_upon,
-                    # Pass the fully configured dictionary
-                    reservoir_dict=self.configured_reservoir_dict
+                    # Pass the fully configured template OBJECT
+                    reservoir_template=self.configured_reservoir_template
                 )
 
             elif lw_type == "PipetteHolder":
@@ -777,6 +787,114 @@ class CreateLabwareDialog(tk.Toplevel):
     def on_cancel(self):
         """Cancel dialog"""
         self.result = None
+        self.destroy()
+
+class ConfigureReservoirTemplateDialog(tk.Toplevel):
+    """
+    Dialog to select a single Reservoir template and specify its placement
+    parameters (auto-size, specific hooks, or N x M block size).
+    """
+
+    def __init__(self, parent, available_reservoirs):
+        super().__init__(parent)
+        self.title("Select or Create Reservoir")
+        self.geometry("500x500")
+        self.result = None  # Will hold the fully configured Reservoir object
+
+        self.available_reservoirs = available_reservoirs
+        self.selected_reservoir_template = None
+
+        self.transient(parent)
+        self.grab_set()
+
+        self.create_widgets()
+
+    def create_widgets(self):
+        main_frame = ttk.Frame(self, padding="15")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # --- 1. Reservoir Template Selection ---
+        ttk.Label(main_frame, text="1. Select an existing Reservoir or create new one",
+                  font=('Arial', 14, 'bold')).pack(anchor='w', pady=(0, 5))
+
+        select_frame = ttk.Frame(main_frame)
+        select_frame.pack(fill='x', pady=5)
+
+        self.template_label = ttk.Label(select_frame, text="Reservoir: None selected", width=30, relief=tk.SUNKEN,
+                                        foreground='red')
+        self.template_label.pack(side=tk.LEFT, fill='x', expand=True, padx=(0, 10))
+        ttk.Button(select_frame, text="Select/Create Reservoir", command=self.select_reservoir).pack(side=tk.RIGHT)
+
+        # --- 2. Placement Options (Template Overrides) ---
+        ttk.Label(main_frame, text="2. Specific Placement (Optional)",
+                  font=('Arial', 14, 'bold')).pack(anchor='w', pady=(15, 5))
+
+        placement_frame = ttk.Frame(main_frame, padding="10")
+        placement_frame.pack(fill=tk.X, pady=(0, 15))
+
+        # A) Explicit Hook IDs (for fixed, non-repeating placement)
+        ttk.Label(placement_frame, text="Explicit Hook IDs (optional, comma-separated for multi-hook reservoirs):",
+                  font=('Arial', 12, 'bold')).grid(row=0, column=0, sticky='w', pady=5, columnspan=2)
+        self.hook_ids_var = tk.StringVar()
+        ttk.Entry(placement_frame, textvariable=self.hook_ids_var).grid(row=1, column=0, columnspan=2, sticky='ew',
+                                                                        padx=5, pady=(0, 10))
+
+        ttk.Label(placement_frame, text="* If hook id is provided, the reservoir is only added to the specified hook.\n Otherwise, copies of reservoir populate the entire reservoirHolder * \n").grid(row=2, column=0, columnspan=2,
+                                                                               sticky='w', padx=5)
+        ttk.Label(placement_frame,
+                  text="** Hook Numbering: Right to left, top to bottom.\n" \
+                       "Example - 5×2 Reservoir Holder:\n" \
+                       "  5   4   3   2   1     (Row 1)\n" \
+                       " 10   9   8   7   6     (Row 2) **"
+                  ).grid(row=4, column=0, columnspan=2,
+            sticky='w', padx=5)
+
+        # --- Control Buttons ---
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill='x', pady=20, side=tk.BOTTOM)
+        ttk.Button(button_frame, text="Save Template Configuration", command=self.on_ok).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(button_frame, text="Cancel", command=self.destroy).pack(side=tk.RIGHT)
+
+    def select_reservoir(self):
+        """Open dialog to select or create a Reservoir component."""
+        # Assume SelectOrCreateComponentDialog exists
+        dialog = SelectOrCreateComponentDialog(self.master.master, "Reservoir", self.available_reservoirs)
+        self.wait_window(dialog)
+
+        if dialog.result and isinstance(dialog.result, Reservoir):
+            self.selected_reservoir_template = dialog.result
+            self.template_label.config(text=f"Template: {self.selected_reservoir_template.labware_id}",
+                                       foreground='blue')
+
+    def on_ok(self):
+        """Process inputs and return the fully configured template object."""
+        if not self.selected_reservoir_template:
+            messagebox.showerror("Error", "Please select a base Reservoir template.")
+            return
+
+        # 1. Start with a deep copy of the template
+        final_template = copy.deepcopy(self.selected_reservoir_template)
+
+        # 2. Apply placement overrides/rules to the copy
+        try:
+            # Explicit hook IDs take precedence
+            hook_ids_str = self.hook_ids_var.get().strip()
+            if hook_ids_str:
+                # Set explicit hook IDs and clear block size variables
+                hook_ids = [int(x.strip()) for x in hook_ids_str.split(',') if x.strip()]
+                final_template.hook_ids = hook_ids
+                # Remove num_hooks attributes to ensure only hook_ids are used
+                if hasattr(final_template, 'num_hooks_x'): del final_template.num_hooks_x
+                if hasattr(final_template, 'num_hooks_y'): del final_template.num_hooks_y
+            else:
+                final_template.hook_ids = []  # Ensure it's empty list if not specified
+
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Hooks X, Hooks Y, or Hook IDs must be valid integers.")
+            return
+
+        # Result is the fully modified template object
+        self.result = final_template
         self.destroy()
 
 class EditSlotDialog(tk.Toplevel):
@@ -868,14 +986,19 @@ class EditSlotDialog(tk.Toplevel):
         self.destroy()
 
 class EditLabwareDialog(tk.Toplevel):
-    """Dialog for editing labware dimensions and offset"""
+    """Enhanced dialog for editing labware with simplified reservoir management"""
 
-    def __init__(self, parent, labware):
+    def __init__(self, parent, labware, available_reservoirs=None):
         super().__init__(parent)
         self.title(f"Edit Labware: {labware.labware_id}")
-        self.geometry("500x500")
+        self.geometry("750x750")
         self.labware = labware
+        self.available_reservoirs = available_reservoirs or []
         self.result = None
+
+        # Track selected reservoir for removal
+        self.selected_reservoir = None
+        self.reservoir_widgets = {}  # reservoir -> canvas items
 
         # Make dialog modal
         self.transient(parent)
@@ -894,37 +1017,16 @@ class EditLabwareDialog(tk.Toplevel):
         ttk.Label(info_frame, text=f"ID: {self.labware.labware_id}").pack(anchor='w')
         ttk.Label(info_frame, text=f"Type: {self.labware.__class__.__name__}").pack(anchor='w')
 
-        # Parameters frame
-        params_frame = ttk.LabelFrame(main_frame, text="Edit Parameters", padding="10")
-        params_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        # Create Notebook (Tabs)
+        self.notebook = ttk.Notebook(main_frame)
+        self.notebook.pack(fill=tk.BOTH, expand=True, pady=5)
 
-        # Dimensions
-        ttk.Label(params_frame, text="Size X (mm):").grid(row=0, column=0, sticky='w', pady=5)
-        self.size_x_var = tk.StringVar(value=str(self.labware.size_x))
-        ttk.Entry(params_frame, textvariable=self.size_x_var, width=25).grid(row=0, column=1, pady=5)
+        # Tab 1: Basic Properties
+        self.create_basic_properties_tab()
 
-        ttk.Label(params_frame, text="Size Y (mm):").grid(row=1, column=0, sticky='w', pady=5)
-        self.size_y_var = tk.StringVar(value=str(self.labware.size_y))
-        ttk.Entry(params_frame, textvariable=self.size_y_var, width=25).grid(row=1, column=1, pady=5)
-
-        ttk.Label(params_frame, text="Size Z (mm):").grid(row=2, column=0, sticky='w', pady=5)
-        self.size_z_var = tk.StringVar(value=str(self.labware.size_z))
-        ttk.Entry(params_frame, textvariable=self.size_z_var, width=25).grid(row=2, column=1, pady=5)
-
-        # Offset
-        ttk.Label(params_frame, text="Offset X (mm):").grid(row=3, column=0, sticky='w', pady=5)
-        self.offset_x_var = tk.StringVar(value=str(self.labware.offset[0]))
-        ttk.Entry(params_frame, textvariable=self.offset_x_var, width=25).grid(row=3, column=1, pady=5)
-
-        ttk.Label(params_frame, text="Offset Y (mm):").grid(row=4, column=0, sticky='w', pady=5)
-        self.offset_y_var = tk.StringVar(value=str(self.labware.offset[1]))
-        ttk.Entry(params_frame, textvariable=self.offset_y_var, width=25).grid(row=4, column=1, pady=5)
-
-        ttk.Label(params_frame, text="Can be stacked upon:").grid(row=5, column=0, sticky='w', pady=2)
-        self.can_be_stacked_upon_var = tk.BooleanVar(value=self.labware.can_be_stacked_upon)
-        ttk.Checkbutton(params_frame, variable=self.can_be_stacked_upon_var).grid(row=5, column=1, sticky='w', pady=2)
-        ttk.Label(params_frame, text="(optional, default: Unselected = False)", font=('Arial', 12, 'italic'),
-                  foreground='gray').grid(row=6, column=0, sticky='w', padx=5)
+        # Tab 2: Manage Reservoirs (only for ReservoirHolder)
+        if isinstance(self.labware, ReservoirHolder):
+            self.create_reservoir_management_tab()
 
         # Buttons
         btn_frame = ttk.Frame(main_frame)
@@ -933,22 +1035,260 @@ class EditLabwareDialog(tk.Toplevel):
         ttk.Button(btn_frame, text="Save", command=self.on_save).pack(side=tk.RIGHT, padx=5)
         ttk.Button(btn_frame, text="Cancel", command=self.on_cancel).pack(side=tk.RIGHT)
 
-    def on_save(self):
-        """Save changes to labware"""
-        try:
-            size_x = float(self.size_x_var.get())
-            size_y = float(self.size_y_var.get())
-            size_z = float(self.size_z_var.get())
-            offset_x = float(self.offset_x_var.get())
-            offset_y = float(self.offset_y_var.get())
-            can_stacked_upon = bool(self.can_be_stacked_upon_var.get())
+    def create_basic_properties_tab(self):
+        """Basic properties tab (same as before)"""
+        basic_tab = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(basic_tab, text="Basic Properties")
 
-            # Update labware
-            self.labware.size_x = size_x
-            self.labware.size_y = size_y
-            self.labware.size_z = size_z
-            self.labware.offset = (offset_x, offset_y)
-            self.labware.can_be_stacked_upon = can_stacked_upon
+        ttk.Label(basic_tab, text="Size X (mm):").grid(row=0, column=0, sticky='w', pady=5)
+        self.size_x_var = tk.StringVar(value=str(self.labware.size_x))
+        ttk.Entry(basic_tab, textvariable=self.size_x_var, width=25).grid(row=0, column=1, pady=5)
+
+        ttk.Label(basic_tab, text="Size Y (mm):").grid(row=1, column=0, sticky='w', pady=5)
+        self.size_y_var = tk.StringVar(value=str(self.labware.size_y))
+        ttk.Entry(basic_tab, textvariable=self.size_y_var, width=25).grid(row=1, column=1, pady=5)
+
+        ttk.Label(basic_tab, text="Size Z (mm):").grid(row=2, column=0, sticky='w', pady=5)
+        self.size_z_var = tk.StringVar(value=str(self.labware.size_z))
+        ttk.Entry(basic_tab, textvariable=self.size_z_var, width=25).grid(row=2, column=1, pady=5)
+
+        ttk.Label(basic_tab, text="Offset X (mm):").grid(row=3, column=0, sticky='w', pady=5)
+        self.offset_x_var = tk.StringVar(value=str(self.labware.offset[0]))
+        ttk.Entry(basic_tab, textvariable=self.offset_x_var, width=25).grid(row=3, column=1, pady=5)
+
+        ttk.Label(basic_tab, text="Offset Y (mm):").grid(row=4, column=0, sticky='w', pady=5)
+        self.offset_y_var = tk.StringVar(value=str(self.labware.offset[1]))
+        ttk.Entry(basic_tab, textvariable=self.offset_y_var, width=25).grid(row=4, column=1, pady=5)
+
+        ttk.Label(basic_tab, text="Can be stacked upon:").grid(row=5, column=0, sticky='w', pady=2)
+        self.can_be_stacked_upon_var = tk.BooleanVar(value=self.labware.can_be_stacked_upon)
+        ttk.Checkbutton(basic_tab, variable=self.can_be_stacked_upon_var).grid(row=5, column=1, sticky='w', pady=2)
+
+    def create_reservoir_management_tab(self):
+        """Simplified reservoir management with visual grid"""
+        reservoir_tab = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(reservoir_tab, text="Manage Reservoirs")
+
+        # Top: Canvas with visual hook grid
+        canvas_frame = ttk.LabelFrame(reservoir_tab, text="Hook Layout (Click reservoir to select)", padding="10")
+        canvas_frame.pack(fill=tk.X, expand=False, pady=(0, 10))
+
+        # Create canvas for drawing with fixed dimensions
+        self.hook_canvas = tk.Canvas(canvas_frame, bg='white', height=250, width=650)
+        self.hook_canvas.pack(fill=tk.NONE, expand=False)
+
+        # Force canvas to update its size before drawing
+        self.hook_canvas.update_idletasks()
+
+        # Draw the hook grid with reservoirs
+        self.draw_hook_grid()
+
+        # Bottom: Control buttons
+        control_frame = ttk.LabelFrame(reservoir_tab, text="Actions", padding="10")
+        control_frame.pack(fill=tk.X)
+
+        btn_container = ttk.Frame(control_frame)
+        btn_container.pack(fill=tk.X)
+
+        ttk.Button(
+            btn_container,
+            text="➕ Place Reservoir at Hook(s)",
+            command=self.add_reservoir_dialog
+        ).pack(side=tk.LEFT, padx=5, expand=True, fill=tk.X)
+
+        ttk.Button(
+            btn_container,
+            text="🗑️ Remove Selected Reservoir",
+            command=self.remove_selected_reservoir
+        ).pack(side=tk.LEFT, padx=5, expand=True, fill=tk.X)
+
+        # Info label
+        self.info_label = ttk.Label(control_frame, text="No reservoir selected", foreground='gray')
+        self.info_label.pack(pady=(10, 0))
+
+    def draw_hook_grid(self):
+        """Draw the hook grid with reservoirs as colored blocks"""
+        self.hook_canvas.delete("all")
+        self.reservoir_widgets.clear()
+
+        holder = self.labware
+
+        # Calculate dimensions - use explicit canvas size
+        canvas_width = self.hook_canvas.winfo_width()
+        canvas_height = self.hook_canvas.winfo_height()
+
+        # If canvas not properly rendered yet, use the dimensions we set
+        if canvas_width < 100:  # Canvas not ready yet
+            canvas_width = 650
+        if canvas_height < 100:  # Canvas not ready yet
+            canvas_height = 250
+
+        padding = 30
+        available_width = canvas_width - 2 * padding
+        available_height = canvas_height - 2 * padding
+
+        cell_width = available_width / holder.hooks_across_x
+        cell_height = available_height / holder.hooks_across_y
+
+        # Draw empty hook grid first (outlines)
+        for row in range(holder.hooks_across_y):
+            for col in range(holder.hooks_across_x):
+                x1 = padding + col * cell_width
+                y1 = padding + row * cell_height
+                x2 = x1 + cell_width
+                y2 = y1 + cell_height
+
+                # Draw cell outline
+                self.hook_canvas.create_rectangle(
+                    x1, y1, x2, y2,
+                    outline='lightgray',
+                    width=1,
+                    tags='grid'
+                )
+
+                # Draw hook ID (right to left numbering)
+                hook_id = holder.position_to_hook_id(holder.hooks_across_x - 1 - col, row)
+                self.hook_canvas.create_text(
+                    (x1 + x2) / 2, (y1 + y2) / 2,
+                    text=str(hook_id),
+                    font=('Arial', 10),
+                    fill='lightgray',
+                    tags='grid'
+                )
+
+        # Draw reservoirs as colored blocks
+        reservoirs = holder.get_reservoirs()
+        colors = ['#FFB6C1', '#87CEEB', '#98FB98', '#FFD700', '#FFA07A', '#DDA0DD', '#F0E68C']
+
+        for idx, reservoir in enumerate(reservoirs):
+            color = colors[idx % len(colors)]
+            self.draw_reservoir_block(reservoir, color, cell_width, cell_height, padding)
+
+    def draw_reservoir_block(self, reservoir, color, cell_width, cell_height, padding):
+        """Draw a reservoir as a colored block spanning its hooks"""
+        holder = self.labware
+
+        # Get all hook positions
+        positions = [holder.hook_id_to_position(hid) for hid in reservoir.hook_ids]
+        cols = [pos[0] for pos in positions]
+        rows = [pos[1] for pos in positions]
+
+        min_col, max_col = min(cols), max(cols)
+        min_row, max_row = min(rows), max(rows)
+
+        # Calculate bounding box (accounting for right-to-left display)
+        # Display col: holder.hooks_across_x - 1 - actual_col
+        display_min_col = holder.hooks_across_x - 1 - max_col
+        display_max_col = holder.hooks_across_x - 1 - min_col
+
+        x1 = padding + display_min_col * cell_width
+        y1 = padding + min_row * cell_height
+        x2 = padding + (display_max_col + 1) * cell_width
+        y2 = padding + (max_row + 1) * cell_height
+
+        # Draw reservoir block
+        rect_id = self.hook_canvas.create_rectangle(
+            x1, y1, x2, y2,
+            fill=color,
+            outline='black',
+            width=2,
+            tags=('reservoir', f'res_{id(reservoir)}')
+        )
+
+        # Draw reservoir label
+        text_id = self.hook_canvas.create_text(
+            (x1 + x2) / 2, (y1 + y2) / 2,
+            text=f"{reservoir.labware_id}\n({len(reservoir.hook_ids)} hooks)",
+            font=('Arial', 9, 'bold'),
+            tags=('reservoir', f'res_{id(reservoir)}')
+        )
+
+        # Store references
+        self.reservoir_widgets[reservoir] = (rect_id, text_id)
+
+        # Bind click event
+        self.hook_canvas.tag_bind(f'res_{id(reservoir)}', '<Button-1>',
+                                  lambda e, r=reservoir: self.select_reservoir(r))
+
+    def select_reservoir(self, reservoir):
+        """Select a reservoir for removal"""
+        # Clear previous selection
+        if self.selected_reservoir and self.selected_reservoir in self.reservoir_widgets:
+            rect_id, text_id = self.reservoir_widgets[self.selected_reservoir]
+            self.hook_canvas.itemconfig(rect_id, width=2)
+
+        # Set new selection
+        self.selected_reservoir = reservoir
+
+        if reservoir in self.reservoir_widgets:
+            rect_id, text_id = self.reservoir_widgets[reservoir]
+            self.hook_canvas.itemconfig(rect_id, width=4, outline='red')
+
+        # Update info label
+        hook_ids_str = ', '.join(map(str, sorted(reservoir.hook_ids)))
+        self.info_label.config(
+            text=f"Selected: {reservoir.labware_id} at hooks {hook_ids_str}",
+            foreground='red'
+        )
+
+    def add_reservoir_dialog(self):
+        """Open dialog to add reservoir at specific hooks"""
+        dialog = PlaceReservoirDialog(self, self.available_reservoirs, self.labware)
+        self.wait_window(dialog)
+
+        if dialog.result:
+            try:
+                reservoir, hook_ids = dialog.result
+
+                # Add the reservoir
+                reservoir_copy = copy.deepcopy(reservoir)
+                reservoir_copy.hook_ids = hook_ids
+
+                self.labware.place_reservoir(hook_ids, reservoir_copy)
+
+                # Redraw
+                self.draw_hook_grid()
+
+                messagebox.showinfo("Success", f"Reservoir '{reservoir_copy.labware_id}' placed at hooks {hook_ids}!")
+
+            except ValueError as e:
+                messagebox.showerror("Error", f"Failed to place reservoir:\n{str(e)}")
+
+    def remove_selected_reservoir(self):
+        """Remove the currently selected reservoir"""
+        if not self.selected_reservoir:
+            messagebox.showwarning("No Selection", "Please click on a reservoir to select it first")
+            return
+
+        if not messagebox.askyesno(
+                "Confirm Remove",
+                f"Remove reservoir '{self.selected_reservoir.labware_id}'?"
+        ):
+            return
+
+        try:
+            # Remove using any hook
+            self.labware.remove_reservoir(self.selected_reservoir.hook_ids[0])
+
+            self.selected_reservoir = None
+            self.info_label.config(text="No reservoir selected", foreground='gray')
+
+            # Redraw
+            self.draw_hook_grid()
+
+            messagebox.showinfo("Success", "Reservoir removed!")
+
+        except ValueError as e:
+            messagebox.showerror("Error", f"Failed to remove reservoir:\n{str(e)}")
+
+    def on_save(self):
+        """Save changes"""
+        try:
+            self.labware.size_x = float(self.size_x_var.get())
+            self.labware.size_y = float(self.size_y_var.get())
+            self.labware.size_z = float(self.size_z_var.get())
+            self.labware.offset = (float(self.offset_x_var.get()), float(self.offset_y_var.get()))
+            self.labware.can_be_stacked_upon = bool(self.can_be_stacked_upon_var.get())
 
             self.result = True
             self.destroy()
@@ -957,8 +1297,188 @@ class EditLabwareDialog(tk.Toplevel):
             messagebox.showerror("Invalid Input", f"Please check your inputs:\n{str(e)}")
 
     def on_cancel(self):
-        """Cancel dialog"""
+        """Cancel without saving"""
         self.result = False
+        self.destroy()
+
+class PlaceReservoirDialog(tk.Toplevel):
+    """Dialog to select reservoir and specify hook IDs for placement"""
+
+    def __init__(self, parent, available_reservoirs, holder):
+        super().__init__(parent)
+        self.title("Place Reservoir at Hook(s)")
+        self.geometry("550x650")
+        self.result = None
+
+        self.available_reservoirs = available_reservoirs
+        self.holder = holder
+
+        self.transient(parent)
+        self.grab_set()
+
+        self.create_widgets()
+
+    def create_widgets(self):
+        main_frame = ttk.Frame(self, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+
+        # Reservoir selection
+        reservoir_frame = ttk.LabelFrame(main_frame, text="Step 1: Select Reservoir", padding="10")
+        reservoir_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+
+        # Listbox with scrollbar
+        list_container = ttk.Frame(reservoir_frame)
+        list_container.pack(fill=tk.BOTH, expand=True)
+
+        scrollbar = ttk.Scrollbar(list_container, orient=tk.VERTICAL)
+        self.reservoir_listbox = tk.Listbox(list_container, yscrollcommand=scrollbar.set)
+        scrollbar.config(command=self.reservoir_listbox.yview)
+
+        self.reservoir_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Populate
+        for res in self.available_reservoirs:
+            display = f"{res.labware_id} ({res.size_x}×{res.size_y}×{res.size_z} mm, {res.capacity}µL)"
+            self.reservoir_listbox.insert(tk.END, display)
+
+        self.reservoir_listbox.bind('<<ListboxSelect>>', self.on_reservoir_select)
+
+        # Create new button
+        ttk.Button(reservoir_frame, text="➕ Create New Reservoir",
+                   command=self.create_new_reservoir).pack(fill=tk.X, pady=(5, 0))
+
+        # Preview
+        preview_frame = ttk.LabelFrame(main_frame, text="Reservoir Preview", padding="10")
+        preview_frame.pack(fill=tk.X, pady=5)
+
+        self.preview_text = tk.Text(preview_frame, height=5, wrap=tk.WORD)
+        self.preview_text.pack(fill=tk.BOTH, expand=True)
+
+        # Hook IDs input
+        hooks_frame = ttk.LabelFrame(main_frame, text="Step 2: Enter Hook ID(s)", padding="10")
+        hooks_frame.pack(fill=tk.X, pady=5)
+
+        ttk.Label(hooks_frame, text="Hook ID(s) (comma-separated):").pack(anchor='w')
+        self.hook_ids_var = tk.StringVar()
+
+        ttk.Entry(hooks_frame, textvariable=self.hook_ids_var, width=40).pack(fill=tk.X, pady=(5, 5))
+        ttk.Label(
+            hooks_frame,
+            text="Examples:\n"
+                 "  • Single hook: 7\n"
+                 "  • Multiple hooks: 7,6,5",
+            font=('Arial', 12, 'italic'),
+            foreground='white'
+        ).pack(anchor='w')
+
+        # Available hooks info
+        available_hooks = self.holder.get_available_hooks()
+        ttk.Label(
+            hooks_frame,
+            text=f"Available hooks: {sorted(available_hooks)}",
+            font=('Arial', 12),
+            foreground='white'
+        ).pack(anchor='w', pady=(5, 0))
+
+        # Buttons
+        btn_frame = ttk.Frame(main_frame)
+        btn_frame.pack(fill=tk.X, pady=10)
+
+        ttk.Button(btn_frame, text="Place", command=self.on_place).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(btn_frame, text="Cancel", command=self.on_cancel).pack(side=tk.RIGHT)
+
+    def on_reservoir_select(self, event=None):
+        """Update preview when selection changes"""
+        selection = self.reservoir_listbox.curselection()
+        if not selection:
+            return
+
+        reservoir = self.available_reservoirs[selection[0]]
+
+        info = f"ID: {reservoir.labware_id}\n"
+        info += f"Size: {reservoir.size_x} × {reservoir.size_y} × {reservoir.size_z} mm\n"
+        info += f"Capacity: {reservoir.capacity} µL\n"
+        info += f"Content: {reservoir.get_content_summary()}\n"
+        if reservoir.shape:
+            info += f"Shape: {reservoir.shape}"
+
+        self.preview_text.delete(1.0, tk.END)
+        self.preview_text.insert(1.0, info)
+
+    def create_new_reservoir(self):
+        """Open dialog to create new reservoir"""
+        dialog = CreateLowLevelLabwareDialog(self, initial_type="Reservoir")
+        self.wait_window(dialog)
+
+        if dialog.result:
+            # Add to list
+            self.available_reservoirs.append(dialog.result)
+
+            # Update listbox
+            display = f"{dialog.result.labware_id} ({dialog.result.size_x}×{dialog.result.size_y}×{dialog.result.size_z} mm)"
+            self.reservoir_listbox.insert(tk.END, display)
+
+            # Select it
+            self.reservoir_listbox.selection_clear(0, tk.END)
+            self.reservoir_listbox.selection_set(tk.END)
+            self.reservoir_listbox.see(tk.END)
+            self.on_reservoir_select()
+
+    def on_place(self):
+        """Validate and place reservoir"""
+        # Check reservoir selection
+        selection = self.reservoir_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("No Reservoir", "Please select a reservoir")
+            return
+
+        reservoir = self.available_reservoirs[selection[0]]
+
+        # Parse hook IDs
+        hook_ids_str = self.hook_ids_var.get().strip()
+        if not hook_ids_str:
+            messagebox.showwarning("No Hooks", "Please enter hook ID(s)")
+            return
+
+        try:
+            # Parse comma-separated hook IDs
+            hook_ids = [int(h.strip()) for h in hook_ids_str.split(',') if h.strip()]
+
+            if not hook_ids:
+                messagebox.showwarning("Invalid Input", "Please enter at least one valid hook ID")
+                return
+
+            # Validate hook IDs
+            for hid in hook_ids:
+                if hid < 1 or hid > self.holder.total_hooks:
+                    messagebox.showerror(
+                        "Invalid Hook ID",
+                        f"Hook ID {hid} is out of range (1-{self.holder.total_hooks})"
+                    )
+                    return
+
+            # Check if hooks are available
+            occupied_hooks = [h for h in hook_ids if self.holder.get_hook_to_reservoir_map()[h] is not None]
+            if occupied_hooks:
+                messagebox.showerror(
+                    "Hooks Occupied",
+                    f"The following hooks are already occupied: {occupied_hooks}\n\n"
+                    f"Available hooks: {sorted(self.holder.get_available_hooks())}"
+                )
+                return
+
+            # Success
+            self.result = (reservoir, hook_ids)
+            self.destroy()
+
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Hook IDs must be numbers separated by commas")
+
+    def on_cancel(self):
+        """Cancel"""
+        self.result = None
         self.destroy()
 
 class CreateSlotDialog(tk.Toplevel):
@@ -1197,535 +1717,6 @@ class CollapsibleFrame(ttk.Frame):
             self.content_frame.pack(fill="both", expand=True)
             self.toggle_btn.config(text="▼")
         self.is_expanded = not self.is_expanded
-
-class ReservoirMappingDialog(tk.Toplevel):
-    """
-    Dialog to map Reservoir components onto the ReservoirHolder's hook grid.
-    """
-    def __init__(self, parent, available_reservoirs, hooks_x, hooks_y):
-        super().__init__(parent)
-        self.title(f"Map Reservoirs ({hooks_x}x{hooks_y} Hooks)")
-        self.geometry("800x600")
-        self.transient(parent)
-        self.grab_set()
-
-        self.available_reservoirs = available_reservoirs
-        self.hooks_x = hooks_x
-        self.hooks_y = hooks_y
-        self.current_reservoir = None
-
-        # Grid state: Stores the Reservoir object for each hook ID.
-        # Initialize the grid as a 2D list of Nones/Reservoir objects
-        # We model this internally as (row, col) where row=0 is top, col=0 is right.
-        self.hook_map = [[None for _ in range(self.hooks_x)] for _ in range(self.hooks_y)]
-
-        # Result: The final reservoir_dict
-        self.result_dict = {}
-        self.reservoir_objects = {}  # Stores unique Reservoir objects placed
-        self.component_id_counter = 0  # Unique ID for reservoir_dict keys
-
-        self.create_widgets()
-
-    def create_widgets(self):
-        main_frame = ttk.Frame(self, padding="10")
-        main_frame.pack(fill=tk.BOTH, expand=True)
-
-        # --- Control Panel (Right) ---
-        control_frame = ttk.Frame(main_frame, width=250)
-        control_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=10)
-        control_frame.pack_propagate(False)  # Keep control frame width fixed
-
-        # Selected Reservoir for placement
-        ttk.Label(control_frame, text="Current Reservoir:").pack(pady=(0, 5))
-        self.current_res_label = ttk.Label(control_frame, text="None Selected", foreground='red')
-        self.current_res_label.pack(fill=tk.X, pady=2)
-
-        ttk.Button(control_frame, text="Select/Create Reservoir", command=self.select_reservoir_for_placement).pack(
-            fill=tk.X, pady=5)
-
-        # Buttons
-        ttk.Button(control_frame, text="Deselect Current Reservoir", command=self.clear_selection).pack(fill=tk.X, pady=10)
-
-        rule_text = (
-            "PLACEMENT RULES:\n\n"
-            "• A single Reservoir object can be placed only once (one-to-one mapping). \n"
-            "• A single Reservoir can be placed across multiple adjacent hooks (horizontally, vertically, or both)."
-        )
-
-        ttk.Label(
-            control_frame,
-            text=rule_text,
-            foreground='WHITE',
-            font=('Arial', 12, 'italic'),
-            wraplength=230,
-            justify=tk.LEFT
-        ).pack(fill=tk.X, pady=(25, 20))
-
-
-        ttk.Button(control_frame, text="FINISH & Save", command=self.on_finish).pack(side=tk.BOTTOM, fill=tk.X,
-                                                                                     pady=(20, 5))
-        ttk.Button(control_frame, text="Cancel", command=self.destroy).pack(side=tk.BOTTOM, fill=tk.X)
-
-        # --- Grid Display (Left/Center) ---
-        grid_frame = ttk.LabelFrame(main_frame, text="Hook Grid (Click to Place/Select)", padding="5")
-        grid_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        self.hook_buttons = [[None for _ in range(self.hooks_x)] for _ in range(self.hooks_y)]
-
-        # Define the column/row weights for resizing
-        for c in range(self.hooks_x + 1):  # +1 for the Row label column
-            grid_frame.grid_columnconfigure(c, weight=1 if c > 0 else 0)
-        for r in range(self.hooks_y + 1):  # +1 for the Col label row
-            grid_frame.grid_rowconfigure(r, weight=1 if r > 0 else 0)
-
-        # Create Column Labels (Right to Left: Col 0 is rightmost)
-        for c in range(self.hooks_x):
-            # Label for column number (Note: Column 0 is on the right)
-            ttk.Label(grid_frame, text=f"Col {self.hooks_x - 1 - c}", relief=tk.RIDGE).grid(row=0, column=c + 1,
-                                                                                            sticky='nsew')
-
-        # Create Hook Buttons and Row Labels
-        for r in range(self.hooks_y):
-            # Row Label
-            ttk.Label(grid_frame, text=f"Row {r}", relief=tk.RIDGE).grid(row=r + 1, column=0, sticky='nsew')
-
-            for c in range(self.hooks_x):
-                # The hook ID in the original system is likely 1-based, sequential.
-                # We will map later. For now, use (r, c)
-                hook_button = tk.Button(grid_frame, text="EMPTY",
-                                        command=lambda r=r, c=c: self.place_reservoir_on_hook(r, c))
-                hook_button.grid(row=r + 1, column=c + 1, sticky='nsew', padx=1, pady=1)
-                self.hook_buttons[r][c] = hook_button
-
-        # Inside the ReservoirMappingDialog class definition:
-
-        def _get_used_reservoirs(self):
-            """Returns a set of unique Reservoir objects currently placed in the hook_map."""
-            used = set()
-            for r in range(self.hooks_y):
-                for c in range(self.hooks_x):
-                    # The hook_map stores the Reservoir object instances
-                    if self.hook_map[r][c]:
-                        used.add(self.hook_map[r][c])
-            return used
-
-    def select_reservoir_for_placement(self):
-        """
-        Open dialog to select a Reservoir component for placement.
-        Passes the FULL master list for selection, and enforces uniqueness
-        via validation *after* selection.
-        """
-        used_reservoirs = self._get_used_reservoirs()
-
-        # 1. Pass the FULL master list to the selection dialog.
-        # This shows ALL available components in the listbox.
-        dialog = SelectOrCreateComponentDialog(
-            self.master.master,
-            "Reservoir",
-            self.available_reservoirs  # <-- Pass the FULL master list here
-        )
-        self.wait_window(dialog)
-
-        if dialog.result and isinstance(dialog.result, Reservoir):
-
-            # 2. Enforce Uniqueness Check (Post-Selection Validation)
-            if dialog.result in used_reservoirs:
-                # If the user selected an existing component that is already placed, block it.
-                messagebox.showerror(
-                    "Unique Constraint Violation",
-                    f"Reservoir '{dialog.result.labware_id}' is already placed on the grid. "
-                    "Please select a different one or create a new one."
-                )
-                self.current_reservoir = None
-            else:
-                # If it's a newly created one, or an existing one that is currently unused, accept it.
-                self.current_reservoir = dialog.result
-                self.current_res_label.config(text=self.current_reservoir.labware_id, foreground='blue')
-        else:
-            self.current_reservoir = None
-            self.current_res_label.config(text="None Selected", foreground='red')
-
-
-    def place_reservoir_on_hook(self, r, c):
-        """Action when a hook button is clicked."""
-        if self.current_reservoir:
-            # Place the currently selected reservoir
-            self.hook_map[r][c] = self.current_reservoir
-            self.hook_buttons[r][c].config(
-                text=self.current_reservoir.labware_id.split('_')[-1],  # Show short ID
-                bg='lightblue',
-                activebackground='blue'
-            )
-            # Register the object for final dict generation
-            self.reservoir_objects[self.current_reservoir.labware_id] = self.current_reservoir
-        else:
-            # If no reservoir selected, show info about the hook
-            res = self.hook_map[r][c]
-            if res:
-                messagebox.showinfo("Hook Info", f"Hook ({r}, {c}) occupied by: {res.labware_id}")
-            else:
-                messagebox.showinfo("Hook Info", f"Hook ({r}, {c}) is EMPTY.")
-
-    def clear_selection(self):
-        """Clear the reservoir from the currently selected hook(s)."""
-        # For simplicity, let's just clear the selected reservoir for placement
-        self.current_reservoir = None
-        self.current_res_label.config(text="None Selected", foreground='red')
-        # A more complex version would allow the user to select grid hooks to clear.
-
-    def _get_hook_id(self, r, c):
-        """Helper to get a sequential 1-based hook ID (standard convention)."""
-        # Hook ID calculation is dependent on the Labware implementation.
-        # Assuming hooks are numbered sequentially: (col * hooks_y) + row + 1
-        # Or simply sequential by row then column, starting from top-left (r=0, c=0)
-        # Assuming R-to-L, T-to-B ordering:
-        # Col 0 (rightmost) is where hook ID 1 starts if R-to-L order is used.
-        # We need to map GUI C (0=right) to internal C (wherever the Labware class starts).
-
-        # Let's assume standard internal Labware numbering is L-to-R, T-to-B (col then row).
-        # We invert the column for the user display.
-
-        # We assume standard sequential numbering 1..N starting at (R=0, C=0) L-to-R, T-to-B
-        # Internal column index: C_internal = self.hooks_x - 1 - c (e.g., if hooks_x=2, c=0 (right) -> C_int=1, c=1 (left) -> C_int=0)
-        # Internal row index: R_internal = r
-
-        # Sequential ID calculation: (R_internal * hooks_x) + C_internal + 1
-        c_internal = self.hooks_x - 1 - c
-        return (r * self.hooks_x) + c_internal + 1
-
-
-    def _get_used_reservoirs(self):
-        """Returns a set of unique Reservoir objects currently placed in the hook_map."""
-        used = set()
-        for r in range(self.hooks_y):
-            for c in range(self.hooks_x):
-                # The hook_map stores the Reservoir object instances
-                if self.hook_map[r][c]:
-                    used.add(self.hook_map[r][c])
-        return used
-
-    def select_reservoir_for_placement(self):
-        """
-        Open dialog to select a Reservoir component for placement.
-        Filters existing components to enforce uniqueness.
-        """
-        used_reservoirs = self._get_used_reservoirs()
-
-        # 1. Create a filtered list of *available* (unused) Reservoir objects
-        filtered_available_reservoirs = [
-            res for res in self.available_reservoirs
-            if res not in used_reservoirs
-        ]
-
-        # 2. Pass the filtered list to the selection dialog.
-        # This ensures the listbox only shows components available for placement.
-        # However, the dialog still allows creating a NEW, unique component.
-        dialog = SelectOrCreateComponentDialog(
-            self.master.master,
-            "Reservoir",
-            filtered_available_reservoirs  # <-- Pass the filtered list here
-        )
-        self.wait_window(dialog)
-
-        if dialog.result and isinstance(dialog.result, Reservoir):
-
-            # Since the list was filtered, if the user *selected* an existing one,
-            # it must be unique. If they *created a new one*, it's also unique.
-            # No further validation is strictly necessary here, but we check just in case
-            # the newly created component was somehow a duplicate (which shouldn't happen).
-
-            if dialog.result in used_reservoirs:
-                # This should only happen if the creation dialog somehow returned a used object
-                messagebox.showerror("Error",
-                                     f"Logic error: Reservoir '{dialog.result.labware_id}' is already mapped.")
-                self.current_reservoir = None
-            else:
-                self.current_reservoir = dialog.result
-                self.current_res_label.config(text=self.current_reservoir.labware_id, foreground='blue')
-        else:
-            self.current_reservoir = None
-            self.current_res_label.config(text="None Selected", foreground='red')
-
-    def place_reservoir_on_hook(self, r, c):
-        """Action when a hook button is clicked."""
-        if self.current_reservoir:
-            existing_res = self.hook_map[r][c]
-
-            # Allow overwriting by the same reservoir instance (e.g., extending the placement block)
-            if existing_res and existing_res is not self.current_reservoir:
-                messagebox.showerror("Placement Error",
-                                     f"Hook ({r}, {c}) is occupied by {existing_res.labware_id}. Deselect the current reservoir to clear this hook.")
-                return
-
-            # Place the currently selected reservoir
-            self.hook_map[r][c] = self.current_reservoir
-            self.hook_buttons[r][c].config(
-                text=self.current_reservoir.labware_id.split('_')[-1],
-                bg='lightblue',
-                activebackground='blue'
-            )
-            # Register the object for final dict generation
-            self.reservoir_objects[self.current_reservoir.labware_id] = self.current_reservoir
-
-        else:
-            # If no reservoir selected, allow clearing the hook
-            if self.hook_map[r][c]:
-                self._clear_single_hook(r, c)
-            else:
-                messagebox.showinfo("Hook Info", f"Hook ({r}, {c}) is EMPTY.")
-
-    def _clear_single_hook(self, r, c):
-        """Internal helper to clear a single hook and update the button appearance."""
-        self.hook_map[r][c] = None
-        self.hook_buttons[r][c].config(text="EMPTY", bg='SystemButtonFace', activebackground='lightgray')
-
-    def clear_selection(self):
-        """Clears the currently selected reservoir (object being placed)."""
-        self.current_reservoir = None
-        self.current_res_label.config(text="None Selected", foreground='red')
-        # Rename the button in the widget creation to "Deselect Reservoir" for clarity.
-
-    def on_finish(self):
-        """Process the hook_map to generate the final reservoir_dict."""
-
-        # Group hooks by the Reservoir object placed there
-        res_to_hooks = {}
-        for r in range(self.hooks_y):
-            for c in range(self.hooks_x):
-                res_obj = self.hook_map[r][c]
-                if res_obj:
-                    # Get the internal, 1-based hook ID
-                    hook_id = self._get_hook_id(r, c)
-
-                    if res_obj not in res_to_hooks:
-                        res_to_hooks[res_obj] = []
-                    res_to_hooks[res_obj].append(hook_id)
-
-        # Generate the final reservoir_dict
-        final_dict = {}
-        for res_obj, hook_ids in res_to_hooks.items():
-            # Get the base dictionary from the Reservoir object
-            res_dict = res_obj.to_dict()
-
-            # Add placement information
-            res_dict["hook_ids"] = hook_ids
-
-            # Use a sequential integer key for the final dictionary structure
-            final_dict[self.component_id_counter] = res_dict
-            self.component_id_counter += 1
-
-        if not final_dict:
-            # Enforce the requirement: at least one reservoir must be selected.
-            messagebox.showerror("Error", "ReservoirHolder must be configured with at least one Reservoir.")
-            return
-
-        self.result_dict = final_dict
-        self.destroy()
-
-class ReservoirEntryDialog(tk.Toplevel):
-
-    """
-    Dialog to select a Reservoir component and specify its placement
-    parameters (hooks).
-    """
-
-    def __init__(self, parent, available_reservoirs):
-        super().__init__(parent)
-        self.title("Add Reservoir to Holder")
-        self.geometry("400x300")
-        self.result = None  # Will hold the (Reservoir object, placement_dict)
-
-        self.available_reservoirs = available_reservoirs
-        self.selected_reservoir = None
-
-        self.transient(parent)
-        self.grab_set()
-
-        self.create_widgets()
-
-    def create_widgets(self):
-        main_frame = ttk.Frame(self, padding="10")
-        main_frame.pack(fill=tk.BOTH, expand=True)
-
-        # --- Reservoir Selection ---
-        ttk.Label(main_frame, text="1. Select Reservoir Component:").pack(anchor='w', pady=5)
-
-        select_frame = ttk.Frame(main_frame)
-        select_frame.pack(fill='x', pady=2)
-
-        self.reservoir_label = ttk.Label(select_frame, text="None selected", width=25, relief=tk.SUNKEN)
-        self.reservoir_label.pack(side=tk.LEFT, fill='x', expand=True, padx=(0, 5))
-        ttk.Button(select_frame, text="Select/Create", command=self.select_reservoir).pack(side=tk.RIGHT)
-
-        # --- Placement Options ---
-        placement_frame = ttk.LabelFrame(main_frame, text="2. Placement (Leave blank for Auto-sizing/Auto-placement)",
-                                         padding="10")
-        placement_frame.pack(fill=tk.X, pady=10)
-
-        # Hooks X
-        ttk.Label(placement_frame, text="Hooks X (width):").grid(row=0, column=0, sticky='w', pady=2)
-        self.hooks_x_var = tk.StringVar()
-        ttk.Entry(placement_frame, textvariable=self.hooks_x_var, width=10).grid(row=0, column=1, sticky='ew', padx=5)
-
-        # Hooks Y
-        ttk.Label(placement_frame, text="Hooks Y (depth):").grid(row=1, column=0, sticky='w', pady=2)
-        self.hooks_y_var = tk.StringVar()
-        ttk.Entry(placement_frame, textvariable=self.hooks_y_var, width=10).grid(row=1, column=1, sticky='ew', padx=5)
-
-        # Explicit Hook IDs (for advanced users)
-        ttk.Label(placement_frame, text="Explicit Hook IDs (comma-separated):").grid(row=2, column=0, sticky='w',
-                                                                                     pady=2)
-        self.hook_ids_var = tk.StringVar()
-        ttk.Entry(placement_frame, textvariable=self.hook_ids_var).grid(row=2, column=1, columnspan=2, sticky='ew',
-                                                                        padx=5)
-
-        # --- Control Buttons ---
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill='x', pady=10)
-        ttk.Button(button_frame, text="Add Reservoir", command=self.on_ok).pack(side=tk.RIGHT, padx=5)
-        ttk.Button(button_frame, text="Cancel", command=self.destroy).pack(side=tk.RIGHT)
-
-    def select_reservoir(self):
-        """Open dialog to select or create a Reservoir component."""
-        # Use the existing SelectOrCreateComponentDialog
-
-        dialog = SelectOrCreateComponentDialog(self.master, "Reservoir", self.available_reservoirs)
-        self.wait_window(dialog)
-
-        if dialog.result and isinstance(dialog.result, Reservoir):
-            self.selected_reservoir = dialog.result
-            self.reservoir_label.config(text=self.selected_reservoir.labware_id)
-
-    def on_ok(self):
-        if not self.selected_reservoir:
-            messagebox.showerror("Error", "Please select a Reservoir component.")
-            return
-
-        placement_dict = {}
-
-        # Parse placement options
-        try:
-            # Explicit hook IDs take precedence
-            hook_ids_str = self.hook_ids_var.get().strip()
-            if hook_ids_str:
-                placement_dict["hook_ids"] = [int(x.strip()) for x in hook_ids_str.split(',') if x.strip()]
-
-            # Hooks X/Y
-            hooks_x = self.hooks_x_var.get().strip()
-            if hooks_x:
-                placement_dict["num_hooks_x"] = int(hooks_x)
-
-            hooks_y = self.hooks_y_var.get().strip()
-            if hooks_y:
-                placement_dict["num_hooks_y"] = int(hooks_y)
-
-        except ValueError:
-            messagebox.showerror("Invalid Input", "Hooks X, Hooks Y, or Hook IDs must be valid integers.")
-            return
-
-        # Result is the selected Reservoir object and its placement parameters
-        self.result = (self.selected_reservoir, placement_dict)
-        self.destroy()
-
-class ConfigureReservoirHolderDialog(tk.Toplevel):
-    """
-    Manages the list of reservoirs to be placed in the ReservoirHolder
-    and generates the final reservoir_dict.
-    """
-
-    def __init__(self, parent, available_reservoirs):
-        super().__init__(parent)
-        self.title("Configure Reservoirs in Holder")
-        self.geometry("600x400")
-
-        # Result is the final reservoir_dict required by ReservoirHolder
-        self.result_dict = {}
-        # Stores (Reservoir object, placement_dict) tuples for display/editing
-        self.reservoir_list = []
-        self.available_reservoirs = available_reservoirs
-        self.current_index = 0  # Used to generate unique keys for the final dict
-
-        self.transient(parent)
-        self.grab_set()
-
-        self.create_widgets()
-        self.refresh_listbox()
-
-    def create_widgets(self):
-        main_frame = ttk.Frame(self, padding="10")
-        main_frame.pack(fill=tk.BOTH, expand=True)
-
-        # Listbox for current reservoirs
-        list_frame = ttk.LabelFrame(main_frame, text="Reservoirs to Place", padding="5")
-        list_frame.pack(fill=tk.BOTH, expand=True, pady=5)
-
-        self.listbox = tk.Listbox(list_frame, height=10)
-        self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
-
-        scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=self.listbox.yview)
-        scrollbar.pack(side=tk.RIGHT, fill="y")
-        self.listbox.config(yscrollcommand=scrollbar.set)
-
-        # Buttons
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill=tk.X, pady=5)
-
-        ttk.Button(button_frame, text="Add Reservoir", command=self.add_reservoir).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Remove Selected", command=self.remove_reservoir).pack(side=tk.LEFT, padx=5)
-
-        ttk.Button(main_frame, text="Finish Configuration", command=self.on_finish).pack(side=tk.BOTTOM, pady=10)
-
-    def refresh_listbox(self):
-        self.listbox.delete(0, tk.END)
-        for res_obj, p_dict in self.reservoir_list:
-            placement_info = ""
-            if p_dict.get("hook_ids"):
-                placement_info = f"Hooks: {p_dict['hook_ids']}"
-            elif p_dict.get("num_hooks_x") or p_dict.get("num_hooks_y"):
-                hx = p_dict.get("num_hooks_x", "Auto")
-                hy = p_dict.get("num_hooks_y", "Auto")
-                placement_info = f"Hooks: {hx}x{hy} (Auto-allocate)"
-            else:
-                placement_info = "Hooks: Auto-size/Auto-allocate"
-
-            self.listbox.insert(tk.END, f"{res_obj.labware_id} | {placement_info}")
-
-    def add_reservoir(self):
-        dialog = ReservoirEntryDialog(self, self.available_reservoirs)
-        self.wait_window(dialog)
-
-        if dialog.result:
-            reservoir_obj, placement_dict = dialog.result
-            self.reservoir_list.append((reservoir_obj, placement_dict))
-            self.refresh_listbox()
-
-    def remove_reservoir(self):
-        selected_indices = self.listbox.curselection()
-        if selected_indices:
-            index = selected_indices[0]
-            del self.reservoir_list[index]
-            self.refresh_listbox()
-
-    def on_finish(self):
-        """Construct the final reservoir_dict for the ReservoirHolder constructor."""
-        if not self.reservoir_list:
-            messagebox.showerror("Error", "Please add at least one reservoir.")
-            return
-
-        final_dict = {}
-        for res_obj, p_dict in self.reservoir_list:
-            # Start with the reservoir's dictionary representation
-            res_dict = res_obj.to_dict()
-
-            # Merge in the placement parameters from the GUI
-            res_dict.update(p_dict)
-
-            # Use the current_index as the unique key (as per place_reservoirs logic)
-            final_dict[self.current_index] = res_dict
-            self.current_index += 1
-
-        self.result_dict = final_dict
-        self.destroy()
 
 class DeckGUI:
     def __init__(self, deck=None):
@@ -2078,6 +2069,7 @@ class DeckGUI:
 
     def create_low_level_para_tab(self):
         """Create the Create tab"""
+
         create_tab = ttk.Frame(self.right_panel_notebook)
         self.right_panel_notebook.add(create_tab, text="Low level parameters")
 
@@ -2279,8 +2271,11 @@ class DeckGUI:
     def create_low_level_labware(self):
         """Open dialog to create low-level labware components and update UI."""
 
-        # 1. Open the creation dialog with the pre-selected type
-        dialog = CreateLowLevelLabwareDialog(self.root)
+        # Get the currently selected type from radio buttons
+        selected_type = self.lll_type.get()
+
+        # Pass it to the dialog as initial_type
+        dialog = CreateLowLevelLabwareDialog(self.root, initial_type=selected_type)
         self.root.wait_window(dialog)
 
         if dialog.result:
@@ -2435,29 +2430,52 @@ class DeckGUI:
                 messagebox.showerror("Error", str(e))
 
     def calculate_scale(self):
-        """Auto-calculate scale to fit deck in canvas"""
+        """Auto-calculate scale to maximize deck in canvas
+        Coordinate system: (0,0) at top-right
+        """
         canvas_width = self.canvas.winfo_width() or 800
         canvas_height = self.canvas.winfo_height() or 600
 
         deck_width = self.deck.range_x[1] - self.deck.range_x[0]
         deck_height = self.deck.range_y[1] - self.deck.range_y[0]
 
-        scale_x = (canvas_width - 100) / deck_width
-        scale_y = (canvas_height - 100) / deck_height
+        # Adaptive margins
+        margin = max(40, min(50, int(min(canvas_width, canvas_height) * 0.02)))
 
-        self.scale = min(scale_x, scale_y, 2.0)
-        self.offset_x = 50
-        self.offset_y = 50
+        scale_x = (canvas_width - 2 * margin) / deck_width
+        scale_y = (canvas_height - 2 * margin) / deck_height
+
+        self.scale = min(scale_x, scale_y)
+
+        # For top-right origin, offset_x is from the right edge
+        self.offset_x = margin
+        self.offset_y = margin
 
     def mm_to_canvas(self, x, y):
-        """Convert mm coordinates to canvas pixels"""
-        return (x * self.scale + self.offset_x,
-                y * self.scale + self.offset_y)
+        """Convert mm coordinates to canvas pixels
+        Coordinate system: (0,0) at top-right
+        X increases: right → left
+        Y increases: top → bottom
+        """
+        canvas_width = self.canvas.winfo_width() or 300
+
+        # Flip X-axis: subtract from right edge
+        canvas_x = canvas_width - (x * self.scale + self.offset_x)
+        canvas_y = y * self.scale + self.offset_y
+
+        return (canvas_x, canvas_y)
 
     def canvas_to_mm(self, cx, cy):
-        """Convert canvas pixels to mm coordinates"""
-        return ((cx - self.offset_x) / self.scale,
-                (cy - self.offset_y) / self.scale)
+        """Convert canvas pixels to mm coordinates
+        Coordinate system: (0,0) at top-right
+        """
+        canvas_width = self.canvas.winfo_width() or 300
+
+        # Reverse the X-axis flip
+        mm_x = (canvas_width - cx - self.offset_x) / self.scale
+        mm_y = (cy - self.offset_y) / self.scale
+
+        return (mm_x, mm_y)
 
     def draw_deck(self, auto_scale = False):
         """Draw the entire deck"""
@@ -2473,6 +2491,8 @@ class DeckGUI:
         x2, y2 = self.mm_to_canvas(self.deck.range_x[1], self.deck.range_y[1])
         self.canvas.create_rectangle(x1, y1, x2, y2, outline='black', width=3, tags='deck_boundary')
 
+        self.draw_corner_labels()
+
         # Draw slots
         for slot_id, slot in self.deck.slots.items():
             self.draw_slot(slot_id, slot)
@@ -2486,6 +2506,92 @@ class DeckGUI:
         self.update_slots_list()
         self.update_labware_list()
         self.update_deck_info()
+
+    def draw_corner_labels(self):
+        """Draw coordinate labels at the four corners of the deck with backgrounds"""
+        x_min, x_max = self.deck.range_x
+        y_min, y_max = self.deck.range_y
+
+        corners = [
+            # (mm_x, mm_y, label_text, anchor, color)
+            (x_min, y_min, f"({x_min}, {y_min})\nORIGIN", 'se', 'red'),
+            (x_max, y_min, f"({x_max}, {y_min})", 'sw', 'blue'),
+            (x_min, y_max, f"({x_min}, {y_max})", 'ne', 'blue'),
+            (x_max, y_max, f"({x_max}, {y_max})", 'nw', 'blue'),
+        ]
+
+        for mm_x, mm_y, label, anchor, color in corners:
+            canvas_x, canvas_y = self.mm_to_canvas(mm_x, mm_y)
+
+            # Draw corner marker circle
+            r = 5
+            self.canvas.create_oval(
+                canvas_x - r, canvas_y - r,
+                canvas_x + r, canvas_y + r,
+                fill=color,
+                outline='white',
+                width=2,
+                tags='corner_marker'
+            )
+
+            # Calculate text position with offset
+            offset = 10
+            anchor_offsets = {
+                'se': (offset, -offset),  # move below-right corner (outside)
+                'sw': (-offset, -offset),  # move below-left corner
+                'ne': (offset, offset),  # move above-right corner
+                'nw': (-offset, offset)  # move above-left corner
+            }
+
+            dx, dy = anchor_offsets[anchor]
+            text_x, text_y = canvas_x + dx, canvas_y + dy
+
+            # Draw background rectangle for text
+            text_id = self.canvas.create_text(
+                text_x, text_y,
+                text=label,
+                font=('Arial', 9, 'bold'),
+                fill=color,
+                anchor=anchor,
+                tags='corner_label'
+            )
+
+            # Get text bounding box and draw background
+            bbox = self.canvas.bbox(text_id)
+            if bbox:
+                padding = 3
+                self.canvas.create_rectangle(
+                    bbox[0] - padding, bbox[1] - padding,
+                    bbox[2] + padding, bbox[3] + padding,
+                    fill='white',
+                    outline=color,
+                    width=1,
+                    tags='corner_label_bg'
+                )
+                # Raise text above background
+                self.canvas.tag_raise(text_id)
+
+        top_center_mm = ((x_min + x_max) / 2, y_min)
+        top_center_canvas = self.mm_to_canvas(*top_center_mm)
+        self.canvas.create_text(
+            top_center_canvas[0], top_center_canvas[1] - 20,
+            text="X-axis (left → right)",
+            font=('Arial', 10, 'italic'),
+            fill='green',
+            tags='axis_label'
+        )
+
+        # Y-axis label (at right center)
+        right_center_mm = (x_min, (y_min + y_max) / 2)
+        right_center_canvas = self.mm_to_canvas(*right_center_mm)
+        self.canvas.create_text(
+            right_center_canvas[0] + 20, right_center_canvas[1],
+            text="Y-axis\n(Top→Bottom)",
+            font=('Arial', 10, 'italic'),
+            fill='green',
+            angle=270,  # Rotated text
+            tags='axis_label'
+        )
 
     def draw_grid(self):
         """Draw background grid"""
@@ -2880,6 +2986,7 @@ class DeckGUI:
 
         if dialog.result:
             self.update_labware_list()
+            self.show_unplaced_labware_info(labware)
             messagebox.showinfo("Success", f"Labware '{labware.labware_id}' updated!")
 
     def delete_selected_unplaced_labware(self):
@@ -3140,6 +3247,7 @@ class DeckGUI:
                     'available_reservoirs': [res.to_dict() for res in self.available_reservoirs],
                     'available_individual_holders': [holder.to_dict() for holder in self.available_individual_holders]
                 }
+                print(data)
                 with open(filename, 'w') as f:
                     json.dump(data, f, indent=2)
                 messagebox.showinfo("Success", f"Deck saved to {filename}")
@@ -3156,8 +3264,6 @@ class DeckGUI:
                 with open(filename, 'r') as f:
                     data = json.load(f)
 
-                from serializable import Serializable
-
                 # Load deck
                 if 'deck' in data:
                     self.deck = Serializable.from_dict(data['deck'])
@@ -3165,6 +3271,7 @@ class DeckGUI:
                     # Old format - just deck
                     self.deck = Serializable.from_dict(data)
 
+                print(data)
                 # Load unplaced labware if present
                 self.unplaced_labware = []
                 if 'unplaced_labware' in data:
@@ -3205,7 +3312,7 @@ class DeckGUI:
 # Main entry point
 if __name__ == "__main__":
     # Create a sample deck for testing
-    deck = Deck(range_x=(0, 500), range_y=(0, 400), deck_id="test_deck", range_z=500)
+    deck = Deck(range_x=(0, 265), range_y=(0, 244), deck_id="test_deck", range_z=141)
 
     # Run GUI
     gui = DeckGUI(deck)
