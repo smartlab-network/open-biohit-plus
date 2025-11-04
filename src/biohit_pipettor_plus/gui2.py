@@ -13,7 +13,7 @@ from labware import (
     Labware, Well, Reservoir, Plate, ReservoirHolder,
     PipetteHolder, TipDropzone, IndividualPipetteHolder
 )
-
+from pipettor_plus import PipettorPlus
 class CreateLowLevelLabwareDialog(tk.Toplevel):
     """Dialog for creating low-level labware components (Well, Reservoir, IndividualPipetteHolder)"""
     def __init__(self, parent, initial_type=None):
@@ -2467,7 +2467,157 @@ class DeckGUI:
         ttk.Button(lll_btn_frame, text="Create Low-Level Lw", command=self.create_low_level_labware).pack( expand=True, fill=tk.X, padx=2)
         ttk.Button(lll_btn_frame, text="Delete Selected", command=self.delete_selected_lll).pack( expand=True, fill=tk.X, padx=2)
 
+        pipettor_section = ttk.LabelFrame(create_control_frame, text="Pipettor Configuration", padding=15)
+        pipettor_section.pack(fill=tk.X, pady=10, padx=5)
+
+        # Tip Volume Selection
+        tip_vol_frame = ttk.Frame(pipettor_section)
+        tip_vol_frame.pack(fill=tk.X, pady=5)
+
+        ttk.Label(tip_vol_frame, text="Tip Volume:", font=('Arial', 13, 'bold')).pack(side=tk.LEFT, padx=(0, 10))
+
+        self.tip_volume_var = tk.IntVar(value=1000)
+        ttk.Radiobutton(tip_vol_frame, text="200 µL", variable=self.tip_volume_var, value=200).pack(side=tk.LEFT,
+                                                                                                    padx=5)
+        ttk.Radiobutton(tip_vol_frame, text="1000 µL", variable=self.tip_volume_var, value=1000).pack(side=tk.LEFT,
+                                                                                                      padx=5)
+
+        # Multichannel Checkbox
+        multichannel_frame = ttk.Frame(pipettor_section)
+        multichannel_frame.pack(fill=tk.X, pady=5)
+
+        self.multichannel_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            multichannel_frame,
+            text="Multichannel (8 tips)",
+            variable=self.multichannel_var
+        ).pack(side=tk.LEFT)
+
+        # Initialize Hardware Checkbox
+        init_frame = ttk.Frame(pipettor_section)
+        init_frame.pack(fill=tk.X, pady=5)
+
+        self.initialize_hw_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            init_frame,
+            text="initialize",
+            variable=self.initialize_hw_var
+        ).pack(side=tk.LEFT)
+
+        # Optional Tip Length
+        tip_length_frame = ttk.Frame(pipettor_section)
+        tip_length_frame.pack(fill=tk.X, pady=5)
+
+        # First line: label and entry
+        input_line = ttk.Frame(tip_length_frame)
+        input_line.pack(fill=tk.X)
+
+        ttk.Label(input_line, text="Tip Length (mm):").pack(side=tk.LEFT, padx=(0, 5))
+        self.tip_length_var = tk.StringVar(value="")
+        ttk.Entry(input_line, textvariable=self.tip_length_var, width=10).pack(side=tk.LEFT)
+
+        # Second line: help text
+        ttk.Label(tip_length_frame, text="(leave empty for default)",
+                  foreground='gray', font=('Arial', 11)).pack(anchor='w', padx=(0, 0))
+
+        # Separator
+        separator = ttk.Separator(pipettor_section, orient='horizontal')
+        separator.pack(fill=tk.X, pady=10)
+
+        # Initialize Button
+        ttk.Button(
+            pipettor_section,
+            text="🤖 Connect and Configure Pipettor",
+            command=self.initialize_pipettor
+        ).pack(fill=tk.X, pady=5)
+
+        # Status Display
+        self.pipettor_status_frame = ttk.LabelFrame(pipettor_section, text="Pipettor Status", padding=10)
+        self.pipettor_status_frame.pack(fill=tk.X, pady=5)
+
+        self.pipettor_status_label = ttk.Label(
+            self.pipettor_status_frame,
+            text="Not initialized",
+            foreground='gray'
+        )
+        self.pipettor_status_label.pack(anchor='w')
+
+    def update_pipettor_status(self):
+        """Update the pipettor status display"""
+        if hasattr(self, 'pipettor_status_label'):
+            status_text = self.get_pipettor_status_text()
+
+            if hasattr(self, 'pipettor') and self.pipettor is not None:
+                if self.pipettor.has_tips:
+                    tip_content = self.pipettor.get_tip_status()
+                    status_text += f"\nContent: {tip_content['content_summary']}"
+
+                self.pipettor_status_label.config(text=status_text, foreground='green')
+            else:
+                self.pipettor_status_label.config(text=status_text, foreground='gray')
+
     #todo
+    def initialize_pipettor(self):
+        """Initialize the pipettor with selected parameters"""
+        try:
+            # Get parameters
+            tip_volume = self.tip_volume_var.get()
+            multichannel = self.multichannel_var.get()
+            initialize = self.initialize_hw_var.get()
+
+            # Get optional tip length
+            tip_length_str = self.tip_length_var.get().strip()
+            tip_length = float(tip_length_str) if tip_length_str else None
+
+            # Validate deck exists
+            if not hasattr(self, 'deck') or self.deck is None:
+                messagebox.showerror("Error", "Deck must be created before initializing pipettor")
+                return
+
+            # Create pipettor
+            self.pipettor = PipettorPlus(
+                tip_volume=tip_volume,
+                multichannel=multichannel,
+                initialize=initialize,
+                deck=self.deck,
+                tip_length=tip_length
+            )
+
+            # Update status display
+            mode = "Multichannel (8 tips)" if multichannel else "Single channel"
+            tip_info = f"{tip_volume}µL tips"
+            tip_length_info = f", tip length: {tip_length}mm" if tip_length else ""
+            hw_status = "initialized" if initialize else "not initialized"
+
+            status_text = f"✓ {mode}, {tip_info}{tip_length_info}\nHardware: {hw_status}"
+
+            self.pipettor_status_label.config(
+                text=status_text,
+                foreground='green'
+            )
+
+            messagebox.showinfo("Success", f"Pipettor initialized successfully!\n\n{status_text}")
+
+        except ValueError as e:
+            messagebox.showerror("Invalid Input", f"Invalid tip length value:\n{str(e)}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to initialize pipettor:\n{str(e)}")
+            self.pipettor_status_label.config(
+                text=f"✗ Initialization failed: {str(e)}",
+                foreground='red'
+            )
+
+    def get_pipettor_status_text(self) -> str:
+        """Get a readable status string for the pipettor"""
+        if not hasattr(self, 'pipettor') or self.pipettor is None:
+            return "Not initialized"
+
+        mode = "Multichannel" if self.pipettor.multichannel else "Single channel"
+        tips = "Has tips" if self.pipettor.has_tips else "No tips"
+        tip_volume = self.pipettor.tip_volume
+
+        return f"{mode} ({tip_volume}µL) - {tips}"
+
     def create_operations_tab(self):
         """Create an empty Operations tab placeholder for future development."""
         operations_tab = ttk.Frame(self.right_panel_notebook)
