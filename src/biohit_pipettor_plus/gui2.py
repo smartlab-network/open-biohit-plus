@@ -2133,12 +2133,12 @@ class DeckGUI:
             )
 
             # Calculate text position with offset
-            offset = 15
+            offset = 10
             anchor_offsets = {
-                'se': (-offset, offset),  # Top-right
-                'sw': (offset, offset),  # Top-left
-                'ne': (-offset, -offset),  # Bottom-right
-                'nw': (offset, -offset)  # Bottom-left
+                'se': (offset, -offset),  # move below-right corner (outside)
+                'sw': (-offset, -offset),  # move below-left corner
+                'ne': (offset, offset),  # move above-right corner
+                'nw': (-offset, offset)  # move above-left corner
             }
 
             dx, dy = anchor_offsets[anchor]
@@ -2909,7 +2909,7 @@ class DeckGUI:
 # Main entry point
 if __name__ == "__main__":
     # Create a sample deck for testing
-    deck = Deck(range_x=(0, 500), range_y=(0, 400), deck_id="test_deck", range_z=500)
+    deck = Deck(range_x=(0, 265), range_y=(0, 244), deck_id="test_deck", range_z=141)
 
     # Run GUI
     gui = DeckGUI(deck)
