@@ -345,7 +345,7 @@ class CreateLowLevelLabwareDialog(tk.Toplevel):
         self.destroy()
 
 class SelectOrCreateComponentDialog(tk.Toplevel):
-    """Dialog for selecting or creating a low-level component"""
+    """Dialog for selecting or creating a low-level component """
 
     def __init__(self, parent, component_type, available_components):
         super().__init__(parent)
