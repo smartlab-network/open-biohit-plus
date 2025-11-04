@@ -10,7 +10,7 @@ from deck import Deck
 from slot import Slot
 from serializable import Serializable
 from labware import (
-    Labware, Well, Reservoir, Plate, ReservoirHolder,
+     Well, Reservoir, Plate, ReservoirHolder,
     PipetteHolder, TipDropzone, IndividualPipetteHolder
 )
 from pipettor_plus import PipettorPlus
