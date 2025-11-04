@@ -22,7 +22,7 @@ deck1.add_slots([slot1, slot2, slot3, slot4, slot5, slot6])
 # Create plate with wells
 example_well = Well(
     size_x=18.9,
-    size_y=8,
+    size_y=7.5,
     size_z=10,
     offset=(-8.5, 0.5),
     content={"water": 500},
@@ -32,7 +32,8 @@ example_well = Well(
 plate1 = Plate(
     118.1, 65, 53, 6, 8,
     well=example_well,
-    offset=(14.05, 1),
+    #offset=(14.05, 1),
+    offset=(0,0),
     add_height=-3,
     remove_height=-10
 )
@@ -79,6 +80,7 @@ tip_dropzone = TipDropzone(
     drop_height_relative=15
 )
 deck1.add_labware(tip_dropzone, slot_id="slot1", min_z=0)
+print(deck1.to_dict())
 
 # Save and verify
 print("📦 Saving deck...")

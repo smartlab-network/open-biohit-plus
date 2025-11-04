@@ -992,7 +992,11 @@ class EditLabwareDialog(tk.Toplevel):
         super().__init__(parent)
         self.title(f"Edit Labware: {labware.labware_id}")
         self.geometry("750x750")
-        self.labware = labware
+
+        # Store reference to ORIGINAL labware
+        self.original_labware = labware
+        self.labware = copy.deepcopy(labware)
+
         self.available_reservoirs = available_reservoirs or []
         self.result = None
 
@@ -1035,6 +1039,74 @@ class EditLabwareDialog(tk.Toplevel):
         ttk.Button(btn_frame, text="Save", command=self.on_save).pack(side=tk.RIGHT, padx=5)
         ttk.Button(btn_frame, text="Cancel", command=self.on_cancel).pack(side=tk.RIGHT)
 
+    def calculate_requirements_text(self, labware):
+        """Calculate and display minimum dimensional requirements"""
+        if isinstance(labware, Plate):
+            well = labware.well
+            offset = labware.offset
+
+            # ✅ Include offsets (matches labware.py validation)
+            min_x = round((well.size_x * labware._columns) + (2 * abs(offset[0])), 2)
+            min_y = round((well.size_y * labware._rows) + (2 * abs(offset[1])), 2)
+
+            return (f"Minimum dimensions for {labware._columns}×{labware._rows} wells:\n"
+                    f"  X: ≥ {min_x}mm ({labware._columns} × {well.size_x}mm + 2×{abs(offset[0])}mm offset)\n"
+                    f"  Y: ≥ {min_y}mm ({labware._rows} × {well.size_y}mm + 2×{abs(offset[1])}mm offset)\n"
+                    f"  Z: ≥ {well.size_z}mm (well height)")
+
+        elif isinstance(labware, PipetteHolder):
+            holder = labware.individual_holder
+            offset = labware.offset
+
+            # ✅ Include offsets (matches labware.py validation)
+            min_x = round((holder.size_x * labware._columns) + (2 * abs(offset[0])), 2)
+            min_y = round((holder.size_y * labware._rows) + (2 * abs(offset[1])), 2)
+
+            return (f"Minimum dimensions for {labware._columns}×{labware._rows} holders:\n"
+                    f"  X: ≥ {min_x}mm ({labware._columns} × {holder.size_x}mm + 2×{abs(offset[0])}mm offset)\n"
+                    f"  Y: ≥ {min_y}mm ({labware._rows} × {holder.size_y}mm + 2×{abs(offset[1])}mm offset)\n"
+                    f"  Z: ≥ {holder.size_z}mm (holder height)")
+
+        elif isinstance(labware, ReservoirHolder):
+            reservoirs = labware.get_reservoirs()
+            if reservoirs:
+                # Find the largest reservoir dimensions
+                max_res_x = max(r.size_x for r in reservoirs)
+                max_res_y = max(r.size_y for r in reservoirs)
+                max_res_z = max(r.size_z for r in reservoirs)
+
+                # Find maximum hook span (how many hooks each reservoir needs)
+                max_span_x = 0
+                max_span_y = 0
+                for r in reservoirs:
+                    positions = [labware.hook_id_to_position(hid) for hid in r.hook_ids]
+                    cols = [pos[0] for pos in positions]
+                    rows = [pos[1] for pos in positions]
+                    span_x = max(cols) - min(cols) + 1
+                    span_y = max(rows) - min(rows) + 1
+                    max_span_x = max(max_span_x, span_x)
+                    max_span_y = max(max_span_y, span_y)
+
+                # Calculate minimum hook spacing needed
+                min_hook_spacing_x = max_res_x / max_span_x if max_span_x > 0 else 0
+                min_hook_spacing_y = max_res_y / max_span_y if max_span_y > 0 else 0
+
+                # Calculate minimum holder dimensions
+                min_holder_x = min_hook_spacing_x * labware._columns
+                min_holder_y = min_hook_spacing_y * labware._rows
+
+                return (f"Based on placed reservoirs:\n"
+                        f"  Minimum hook spacing: {min_hook_spacing_x:.1f}×{min_hook_spacing_y:.1f}mm\n"
+                        f"  Minimum holder size: ≥ {min_holder_x:.1f}×{min_holder_y:.1f}mm\n"
+                        f"  Z: ≥ {max_res_z}mm (largest reservoir height)")
+            else:
+                return "No reservoirs placed yet"
+
+        elif isinstance(labware, TipDropzone):
+            return "TipDropzone has no child component constraints"
+
+        return "No specific requirements"
+
     def create_basic_properties_tab(self):
         """Basic properties tab (same as before)"""
         basic_tab = ttk.Frame(self.notebook, padding="10")
@@ -1063,6 +1135,22 @@ class EditLabwareDialog(tk.Toplevel):
         ttk.Label(basic_tab, text="Can be stacked upon:").grid(row=5, column=0, sticky='w', pady=2)
         self.can_be_stacked_upon_var = tk.BooleanVar(value=self.labware.can_be_stacked_upon)
         ttk.Checkbutton(basic_tab, variable=self.can_be_stacked_upon_var).grid(row=5, column=1, sticky='w', pady=2)
+
+        separator = ttk.Separator(basic_tab, orient='horizontal')
+        separator.grid(row=6, column=0, columnspan=2, sticky='ew', pady=10)
+
+        req_frame = ttk.LabelFrame(basic_tab, text="⚠️ Dimensional Requirements", padding="10")
+        req_frame.grid(row=7, column=0, columnspan=2, sticky='ew', pady=5)
+
+        req_text = self.calculate_requirements_text(self.labware)
+        req_label = ttk.Label(
+            req_frame,
+            text=req_text,
+            justify=tk.LEFT,
+            foreground='red',
+            font=('Arial',11)
+        )
+        req_label.pack(anchor='w')
 
     def create_reservoir_management_tab(self):
         """Simplified reservoir management with visual grid"""
@@ -1222,7 +1310,7 @@ class EditLabwareDialog(tk.Toplevel):
 
         if reservoir in self.reservoir_widgets:
             rect_id, text_id = self.reservoir_widgets[reservoir]
-            self.hook_canvas.itemconfig(rect_id, width=4, outline='red')
+            self.hook_canvas.itemconfig(rect_id, width=4, outline='black')
 
         # Update info label
         hook_ids_str = ', '.join(map(str, sorted(reservoir.hook_ids)))
@@ -1281,14 +1369,231 @@ class EditLabwareDialog(tk.Toplevel):
         except ValueError as e:
             messagebox.showerror("Error", f"Failed to remove reservoir:\n{str(e)}")
 
+    def validate_labware_dimensions(self, labware, new_size_x, new_size_y, new_size_z, new_offset):
+        """Validate that child components still fit after dimension changes"""
+        errors = []
+        warnings = []
+
+        if isinstance(labware, Plate):
+            errors, warnings = self.validate_plate_dimensions(
+                labware, new_size_x, new_size_y, new_size_z, new_offset  # ✅ Added new_size_z
+            )
+
+        elif isinstance(labware, PipetteHolder):
+            errors, warnings = self.validate_pipette_holder_dimensions(
+                labware, new_size_x, new_size_y, new_size_z, new_offset  # ✅ Added new_size_z
+            )
+
+        elif isinstance(labware, ReservoirHolder):
+            errors, warnings = self.validate_reservoir_holder_dimensions(
+                labware, new_size_x, new_size_y, new_size_z, new_offset  # ✅ Added new_size_z
+            )
+
+        return errors, warnings
+
+    def validate_plate_dimensions(self, plate, new_size_x, new_size_y, new_size_z, new_offset):
+        """Validate Plate dimensions against well configuration"""
+        errors = []
+        warnings = []
+
+        well = plate.well  # Template well
+        n_cols = plate._columns
+        n_rows = plate._rows
+
+        # ✅ Match labware.py validation exactly
+        min_required_x = round((well.size_x * n_cols) + (2 * abs(new_offset[0])), 2)
+        min_required_y = round((well.size_y * n_rows) + (2 * abs(new_offset[1])), 2)
+
+        if new_size_x < min_required_x:
+            errors.append(
+                f"❌ Plate width too small!\n"
+                f"   Current: {new_size_x}mm\n"
+                f"   Required: {min_required_x:.1f}mm\n"
+                f"   ({n_cols} wells × {well.size_x}mm + offsets)"
+            )
+
+        if new_size_y < min_required_y:
+            errors.append(
+                f"❌ Plate length too small!\n"
+                f"   Current: {new_size_y}mm\n"
+                f"   Required: {min_required_y:.1f}mm\n"
+                f"   ({n_rows} wells × {well.size_y}mm + offsets)"
+            )
+
+        # ✅ Z-height validation - now new_size_z is available
+        if well.size_z > new_size_z:
+            errors.append(
+                f"❌ Well height exceeds plate height!\n"
+                f"   Well height: {well.size_z}mm\n"
+                f"   Plate height: {new_size_z}mm"
+            )
+
+        # ✅ Warn if wells will be widely spaced
+        if new_size_x >= min_required_x and new_size_y >= min_required_y:
+            new_spacing_x = (new_size_x - 2 * abs(new_offset[0])) / n_cols
+            new_spacing_y = (new_size_y - 2 * abs(new_offset[1])) / n_rows
+
+            if new_spacing_x > well.size_x * 1.5 or new_spacing_y > well.size_y * 1.5:
+                warnings.append(
+                    f"⚠️ Wells will be widely spaced:\n"
+                    f"   X spacing: {new_spacing_x:.1f}mm (well size: {well.size_x}mm)\n"
+                    f"   Y spacing: {new_spacing_y:.1f}mm (well size: {well.size_y}mm)"
+                )
+
+        return errors, warnings
+
+    def validate_pipette_holder_dimensions(self, holder, new_size_x, new_size_y, new_size_z, new_offset):
+        """Validate PipetteHolder dimensions against individual holder configuration"""
+        errors = []
+        warnings = []
+
+        individual = holder.individual_holder  # Template
+        n_x = holder._columns
+        n_y = holder._rows
+
+        # ✅ Match labware.py validation exactly
+        min_required_x = round((individual.size_x * n_x) + (2 * abs(new_offset[0])), 2)
+        min_required_y = round((individual.size_y * n_y) + (2 * abs(new_offset[1])), 2)
+
+        if new_size_x < min_required_x:
+            errors.append(
+                f"❌ PipetteHolder width too small!\n"
+                f"   Current: {new_size_x}mm\n"
+                f"   Required: {min_required_x:.1f}mm\n"
+                f"   ({n_x} holders × {individual.size_x}mm + offsets)"
+            )
+
+        if new_size_y < min_required_y:
+            errors.append(
+                f"❌ PipetteHolder length too small!\n"
+                f"   Current: {new_size_y}mm\n"
+                f"   Required: {min_required_y:.1f}mm\n"
+                f"   ({n_y} holders × {individual.size_y}mm + offsets)"
+            )
+
+        # ✅ Z-height validation - now new_size_z is available
+        if individual.size_z > new_size_z:
+            errors.append(
+                f"❌ Individual holder height exceeds PipetteHolder height!\n"
+                f"   Holder height: {individual.size_z}mm\n"
+                f"   PipetteHolder height: {new_size_z}mm"
+            )
+
+        return errors, warnings
+
+    def validate_reservoir_holder_dimensions(self, holder, new_size_x, new_size_y, new_size_z, new_offset):
+        """Validate ReservoirHolder dimensions against placed reservoirs"""
+        errors = []
+        warnings = []
+
+        hooks_x = holder._columns
+        hooks_y = holder._rows
+
+        if hooks_x == 0 or hooks_y == 0:
+            return errors, warnings
+
+        # Calculate new hook spacing
+        new_hook_spacing_x = new_size_x / hooks_x
+        new_hook_spacing_y = new_size_y / hooks_y
+
+        # Check each placed reservoir
+        reservoirs = holder.get_reservoirs()
+        for reservoir in reservoirs:
+            # Get dimensions of area this reservoir occupies
+            positions = [holder.hook_id_to_position(hid) for hid in reservoir.hook_ids]
+            cols = [pos[0] for pos in positions]
+            rows = [pos[1] for pos in positions]
+
+            width_in_hooks = max(cols) - min(cols) + 1
+            length_in_hooks = max(rows) - min(rows) + 1
+
+            # Calculate space available for this reservoir with new dimensions
+            available_x = width_in_hooks * new_hook_spacing_x
+            available_y = length_in_hooks * new_hook_spacing_y
+
+            # Check if reservoir fits
+            if reservoir.size_x > available_x:
+                errors.append(
+                    f"❌ Reservoir '{reservoir.labware_id}' won't fit!\n"
+                    f"   Reservoir width: {reservoir.size_x}mm\n"
+                    f"   Available space: {available_x:.1f}mm\n"
+                    f"   (spans {width_in_hooks} hooks × {new_hook_spacing_x:.1f}mm spacing)"
+                )
+
+            if reservoir.size_y > available_y:
+                errors.append(
+                    f"❌ Reservoir '{reservoir.labware_id}' won't fit!\n"
+                    f"   Reservoir length: {reservoir.size_y}mm\n"
+                    f"   Available space: {available_y:.1f}mm\n"
+                    f"   (spans {length_in_hooks} hooks × {new_hook_spacing_y:.1f}mm spacing)"
+                )
+
+            # ✅ Z-height validation - now new_size_z is available
+            if reservoir.size_z > new_size_z:
+                errors.append(
+                    f"❌ Reservoir '{reservoir.labware_id}' height exceeds holder height!\n"
+                    f"   Reservoir height: {reservoir.size_z}mm\n"
+                    f"   Holder height: {new_size_z}mm"
+                )
+
+            # ✅ Warning for excess space
+            if reservoir.size_x < available_x * 0.5 or reservoir.size_y < available_y * 0.5:
+                warnings.append(
+                    f"⚠️ Reservoir '{reservoir.labware_id}' will have excess space:\n"
+                    f"   Reservoir: {reservoir.size_x}×{reservoir.size_y}mm\n"
+                    f"   Available: {available_x:.1f}×{available_y:.1f}mm"
+                )
+
+        return errors, warnings
+
     def on_save(self):
-        """Save changes"""
+        """Save changes with validation"""
         try:
-            self.labware.size_x = float(self.size_x_var.get())
-            self.labware.size_y = float(self.size_y_var.get())
-            self.labware.size_z = float(self.size_z_var.get())
-            self.labware.offset = (float(self.offset_x_var.get()), float(self.offset_y_var.get()))
-            self.labware.can_be_stacked_upon = bool(self.can_be_stacked_upon_var.get())
+            # Get new values
+            new_size_x = float(self.size_x_var.get())
+            new_size_y = float(self.size_y_var.get())
+            new_size_z = float(self.size_z_var.get())
+            new_offset = (float(self.offset_x_var.get()), float(self.offset_y_var.get()))
+            new_can_be_stacked = bool(self.can_be_stacked_upon_var.get())
+
+            # ⭐ VALIDATE BEFORE SAVING ⭐
+            errors, warnings = self.validate_labware_dimensions(
+                self.labware, new_size_x, new_size_y, new_size_z, new_offset
+            )
+
+            # Show errors and prevent saving
+            if errors:
+                error_msg = "Cannot save changes:\n\n" + "\n\n".join(errors)
+                messagebox.showerror("Validation Error", error_msg)
+                return
+
+            # Show warnings and ask for confirmation
+            if warnings:
+                warning_msg = "Warnings detected:\n\n" + "\n\n".join(warnings)
+                warning_msg += "\n\nDo you want to proceed anyway?"
+
+                if not messagebox.askyesno("Validation Warning", warning_msg, icon='warning'):
+                    return
+
+            # Apply changes to the WORKING COPY first
+            self.labware.size_x = new_size_x
+            self.labware.size_y = new_size_y
+            self.labware.size_z = new_size_z
+            self.labware.offset = new_offset
+            self.labware.can_be_stacked_upon = new_can_be_stacked
+
+            # NOW copy all changes back to the ORIGINAL labware
+            self.original_labware.size_x = self.labware.size_x
+            self.original_labware.size_y = self.labware.size_y
+            self.original_labware.size_z = self.labware.size_z
+            self.original_labware.offset = self.labware.offset
+            self.original_labware.can_be_stacked_upon = self.labware.can_be_stacked_upon
+
+            # For ReservoirHolder, copy the reservoir configuration
+            if isinstance(self.labware, ReservoirHolder):
+                self.original_labware._ReservoirHolder__hook_to_reservoir = copy.deepcopy(
+                    self.labware._ReservoirHolder__hook_to_reservoir
+                )
 
             self.result = True
             self.destroy()
@@ -1307,7 +1612,7 @@ class PlaceReservoirDialog(tk.Toplevel):
     def __init__(self, parent, available_reservoirs, holder):
         super().__init__(parent)
         self.title("Place Reservoir at Hook(s)")
-        self.geometry("550x650")
+        self.geometry("500x650")
         self.result = None
 
         self.available_reservoirs = available_reservoirs
@@ -2981,7 +3286,7 @@ class DeckGUI:
 
         labware = self.unplaced_labware[selection[0]]
 
-        dialog = EditLabwareDialog(self.root, labware)
+        dialog = EditLabwareDialog(self.root, labware, self.available_reservoirs)
         self.root.wait_window(dialog)
 
         if dialog.result:
