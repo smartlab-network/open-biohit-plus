@@ -197,7 +197,7 @@ class Labware(Serializable):
             size_y=data["size_y"],
             size_z=data["size_z"],
             offset=data["offset"],
-            can_be_stacked_upon=data["can_be_stacked_upon"],
+            can_be_stacked_upon=data.get("can_be_stacked_upon", False),
             labware_id=data["labware_id"],
             position=position
         )
@@ -1237,7 +1237,7 @@ class PipetteHolder(Labware):
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
-            can_be_stacked_upon = ["can_be_stacked_upon"],
+            can_be_stacked_upon = data.get("can_be_stacked_upon", False),
             add_height=data["add_height"],
             remove_height=data["remove_height"],
             offset=data["offset"],
