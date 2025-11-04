@@ -9,16 +9,17 @@ from src.biohit_pipettor_plus.labware import Labware, PipetteHolder, Plate, TipD
 from src.biohit_pipettor_plus.pipettor_plus import PipettorPlus
 
 class FunctionWindow:
-    def __init__(self, deck: Deck, master: ttk.Window = None):
+    def __init__(self, deck: Deck, master: ttk.Window = None, pipettor: PipettorPlus = None):
         if isinstance(master, ttk.Window):
             self.window_build_func = ttk.Toplevel(master)
+
         else:
             self.window_build_func = ttk.Window(themename="solar")
 
         self.window_build_func.geometry("1400x800")
 
         self.deck = deck
-        self.pipettor = PipettorPlus(deck = self.deck, multichannel=False, tip_volume=200)
+        #self.pipettor = PipettorPlus(deck = self.deck, multichannel=False, tip_volume=200)
 
         self.set_grid_settings_func_win()
         self.create_window_build_func()
@@ -227,6 +228,7 @@ class FunctionWindow:
                 part="second",
                 **kwargs
             )
+
         elif part == "second" and labware_obj is not None:
             window = WellWindow(
                 rows=labware_obj.holders_across_y,
@@ -274,7 +276,8 @@ class FunctionWindow:
             list_return = [(r, c) for r, row in enumerate(window.well_state) for c, active in enumerate(row) if active]
             del window
 
-            func = lambda lw=labware_obj, lr=list_return: self.pipettor.return_tips(labware_obj=lw, list_return=lr)
+            #func = lambda lw=labware_obj, lr=list_return: self.pipettor.return_tips(labware_obj=lw, list_return=lr)
+            func = lambda: print(2)
             self.add_current_function(func_str=func_str, func=func, labware_id=labware_obj.labware_id)
 
     def callback_replace_tips(self, func_str: str, part: str = "first", labware_obj: PipetteHolder = None, **kwargs):
@@ -324,9 +327,10 @@ class FunctionWindow:
             list_return = [(r, c) for r, row in enumerate(window.well_state) for c, active in enumerate(row) if active]
             del window
 
-            func = lambda lw=labware_obj, lr=list_return, lp=list_pick: self.pipettor.replace_tips(
+            """func = lambda lw=labware_obj, lr=list_return, lp=list_pick: self.pipettor.replace_tips(
                 labware_obj=lw, return_list_col_row=lr, pick_list_col_row=lp
-            )
+            )"""
+            func = lambda: print(2)
             self.add_current_function(func_str=func_str, func=func, labware_id=labware_obj.labware_id)
 
     def callback_discard_tips(self, func_str: str, part: str = "first", labware_obj: TipDropzone = None, **kwargs):
@@ -350,8 +354,9 @@ class FunctionWindow:
                 **kwargs
             )
         elif part == "second" and labware_obj is not None:
-            func = lambda lw=labware_obj: print(
-                f"Discarding tips into {lw.labware_id}")  # replace with self.pipettor method
+            """func = lambda lw=labware_obj: print(
+                f"Discarding tips into {lw.labware_id}")  # replace with self.pipettor method"""
+            func = lambda: print(2)
             self.add_current_function(func_str=func_str, func=func, labware_id=labware_obj.labware_id)
 
     def callback_add_medium(self, func_str: str, part: str = "first", labware_obj: ReservoirHolder or Plate = None,
@@ -427,12 +432,14 @@ class FunctionWindow:
                 except ValueError:
                     return
 
-                func = lambda kwargs=kwargs, vol=volume: self.pipettor.add_medium(
+                """func = lambda kwargs=kwargs, vol=volume: self.pipettor.add_medium(
                     source=kwargs["source_labware"],
                     source_col_row=kwargs["source_positions"],
                     destination=kwargs["dest_labware"],
                     dest_col_row=kwargs["dest_positions"]
-                )
+                )"""
+                func = lambda: print(2)
+
                 self.add_current_function(func_str=func_str, func=func, labware_id=kwargs["dest_labware"].labware_id)
                 self.clear_grid(self.second_column_frame)
 
@@ -507,13 +514,14 @@ class FunctionWindow:
                     volume = float(text_var.get())
                 except ValueError:
                     return
-                func = lambda kwargs=kwargs, vol=volume: self.pipettor.remove_medium(
+                """func = lambda kwargs=kwargs, vol=volume: self.pipettor.remove_medium(
                     source=kwargs["source_labware"],
                     destination=kwargs["dest_labware"],
                     source_col_row=kwargs["source_positions"],
                     destination_col_row=kwargs["dest_positions"],
                     volume_per_well=vol
-                )
+                )"""
+                func = lambda: print(2)
                 self.add_current_function(func_str=func_str, func=func, labware_id=kwargs["dest_labware"].labware_id)
                 self.clear_grid(self.second_column_frame)
 
@@ -588,13 +596,14 @@ class FunctionWindow:
                     volume = float(text_var.get())
                 except ValueError:
                     return
-                func = lambda kwargs=kwargs, vol=volume: self.pipettor.transfer_plate_to_plate(
+                """func = lambda kwargs=kwargs, vol=volume: self.pipettor.transfer_plate_to_plate(
                     source=kwargs["source_labware"],
                     source_col_row=kwargs["source_positions"],
                     destination=kwargs["dest_labware"],
                     dest_col_row=kwargs["dest_positions"],
                     volume_per_well=vol
-                )
+                )"""
+                func = lambda: print(2)
                 self.add_current_function(func_str=func_str, func=func, labware_id=kwargs["dest_labware"].labware_id)
                 self.clear_grid(self.second_column_frame)
 
@@ -656,11 +665,12 @@ class FunctionWindow:
                     volume = float(text_var.get())
                 except ValueError:
                     return
-                func = lambda kwargs=kwargs, vol=volume: self.pipettor.suck(
+                """func = lambda kwargs=kwargs, vol=volume: self.pipettor.suck(
                     source=kwargs["labware_obj"],
                     source_col_row=kwargs["positions"],
                     volume=vol
-                )
+                )"""
+                func = lambda: print(2)
                 self.add_current_function(func_str=func_str, func=func, labware_id=kwargs["labware_obj"].labware_id)
                 self.clear_grid(self.second_column_frame)
 
@@ -722,11 +732,12 @@ class FunctionWindow:
                     volume = float(text_var.get())
                 except ValueError:
                     return
-                func = lambda kwargs=kwargs, vol=volume: self.pipettor.spit(
+                """func = lambda kwargs=kwargs, vol=volume: self.pipettor.spit(
                     destination=kwargs["labware_obj"],
                     dest_col_row=kwargs["positions"],
                     volume=vol
-                )
+                )"""
+                func = lambda: print(2)
                 self.add_current_function(func_str=func_str, func=func, labware_id=kwargs["labware_obj"].labware_id)
                 self.clear_grid(self.second_column_frame)
 
@@ -775,10 +786,11 @@ class FunctionWindow:
             kwargs["positions"] = [(r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v]
             del window
 
-            func = lambda kwargs=kwargs: self.pipettor.spit_all(
+            """func = lambda kwargs=kwargs: self.pipettor.spit_all(
                 destination=kwargs["labware_obj"],
                 dest_col_row=kwargs["positions"]
-            )
+            )"""
+            func = lambda: print(2)
             self.add_current_function(func_str=func_str, func=func, labware_id=kwargs["labware_obj"].labware_id)
             self.clear_grid(self.second_column_frame)
 
@@ -790,7 +802,8 @@ class FunctionWindow:
     def callback_home(self, func_str: str):
         """Send pipettor to home position."""
         self.clear_grid(self.second_column_frame)
-        func = lambda: self.pipettor.home()
+        #func = lambda: self.pipettor.home()
+        func = lambda: print(2)
         self.add_current_function(
             func_str=func_str,
             func=func,

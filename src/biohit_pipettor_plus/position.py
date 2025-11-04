@@ -1,6 +1,6 @@
 from typing import Tuple, List, Dict
-from .labware import Labware, ReservoirHolder, Reservoir, Plate, PipetteHolder
-from .serializable import Serializable, register_class
+from labware import Labware, ReservoirHolder, Reservoir, Plate, PipetteHolder
+from serializable import Serializable, register_class
 
 
 @register_class
@@ -42,21 +42,27 @@ class Position_allocator:
         columns = columns
         offset_x, offset_y = lw.offset
 
-        if x_spacing is None or y_spacing is None:
-            try:
+        if x_spacing is None:
+            # Handle single column case (no horizontal spacing needed)
+            if columns == 1:
+                x_spacing = 0
+            else:
                 x_spacing = round((lw.size_x - 2 * offset_x) / (columns - 1), 2)
+                # Ensure spacing is never negative
+                if x_spacing < 0:
+                    x_spacing = 0
+
+        if y_spacing is None:
+            # Handle single row case (no vertical spacing needed)
+            if rows == 1:
+                y_spacing = 0
+            else:
                 y_spacing = round((lw.size_y - 2 * offset_y) / (rows - 1), 2)
-            except Exception:
-                x_spacing = 0
-                y_spacing = 0
+                # Ensure spacing is never negative
+                if y_spacing < 0:
+                    y_spacing = 0
 
-            # Ensure spacing is never negative
-            if x_spacing < 0:
-                x_spacing = 0
-            if y_spacing < 0:
-                y_spacing = 0
-
-            print(f"x_spacing: {x_spacing}, y_spacing: {y_spacing}")
+        print(f"labware : {lw.labware_id} x_spacing: {x_spacing}, y_spacing: {y_spacing}")
 
         for i in range(rows):
             for j in range(columns):
@@ -108,13 +114,17 @@ class Position_allocator:
         # Update reservoir positions
         for res, hooks_pos in reservoir_positions.items():
             if len(hooks_pos) == 1:
-                res.position = hooks_pos[0]
+                hook_x, hook_y = hooks_pos[0]  # Single hook
             else:
-                # Compute center of multiple hooks
+                # Multiple hooks - find average
                 xs, ys = zip(*hooks_pos)
-                center_x = round((sum(xs) / len(xs)), 2)
-                center_y = round((sum(ys) / len(ys)), 2)
-                res.position = (center_x, center_y)
+                hook_x = round((sum(xs) / len(xs)), 2)
+                hook_y = round((sum(ys) / len(ys)), 2)
+
+            # Step 2: Add half the reservoir size to get center
+            center_x = round(hook_x + (res.size_x  / 2) + res.offset[0], 2)
+            center_y = round(hook_y + (res.size_y / 2) + res.offset[1], 2)
+            res.position = (center_x, center_y)
 
     def update_plate_positions(
             self,
@@ -135,7 +145,7 @@ class Position_allocator:
 
         for well_id, well in wells.items():
             if well is not None and well.column is not None and well.row is not None:
-                # ✅ NO PARSING: Use the well's column and row attributes directly
+                # Use the well's column and row attributes directly
                 col = well.column
                 row = well.row
 
@@ -145,7 +155,10 @@ class Position_allocator:
 
                 if idx < len(positions):
                     x_pos, y_pos, _ = positions[idx]
-                    well.position = (x_pos, y_pos)
+                    # Add half of well size to get center position
+                    center_x = round(x_pos + (well.size_x / 2) + well.offset[0], 2)
+                    center_y = round(y_pos + (well.size_y / 2) + well.offset[1], 2)
+                    well.position = (center_x, center_y)
 
     def update_PipetteHolder_positions(
             self,
@@ -173,6 +186,8 @@ class Position_allocator:
                 # The positions list is organized by rows then columns
                 idx = row * holder.holders_across_x + col
 
-                if idx < len(positions):
-                    x_pos, y_pos, _ = positions[idx]
-                    individual_holder.position = (x_pos, y_pos)
+                x_pos, y_pos, _ = positions[idx]
+                # Add half of holder size to get center position
+                center_x = round(x_pos + (individual_holder.size_x / 2) + individual_holder.offset[0], 2)
+                center_y = round(y_pos + (individual_holder.size_y / 2) + individual_holder.offset[1], 2)
+                individual_holder.position = (center_x, center_y)

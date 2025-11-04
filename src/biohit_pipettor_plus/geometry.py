@@ -275,7 +275,6 @@ def calculate_dynamic_remove_height(item: 'Labware', volume_to_remove: float) ->
 
     Strategy:
     - Aspirate from midpoint between current level and final level
-    - Safety offset to avoid touching bottom
 
     Parameters
     ----------
@@ -287,7 +286,7 @@ def calculate_dynamic_remove_height(item: 'Labware', volume_to_remove: float) ->
     Returns
     -------
     float
-        Optimal aspiration height FROM CONTAINER BOTTOM (mm)
+        Optimal aspiration height from container Top (mm)
     """
     # Get current liquid height
     current_height = calculate_liquid_height(item)
@@ -314,71 +313,10 @@ def calculate_dynamic_remove_height(item: 'Labware', volume_to_remove: float) ->
     # Restore original content
     item.content = original_content
 
-    # Aspirate from midpoint between current and final
-    target_height = (current_height + final_height) / 2
+    # Aspirate from midpoint between current and final. Target_height is height from labware top
+    target_height = item.size_z - ((current_height + final_height) / 2)
+    print(f"target_height{target_height} = item.size_z {item.size_z} - ((current_height {current_height}   + {final_height}final_height) / 2)")
 
-    # Don't exceed container height
-    target_height = min(target_height, item.size_z - 1)
+    # remove involves going into the labware. so negative target_height.
+    target_height = -target_height
     return target_height
-
-
-def calculate_dynamic_add_height(item: 'Labware', volume_to_add: float,
-                                 clearance_above_liquid: float = 5.0,
-                                 empty_dispense_height: float = 3.0) -> float:
-    """
-    Calculate optimal dispensing height based on current and final liquid levels.
-
-    Strategy:
-    - Dispense slightly above current liquid level to avoid splashing
-    - Or dispense near bottom if container is empty
-
-    Parameters
-    ----------
-    item : Labware
-        Well or Reservoir to dispense into
-    volume_to_add : float
-        Volume that will be dispensed (µL)
-    clearance_above_liquid : float, optional
-        Height above liquid surface for dispensing (mm). Default is 5.0mm.
-    empty_dispense_height : float, optional
-        Height for dispensing into empty container (mm). Default is 3.0mm.
-
-    Returns
-    -------
-    float
-        Optimal dispensing height FROM CONTAINER BOTTOM (mm)
-
-    Examples
-    --------
-    >>> well = Well(size_x=6.4, size_y=6.4, size_z=10, capacity=200, shape="u_bottom")
-    >>> well.add_content("media", 50)
-    >>> height = calculate_dynamic_add_height(well, 100)
-    >>> print(f"Dispense at: {height:.1f}mm")
-    """
-    # Get current liquid height
-    current_height = calculate_liquid_height(item)
-
-    # Calculate final liquid height
-    current_volume = item.get_total_volume()
-    final_volume = current_volume + volume_to_add
-
-    # Check for overflow
-    if hasattr(item, 'capacity') and item.capacity > 0:
-        if final_volume > item.capacity:
-            print(f"  ⚠️ Warning: Adding {volume_to_add}µL would overflow! "
-                  f"Current: {current_volume}µL, Capacity: {item.capacity}µL")
-
-    if current_height <= 0:
-        # Empty container - dispense near bottom
-        return empty_dispense_height
-    else:
-        # Dispense slightly above current liquid level
-        target_height = current_height + clearance_above_liquid
-
-        # Don't exceed container height
-        target_height = min(target_height, item.size_z - 1)
-
-        # But also don't go too low
-        target_height = max(target_height, empty_dispense_height)
-
-        return target_height

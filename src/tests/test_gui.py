@@ -6,5 +6,5 @@ deck_1: Deck = read_json("MainDeck_01")
 print(deck_1)
 gui = FunctionWindow(deck=deck_1)
 
-root = gui.root
+root = gui.window_build_func
 root.mainloop()
