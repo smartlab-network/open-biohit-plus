@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from .serializable import CLASS_REGISTRY, Serializable
+from serializable import CLASS_REGISTRY, Serializable
 
 
 def get_json_dir() -> Path:
@@ -140,3 +140,57 @@ def read_json(obj_id: str) -> Serializable:
 
     # Use the global Serializable.from_dict to reconstruct the object
     return Serializable.from_dict(data[obj_id])
+
+
+def save_deck_for_gui(deck_object: Serializable,
+                      filename: str,
+                      unplaced_labware: list = None,
+                      unplaced_slots: list = None,
+                      available_wells: list = None,
+                      available_reservoirs: list = None,
+                      available_individual_holders: list = None):
+    """
+    Saves a Deck object and its related components in the GUI-compatible format.
+
+    This saves to a specific 'filename' (e.g., "deck1_for_gui.json")
+    in the default directory (C:/ProgramData/biohit).
+
+    It converts lists of objects into lists of dictionaries for JSON serialization.
+    """
+    # Get the directory path and join it with the desired filename
+    if not filename.endswith(".json"):
+        filename += ".json"
+
+    path = get_json_dir().joinpath(filename)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    # --- UPDATED SECTION ---
+    # Default to empty lists if no arguments are passed
+    if unplaced_labware is None:
+        unplaced_labware = []
+    if unplaced_slots is None:
+        unplaced_slots = []
+    if available_wells is None:
+        available_wells = []
+    if available_reservoirs is None:
+        available_reservoirs = []
+    if available_individual_holders is None:
+        available_individual_holders = []
+
+    # Prepare data for JSON, converting all objects in lists to dicts
+    gui_data = {
+        'deck': deck_object.to_dict(),
+        'unplaced_labware': [lw.to_dict() for lw in unplaced_labware],
+        'unplaced_slots': [slot.to_dict() for slot in unplaced_slots],
+        'available_wells': [well.to_dict() for well in available_wells],
+        'available_reservoirs': [res.to_dict() for res in available_reservoirs],
+        'available_individual_holders': [holder.to_dict() for holder in available_individual_holders]
+    }
+    # --- END UPDATED SECTION ---
+
+    try:
+        with open(path, 'w') as f:
+            json.dump(gui_data, f, indent=2)
+        print(f"Deck configuration saved to {path} in GUI-compatible format.")
+    except Exception as e:
+        print(f"Failed to save deck: {str(e)}")
