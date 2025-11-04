@@ -2028,29 +2028,52 @@ class DeckGUI:
                 messagebox.showerror("Error", str(e))
 
     def calculate_scale(self):
-        """Auto-calculate scale to fit deck in canvas"""
+        """Auto-calculate scale to maximize deck in canvas
+        Coordinate system: (0,0) at top-right
+        """
         canvas_width = self.canvas.winfo_width() or 800
         canvas_height = self.canvas.winfo_height() or 600
 
         deck_width = self.deck.range_x[1] - self.deck.range_x[0]
         deck_height = self.deck.range_y[1] - self.deck.range_y[0]
 
-        scale_x = (canvas_width - 100) / deck_width
-        scale_y = (canvas_height - 100) / deck_height
+        # Adaptive margins
+        margin = max(40, min(50, int(min(canvas_width, canvas_height) * 0.02)))
 
-        self.scale = min(scale_x, scale_y, 2.0)
-        self.offset_x = 50
-        self.offset_y = 50
+        scale_x = (canvas_width - 2 * margin) / deck_width
+        scale_y = (canvas_height - 2 * margin) / deck_height
+
+        self.scale = min(scale_x, scale_y)
+
+        # For top-right origin, offset_x is from the right edge
+        self.offset_x = margin
+        self.offset_y = margin
 
     def mm_to_canvas(self, x, y):
-        """Convert mm coordinates to canvas pixels"""
-        return (x * self.scale + self.offset_x,
-                y * self.scale + self.offset_y)
+        """Convert mm coordinates to canvas pixels
+        Coordinate system: (0,0) at top-right
+        X increases: right → left
+        Y increases: top → bottom
+        """
+        canvas_width = self.canvas.winfo_width() or 300
+
+        # Flip X-axis: subtract from right edge
+        canvas_x = canvas_width - (x * self.scale + self.offset_x)
+        canvas_y = y * self.scale + self.offset_y
+
+        return (canvas_x, canvas_y)
 
     def canvas_to_mm(self, cx, cy):
-        """Convert canvas pixels to mm coordinates"""
-        return ((cx - self.offset_x) / self.scale,
-                (cy - self.offset_y) / self.scale)
+        """Convert canvas pixels to mm coordinates
+        Coordinate system: (0,0) at top-right
+        """
+        canvas_width = self.canvas.winfo_width() or 300
+
+        # Reverse the X-axis flip
+        mm_x = (canvas_width - cx - self.offset_x) / self.scale
+        mm_y = (cy - self.offset_y) / self.scale
+
+        return (mm_x, mm_y)
 
     def draw_deck(self, auto_scale = False):
         """Draw the entire deck"""
@@ -2066,6 +2089,8 @@ class DeckGUI:
         x2, y2 = self.mm_to_canvas(self.deck.range_x[1], self.deck.range_y[1])
         self.canvas.create_rectangle(x1, y1, x2, y2, outline='black', width=3, tags='deck_boundary')
 
+        self.draw_corner_labels()
+
         # Draw slots
         for slot_id, slot in self.deck.slots.items():
             self.draw_slot(slot_id, slot)
@@ -2079,6 +2104,92 @@ class DeckGUI:
         self.update_slots_list()
         self.update_labware_list()
         self.update_deck_info()
+
+    def draw_corner_labels(self):
+        """Draw coordinate labels at the four corners of the deck with backgrounds"""
+        x_min, x_max = self.deck.range_x
+        y_min, y_max = self.deck.range_y
+
+        corners = [
+            # (mm_x, mm_y, label_text, anchor, color)
+            (x_min, y_min, f"({x_min}, {y_min})\nORIGIN", 'se', 'red'),
+            (x_max, y_min, f"({x_max}, {y_min})", 'sw', 'blue'),
+            (x_min, y_max, f"({x_min}, {y_max})", 'ne', 'blue'),
+            (x_max, y_max, f"({x_max}, {y_max})", 'nw', 'blue'),
+        ]
+
+        for mm_x, mm_y, label, anchor, color in corners:
+            canvas_x, canvas_y = self.mm_to_canvas(mm_x, mm_y)
+
+            # Draw corner marker circle
+            r = 5
+            self.canvas.create_oval(
+                canvas_x - r, canvas_y - r,
+                canvas_x + r, canvas_y + r,
+                fill=color,
+                outline='white',
+                width=2,
+                tags='corner_marker'
+            )
+
+            # Calculate text position with offset
+            offset = 15
+            anchor_offsets = {
+                'se': (-offset, offset),  # Top-right
+                'sw': (offset, offset),  # Top-left
+                'ne': (-offset, -offset),  # Bottom-right
+                'nw': (offset, -offset)  # Bottom-left
+            }
+
+            dx, dy = anchor_offsets[anchor]
+            text_x, text_y = canvas_x + dx, canvas_y + dy
+
+            # Draw background rectangle for text
+            text_id = self.canvas.create_text(
+                text_x, text_y,
+                text=label,
+                font=('Arial', 9, 'bold'),
+                fill=color,
+                anchor=anchor,
+                tags='corner_label'
+            )
+
+            # Get text bounding box and draw background
+            bbox = self.canvas.bbox(text_id)
+            if bbox:
+                padding = 3
+                self.canvas.create_rectangle(
+                    bbox[0] - padding, bbox[1] - padding,
+                    bbox[2] + padding, bbox[3] + padding,
+                    fill='white',
+                    outline=color,
+                    width=1,
+                    tags='corner_label_bg'
+                )
+                # Raise text above background
+                self.canvas.tag_raise(text_id)
+
+        top_center_mm = ((x_min + x_max) / 2, y_min)
+        top_center_canvas = self.mm_to_canvas(*top_center_mm)
+        self.canvas.create_text(
+            top_center_canvas[0], top_center_canvas[1] - 20,
+            text="X-axis (left → right)",
+            font=('Arial', 10, 'italic'),
+            fill='green',
+            tags='axis_label'
+        )
+
+        # Y-axis label (at right center)
+        right_center_mm = (x_min, (y_min + y_max) / 2)
+        right_center_canvas = self.mm_to_canvas(*right_center_mm)
+        self.canvas.create_text(
+            right_center_canvas[0] + 20, right_center_canvas[1],
+            text="Y-axis\n(Top→Bottom)",
+            font=('Arial', 10, 'italic'),
+            fill='green',
+            angle=270,  # Rotated text
+            tags='axis_label'
+        )
 
     def draw_grid(self):
         """Draw background grid"""
