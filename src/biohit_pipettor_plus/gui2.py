@@ -3031,7 +3031,7 @@ class DeckGUI:
         self.canvas.create_text(
             top_center_canvas[0], top_center_canvas[1] - 20,
             text="X-axis (left → right)",
-            font=('Arial', 10, 'italic'),
+            font=('Arial', 14, 'italic'),
             fill='green',
             tags='axis_label'
         )
@@ -3042,7 +3042,7 @@ class DeckGUI:
         self.canvas.create_text(
             right_center_canvas[0] + 20, right_center_canvas[1],
             text="Y-axis\n(Top→Bottom)",
-            font=('Arial', 10, 'italic'),
+            font=('Arial', 14, 'italic'),
             fill='green',
             angle=270,  # Rotated text
             tags='axis_label'
