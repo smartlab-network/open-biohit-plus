@@ -1536,14 +1536,6 @@ class EditLabwareDialog(tk.Toplevel):
                     f"   Holder height: {new_size_z}mm"
                 )
 
-            # ✅ Warning for excess space
-            if reservoir.size_x < available_x * 0.5 or reservoir.size_y < available_y * 0.5:
-                warnings.append(
-                    f"⚠️ Reservoir '{reservoir.labware_id}' will have excess space:\n"
-                    f"   Reservoir: {reservoir.size_x}×{reservoir.size_y}mm\n"
-                    f"   Available: {available_x:.1f}×{available_y:.1f}mm"
-                )
-
         return errors, warnings
 
     def on_save(self):
@@ -2057,9 +2049,8 @@ class DeckGUI:
         self.labware_view_mode = tk.StringVar(value="unplaced")  # "placed" or "unplaced"
 
         self.setup_ui()
-        #Force the GUI to render and calculate widget dimensions (size of the canvas)
-        self.root.update_idletasks()
-        self.draw_deck(auto_scale=True)
+        # Delay initial draw until window is fully rendered
+        self.root.after(100, lambda: self.draw_deck(auto_scale=True))
 
     def setup_ui(self):
         # Menu bar
@@ -2969,7 +2960,7 @@ class DeckGUI:
 
         corners = [
             # (mm_x, mm_y, label_text, anchor, color)
-            (x_min, y_min, f"({x_min}, {y_min})\nORIGIN", 'se', 'red'),
+            (x_min, y_min, f"({x_min}, {y_min})\nORIGIN, right corner", 'se', 'red'),
             (x_max, y_min, f"({x_max}, {y_min})", 'sw', 'blue'),
             (x_min, y_max, f"({x_min}, {y_max})", 'ne', 'blue'),
             (x_max, y_max, f"({x_max}, {y_max})", 'nw', 'blue'),
@@ -3030,7 +3021,7 @@ class DeckGUI:
         top_center_canvas = self.mm_to_canvas(*top_center_mm)
         self.canvas.create_text(
             top_center_canvas[0], top_center_canvas[1] - 20,
-            text="X-axis (left → right)",
+            text="X-axis (right to left)",
             font=('Arial', 14, 'italic'),
             fill='green',
             tags='axis_label'
@@ -3041,7 +3032,7 @@ class DeckGUI:
         right_center_canvas = self.mm_to_canvas(*right_center_mm)
         self.canvas.create_text(
             right_center_canvas[0] + 20, right_center_canvas[1],
-            text="Y-axis\n(Top→Bottom)",
+            text="Y-axis\n(Top to Bottom)",
             font=('Arial', 14, 'italic'),
             fill='green',
             angle=270,  # Rotated text
