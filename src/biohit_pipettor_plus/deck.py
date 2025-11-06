@@ -1,8 +1,7 @@
-from slot import Slot
-from labware import Labware
-from serializable import Serializable, register_class
+from .slot import Slot
+from .labware import Labware
+from .serializable import Serializable, register_class
 from typing import Optional
-
 
 @register_class
 class Deck(Serializable):

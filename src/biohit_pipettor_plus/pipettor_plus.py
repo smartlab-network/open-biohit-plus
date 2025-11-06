@@ -11,7 +11,6 @@ from biohit_pipettor.errors import CommandFailed
 from src.biohit_pipettor_plus.geometry import (
     calculate_liquid_height,
     calculate_dynamic_remove_height,
-    calculate_dynamic_add_height
 )
 
 Change_Tips = 0

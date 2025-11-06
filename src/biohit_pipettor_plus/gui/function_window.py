@@ -8,6 +8,8 @@ from src.biohit_pipettor_plus.slot import Slot
 from src.biohit_pipettor_plus.labware import Labware, PipetteHolder, Plate, TipDropzone, ReservoirHolder
 from src.biohit_pipettor_plus.pipettor_plus import PipettorPlus
 
+MULTI_CHANNEL_NUMBER = 6
+
 class FunctionWindow:
     def __init__(self, deck: Deck, master: ttk.Window = None, pipettor: PipettorPlus = None):
         if isinstance(master, ttk.Window):
@@ -20,6 +22,13 @@ class FunctionWindow:
 
         self.deck = deck
         #self.pipettor = PipettorPlus(deck = self.deck, multichannel=False, tip_volume=200)
+
+        """if self.pipettor.multichannel:
+            self.channels = 8
+        else: 
+            self.channels = 1"""
+
+        self.channels = 8
 
         self.set_grid_settings_func_win()
         self.create_window_build_func()
@@ -234,8 +243,10 @@ class FunctionWindow:
                 rows=labware_obj.holders_across_y,
                 columns=labware_obj.holders_across_x,
                 labware_id=labware_obj.labware_id,
+                max_selected = self.channels,
                 master=self.window_build_func,
-                title=f"Pick tips from: {labware_obj.labware_id}"
+                title=f"Pick tips from: {labware_obj.labware_id}",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True)
             )
             self.window_build_func.wait_variable(window.safe_var)
             list_return = [(r, c) for r, row in enumerate(window.well_state) for c, active in enumerate(row) if active]
@@ -265,12 +276,15 @@ class FunctionWindow:
                 **kwargs
             )
         elif part == "second" and labware_obj is not None:
+
             window = WellWindow(
                 rows=labware_obj.holders_across_y,
                 columns=labware_obj.holders_across_x,
                 labware_id=labware_obj.labware_id,
+                max_selected=self.channels,
                 master=self.window_build_func,
-                title=f"Return tips to: {labware_obj.labware_id}"
+                title=f"Return tips to: {labware_obj.labware_id}",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj)
             )
             self.window_build_func.wait_variable(window.safe_var)
             list_return = [(r, c) for r, row in enumerate(window.well_state) for c, active in enumerate(row) if active]
@@ -303,16 +317,17 @@ class FunctionWindow:
                 **kwargs
             )
         elif part == "second" and labware_obj is not None:
-            # Pick wells
             window = WellWindow(
                 rows=labware_obj.holders_across_y,
                 columns=labware_obj.holders_across_x,
                 labware_id=labware_obj.labware_id,
+                max_selected=self.channels,
                 master=self.window_build_func,
-                title=f"Pick tips from: {labware_obj.labware_id}"
+                title=f"Return tips to: {labware_obj.labware_id}",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, soruce=False)
             )
             self.window_build_func.wait_variable(window.safe_var)
-            list_pick = [(r, c) for r, row in enumerate(window.well_state) for c, active in enumerate(row) if active]
+            list_return = [(r, c) for r, row in enumerate(window.well_state) for c, active in enumerate(row) if active]
             del window
 
             # Return wells
@@ -320,11 +335,13 @@ class FunctionWindow:
                 rows=labware_obj.holders_across_y,
                 columns=labware_obj.holders_across_x,
                 labware_id=labware_obj.labware_id,
+                max_selected=self.channels,
                 master=self.window_build_func,
-                title=f"Return tips to: {labware_obj.labware_id}"
+                title=f"Pick tips from: {labware_obj.labware_id}",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, soruce=True)
             )
             self.window_build_func.wait_variable(window.safe_var)
-            list_return = [(r, c) for r, row in enumerate(window.well_state) for c, active in enumerate(row) if active]
+            list_pick = [(r, c) for r, row in enumerate(window.well_state) for c, active in enumerate(row) if active]
             del window
 
             """func = lambda lw=labware_obj, lr=list_return, lp=list_pick: self.pipettor.replace_tips(
@@ -381,18 +398,27 @@ class FunctionWindow:
                 **kwargs
             )
         elif part == "second" and labware_obj is not None:
-            # Pick source wells
+
             window = WellWindow(
                 rows=labware_obj.hooks_across_y,
                 columns=labware_obj.hooks_across_x,
                 labware_id=labware_obj.labware_id,
                 master=self.window_build_func,
-                title=f"Choose source wells: {labware_obj.labware_id}"
+                title=f"Choose source wells: {labware_obj.labware_id}",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True)
             )
+
+
             self.window_build_func.wait_variable(window.safe_var)
+
+
             kwargs["source_labware"] = labware_obj
-            kwargs["source_positions"] = [(r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row)
-                                          if v]
+            kwargs["source_positions"] = [
+                (r, c)
+                for r, row in enumerate(window.well_state)
+                for c, v in enumerate(row)
+                if v
+            ]
             del window
 
             self.clear_grid(self.second_column_frame)
@@ -409,8 +435,10 @@ class FunctionWindow:
                 rows=labware_obj._rows,
                 columns=labware_obj._columns,
                 labware_id=labware_obj.labware_id,
+                max_selected=self.channels,
                 master=self.window_build_func,
-                title=f"Choose destination wells: {labware_obj.labware_id}"
+                title=f"Choose destination wells: {labware_obj.labware_id}",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, soruce=False)
             )
             self.window_build_func.wait_variable(window.safe_var)
             kwargs["dest_labware"] = labware_obj
@@ -471,8 +499,10 @@ class FunctionWindow:
                 rows=labware_obj._rows,
                 columns=labware_obj._columns,
                 labware_id=labware_obj.labware_id,
+                max_selected=self.channels,
                 master=self.window_build_func,
-                title=f"Select source wells: {labware_obj.labware_id}"
+                title=f"Select source wells: {labware_obj.labware_id}",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, soruce=True)
             )
             self.window_build_func.wait_variable(window.safe_var)
             kwargs["source_labware"] = labware_obj
@@ -493,8 +523,10 @@ class FunctionWindow:
                 rows=labware_obj.hooks_across_y,
                 columns=labware_obj.hooks_across_x,
                 labware_id=labware_obj.labware_id,
+                max_selected=self.channels,
                 master=self.window_build_func,
-                title=f"Select destination wells: {labware_obj.labware_id}"
+                title=f"Select destination Reservoir: {labware_obj.labware_id}",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj)
             )
             self.window_build_func.wait_variable(window.safe_var)
             kwargs["dest_labware"] = labware_obj
@@ -553,8 +585,10 @@ class FunctionWindow:
                 rows=labware_obj._rows,
                 columns=labware_obj._columns,
                 labware_id=labware_obj.labware_id,
+                max_selected=self.channels,
                 master=self.window_build_func,
-                title=f"Select source wells: {labware_obj.labware_id}"
+                title=f"Select source wells: {labware_obj.labware_id}",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, soruce=True)
             )
             self.window_build_func.wait_variable(window.safe_var)
             kwargs["source_labware"] = labware_obj
@@ -575,8 +609,10 @@ class FunctionWindow:
                 rows=labware_obj._rows,
                 columns=labware_obj._columns,
                 labware_id=labware_obj.labware_id,
+                max_selected=self.channels,
                 master=self.window_build_func,
-                title=f"Select destination wells: {labware_obj.labware_id}"
+                title=f"Select destination wells: {labware_obj.labware_id}",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj)
             )
             self.window_build_func.wait_variable(window.safe_var)
             kwargs["dest_labware"] = labware_obj
@@ -645,8 +681,10 @@ class FunctionWindow:
                 rows=rows,
                 columns=columns,
                 labware_id=labware_obj.labware_id,
+                max_selected=self.channels,
                 master=self.window_build_func,
-                title=f"Select wells to suck from: {labware_obj.labware_id}"
+                title=f"Select wells to suck from: {labware_obj.labware_id}",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, soruce=True)
             )
             self.window_build_func.wait_variable(window.safe_var)
             kwargs["labware_obj"] = labware_obj
@@ -711,9 +749,11 @@ class FunctionWindow:
             window = WellWindow(
                 rows=rows,
                 columns=columns,
+                max_selected = self.channels,
                 labware_id=labware_obj.labware_id,
                 master=self.window_build_func,
-                title=f"Select wells to spit into: {labware_obj.labware_id}"
+                title=f"Select wells to spit into: {labware_obj.labware_id}",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj)
             )
             self.window_build_func.wait_variable(window.safe_var)
             kwargs["labware_obj"] = labware_obj
@@ -778,8 +818,10 @@ class FunctionWindow:
                 rows=rows,
                 columns=columns,
                 labware_id=labware_obj.labware_id,
+                max_selected=self.channels,
                 master=self.window_build_func,
-                title=f"Select wells to spit all into: {labware_obj.labware_id}"
+                title=f"Select wells to spit all into: {labware_obj.labware_id}",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj)
             )
             self.window_build_func.wait_variable(window.safe_var)
             kwargs["labware_obj"] = labware_obj
@@ -794,10 +836,66 @@ class FunctionWindow:
             self.add_current_function(func_str=func_str, func=func, labware_id=kwargs["labware_obj"].labware_id)
             self.clear_grid(self.second_column_frame)
 
+    def get_wells_list_from_labware(self, labware_obj, source: bool = False)-> list[tuple[int,int]]:
+        """
+        Liefert wells_list passend zum Labware-Typ.
 
-    # --------------------------------------------------------------------------
-    # BASIC MOTION / HOME FUNCTIONS
-    # --------------------------------------------------------------------------
+        - Für Plate: wie bisher (Medium vorhanden oder leer)
+        - Für ReservoirHolder: nur Reservoirs mit Inhalt (source=True) oder Platz (source=False)
+        - Für PipetteHolder: belegt oder frei
+        """
+
+        # Plate
+        if isinstance(labware_obj, Plate):
+            rows, columns = labware_obj._rows, labware_obj._columns
+            wells_list = [(r, c) for r in range(rows) for c in range(columns)]
+
+            if source:
+                wells_list = [
+                    (r, c)
+                    for (r, c) in wells_list
+                    if hasattr(labware_obj, "medium_state")
+                       and labware_obj.medium_state[r][c]
+                ]
+
+        # ReservoirHolder
+        elif isinstance(labware_obj, ReservoirHolder):
+            rows, columns = labware_obj.hooks_across_y, labware_obj.hooks_across_x
+            wells_list = []
+
+            for res in labware_obj.get_reservoirs():
+                if res is None:
+                    continue
+
+                # Quelle: Reservoir mit Inhalt
+                if source and res.get_total_volume() > 0:
+                    wells_list.append((res.row, res.column))
+
+                # Ziel: Reservoir mit Platz
+                elif not source and res.get_available_volume() > 0:
+                    wells_list.append((res.row, res.column))
+
+        #  PipetteHolder
+        elif isinstance(labware_obj, PipetteHolder):
+            rows, columns = labware_obj.holders_across_y, labware_obj.holders_across_x
+
+            if source:
+                wells_list = [
+                    (holder.row, holder.column)
+                    for holder in labware_obj.get_occupied_holders()
+                    if holder.is_occupied
+                ]
+            else:
+                wells_list = [
+                    (holder.row, holder.column)
+                    for holder in labware_obj.get_available_holders()
+                    if holder.is_available()
+                ]
+
+        else:
+            raise TypeError(f"Unsupported labware type: {type(labware_obj)}")
+
+        return wells_list
 
     def callback_home(self, func_str: str):
         """Send pipettor to home position."""

@@ -10,8 +10,8 @@ deck = Deck(
     deck_id="MainDeck_01",
     range_z=500
 )
-slot_width = 120.0
-slot_depth = 100.0
+slot_width = 160.0
+slot_depth = 140.0
 for i in range(6):
     slot = Slot(
         range_x=(i % 2 * slot_width, (i % 2 + 1) * slot_width),
@@ -27,9 +27,6 @@ well_template = Well(
     size_y=9,
     size_z=12.0,
     capacity=200.0,           # µL
-    add_height=1.0,
-    remove_height=1.0,
-    suck_offset_xy=(0.0, 0.0),
     row=0,
     column=0,
     shape="circular"
