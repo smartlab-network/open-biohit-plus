@@ -42,6 +42,16 @@ class Labware(Serializable):
         super().__init_subclass__(**kwargs)
         Labware.registry[cls.__name__] = cls
 
+    @staticmethod
+    def validate_positive_dimensions(size_x: float, size_y: float, size_z: float, labware_type: str = "Labware"):
+        """Validate that dimensions are positive"""
+        if size_x <= 0:
+            raise ValueError(f"{labware_type} size_x must be positive, got {size_x}")
+        if size_y <= 0:
+            raise ValueError(f"{labware_type} size_y must be positive, got {size_y}")
+        if size_z <= 0:
+            raise ValueError(f"{labware_type} size_z must be positive, got {size_z}")
+
     def __init__(self, size_x: float, size_y: float, size_z: float, offset: tuple[float, float] = (0.0, 0.0),
                  labware_id: str = None, position: tuple[float, float] = None, can_be_stacked_upon :bool = False):
         """
@@ -61,6 +71,7 @@ class Labware(Serializable):
             (x, y) position coordinates of the labware in millimeters.
             If None, position is not set.
     """
+        Labware.validate_positive_dimensions(size_x, size_y, size_z, self.__class__.__name__)
         self.size_x = size_x
         self.size_y = size_y
         self.size_z = size_z
@@ -197,7 +208,7 @@ class Labware(Serializable):
             size_y=data["size_y"],
             size_z=data["size_z"],
             offset=data["offset"],
-            can_be_stacked_upon=data["can_be_stacked_upon"],
+            can_be_stacked_upon=data.get("can_be_stacked_upon", False),
             labware_id=data["labware_id"],
             position=position
         )
@@ -576,7 +587,6 @@ class Plate(Labware):
         position : tuple[float, float], optional
             (x, y) position coordinates of the plate in millimeters.
         """
-
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id,
                          position=position, can_be_stacked_upon=can_be_stacked_upon)
 
@@ -587,12 +597,28 @@ class Plate(Labware):
         self._rows = wells_y
         self.add_height = add_height
         self.remove_height = remove_height
-
         self.__wells: dict[tuple[int, int], Well] = {}
         self.well = well
 
-        if self._columns * well.size_x > size_x or self._rows * well.size_y > size_y:
-                raise ValueError("Well is too big for this Plate")
+        min_required_x = round((wells_x * well.size_x) + (2*abs(offset[0])),2)
+        min_required_y = round((wells_y * well.size_y) +  (2*abs(offset[1])),2)
+
+        if size_x < min_required_x:
+            raise ValueError(
+                f"Plate width ({size_x}mm) is too small for {wells_x} wells of width {well.size_x}mm. "
+                f"Minimum required: {min_required_x:.1f}mm (including offsets)"
+            )
+
+        if size_y < min_required_y:
+            raise ValueError(
+                f"Plate height ({size_y}mm) is too small for {wells_y} wells of height {well.size_y}mm. "
+                f"Minimum required: {min_required_y:.1f}mm (including offsets)"
+            )
+
+        if well.size_z > size_z:
+            raise ValueError(
+                f"Well height ({well.size_z}mm) exceeds plate height ({size_z}mm)"
+            )
 
         self.place_wells()
 
@@ -883,25 +909,42 @@ class PipetteHolder(Labware):
             (x, y) position coordinates of the pipette holder in millimeters.
             If None, position is not set.
         """
+
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id,
                          position=position, can_be_stacked_upon=can_be_stacked_upon)
 
         if holders_across_x <= 0 or holders_across_y <= 0:
-            raise ValueError("holders_across_x and holders_across_y cannot be negative or 0")
+            raise ValueError("holders_across_x and holders_across_y must be positive")
 
         self.add_height = add_height
         self.remove_height = remove_height
         self._columns = holders_across_x
         self._rows = holders_across_y
-
         self.__individual_holders: dict[tuple[int, int], IndividualPipetteHolder] = {}
         self.individual_holder = individual_holder
 
-        # Validate that individual holder fits
-        if holders_across_x * individual_holder.size_x > size_x or holders_across_y * individual_holder.size_y > size_y:
-            raise ValueError("Individual holder is too big for this PipetteHolder")
-        else:
-            self.place_individual_holders()
+        # ⭐ CORRECTED VALIDATION - Account for offsets
+        min_required_x = round((holders_across_x * individual_holder.size_x) + (2*abs(offset[0])),2)
+        min_required_y = round((holders_across_y * individual_holder.size_y) + (2*abs(offset[1])),2)
+
+        if size_x < min_required_x:
+            raise ValueError(
+                f"PipetteHolder width ({size_x}mm) is too small for {holders_across_x} holders of width {individual_holder.size_x}mm. "
+                f"Minimum required: {min_required_x:.1f}mm (including offsets)"
+            )
+
+        if size_y < min_required_y:
+            raise ValueError(
+                f"PipetteHolder height ({size_y}mm) is too small for {holders_across_y} holders of height {individual_holder.size_y}mm. "
+                f"Minimum required: {min_required_y:.1f}mm (including offsets)"
+            )
+
+        if individual_holder.size_z > size_z:
+            raise ValueError(
+                f"Individual holder height ({individual_holder.size_z}mm) exceeds PipetteHolder height ({size_z}mm)"
+            )
+
+        self.place_individual_holders()
 
     def place_individual_holders(self):
         """Create individual holder positions across the grid."""
@@ -1237,7 +1280,7 @@ class PipetteHolder(Labware):
             size_x=data["size_x"],
             size_y=data["size_y"],
             size_z=data["size_z"],
-            can_be_stacked_upon = ["can_be_stacked_upon"],
+            can_be_stacked_upon = data.get("can_be_stacked_upon", False),
             add_height=data["add_height"],
             remove_height=data["remove_height"],
             offset=data["offset"],
