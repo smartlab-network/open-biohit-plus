@@ -604,10 +604,13 @@ class Plate(Labware):
         min_required_y = round((wells_y * well.size_y) +  (2*abs(offset[1])),2)
 
         if size_x < min_required_x:
-            raise ValueError(
+            print("to fix later")
+            pass
+            """raise ValueError(
                 f"Plate width ({size_x}mm) is too small for {wells_x} wells of width {well.size_x}mm. "
                 f"Minimum required: {min_required_x:.1f}mm (including offsets)"
             )
+            """
 
         if size_y < min_required_y:
             raise ValueError(

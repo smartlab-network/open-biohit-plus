@@ -27,23 +27,22 @@ example_well = Well(
     offset=(-8.5, 0.5),
     content={"water": 500},
     capacity=1000,
-    shape="u_bottom",
 )
+
 plate1 = Plate(
     118.1, 65, 53, 6, 8,
     well=example_well,
-    #offset=(14.05, 1),
-    offset=(0,0),
+    offset=(14.05, 1),
     add_height=-3,
     remove_height=-10
 )
-deck1.add_labware(plate1, slot_id="slot4", min_z=0)
+deck1.add_labware(plate1, slot_id="slot4", min_z=0, x_spacing=18, y_spacing=9)
 
 # Create reservoir holder
 example_reservoir = Reservoir(
-    size_x=30, size_y=69, size_z=16.5,
+    size_x=16.5, size_y=79, size_z=45,
     capacity=30000,
-    content={"water": 500}
+    content={"water": 20000}
 )
 reservoirHolder = ReservoirHolder(
     size_x=118,
@@ -51,7 +50,7 @@ reservoirHolder = ReservoirHolder(
     size_z=66,
     offset=(-5.75, 0),
     hooks_across_x=7,
-    hooks_across_y=2,
+    hooks_across_y=1,
     add_height=-10,
     remove_height=-51,
     reservoir_template=example_reservoir
@@ -77,7 +76,7 @@ tip_dropzone = TipDropzone(
     size_z=20,
     offset=(10, 5),
     labware_id="dropzone_1",
-    drop_height_relative=15
+    drop_height_relative=-15
 )
 deck1.add_labware(tip_dropzone, slot_id="slot1", min_z=0)
 print(deck1.to_dict())
@@ -107,3 +106,7 @@ save_deck_for_gui(
     available_reservoirs=[example_reservoir],
     available_individual_holders=[ExamplePipetteHolder],
 )
+
+print(plate1.to_dict())
+print(reservoirHolder.to_dict())
+print(pipette_holder.to_dict())
