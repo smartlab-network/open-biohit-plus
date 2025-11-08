@@ -1,7 +1,10 @@
 from src.biohit_pipettor_plus.control_json import read_json
-from src.biohit_pipettor_plus.gui import Gui
-restored_deck = read_json("deck1")
+from src.biohit_pipettor_plus.gui.function_window import FunctionWindow
+from src.biohit_pipettor_plus.deck import Deck
 
-gui = Gui(deck=restored_deck)
-root = gui.get_root()
+deck_1: Deck = read_json("MainDeck_01")
+print(deck_1)
+gui = FunctionWindow(deck=deck_1)
+
+root = gui.window_build_func
 root.mainloop()
