@@ -1,7 +1,6 @@
 from typing import Dict, List
 from labware import Labware, ReservoirHolder, PipetteHolder, Plate
 from serializable import Serializable, register_class
-#TODO get this right
 from position import Position_allocator
 
 @register_class

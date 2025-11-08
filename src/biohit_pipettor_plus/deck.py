@@ -1,5 +1,5 @@
 from slot import Slot
-from labware import Labware
+from labware import Labware, Plate, ReservoirHolder, PipetteHolder
 from serializable import Serializable, register_class
 from typing import Optional
 
@@ -218,9 +218,22 @@ class Deck(Serializable):
 
         # 2. Reset labware state
         labware.position = None
+
+        if isinstance(labware, Plate):
+            for well in labware.get_wells().values():
+                if well:
+                    well.position = None
+        elif isinstance(labware, ReservoirHolder):
+            for reservoir in labware.get_reservoirs():
+                if reservoir:
+                    reservoir.position = None
+        elif isinstance(labware, PipetteHolder):
+            for holder in labware.get_individual_holders().values():
+                if holder:
+                    holder.position = None
+
         print(f"✓ Removed '{labware_id}' from slot '{slot_id}'")
         return labware  # Return the object to the caller (GUI)
-
 
     def _is_within_range(self, slot: Slot) -> bool:
         return (
