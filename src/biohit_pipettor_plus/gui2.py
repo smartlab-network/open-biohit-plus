@@ -897,6 +897,935 @@ class ConfigureReservoirTemplateDialog(tk.Toplevel):
         self.result = final_template
         self.destroy()
 
+
+class EditWellContentDialog(tk.Toplevel):
+    """Simplified dialog for editing well content"""
+
+    def __init__(self, parent, well):
+        super().__init__(parent)
+        self.title(f"Edit Well Content")
+        self.geometry("500x500")
+        self.well = well
+        self.result = False
+
+        self.transient(parent)
+        self.grab_set()
+
+        self.create_widgets()
+
+    def create_widgets(self):
+        main_frame = ttk.Frame(self, padding="15")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Title
+        title_label = ttk.Label(main_frame, text=f"Edit: {self.well.labware_id}",
+                                font=('Arial', 12, 'bold'))
+        title_label.pack(pady=(0, 15))
+
+        # Add content section
+        add_frame = ttk.LabelFrame(main_frame, text="Add Content", padding="15")
+        add_frame.pack(fill=tk.X, pady=(0, 10))
+
+        ttk.Label(add_frame, text="Content Type:").grid(row=0, column=0, sticky='w', pady=5)
+        self.add_type_var = tk.StringVar()
+        ttk.Entry(add_frame, textvariable=self.add_type_var, width=25).grid(row=0, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(add_frame, text="Volume (µL):").grid(row=1, column=0, sticky='w', pady=5)
+        self.add_volume_var = tk.StringVar()
+        ttk.Entry(add_frame, textvariable=self.add_volume_var, width=25).grid(row=1, column=1, pady=5, padx=(10, 0))
+
+        ttk.Button(add_frame, text="➕ Add", command=self.add_content).grid(row=2, column=0, columnspan=2, pady=(10, 0),
+                                                                           sticky='ew')
+
+        # Remove content section
+        remove_frame = ttk.LabelFrame(main_frame, text="Remove Content", padding="15")
+        remove_frame.pack(fill=tk.X, pady=(0, 10))
+
+        ttk.Label(remove_frame, text="Volume to Remove (µL):").grid(row=0, column=0, sticky='w', pady=5)
+        self.remove_volume_var = tk.StringVar()
+        ttk.Entry(remove_frame, textvariable=self.remove_volume_var, width=25).grid(row=0, column=1, pady=5,
+                                                                                    padx=(10, 0))
+
+        ttk.Button(remove_frame, text="Remove (proportional)",
+                   command=self.remove_content).grid(row=1, column=0, columnspan=2, pady=(10, 5), sticky='ew')
+
+        ttk.Button(remove_frame, text="Clear All Content",
+                   command=self.clear_all).grid(row=2, column=0, columnspan=2, pady=(0, 0), sticky='ew')
+
+        # Buttons
+        btn_frame = ttk.Frame(main_frame)
+        btn_frame.pack(fill=tk.X, pady=(15, 0))
+
+        ttk.Button(btn_frame, text="Save", command=self.on_done).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(btn_frame, text="Cancel", command=self.destroy).pack(side=tk.RIGHT)
+
+    def add_content(self):
+        """Add content to well"""
+        try:
+            content_type = self.add_type_var.get().strip()
+            volume = float(self.add_volume_var.get())
+
+            if not content_type:
+                messagebox.showerror("Error", "Please enter content type")
+                return
+
+            if volume <= 0:
+                messagebox.showerror("Error", "Volume must be positive")
+                return
+
+            self.well.add_content(content_type, volume)
+
+            # Clear inputs
+            self.add_type_var.set("")
+            self.add_volume_var.set("")
+
+            messagebox.showinfo("Success", f"Added {volume}µL of {content_type}")
+
+        except ValueError as e:
+            messagebox.showerror("Error", str(e))
+
+    def remove_content(self):
+        """Remove content from well proportionally"""
+        try:
+            volume = float(self.remove_volume_var.get())
+
+            if volume <= 0:
+                messagebox.showerror("Error", "Volume must be positive")
+                return
+
+            self.well.remove_content(volume)
+            self.remove_volume_var.set("")
+
+            messagebox.showinfo("Success", f"Removed {volume}µL")
+
+        except ValueError as e:
+            messagebox.showerror("Error", str(e))
+
+    def clear_all(self):
+        """Clear all content"""
+        if messagebox.askyesno("Confirm", "Clear all content from this well?"):
+            self.well.clear_content()
+            messagebox.showinfo("Success", "Content cleared")
+
+    def on_done(self):
+        """Close dialog"""
+        self.result = True
+        self.destroy()
+
+class EditReservoirContentDialog(tk.Toplevel):
+    """Simplified dialog for editing reservoir content"""
+
+    def __init__(self, parent, reservoir):
+        super().__init__(parent)
+        self.title(f"Edit Reservoir Content")
+        self.geometry("500x500")
+        self.reservoir = reservoir
+        self.result = False
+
+        self.transient(parent)
+        self.grab_set()
+
+        self.create_widgets()
+
+    def create_widgets(self):
+        main_frame = ttk.Frame(self, padding="15")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Title
+        title_label = ttk.Label(main_frame, text=f"Edit: {self.reservoir.labware_id}",
+                                font=('Arial', 12, 'bold'))
+        title_label.pack(pady=(0, 15))
+
+        # Add content section
+        add_frame = ttk.LabelFrame(main_frame, text="Add Content", padding="15")
+        add_frame.pack(fill=tk.X, pady=(0, 10))
+
+        ttk.Label(add_frame, text="Content Type:").grid(row=0, column=0, sticky='w', pady=5)
+        self.add_type_var = tk.StringVar()
+        ttk.Entry(add_frame, textvariable=self.add_type_var, width=25).grid(row=0, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(add_frame, text="Volume (µL):").grid(row=1, column=0, sticky='w', pady=5)
+        self.add_volume_var = tk.StringVar()
+        ttk.Entry(add_frame, textvariable=self.add_volume_var, width=25).grid(row=1, column=1, pady=5, padx=(10, 0))
+
+        ttk.Button(add_frame, text="➕ Add", command=self.add_content).grid(row=2, column=0, columnspan=2, pady=(10, 0),
+                                                                           sticky='ew')
+
+        # Remove content section
+        remove_frame = ttk.LabelFrame(main_frame, text="Remove Content", padding="15")
+        remove_frame.pack(fill=tk.X, pady=(0, 10))
+
+        ttk.Label(remove_frame, text="Volume to Remove (µL):").grid(row=0, column=0, sticky='w', pady=5)
+        self.remove_volume_var = tk.StringVar()
+        ttk.Entry(remove_frame, textvariable=self.remove_volume_var, width=25).grid(row=0, column=1, pady=5,
+                                                                                    padx=(10, 0))
+
+        ttk.Button(remove_frame, text="Remove (proportional)",
+                   command=self.remove_content).grid(row=1, column=0, columnspan=2, pady=(10, 5), sticky='ew')
+
+        ttk.Button(remove_frame, text="Clear All Content",
+                   command=self.clear_all).grid(row=2, column=0, columnspan=2, pady=(0, 0), sticky='ew')
+
+        # Buttons
+        btn_frame = ttk.Frame(main_frame)
+        btn_frame.pack(fill=tk.X, pady=(15, 0))
+
+        ttk.Button(btn_frame, text="Save", command=self.on_done).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(btn_frame, text="Cancel", command=self.destroy).pack(side=tk.RIGHT)
+
+    def add_content(self):
+        """Add content to reservoir"""
+        try:
+            content_type = self.add_type_var.get().strip()
+            volume = float(self.add_volume_var.get())
+
+            if not content_type:
+                messagebox.showerror("Error", "Please enter content type")
+                return
+
+            if volume <= 0:
+                messagebox.showerror("Error", "Volume must be positive")
+                return
+
+            self.reservoir.add_content(content_type, volume)
+
+            # Clear inputs
+            self.add_type_var.set("")
+            self.add_volume_var.set("")
+
+            messagebox.showinfo("Success", f"Added {volume}µL of {content_type}")
+
+        except ValueError as e:
+            messagebox.showerror("Error", str(e))
+
+    def remove_content(self):
+        """Remove content from reservoir proportionally"""
+        try:
+            volume = float(self.remove_volume_var.get())
+
+            if volume <= 0:
+                messagebox.showerror("Error", "Volume must be positive")
+                return
+
+            self.reservoir.remove_content(volume)
+            self.remove_volume_var.set("")
+
+            messagebox.showinfo("Success", f"Removed {volume}µL")
+
+        except ValueError as e:
+            messagebox.showerror("Error", str(e))
+
+    def clear_all(self):
+        """Clear all content"""
+        if messagebox.askyesno("Confirm", "Clear all content from this reservoir?"):
+            self.reservoir.clear_content()
+            messagebox.showinfo("Success", "Content cleared")
+
+    def on_done(self):
+        """Close dialog"""
+        self.result = True
+        self.destroy()
+
+class EditHolderOccupancyDialog(tk.Toplevel):
+    """Simplified dialog for editing pipette holder occupancy"""
+
+    def __init__(self, parent, holder):
+        super().__init__(parent)
+        self.title(f"Edit Holder")
+        self.geometry("300x300")
+        self.holder = holder
+        self.result = False
+
+        self.transient(parent)
+        self.grab_set()
+
+        self.create_widgets()
+
+    def create_widgets(self):
+        main_frame = ttk.Frame(self, padding="20")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Title
+        title_label = ttk.Label(main_frame, text=f"Edit: {self.holder.labware_id}",
+                                font=('Arial', 12, 'bold'))
+        title_label.pack(pady=(0, 20))
+
+        # Current status display
+        status_frame = ttk.Frame(main_frame)
+        status_frame.pack(pady=(0, 20))
+
+        ttk.Label(status_frame, text="Current Status:",
+                  font=('Arial', 11, 'bold')).pack(side=tk.LEFT, padx=(0, 10))
+
+        status_text = "Has Tip ✓" if self.holder.is_occupied else "Empty ✗"
+        status_color = "green" if self.holder.is_occupied else "red"
+
+        ttk.Label(status_frame, text=status_text,
+                  font=('Arial', 13, 'bold'), foreground=status_color).pack(side=tk.LEFT)
+
+        # Action buttons frame
+        action_frame = ttk.LabelFrame(main_frame, text="Actions", padding="15")
+        action_frame.pack(fill=tk.X, pady=(0, 20))
+
+        ttk.Button(action_frame, text="✓ Place Tip",
+                   command=self.place_tip).pack(fill=tk.X, pady=5)
+
+        ttk.Button(action_frame, text="✗ Remove Tip",
+                   command=self.remove_tip).pack(fill=tk.X, pady=5)
+
+        # Bottom buttons
+        btn_frame = ttk.Frame(main_frame)
+        btn_frame.pack(fill=tk.X)
+
+        ttk.Button(btn_frame, text="Save", command=self.on_done).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(btn_frame, text="Cancel", command=self.destroy).pack(side=tk.RIGHT)
+
+    def place_tip(self):
+        """Place a tip"""
+        try:
+            self.holder.place_pipette()
+            messagebox.showinfo("Success", "Tip placed")
+            # Update dialog to show new status
+            self.destroy()
+            # Reopen with updated status
+            self.result = True
+        except ValueError as e:
+            messagebox.showerror("Error", str(e))
+
+    def remove_tip(self):
+        """Remove a tip"""
+        try:
+            self.holder.remove_pipette()
+            messagebox.showinfo("Success", "Tip removed")
+            # Update dialog to show new status
+            self.destroy()
+            # Reopen with updated status
+            self.result = True
+        except ValueError as e:
+            messagebox.showerror("Error", str(e))
+
+    def on_done(self):
+        """Close dialog"""
+        self.result = True
+        self.destroy()
+
+class ViewChildrenLabwareDialog(tk.Toplevel):
+    """Standalone dialog for viewing and editing child labware items"""
+
+    def __init__(self, parent, labware):
+        super().__init__(parent)
+        self.title(f"View Children: {labware.labware_id}")
+        self.geometry("1000x750")
+        self.labware = labware
+        self.selected_item = None
+
+        self.transient(parent)
+        self.grab_set()
+
+        self.create_widgets()
+        # Delay drawing until window is fully rendered
+        self.after(100, self.draw_grid)
+
+    def create_widgets(self):
+        main_frame = ttk.Frame(self, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Top info
+        info_frame = ttk.LabelFrame(main_frame, text="Labware Info", padding="10")
+        info_frame.pack(fill=tk.X, pady=(0, 5))
+
+        ttk.Label(info_frame, text=f"Type: {self.labware.__class__.__name__}",
+                  font=('Arial', 10, 'bold')).pack(side=tk.LEFT, padx=10)
+        ttk.Label(info_frame, text=f"ID: {self.labware.labware_id}",
+                  font=('Arial', 10, 'bold')).pack(side=tk.LEFT, padx=10)
+
+        if isinstance(self.labware, Plate):
+            ttk.Label(info_frame, text=f"Grid: {self.labware._columns} × {self.labware._rows}",
+                      font=('Arial', 10)).pack(side=tk.LEFT, padx=10)
+        elif isinstance(self.labware, ReservoirHolder):
+            ttk.Label(info_frame, text=f"Hooks: {self.labware._columns} × {self.labware._rows}",
+                      font=('Arial', 10)).pack(side=tk.LEFT, padx=10)
+        elif isinstance(self.labware, PipetteHolder):
+            ttk.Label(info_frame, text=f"Holders: {self.labware._columns} × {self.labware._rows}",
+                      font=('Arial', 10)).pack(side=tk.LEFT, padx=10)
+
+        # Main split: Canvas on left, Info on right
+        content_frame = ttk.Frame(main_frame)
+        content_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Left: Canvas with grid
+        canvas_container = ttk.LabelFrame(content_frame,
+                                          text="Grid View (Click item to select) - Column 0 is RIGHTMOST", padding="5")
+        canvas_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+
+        # Create canvas WITHOUT scrollbars (we'll fit everything to view)
+        self.canvas = tk.Canvas(canvas_container, bg='white')
+        self.canvas.pack(fill=tk.BOTH, expand=True)
+
+        self.canvas.bind('<Button-1>', self.on_canvas_click)
+
+        # Right: Item details and edit controls
+        right_frame = ttk.Frame(content_frame, width=350)
+        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, padx=(5, 0))
+        right_frame.pack_propagate(False)
+
+        # Item info display
+        self.info_frame = ttk.LabelFrame(right_frame, text="Selected Item Info", padding="10")
+        self.info_frame.pack(fill=tk.BOTH, expand=True)
+
+        self.info_text = tk.Text(self.info_frame, height=20, wrap=tk.WORD, width=35)
+        scrollbar = ttk.Scrollbar(self.info_frame, orient=tk.VERTICAL, command=self.info_text.yview)
+        self.info_text.configure(yscrollcommand=scrollbar.set)
+
+        self.info_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Edit buttons
+        btn_frame = ttk.Frame(right_frame)
+        btn_frame.pack(fill=tk.X, pady=(10, 0))
+
+        if isinstance(self.labware, PipetteHolder):
+            ttk.Button(btn_frame, text="📝 Place / Remove",
+                       command=self.edit_selected_item).pack(fill=tk.X, pady=2)
+        elif isinstance(self.labware, ReservoirHolder) or isinstance(self.labware, Plate):
+            ttk.Button(btn_frame, text="📝 Manage content",
+                      command=self.edit_selected_item).pack(fill=tk.X, pady=2)
+        ttk.Button(btn_frame, text="🔄 Refresh View",
+                   command=self.refresh_view).pack(fill=tk.X, pady=2)
+        ttk.Button(btn_frame, text="Clear Selection",
+                   command=self.clear_selection).pack(fill=tk.X, pady=2)
+
+        # Legend
+        legend_frame = ttk.LabelFrame(right_frame, text="Legend", padding="10")
+        legend_frame.pack(fill=tk.X, pady=(10, 0))
+
+        if isinstance(self.labware, Plate):
+            self.create_well_legend(legend_frame)
+        elif isinstance(self.labware, PipetteHolder):
+            self.create_holder_legend(legend_frame)
+
+        # Bottom: Close button
+        bottom_frame = ttk.Frame(main_frame)
+        bottom_frame.pack(fill=tk.X, pady=(10, 0))
+
+        ttk.Button(bottom_frame, text="Close", command=self.destroy).pack(side=tk.RIGHT)
+
+    def create_well_legend(self, parent):
+        """Create legend for well colors"""
+        colors = [
+            ('#FFB6B6', 'Empty'),
+            ('#ADD8E6', 'Has Content')
+        ]
+
+        for color, label in colors:
+            row = ttk.Frame(parent)
+            row.pack(fill=tk.X, pady=2)
+
+            canvas = tk.Canvas(row, width=20, height=15, bg=color, highlightthickness=1, highlightbackground='black')
+            canvas.pack(side=tk.LEFT, padx=(0, 5))
+
+            ttk.Label(row, text=label).pack(side=tk.LEFT)
+
+    def create_holder_legend(self, parent):
+        """Create legend for holder colors"""
+        colors = [
+            ('#90EE90', 'Has Tip (✓)'),
+            ('#FFE4E4', 'Empty (✗)')
+        ]
+
+        for color, label in colors:
+            row = ttk.Frame(parent)
+            row.pack(fill=tk.X, pady=2)
+
+            canvas = tk.Canvas(row, width=20, height=15, bg=color, highlightthickness=1, highlightbackground='black')
+            canvas.pack(side=tk.LEFT, padx=(0, 5))
+
+            ttk.Label(row, text=label).pack(side=tk.LEFT)
+
+    def calculate_scale(self):
+        """Calculate the scale to fit all items in the canvas without scrolling"""
+        # Get canvas dimensions
+        self.canvas.update_idletasks()
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+
+        # Get grid dimensions
+        if isinstance(self.labware, Plate):
+            cols = self.labware._columns
+            rows = self.labware._rows
+        elif isinstance(self.labware, ReservoirHolder):
+            cols = self.labware._columns
+            rows = self.labware._rows
+        elif isinstance(self.labware, PipetteHolder):
+            cols = self.labware._columns
+            rows = self.labware._rows
+        else:
+            return 60  # Default
+
+        # Calculate padding
+        padding = 40
+        label_space = 25  # Space for row/column labels
+
+        # Calculate available space
+        available_width = canvas_width - 2 * padding - label_space
+        available_height = canvas_height - 2 * padding - label_space
+
+        # Calculate cell size that fits
+        cell_width = available_width / cols if cols > 0 else 60
+        cell_height = available_height / rows if rows > 0 else 60
+
+        # Use the smaller dimension to ensure everything fits
+        cell_size = min(cell_width, cell_height)
+
+        # Set minimum and maximum bounds
+        cell_size = max(40, min(cell_size, 150))  # Between 40 and 150 pixels
+
+        return cell_size
+
+    def draw_grid(self):
+        """Draw grid representation of items"""
+        self.canvas.delete("all")
+
+        if isinstance(self.labware, Plate):
+            self.draw_plate_grid()
+        elif isinstance(self.labware, ReservoirHolder):
+            self.draw_reservoir_grid()
+        elif isinstance(self.labware, PipetteHolder):
+            self.draw_pipette_holder_grid()
+
+    def draw_plate_grid(self):
+        """Draw well grid for Plate with RIGHT-TO-LEFT layout (column 0 at right)"""
+        plate = self.labware
+        rows = plate._rows
+        cols = plate._columns
+
+        # Calculate scale to fit
+        cell_size = self.calculate_scale()
+        padding = 40
+
+        # Draw column labels (RIGHT TO LEFT - col 0 is rightmost)
+        for col in range(cols):
+            display_col = cols - 1 - col  # Flip: col 0 appears at right
+            x = padding + display_col * cell_size + cell_size / 2
+            self.canvas.create_text(
+                x, padding - 15,
+                text=str(col),
+                font=('Arial', 10, 'bold'),
+                fill='blue'
+            )
+
+        # Draw row labels
+        for row in range(rows):
+            y = padding + row * cell_size + cell_size / 2
+            self.canvas.create_text(
+                padding - 15, y,
+                text=str(row),
+                font=('Arial', 10, 'bold'),
+                fill='blue'
+            )
+
+        # Draw wells (RIGHT TO LEFT)
+        for row in range(rows):
+            for col in range(cols):
+                well = plate.get_well_at(col, row)
+                if not well:
+                    continue
+
+                display_col = cols - 1 - col  # Flip for display
+
+                x1 = padding + display_col * cell_size
+                y1 = padding + row * cell_size
+                x2 = x1 + cell_size
+                y2 = y1 + cell_size
+
+                # Simple color: light blue if has content, light red if empty
+                fill_color = self.get_well_color(well)
+
+                # Draw well
+                self.canvas.create_rectangle(
+                    x1, y1, x2, y2,
+                    fill=fill_color,
+                    outline='black',
+                    width=2,
+                    tags=('item', f'well_{col}_{row}')
+                )
+
+                # Draw label - scale font based on cell size
+                font_size = max(7, min(int(cell_size / 8), 11))
+                vol = well.get_total_volume()
+                if vol > 0:
+                    if vol >= 1000:
+                        vol_text = f"{vol / 1000:.1f}mL"
+                    else:
+                        vol_text = f"{vol:.0f}µL"
+                else:
+                    vol_text = "Empty"
+
+                self.canvas.create_text(
+                    (x1 + x2) / 2, (y1 + y2) / 2,
+                    text=vol_text,
+                    font=('Arial', font_size),
+                    tags=('item', f'well_{col}_{row}')
+                )
+
+    def draw_reservoir_grid(self):
+        """Draw reservoir grid for ReservoirHolder (already RIGHT-TO-LEFT)"""
+        holder = self.labware
+        hooks_x = holder._columns
+        hooks_y = holder._rows
+
+        # Calculate scale to fit
+        cell_size = self.calculate_scale()
+        padding = 40
+
+        # Draw hook labels (numbering right to left, top to bottom)
+        for row in range(hooks_y):
+            for col in range(hooks_x):
+                display_col = hooks_x - 1 - col
+                hook_id = holder.position_to_hook_id(col, row)
+
+                x = padding + display_col * cell_size + cell_size / 2
+                y = padding + row * cell_size + cell_size / 2
+
+                # Draw background
+                x1 = padding + display_col * cell_size
+                y1 = padding + row * cell_size
+                x2 = x1 + cell_size
+                y2 = y1 + cell_size
+
+                self.canvas.create_rectangle(
+                    x1, y1, x2, y2,
+                    outline='lightgray',
+                    fill='white',
+                    width=1
+                )
+
+                font_size = max(7, min(int(cell_size / 10), 10))
+                self.canvas.create_text(
+                    x, y,
+                    text=str(hook_id),
+                    font=('Arial', font_size),
+                    fill='lightgray'
+                )
+
+        # Draw reservoirs on top
+        reservoirs = holder.get_reservoirs()
+        colors = ['#FFB6C1', '#87CEEB', '#98FB98', '#FFD700', '#FFA07A', '#DDA0DD', '#F0E68C', '#E6E6FA']
+
+        for idx, reservoir in enumerate(reservoirs):
+            color = colors[idx % len(colors)]
+
+            positions = [holder.hook_id_to_position(hid) for hid in reservoir.hook_ids]
+            cols = [pos[0] for pos in positions]
+            rows = [pos[1] for pos in positions]
+
+            min_col, max_col = min(cols), max(cols)
+            min_row, max_row = min(rows), max(rows)
+
+            # Right-to-left display
+            display_min_col = hooks_x - 1 - max_col
+            display_max_col = hooks_x - 1 - min_col
+
+            x1 = padding + display_min_col * cell_size
+            y1 = padding + min_row * cell_size
+            x2 = padding + (display_max_col + 1) * cell_size
+            y2 = padding + (max_row + 1) * cell_size
+
+            # Draw reservoir
+            self.canvas.create_rectangle(
+                x1, y1, x2, y2,
+                fill=color,
+                outline='black',
+                width=3,
+                tags=('item', f'reservoir_{reservoir.column}_{reservoir.row}')
+            )
+
+            # Label - scale font
+            font_size = max(8, min(int(cell_size / 8), 12))
+            label = f"{reservoir.labware_id}\n"
+            label += f"Pos: ({reservoir.column},{reservoir.row})\n"
+            vol = reservoir.get_total_volume()
+            if vol >= 1000:
+                label += f"{vol / 1000:.1f}mL"
+            else:
+                label += f"{vol:.0f}µL"
+
+            self.canvas.create_text(
+                (x1 + x2) / 2, (y1 + y2) / 2,
+                text=label,
+                font=('Arial', font_size, 'bold'),
+                tags=('item', f'reservoir_{reservoir.column}_{reservoir.row}')
+            )
+
+    def draw_pipette_holder_grid(self):
+        """Draw holder grid for PipetteHolder with RIGHT-TO-LEFT layout (column 0 at right)"""
+        holder = self.labware
+        holders_x = holder._columns
+        holders_y = holder._rows
+
+        # Calculate scale to fit
+        cell_size = self.calculate_scale()
+        padding = 40
+
+        # Draw column labels (RIGHT TO LEFT - col 0 is rightmost)
+        for col in range(holders_x):
+            display_col = holders_x - 1 - col  # Flip: col 0 appears at right
+            x = padding + display_col * cell_size + cell_size / 2
+            self.canvas.create_text(
+                x, padding - 15,
+                text=str(col),
+                font=('Arial', 10, 'bold'),
+                fill='blue'
+            )
+
+        # Draw row labels
+        for row in range(holders_y):
+            y = padding + row * cell_size + cell_size / 2
+            self.canvas.create_text(
+                padding - 15, y,
+                text=str(row),
+                font=('Arial', 10, 'bold'),
+                fill='blue'
+            )
+
+        # Draw individual holders (RIGHT TO LEFT)
+        for row in range(holders_y):
+            for col in range(holders_x):
+                individual = holder.get_holder_at(col, row)
+                if not individual:
+                    continue
+
+                display_col = holders_x - 1 - col  # Flip for display
+
+                x1 = padding + display_col * cell_size
+                y1 = padding + row * cell_size
+                x2 = x1 + cell_size
+                y2 = y1 + cell_size
+
+                # Color based on occupancy
+                fill_color = '#90EE90' if individual.is_occupied else '#FFE4E4'
+
+                # Draw holder
+                self.canvas.create_rectangle(
+                    x1, y1, x2, y2,
+                    fill=fill_color,
+                    outline='black',
+                    width=2,
+                    tags=('item', f'holder_{col}_{row}')
+                )
+
+                # Label - use tick marks with scaled font
+                status = "✓" if individual.is_occupied else "✗"
+                status_color = "darkgreen" if individual.is_occupied else "darkred"
+                font_size = max(16, min(int(cell_size / 3), 28))
+
+                self.canvas.create_text(
+                    (x1 + x2) / 2, (y1 + y2) / 2,
+                    text=status,
+                    font=('Arial', font_size, 'bold'),
+                    fill=status_color,
+                    tags=('item', f'holder_{col}_{row}')
+                )
+
+    def get_well_color(self, well):
+        """Get color for well - light blue if has content, light red if empty"""
+        volume = well.get_total_volume()
+
+        if volume == 0:
+            return '#FFB6B6'  # Empty - light red
+        else:
+            return '#ADD8E6'  # Has content - light blue
+
+    def on_canvas_click(self, event):
+        """Handle click on canvas item"""
+        item = self.canvas.find_closest(event.x, event.y)[0]
+        tags = self.canvas.gettags(item)
+
+        # Find the item tag
+        item_tag = None
+        for tag in tags:
+            if tag.startswith(('well_', 'reservoir_', 'holder_')):
+                item_tag = tag
+                break
+
+        if item_tag:
+            self.select_item(item_tag)
+
+    def select_item(self, item_tag):
+        """Select and highlight an item"""
+        # Clear previous selection
+        for item in self.canvas.find_withtag('item'):
+            if self.canvas.type(item) in ('rectangle', 'oval'):
+                # Reset to original width
+                orig_tags = self.canvas.gettags(item)
+                if 'reservoir_' in str(orig_tags):
+                    self.canvas.itemconfig(item, width=3, outline='black')
+                else:
+                    self.canvas.itemconfig(item, width=2, outline='black')
+
+        # Highlight new selection
+        items = self.canvas.find_withtag(item_tag)
+        for item in items:
+            if self.canvas.type(item) in ('rectangle', 'oval'):
+                self.canvas.itemconfig(item, width=4, outline='red')
+
+        self.selected_item = item_tag
+        self.show_item_info(item_tag)
+
+    def show_item_info(self, item_tag):
+        """Display info for selected item"""
+        self.info_text.delete(1.0, tk.END)
+
+        if item_tag.startswith('well_'):
+            _, col_str, row_str = item_tag.split('_')
+            col, row = int(col_str), int(row_str)
+            well = self.labware.get_well_at(col, row)
+
+            info = f"WELL at Grid ({col}, {row})\n"
+            info += "=" * 35 + "\n\n"
+            info += f"ID: {well.labware_id}\n"
+            info += f"Position (mm): {well.position}\n\n"
+            info += f"Dimensions:\n"
+            info += f"  {well.size_x} × {well.size_y} × {well.size_z} mm\n\n"
+            info += f"Volume:\n"
+            info += f"  Capacity: {well.capacity} µL\n"
+            info += f"  Current: {well.get_total_volume():.1f} µL\n"
+            info += f"  Available: {well.get_available_volume():.1f} µL\n"
+            info += f"  Fill: {(well.get_total_volume() / well.capacity * 100):.1f}%\n\n"
+
+            if well.shape:
+                info += f"Shape: {well.shape}\n\n"
+
+            info += f"Content:\n"
+            if well.content:
+                for content_type, vol in well.content.items():
+                    info += f"  • {content_type}: {vol:.1f} µL\n"
+            else:
+                info += "  (empty)\n"
+
+        elif item_tag.startswith('reservoir_'):
+            _, col_str, row_str = item_tag.split('_')
+            col, row = int(col_str), int(row_str)
+
+            # Find reservoir at this position
+            reservoir = None
+            for res in self.labware.get_reservoirs():
+                if res.column == col and res.row == row:
+                    reservoir = res
+                    break
+
+            if reservoir:
+                info = f"RESERVOIR at Grid ({col}, {row})\n"
+                info += "=" * 35 + "\n\n"
+                info += f"ID: {reservoir.labware_id}\n"
+                info += f"Position (mm): {reservoir.position}\n\n"
+                info += f"Dimensions:\n"
+                info += f"  {reservoir.size_x} × {reservoir.size_y} × {reservoir.size_z} mm\n\n"
+                info += f"Hook IDs: {reservoir.hook_ids}\n"
+                info += f"Spans: {len(reservoir.hook_ids)} hooks\n\n"
+                info += f"Volume:\n"
+                info += f"  Capacity: {reservoir.capacity} µL\n"
+                info += f"  Current: {reservoir.get_total_volume():.1f} µL\n"
+                info += f"  Available: {reservoir.get_available_volume():.1f} µL\n"
+                info += f"  Fill: {(reservoir.get_total_volume() / reservoir.capacity * 100):.1f}%\n\n"
+
+                if reservoir.shape:
+                    info += f"Shape: {reservoir.shape}\n\n"
+
+                info += f"Content:\n"
+                if reservoir.content:
+                    for content_type, vol in reservoir.content.items():
+                        info += f"  • {content_type}: {vol:.1f} µL\n"
+                else:
+                    info += "  (empty)\n"
+            else:
+                info = "Reservoir not found"
+
+        elif item_tag.startswith('holder_'):
+            _, col_str, row_str = item_tag.split('_')
+            col, row = int(col_str), int(row_str)
+            holder = self.labware.get_holder_at(col, row)
+
+            info = f"PIPETTE HOLDER at Grid ({col}, {row})\n"
+            info += "=" * 35 + "\n\n"
+            info += f"ID: {holder.labware_id}\n"
+            info += f"Position (mm): {holder.position}\n\n"
+            info += f"Dimensions:\n"
+            info += f"  {holder.size_x} × {holder.size_y} × {holder.size_z} mm\n\n"
+            info += f"Status:\n"
+            info += f"  Is Occupied: {holder.is_occupied}\n"
+            info += f"  {'✓ Has Tip' if holder.is_occupied else '✗ Empty'}\n"
+
+        self.info_text.insert(1.0, info)
+
+    def edit_selected_item(self):
+        """Open edit dialog for selected item"""
+        if not self.selected_item:
+            messagebox.showwarning("No Selection", "Please click on an item in the grid first")
+            return
+
+        if self.selected_item.startswith('well_'):
+            _, col_str, row_str = self.selected_item.split('_')
+            col, row = int(col_str), int(row_str)
+            well = self.labware.get_well_at(col, row)
+
+            dialog = EditWellContentDialog(self, well)
+            self.wait_window(dialog)
+
+            if dialog.result:
+                self.refresh_view()
+
+        elif self.selected_item.startswith('reservoir_'):
+            _, col_str, row_str = self.selected_item.split('_')
+            col, row = int(col_str), int(row_str)
+
+            reservoir = None
+            for res in self.labware.get_reservoirs():
+                if res.column == col and res.row == row:
+                    reservoir = res
+                    break
+
+            if reservoir:
+                dialog = EditReservoirContentDialog(self, reservoir)
+                self.wait_window(dialog)
+
+                if dialog.result:
+                    self.refresh_view()
+
+        elif self.selected_item.startswith('holder_'):
+            _, col_str, row_str = self.selected_item.split('_')
+            col, row = int(col_str), int(row_str)
+            holder = self.labware.get_holder_at(col, row)
+
+            dialog = EditHolderOccupancyDialog(self, holder)
+            self.wait_window(dialog)
+
+            if dialog.result:
+                self.refresh_view()
+
+    def refresh_view(self):
+        """Refresh the grid view and reselect item if it exists"""
+        current_selection = self.selected_item
+        self.draw_grid()
+        if current_selection:
+            # Try to reselect the same item
+            try:
+                self.select_item(current_selection)
+            except:
+                self.clear_selection()
+
+    def clear_selection(self):
+        """Clear item selection"""
+        for item in self.canvas.find_withtag('item'):
+            if self.canvas.type(item) in ('rectangle', 'oval'):
+                orig_tags = self.canvas.gettags(item)
+                if 'reservoir_' in str(orig_tags):
+                    self.canvas.itemconfig(item, width=3, outline='black')
+                else:
+                    self.canvas.itemconfig(item, width=2, outline='black')
+        self.selected_item = None
+        self.info_text.delete(1.0, tk.END)
+
 class EditSlotDialog(tk.Toplevel):
     """Dialog for editing an existing slot"""
 
@@ -2299,6 +3228,36 @@ class DeckGUI:
                 command=self.delete_selected_unplaced_slot
             ).pack(fill=tk.X, pady=2)
 
+    def view_children_labware(self):
+        """Open viewer for child labware items (works for both placed and unplaced)"""
+        selection = self.labware_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("No Selection", "Please select a labware first")
+            return
+
+        # Get labware based on current view mode
+        if self.labware_view_mode.get() == "placed":
+            lw_id = self.labware_listbox.get(selection[0])
+            labware = self.deck.labware.get(lw_id)
+        else:
+            labware = self.unplaced_labware[selection[0]]
+
+        if not labware:
+            return
+
+        # Only works for composite labware
+        if not isinstance(labware, (Plate, ReservoirHolder, PipetteHolder)):
+            messagebox.showinfo("Not Applicable",
+                                f"{labware.__class__.__name__} doesn't have child items to view")
+            return
+
+        dialog = ViewChildrenLabwareDialog(self.root, labware)
+        self.root.wait_window(dialog)
+
+        # Refresh main display after editing
+        if self.labware_view_mode.get() == "placed":
+            self.draw_deck()
+
     def update_labware_buttons(self):
         """Update buttons based on current labware view mode"""
         # Clear existing buttons
@@ -2312,6 +3271,12 @@ class DeckGUI:
                 text="Unplace Labware",
                 command=self.unplace_selected_labware
             ).pack(fill=tk.X, pady=2)
+            ttk.Button(
+                self.labware_button_frame,
+                text=" View and Edit Children Labware",
+                command=self.view_children_labware
+            ).pack(fill=tk.X, pady=2)
+
         else:
             # Show "Place on Slot", "Edit", and "Delete" buttons for unplaced labware
             ttk.Button(
@@ -2324,6 +3289,12 @@ class DeckGUI:
                 text="Edit",
                 command=self.edit_selected_unplaced_labware
             ).pack(fill=tk.X, pady=2)
+            ttk.Button(
+                self.labware_button_frame,
+                text=" View Children Labware",
+                command=self.view_children_labware
+            ).pack(fill=tk.X, pady=2)
+
             ttk.Button(
                 self.labware_button_frame,
                 text="Create",
@@ -3511,6 +4482,10 @@ class DeckGUI:
         self.clear_selection()
         self.labware_listbox.selection_clear(0, tk.END)
 
+        if slot_id in self.deck.slots:
+            self.slot_view_mode.set("placed")
+            self.update_slots_list()
+
         tag = f'slot_{slot_id}'
         self.selected_item = ('slot', slot_id)
 
@@ -3518,7 +4493,7 @@ class DeckGUI:
         listbox = self.slots_listbox  # Correctly assigns the single listbox
         listbox.selection_clear(0, tk.END)
 
-        # --- FIX THE SELECTION LOOP ---
+        # --- SELECTION LOOP ---
         for item in items:
             item_type = self.canvas.type(item)
 
@@ -3566,6 +4541,9 @@ class DeckGUI:
         self.slots_listbox.selection_clear(0, tk.END)
         self.selected_item = ('labware', lw_id)
 
+        if lw_id in self.deck.labware:
+            self.labware_view_mode.set("placed")
+            self.update_labware_list()
         items = self.canvas.find_withtag(f'labware_{lw_id}')
 
         lw = self.deck.labware.get(lw_id)  # Use .get() for safety
