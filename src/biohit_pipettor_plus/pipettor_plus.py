@@ -5,7 +5,7 @@ try:
     HARDWARE_AVAILABLE = True
 
 except ImportError:
-    print("⚠️  Hardware not available - running in simulation mode")
+    print("⚠️ Hardware not available - running in simulation mode")
     HARDWARE_AVAILABLE = False
 
 
