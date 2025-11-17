@@ -34,7 +34,7 @@ class WellWindow:
     def __init__(self, rows: int, columns: int, labware_id: str, title: str = "",
                  master: ttk.Window = None, wells_list: list[tuple[int, int]] = None,
                  max_selected: int = None):
-
+        print("test")
         # --- Window setup ---
         if master:
             self.__root = ttk.Toplevel(master=master, title=title)
