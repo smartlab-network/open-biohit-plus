@@ -14,6 +14,8 @@ from labware import (
     PipetteHolder, TipDropzone, IndividualPipetteHolder
 )
 from pipettor_plus import PipettorPlus
+from .gui.function_window import FunctionWindow
+
 class CreateLowLevelLabwareDialog(tk.Toplevel):
     """Dialog for creating low-level labware components (Well, Reservoir, IndividualPipetteHolder)"""
     def __init__(self, parent, initial_type=None):
@@ -3582,18 +3584,30 @@ class DeckGUI:
 
     def create_operations_tab(self):
         """Create an empty Operations tab placeholder for future development."""
-        operations_tab = ttk.Frame(self.right_panel_notebook)
-        self.right_panel_notebook.add(operations_tab, text="Operations")
+        self.operations_tab = ttk.Frame(self.right_panel_notebook)
+        self.right_panel_notebook.add(self.operations_tab, text="Operations")
 
         # Add a simple label to confirm the tab is present and ready for code
         ttk.Label(
-            operations_tab,
+            self.operations_tab,
             text="Operations Tab\n(Code to be added by developer)",
             font=('Arial', 12),
             anchor=tk.CENTER,
             justify=tk.CENTER,
             padding=20
         ).pack(expand=True, fill=tk.BOTH)
+
+        ttk.Button(
+            self.operations_tab,
+            text = "Create Operations",
+            font = ('Arial', 12),
+            anchor=tk.CENTER,
+            padding=20,
+            command=self.callback_button_operations
+        ).pack(expand=True, fill=tk.BOTH)
+
+    def callback_button_operations(self):
+        FunctionWindow(deck = self.deck, master = self.root, plot_frame=self.operations_tab)
 
     def delete_selected_lll(self):
         """Delete the selected low-level labware"""

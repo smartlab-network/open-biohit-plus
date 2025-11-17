@@ -13,13 +13,11 @@ from pipettor_plus import PipettorPlus
 MULTI_CHANNEL_NUMBER = 6
 
 class FunctionWindow:
-    def __init__(self, deck: Deck, master: ttk.Window = None, pipettor: PipettorPlus = None):
+    def __init__(self, deck: Deck, master: ttk.Window = None, pipettor: PipettorPlus = None, plot_frame: ttk.Frame = None):
         if isinstance(master, ttk.Window or tk.Tk):
             self.window_build_func = ttk.Toplevel(master)
-            print("slave")
         else:
             self.window_build_func = ttk.Window(themename="solar")
-            print("Master")
         self.window_build_func.geometry("1400x800")
 
         self.is_shown = False
@@ -40,6 +38,7 @@ class FunctionWindow:
         self.current_func_list: list[Callable] = []
 
         self.dict_top_labware = self.get_top_labwares()
+        self.plot_frame = plot_frame
 
     def show_window(self):
         if self.is_shown:
@@ -185,7 +184,15 @@ class FunctionWindow:
         self.custom_funcs_dict[name] = self.current_func_list
         self.current_func_list = []
         self.third_column_frame.grid_remove()
-        print(self.custom_funcs_dict)
+
+        ttk.Button(self.plot_frame,
+                   text = name,
+                   command = lambda: self.task_manager(self.custom_funcs_dict[name])).pack(expand=True, fill=tk.BOTH)
+
+    def task_manager(self, operations: list[Callable]):
+        for idx, command in enumerate(operations):
+            print(f"done: {idx/len(operations)}")
+            command()
 
     def display_possible_labware(self, labware_type, next_callback, func_str, part="first", start_row=0, **kwargs):
         """Display selectable labware of a given type and call `next_callback` with selected labware."""
