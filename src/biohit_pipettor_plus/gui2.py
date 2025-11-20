@@ -1,7 +1,8 @@
 # gui2.py - Enhanced Tkinter GUI for Deck Editor with Low-Level Labware Support
 
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog, simpledialog
+from tkinter import messagebox, filedialog, simpledialog
+import ttkbootstrap as ttk
 import json
 
 import copy
@@ -34,7 +35,7 @@ class CreateLowLevelLabwareDialog(tk.Toplevel):
         main_frame.pack(fill=tk.BOTH, expand=True)
 
         # Type Selection
-        type_frame = ttk.LabelFrame(main_frame, text="Component Type", padding="10")
+        type_frame = ttk.Labelframe(main_frame, text="Component Type", padding="10")
         type_frame.pack(fill=tk.X, pady=5)
 
         all_types = ["Well", "Reservoir", "IndividualPipetteHolder"]
@@ -61,7 +62,7 @@ class CreateLowLevelLabwareDialog(tk.Toplevel):
             ).pack(anchor='w')
 
         # Basic Parameters
-        basic_frame = ttk.LabelFrame(main_frame, text="Basic Parameters", padding="10")
+        basic_frame = ttk.Labelframe(main_frame, text="Basic Parameters", padding="10")
         basic_frame.pack(fill=tk.X, pady=5)
 
         # ID
@@ -95,7 +96,7 @@ class CreateLowLevelLabwareDialog(tk.Toplevel):
         ttk.Entry(basic_frame, textvariable=self.offset_y_var, width=30).grid(row=5, column=1, pady=2)
 
         # Type-Specific Parameters Frame
-        self.specific_frame = ttk.LabelFrame(main_frame, text="Type-Specific Parameters", padding="10")
+        self.specific_frame = ttk.Labelframe(main_frame, text="Type-Specific Parameters", padding="10")
         self.specific_frame.pack(fill=tk.BOTH, expand=True, pady=5)
 
         # Initialize type-specific fields
@@ -373,7 +374,7 @@ class SelectOrCreateComponentDialog(tk.Toplevel):
         ).pack(pady=(0, 10))
 
         # List frame
-        list_frame = ttk.LabelFrame(main_frame, text=f"Available {self.component_type}s", padding="10")
+        list_frame = ttk.Labelframe(main_frame, text=f"Available {self.component_type}s", padding="10")
         list_frame.pack(fill=tk.BOTH, expand=True, pady=5)
 
         # Listbox with scrollbar
@@ -490,7 +491,7 @@ class CreateLabwareDialog(tk.Toplevel):
         main_frame.pack(fill=tk.BOTH, expand=True)
 
         # Labware Type Selection
-        type_frame = ttk.LabelFrame(main_frame, text="Labware Type", padding="10")
+        type_frame = ttk.Labelframe(main_frame, text="Labware Type", padding="10")
         type_frame.pack(fill=tk.X, pady=5)
 
         self.labware_type = tk.StringVar(value="Plate")
@@ -506,7 +507,7 @@ class CreateLabwareDialog(tk.Toplevel):
             ).pack(anchor='w')
 
         # Basic Parameters
-        basic_frame = ttk.LabelFrame(main_frame, text="Basic Parameters", padding="10")
+        basic_frame = ttk.Labelframe(main_frame, text="Basic Parameters", padding="10")
         basic_frame.pack(fill=tk.X, pady=5)
 
         # Labware ID
@@ -544,7 +545,7 @@ class CreateLabwareDialog(tk.Toplevel):
         ttk.Label(basic_frame, text="(optional, default: Unselected = False)", font=('Arial', 12, 'italic'),foreground='gray').grid(row=6, column=2, sticky='w', padx=5)
 
         # Type-Specific Parameters Frame
-        self.specific_frame = ttk.LabelFrame(main_frame, text="Type-Specific Parameters", padding="10")
+        self.specific_frame = ttk.Labelframe(main_frame, text="Type-Specific Parameters", padding="10")
         self.specific_frame.pack(fill=tk.BOTH, expand=True, pady=5)
 
         # Initialize type-specific fields
@@ -897,7 +898,6 @@ class ConfigureReservoirTemplateDialog(tk.Toplevel):
         self.result = final_template
         self.destroy()
 
-
 class EditWellContentDialog(tk.Toplevel):
     """Simplified dialog for editing well content"""
 
@@ -923,7 +923,7 @@ class EditWellContentDialog(tk.Toplevel):
         title_label.pack(pady=(0, 15))
 
         # Add content section
-        add_frame = ttk.LabelFrame(main_frame, text="Add Content", padding="15")
+        add_frame = ttk.Labelframe(main_frame, text="Add Content", padding="15")
         add_frame.pack(fill=tk.X, pady=(0, 10))
 
         ttk.Label(add_frame, text="Content Type:").grid(row=0, column=0, sticky='w', pady=5)
@@ -938,7 +938,7 @@ class EditWellContentDialog(tk.Toplevel):
                                                                            sticky='ew')
 
         # Remove content section
-        remove_frame = ttk.LabelFrame(main_frame, text="Remove Content", padding="15")
+        remove_frame = ttk.Labelframe(main_frame, text="Remove Content", padding="15")
         remove_frame.pack(fill=tk.X, pady=(0, 10))
 
         ttk.Label(remove_frame, text="Volume to Remove (µL):").grid(row=0, column=0, sticky='w', pady=5)
@@ -1037,7 +1037,7 @@ class EditReservoirContentDialog(tk.Toplevel):
         title_label.pack(pady=(0, 15))
 
         # Add content section
-        add_frame = ttk.LabelFrame(main_frame, text="Add Content", padding="15")
+        add_frame = ttk.Labelframe(main_frame, text="Add Content", padding="15")
         add_frame.pack(fill=tk.X, pady=(0, 10))
 
         ttk.Label(add_frame, text="Content Type:").grid(row=0, column=0, sticky='w', pady=5)
@@ -1052,7 +1052,7 @@ class EditReservoirContentDialog(tk.Toplevel):
                                                                            sticky='ew')
 
         # Remove content section
-        remove_frame = ttk.LabelFrame(main_frame, text="Remove Content", padding="15")
+        remove_frame = ttk.Labelframe(main_frame, text="Remove Content", padding="15")
         remove_frame.pack(fill=tk.X, pady=(0, 10))
 
         ttk.Label(remove_frame, text="Volume to Remove (µL):").grid(row=0, column=0, sticky='w', pady=5)
@@ -1164,7 +1164,7 @@ class EditHolderOccupancyDialog(tk.Toplevel):
                   font=('Arial', 13, 'bold'), foreground=status_color).pack(side=tk.LEFT)
 
         # Action buttons frame
-        action_frame = ttk.LabelFrame(main_frame, text="Actions", padding="15")
+        action_frame = ttk.Labelframe(main_frame, text="Actions", padding="15")
         action_frame.pack(fill=tk.X, pady=(0, 20))
 
         ttk.Button(action_frame, text="✓ Place Tip",
@@ -1231,7 +1231,7 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
         main_frame.pack(fill=tk.BOTH, expand=True)
 
         # Top info
-        info_frame = ttk.LabelFrame(main_frame, text="Labware Info", padding="10")
+        info_frame = ttk.Labelframe(main_frame, text="Labware Info", padding="10")
         info_frame.pack(fill=tk.X, pady=(0, 5))
 
         ttk.Label(info_frame, text=f"Type: {self.labware.__class__.__name__}",
@@ -1254,7 +1254,7 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
         content_frame.pack(fill=tk.BOTH, expand=True)
 
         # Left: Canvas with grid
-        canvas_container = ttk.LabelFrame(content_frame,
+        canvas_container = ttk.Labelframe(content_frame,
                                           text="Grid View (Click item to select) - Column 0 is RIGHTMOST", padding="5")
         canvas_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
 
@@ -1270,7 +1270,7 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
         right_frame.pack_propagate(False)
 
         # Item info display
-        self.info_frame = ttk.LabelFrame(right_frame, text="Selected Item Info", padding="10")
+        self.info_frame = ttk.Labelframe(right_frame, text="Selected Item Info", padding="10")
         self.info_frame.pack(fill=tk.BOTH, expand=True)
 
         self.info_text = tk.Text(self.info_frame, height=20, wrap=tk.WORD, width=35)
@@ -1296,7 +1296,7 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
                    command=self.clear_selection).pack(fill=tk.X, pady=2)
 
         # Legend
-        legend_frame = ttk.LabelFrame(right_frame, text="Legend", padding="10")
+        legend_frame = ttk.Labelframe(right_frame, text="Legend", padding="10")
         legend_frame.pack(fill=tk.X, pady=(10, 0))
 
         if isinstance(self.labware, Plate):
@@ -1847,7 +1847,7 @@ class EditSlotDialog(tk.Toplevel):
         main_frame.pack(fill=tk.BOTH, expand=True)
 
         # Parameters frame
-        params_frame = ttk.LabelFrame(main_frame, text="Slot Parameters", padding="10")
+        params_frame = ttk.Labelframe(main_frame, text="Slot Parameters", padding="10")
         params_frame.pack(fill=tk.BOTH, expand=True)
 
         # Slot ID (read-only display)
@@ -1944,7 +1944,7 @@ class EditLabwareDialog(tk.Toplevel):
         main_frame.pack(fill=tk.BOTH, expand=True)
 
         # Info
-        info_frame = ttk.LabelFrame(main_frame, text="Labware Info", padding="10")
+        info_frame = ttk.Labelframe(main_frame, text="Labware Info", padding="10")
         info_frame.pack(fill=tk.X, pady=5)
 
         ttk.Label(info_frame, text=f"ID: {self.labware.labware_id}").pack(anchor='w')
@@ -2037,10 +2037,11 @@ class EditLabwareDialog(tk.Toplevel):
         return "No specific requirements"
 
     def create_basic_properties_tab(self):
-        """Basic properties tab (same as before)"""
+        """Basic properties tab"""
         basic_tab = ttk.Frame(self.notebook, padding="10")
         self.notebook.add(basic_tab, text="Basic Properties")
 
+        # Existing basic properties...
         ttk.Label(basic_tab, text="Size X (mm):").grid(row=0, column=0, sticky='w', pady=5)
         self.size_x_var = tk.StringVar(value=str(self.labware.size_x))
         ttk.Entry(basic_tab, textvariable=self.size_x_var, width=25).grid(row=0, column=1, pady=5)
@@ -2065,11 +2066,70 @@ class EditLabwareDialog(tk.Toplevel):
         self.can_be_stacked_upon_var = tk.BooleanVar(value=self.labware.can_be_stacked_upon)
         ttk.Checkbutton(basic_tab, variable=self.can_be_stacked_upon_var).grid(row=5, column=1, sticky='w', pady=2)
 
-        separator = ttk.Separator(basic_tab, orient='horizontal')
-        separator.grid(row=6, column=0, columnspan=2, sticky='ew', pady=10)
+        # ✅ ADD HEIGHT PROPERTIES SECTION
+        current_row = 6
 
-        req_frame = ttk.LabelFrame(basic_tab, text="⚠️ Dimensional Requirements", padding="10")
-        req_frame.grid(row=7, column=0, columnspan=2, sticky='ew', pady=5)
+        # Add separator before height properties
+        separator = ttk.Separator(basic_tab, orient='horizontal')
+        separator.grid(row=current_row, column=0, columnspan=2, sticky='ew', pady=10)
+        current_row += 1
+
+        # Height Properties Section
+        height_label = ttk.Label(basic_tab, text="Height Properties:", font=('Arial', 10, 'bold'))
+        height_label.grid(row=current_row, column=0, columnspan=2, sticky='w', pady=5)
+        current_row += 1
+
+        # Initialize height property variables
+        self.add_height_var = None
+        self.remove_height_var = None
+        self.drop_height_var = None
+
+        # Add height (for Plate, PipetteHolder, ReservoirHolder)
+        if hasattr(self.labware, 'add_height'):
+            ttk.Label(basic_tab, text="Add Height (mm):").grid(row=current_row, column=0, sticky='w', pady=5)
+            self.add_height_var = tk.StringVar(value=str(self.labware.add_height))
+            entry = ttk.Entry(basic_tab, textvariable=self.add_height_var, width=25)
+            entry.grid(row=current_row, column=1, pady=5)
+
+            # Add tooltip/help
+            help_label = ttk.Label(basic_tab, text="(Height for adding liquid)",
+                                   font=('Arial', 9, 'italic'), foreground='gray')
+            help_label.grid(row=current_row, column=2, sticky='w', padx=5)
+            current_row += 1
+
+        # Remove height (for Plate, PipetteHolder, ReservoirHolder)
+        if hasattr(self.labware, 'remove_height'):
+            ttk.Label(basic_tab, text="Remove Height (mm):").grid(row=current_row, column=0, sticky='w', pady=5)
+            self.remove_height_var = tk.StringVar(value=str(self.labware.remove_height))
+            entry = ttk.Entry(basic_tab, textvariable=self.remove_height_var, width=25)
+            entry.grid(row=current_row, column=1, pady=5)
+
+            # Add tooltip/help
+            help_label = ttk.Label(basic_tab, text="(Height for removing liquid/tips)",
+                                   font=('Arial', 9, 'italic'), foreground='gray')
+            help_label.grid(row=current_row, column=2, sticky='w', padx=5)
+            current_row += 1
+
+        # Drop height (for TipDropzone)
+        if hasattr(self.labware, 'drop_height'):
+            ttk.Label(basic_tab, text="Drop Height (mm):").grid(row=current_row, column=0, sticky='w', pady=5)
+            self.drop_height_var = tk.StringVar(value=str(self.labware.drop_height))
+            entry = ttk.Entry(basic_tab, textvariable=self.drop_height_var, width=25)
+            entry.grid(row=current_row, column=1, pady=5)
+
+            # Add tooltip/help
+            help_label = ttk.Label(basic_tab, text="(Height for dropping tips)",
+                                   font=('Arial', 9, 'italic'), foreground='gray')
+            help_label.grid(row=current_row, column=2, sticky='w', padx=5)
+            current_row += 1
+
+        # Continue with existing code (dimensional requirements)
+        separator2 = ttk.Separator(basic_tab, orient='horizontal')
+        separator2.grid(row=current_row, column=0, columnspan=2, sticky='ew', pady=10)
+        current_row += 1
+
+        req_frame = ttk.Labelframe(basic_tab, text="⚠️ Dimensional Requirements", padding="10")
+        req_frame.grid(row=current_row, column=0, columnspan=2, sticky='ew', pady=5)
 
         req_text = self.calculate_requirements_text(self.labware)
         req_label = ttk.Label(
@@ -2077,7 +2137,7 @@ class EditLabwareDialog(tk.Toplevel):
             text=req_text,
             justify=tk.LEFT,
             foreground='red',
-            font=('Arial',11)
+            font=('Arial', 11)
         )
         req_label.pack(anchor='w')
 
@@ -2087,7 +2147,7 @@ class EditLabwareDialog(tk.Toplevel):
         self.notebook.add(reservoir_tab, text="Manage Reservoirs")
 
         # Top: Canvas with visual hook grid
-        canvas_frame = ttk.LabelFrame(reservoir_tab, text="Hook Layout (Click reservoir to select)", padding="10")
+        canvas_frame = ttk.Labelframe(reservoir_tab, text="Hook Layout (Click reservoir to select)", padding="10")
         canvas_frame.pack(fill=tk.X, expand=False, pady=(0, 10))
 
         # Create canvas for drawing with fixed dimensions
@@ -2101,7 +2161,7 @@ class EditLabwareDialog(tk.Toplevel):
         self.draw_hook_grid()
 
         # Bottom: Control buttons
-        control_frame = ttk.LabelFrame(reservoir_tab, text="Actions", padding="10")
+        control_frame = ttk.Labelframe(reservoir_tab, text="Actions", padding="10")
         control_frame.pack(fill=tk.X)
 
         btn_container = ttk.Frame(control_frame)
@@ -2467,6 +2527,30 @@ class EditLabwareDialog(tk.Toplevel):
 
         return errors, warnings
 
+    def validate_height_properties(self, add_height, remove_height, drop_height, size_z):
+        """Validate height properties don't exceed labware height"""
+        errors = []
+
+        if add_height is not None:
+            if add_height > size_z:
+                errors.append(
+                    f"❌ Add height ({add_height}mm) exceeds labware height ({size_z}mm)"
+                )
+
+        if remove_height is not None:
+            if remove_height > size_z:
+                errors.append(
+                    f"❌ Remove height ({remove_height}mm) exceeds labware height ({size_z}mm)"
+                )
+
+        if drop_height is not None:
+            if drop_height > size_z:
+                errors.append(
+                    f"❌ Drop height ({drop_height}mm) exceeds labware height ({size_z}mm)"
+                )
+
+        return errors
+
     def on_save(self):
         """Save changes with validation"""
         try:
@@ -2477,10 +2561,29 @@ class EditLabwareDialog(tk.Toplevel):
             new_offset = (float(self.offset_x_var.get()), float(self.offset_y_var.get()))
             new_can_be_stacked = bool(self.can_be_stacked_upon_var.get())
 
-            # ⭐ VALIDATE BEFORE SAVING ⭐
+            # ✅ GET HEIGHT PROPERTIES
+            new_add_height = None
+            new_remove_height = None
+            new_drop_height = None
+
+            if self.add_height_var is not None:
+                new_add_height = float(self.add_height_var.get())
+            if self.remove_height_var is not None:
+                new_remove_height = float(self.remove_height_var.get())
+            if self.drop_height_var is not None:
+                new_drop_height = float(self.drop_height_var.get())
+
+            #  VALIDATE BEFORE SAVING
             errors, warnings = self.validate_labware_dimensions(
                 self.labware, new_size_x, new_size_y, new_size_z, new_offset
             )
+
+            #  ADD HEIGHT VALIDATION
+            height_errors = self.validate_height_properties(
+                new_add_height, new_remove_height, new_drop_height, new_size_z
+            )
+            if height_errors:
+                errors.extend(height_errors)
 
             # Show errors and prevent saving
             if errors:
@@ -2503,12 +2606,28 @@ class EditLabwareDialog(tk.Toplevel):
             self.labware.offset = new_offset
             self.labware.can_be_stacked_upon = new_can_be_stacked
 
+            #  APPLY HEIGHT PROPERTIES
+            if new_add_height is not None and hasattr(self.labware, 'add_height'):
+                self.labware.add_height = new_add_height
+            if new_remove_height is not None and hasattr(self.labware, 'remove_height'):
+                self.labware.remove_height = new_remove_height
+            if new_drop_height is not None and hasattr(self.labware, 'drop_height'):
+                self.labware.drop_height = new_drop_height
+
             # NOW copy all changes back to the ORIGINAL labware
             self.original_labware.size_x = self.labware.size_x
             self.original_labware.size_y = self.labware.size_y
             self.original_labware.size_z = self.labware.size_z
             self.original_labware.offset = self.labware.offset
             self.original_labware.can_be_stacked_upon = self.labware.can_be_stacked_upon
+
+            #  COPY HEIGHT PROPERTIES
+            if hasattr(self.labware, 'add_height'):
+                self.original_labware.add_height = self.labware.add_height
+            if hasattr(self.labware, 'remove_height'):
+                self.original_labware.remove_height = self.labware.remove_height
+            if hasattr(self.labware, 'drop_height'):
+                self.original_labware.drop_height = self.labware.drop_height
 
             # For ReservoirHolder, copy the reservoir configuration
             if isinstance(self.labware, ReservoirHolder):
@@ -2550,7 +2669,7 @@ class PlaceReservoirDialog(tk.Toplevel):
 
 
         # Reservoir selection
-        reservoir_frame = ttk.LabelFrame(main_frame, text="Step 1: Select Reservoir", padding="10")
+        reservoir_frame = ttk.Labelframe(main_frame, text="Step 1: Select Reservoir", padding="10")
         reservoir_frame.pack(fill=tk.BOTH, expand=True, pady=5)
 
         # Listbox with scrollbar
@@ -2576,14 +2695,14 @@ class PlaceReservoirDialog(tk.Toplevel):
                    command=self.create_new_reservoir).pack(fill=tk.X, pady=(5, 0))
 
         # Preview
-        preview_frame = ttk.LabelFrame(main_frame, text="Reservoir Preview", padding="10")
+        preview_frame = ttk.Labelframe(main_frame, text="Reservoir Preview", padding="10")
         preview_frame.pack(fill=tk.X, pady=5)
 
         self.preview_text = tk.Text(preview_frame, height=5, wrap=tk.WORD)
         self.preview_text.pack(fill=tk.BOTH, expand=True)
 
         # Hook IDs input
-        hooks_frame = ttk.LabelFrame(main_frame, text="Step 2: Enter Hook ID(s)", padding="10")
+        hooks_frame = ttk.Labelframe(main_frame, text="Step 2: Enter Hook ID(s)", padding="10")
         hooks_frame.pack(fill=tk.X, pady=5)
 
         ttk.Label(hooks_frame, text="Hook ID(s) (comma-separated):").pack(anchor='w')
@@ -2727,7 +2846,7 @@ class CreateSlotDialog(tk.Toplevel):
         main_frame.pack(fill=tk.BOTH, expand=True)
 
         # Parameters frame
-        params_frame = ttk.LabelFrame(main_frame, text="Slot Parameters", padding="10")
+        params_frame = ttk.Labelframe(main_frame, text="Slot Parameters", padding="10")
         params_frame.pack(fill=tk.BOTH, expand=True)
 
         # Slot ID
@@ -2822,7 +2941,7 @@ class AddLabwareToSlotDialog(tk.Toplevel):
         main_frame.pack(fill=tk.BOTH, expand=True)
 
         # Info
-        info_frame = ttk.LabelFrame(main_frame, text="Labware Info", padding="10")
+        info_frame = ttk.Labelframe(main_frame, text="Labware Info", padding="10")
         info_frame.pack(fill=tk.X, pady=5)
 
         ttk.Label(info_frame, text=f"ID: {self.labware.labware_id}").pack(anchor='w')
@@ -2831,7 +2950,7 @@ class AddLabwareToSlotDialog(tk.Toplevel):
             anchor='w')
 
         # Placement parameters
-        params_frame = ttk.LabelFrame(main_frame, text="Placement", padding="10")
+        params_frame = ttk.Labelframe(main_frame, text="Placement", padding="10")
         params_frame.pack(fill=tk.BOTH, expand=True, pady=5)
 
         # Slot selection
@@ -3096,7 +3215,7 @@ class DeckGUI:
         )
         self.deck_info_label.pack(fill=tk.X, anchor='w')
         # Info panel
-        self.info_frame = ttk.LabelFrame(control_frame, text="Selection Info", padding=10)
+        self.info_frame = ttk.Labelframe(control_frame, text="Selection Info", padding=10)
         self.info_frame.pack(fill=tk.BOTH, pady=5, padx=5)
 
         self.info_text = tk.Text(self.info_frame, height=10, wrap=tk.WORD)
@@ -3110,7 +3229,7 @@ class DeckGUI:
         ttk.Button(btn_frame, text="Clear Selection", command=self.clear_selection).pack(fill=tk.X, pady=2)
 
         # ===== SLOTS SECTION WITH TOGGLE =====
-        slots_main_frame = ttk.LabelFrame(control_frame, text="Slots", padding=10)
+        slots_main_frame = ttk.Labelframe(control_frame, text="Slots", padding=10)
         slots_main_frame.pack(fill=tk.X, pady=5, padx=5)
 
         # View mode selector
@@ -3148,7 +3267,7 @@ class DeckGUI:
 
 
         # ===== LABWARE SECTION WITH TOGGLE =====
-        labware_main_frame = ttk.LabelFrame(control_frame, text="Labware", padding=10)
+        labware_main_frame = ttk.Labelframe(control_frame, text="Labware", padding=10)
         labware_main_frame.pack(fill=tk.X, pady=5, padx=5)
 
         # View mode selector
@@ -3381,7 +3500,7 @@ class DeckGUI:
         create_canvas.bind('<Leave>', unbind_create_mousewheel)
 
         # === SELECTION INFO PANEL ===
-        self.create_info_frame = ttk.LabelFrame(create_control_frame, text="Selection Info", padding=10)
+        self.create_info_frame = ttk.Labelframe(create_control_frame, text="Selection Info", padding=10)
         self.create_info_frame.pack(fill=tk.BOTH, pady=5, padx=5)
 
         self.create_info_text = tk.Text(self.create_info_frame, height=10, wrap=tk.WORD)
@@ -3395,7 +3514,7 @@ class DeckGUI:
 
         # === CREATE SECTIONS ===
         # Low-Level Labware section
-        low_level_section = ttk.LabelFrame(create_control_frame, text="Low-Level Labware", padding=15)
+        low_level_section = ttk.Labelframe(create_control_frame, text="Low-Level Labware", padding=15)
         low_level_section.pack(fill=tk.X, pady=10, padx=5)
 
         # LLL type selector (radio buttons)
@@ -3426,10 +3545,10 @@ class DeckGUI:
         lll_btn_frame = ttk.Frame(low_level_section)
         lll_btn_frame.pack(fill=tk.X, pady=(5, 0))
 
-        ttk.Button(lll_btn_frame, text="Create Low-Level Lw", command=self.create_low_level_labware).pack( expand=True, fill=tk.X, padx=2)
-        ttk.Button(lll_btn_frame, text="Delete Selected", command=self.delete_selected_lll).pack( expand=True, fill=tk.X, padx=2)
+        ttk.Button(lll_btn_frame, text="Create Low-Level Lw", command=self.create_low_level_labware).pack( expand=True, fill=tk.X, padx=5, pady=5)
+        ttk.Button(lll_btn_frame, text="Delete Selected", command=self.delete_selected_lll).pack( expand=True, fill=tk.X, padx=5, pady=5)
 
-        pipettor_section = ttk.LabelFrame(create_control_frame, text="Pipettor Configuration", padding=15)
+        pipettor_section = ttk.Labelframe(create_control_frame, text="Pipettor Configuration", padding=15)
         pipettor_section.pack(fill=tk.X, pady=10, padx=5)
 
         # Tip Volume Selection
@@ -3494,7 +3613,7 @@ class DeckGUI:
         ).pack(fill=tk.X, pady=5)
 
         # Status Display
-        self.pipettor_status_frame = ttk.LabelFrame(pipettor_section, text="Pipettor Status", padding=10)
+        self.pipettor_status_frame = ttk.Labelframe(pipettor_section, text="Pipettor Status", padding=10)
         self.pipettor_status_frame.pack(fill=tk.X, pady=5)
 
         self.pipettor_status_label = ttk.Label(
@@ -3518,7 +3637,6 @@ class DeckGUI:
             else:
                 self.pipettor_status_label.config(text=status_text, foreground='gray')
 
-    #todo
     def initialize_pipettor(self):
         """Initialize the pipettor with selected parameters"""
         try:
@@ -3557,6 +3675,8 @@ class DeckGUI:
                 text=status_text,
                 foreground='green'
             )
+            if hasattr(self, 'rebuild_operations_tab'):
+                self.rebuild_operations_tab()
 
             messagebox.showinfo("Success", f"Pipettor initialized successfully!\n\n{status_text}")
 
@@ -3581,19 +3701,141 @@ class DeckGUI:
         return f"{mode} ({tip_volume}µL) - {tips}"
 
     def create_operations_tab(self):
-        """Create an empty Operations tab placeholder for future development."""
+        """Create the Operations tab - always create the frame"""
         operations_tab = ttk.Frame(self.right_panel_notebook)
         self.right_panel_notebook.add(operations_tab, text="Operations")
 
-        # Add a simple label to confirm the tab is present and ready for code
-        ttk.Label(
-            operations_tab,
-            text="Operations Tab\n(Code to be added by developer)",
-            font=('Arial', 12),
-            anchor=tk.CENTER,
-            justify=tk.CENTER,
-            padding=20
-        ).pack(expand=True, fill=tk.BOTH)
+        # Store reference to the tab frame
+        self.operations_tab_frame = operations_tab
+
+        # Initialize FunctionWindow to None
+        self.function_window = None
+
+        # Build or rebuild the content
+        self.rebuild_operations_tab()
+
+    def rebuild_operations_tab(self):
+        """
+        Rebuild the operations tab content.
+        Call this whenever pipettor or deck state changes.
+        """
+        # Clear existing content
+        for widget in self.operations_tab_frame.winfo_children():
+            widget.destroy()
+
+        # Check pipettor status
+        if not hasattr(self, 'pipettor') or self.pipettor is None:
+            # Show warning with retry button
+            warning_frame = ttk.Frame(
+                self.operations_tab_frame,
+                relief=tk.RIDGE,
+                borderwidth=2
+            )
+            warning_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+            ttk.Label(
+                warning_frame,
+                text="⚠️ Pipettor Not Initialized",
+                font=('Arial', 16, 'bold'),
+                foreground='red'
+            ).pack(pady=(20, 10))
+
+            ttk.Label(
+                warning_frame,
+                text="Please configure the pipettor in the\n'Low level parameters' tab first.",
+                font=('Arial', 11),
+                justify=tk.CENTER
+            ).pack(pady=10)
+
+            ttk.Button(
+                warning_frame,
+                text="🔄 Refresh Operations Tab",
+                command=self.rebuild_operations_tab,
+                #bootstyle="warning"
+            ).pack(pady=20)
+
+            return
+
+        # Check deck status
+        if not self.deck.slots:
+            # Show deck warning
+            warning_frame = ttk.Frame(
+                self.operations_tab_frame,
+                relief=tk.RIDGE,
+                borderwidth=2
+            )
+            warning_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+            ttk.Label(
+                warning_frame,
+                text="⚠️ Empty Deck",
+                font=('Arial', 16, 'bold'),
+                foreground='orange'
+            ).pack(pady=(20, 10))
+
+            ttk.Label(
+                warning_frame,
+                text="Please add slots and labware to the deck first.\n\nGo to 'Deck Editor' tab to set up your deck.",
+                font=('Arial', 11),
+                justify=tk.CENTER
+            ).pack(pady=10)
+
+            ttk.Button(
+                warning_frame,
+                text="🔄 Refresh Operations Tab",
+                command=self.rebuild_operations_tab,
+                #bootstyle="info"
+            ).pack(pady=20)
+
+            return
+
+        # Check if deck has any labware
+        has_labware = False
+        for slot in self.deck.slots.values():
+            if slot.labware_stack:
+                has_labware = True
+                break
+
+        if not has_labware:
+            # Show labware warning
+            warning_frame = ttk.Frame(
+                self.operations_tab_frame,
+                relief=tk.RIDGE,
+                borderwidth=2
+            )
+            warning_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+            ttk.Label(
+                warning_frame,
+                text="⚠️ No Labware on Deck",
+                font=('Arial', 16, 'bold'),
+                foreground='orange'
+            ).pack(pady=(20, 10))
+
+            ttk.Label(
+                warning_frame,
+                text="Please place labware on the deck first.\n\nGo to 'Deck Editor' tab to place labware on slots.",
+                font=('Arial', 11),
+                justify=tk.CENTER
+            ).pack(pady=10)
+
+            ttk.Button(
+                warning_frame,
+                text="🔄 Refresh Operations Tab",
+                command=self.rebuild_operations_tab,
+                #bootstyle="info"
+            ).pack(pady=20)
+
+            return
+
+        # All good - create FunctionWindow
+        from function_window import FunctionWindow
+        self.function_window = FunctionWindow(
+            deck=self.deck,
+            pipettor=self.pipettor,
+            mode="direct",
+            parent_frame=self.operations_tab_frame
+        )
 
     def delete_selected_lll(self):
         """Delete the selected low-level labware"""
@@ -3787,6 +4029,8 @@ class DeckGUI:
             self.available_reservoirs = []
             self.available_individual_holders = []
             self.draw_deck()
+            if hasattr(self, 'rebuild_operations_tab'):
+                self.rebuild_operations_tab()
             messagebox.showinfo("Success", "New deck created!")
 
     def create_slot(self):
@@ -3841,6 +4085,9 @@ class DeckGUI:
                 )
                 self.unplaced_labware.remove(labware)
                 self.draw_deck()
+                if hasattr(self, 'rebuild_operations_tab'):
+                    self.rebuild_operations_tab()
+
                 messagebox.showinfo("Success",
                                     f"Labware '{labware.labware_id}' placed on slot '{dialog.result['slot_id']}'!")
             except ValueError as e:
@@ -4219,6 +4466,7 @@ class DeckGUI:
         if isinstance(lw, Plate):
             info += f"\nRows: {lw._rows}\n"
             info += f"Columns: {lw._columns}\n"
+
         elif isinstance(lw, ReservoirHolder):
             info += f"\nHooks X: {lw.hooks_across_x}\n"
             info += f"Hooks Y: {lw.hooks_across_y}\n"
@@ -4226,6 +4474,13 @@ class DeckGUI:
             info += f"\nHolders X: {lw.holders_across_x}\n"
             info += f"Holders Y: {lw.holders_across_y}\n"
 
+        if hasattr(lw, 'add_height'):
+            info += f"Add Height: {lw.add_height} mm\n"
+        if hasattr(lw, 'remove_height'):
+            info += f"Remove Height: {lw.remove_height} mm\n"
+
+        if hasattr(lw, 'drop_height'):
+            info += f"\nDrop Height: {lw.drop_height} mm\n"
         self.update_info_in_both_tabs(info)
 
     # Slot management methods
@@ -4254,6 +4509,9 @@ class DeckGUI:
         self.unplaced_slots.remove(slot)
 
         self.draw_deck()
+        if hasattr(self, 'rebuild_operations_tab'):
+            self.rebuild_operations_tab()
+
         messagebox.showinfo("Success", f"Slot '{slot.slot_id}' placed on deck!")
 
     def unplace_selected_slot(self, slot_id=None):
@@ -4302,6 +4560,9 @@ class DeckGUI:
         self.update_slots_list()
 
         # D. Show success message
+        if hasattr(self, 'rebuild_operations_tab'):
+            self.rebuild_operations_tab()
+
         if unplaced_labware_list:
             lw_list = ", ".join([lw.labware_id for lw in unplaced_labware_list])
             messagebox.showinfo("Unplaced", f"Slot {slot_id} and contained labware ({lw_list}) unplaced successfully.")
@@ -4328,7 +4589,6 @@ class DeckGUI:
             return
 
         try:
-            # ⭐ NEW: Use the updated deck function to perform the unplace operation
             labware = self.deck.remove_labware(lw_id)
 
         except ValueError as e:
@@ -4340,6 +4600,9 @@ class DeckGUI:
         self.canvas.delete(f'labware_{lw_id}')
         self.clear_selection()
         self.update_labware_list()
+        if hasattr(self, 'rebuild_operations_tab'):
+            self.rebuild_operations_tab()
+
         messagebox.showinfo("Unplaced", f"Labware {lw_id} unplaced successfully.")
         return
 
@@ -4574,18 +4837,26 @@ class DeckGUI:
         info += f"Size Z: {lw.size_z} mm\n"
         info += f"Offset: {lw.offset}\n"
         info += f"Position: {lw.position}\n"
-        info += f"Slot: {slot_id if slot_id else 'None'}\n"
+        info += f"Slot: {slot_id if slot_id else 'None'}\n\n"
 
         # Add type-specific info
         if isinstance(lw, Plate):
-            info += f"\nRows: {lw._rows}\n"
+            info += f"Rows: {lw._rows}\n"
             info += f"Columns: {lw._columns}\n"
         elif isinstance(lw, ReservoirHolder):
-            info += f"\nHooks X: {lw.hooks_across_x}\n"
+            info += f"Hooks X: {lw.hooks_across_x}\n"
             info += f"Hooks Y: {lw.hooks_across_y}\n"
         elif isinstance(lw, PipetteHolder):
-            info += f"\nHolders X: {lw.holders_across_x}\n"
-            info += f"\nHolders Y: {lw.holders_across_y}\n"
+            info += f"Holders X: {lw.holders_across_x}\n"
+            info += f"Holders Y: {lw.holders_across_y}\n"
+
+        if hasattr(lw, 'add_height'):
+            info += f"Add Height: {lw.add_height} mm\n"
+        if hasattr(lw, 'remove_height'):
+            info += f"Remove Height: {lw.remove_height} mm\n"
+
+        if hasattr(lw, 'drop_height'):
+            info += f"\nDrop Height: {lw.drop_height} mm\n"
 
         self.update_info_in_both_tabs(info)
 
@@ -4725,6 +4996,8 @@ class DeckGUI:
                         self.available_individual_holders.append(Serializable.from_dict(holder_data))
 
                 self.draw_deck()
+                if hasattr(self, 'rebuild_operations_tab'):
+                    self.rebuild_operations_tab()
                 messagebox.showinfo("Success", f"Deck loaded from {filename}")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load: {str(e)}")
