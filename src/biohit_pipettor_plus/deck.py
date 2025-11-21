@@ -273,19 +273,6 @@ class Deck(Serializable):
 
     @classmethod
     def _from_dict(cls, data: dict) -> "Deck":
-        """
-        Deserialize a Deck from a dictionary, restoring slots and stacked labware.
-
-        Parameters
-        ---------
-        data : dict
-            Dictionary containing deck, slot, and labware attributes.
-
-        Returns
-        -------
-        Deck
-            Reconstructed Deck instance.
-        """
         deck = cls(
             range_x=tuple(data["range_x"]),
             range_y=tuple(data["range_y"]),
@@ -293,16 +280,27 @@ class Deck(Serializable):
             deck_id=data["deck_id"]
         )
 
-        # Restore slots
-        for sid, sdata in data.get("slots", {}).items():
-            deck.slots[sid] = Serializable.from_dict(sdata)
-
-        # Restore global labware references
+        # ✅ STEP 1: Create all labware FIRST
         for lid, lwdata in data.get("labware", {}).items():
             deck.labware[lid] = Serializable.from_dict(lwdata)
 
-        return deck
+        # ✅ STEP 2: Create slots (without labware)
+        for sid, sdata in data.get("slots", {}).items():
+            deck.slots[sid] = Serializable.from_dict(sdata)
 
+        # ✅ STEP 3: Populate slot labware_stack with existing labware objects
+        for slot_id, slot in deck.slots.items():
+            if hasattr(slot, '_pending_labware_data'):
+                for lw_id, (lw_data, z_range) in slot._pending_labware_data.items():
+                    if lw_id in deck.labware:
+                        slot.labware_stack[lw_id] = (deck.labware[lw_id], tuple(z_range))
+                    else:
+                        print(f"⚠️ Warning: {lw_id} in slot but not in deck.labware")
+
+                # Clean up temporary data
+                delattr(slot, '_pending_labware_data')
+
+        return deck
     def get_slot_for_labware(self, labware_id: str) -> Optional[str]:
             """
             Find the slot ID containing the given labware_id.

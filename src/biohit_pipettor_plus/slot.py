@@ -180,25 +180,18 @@ class Slot(Serializable):
     @classmethod
     def _from_dict(cls, data: dict) -> "Slot":
         """
-        Deserialize a Slot instance from a dictionary, restoring stacked Labware with Z-ranges.
+        Deserialize a Slot instance from a dictionary.
 
-        Parameters
-        ----------
-        data : dict
-            Dictionary containing slot attributes and labware stack.
-
-        Returns
-        -------
-        Slot
-            Reconstructed Slot instance.
+        Note: Labware objects should be populated by Deck after all labware is created.
         """
         slot = cls(
-            range_x= tuple(data["range_x"]),
-            range_y= tuple(data["range_y"]),
+            range_x=tuple(data["range_x"]),
+            range_y=tuple(data["range_y"]),
             range_z=data["range_z"],
             slot_id=data["slot_id"]
         )
 
-        for lw_id, (lw_data, zr) in data.get("labware_stack", {}).items():
-            slot.labware_stack[lw_id] = [Serializable.from_dict(lw_data), tuple(zr)]
+        # ✅ Don't create labware here - just store the raw data temporarily
+        slot._pending_labware_data = data.get("labware_stack", {})
+
         return slot

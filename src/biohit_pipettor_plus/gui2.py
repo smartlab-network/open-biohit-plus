@@ -14,6 +14,8 @@ from labware import (
      Well, Reservoir, Plate, ReservoirHolder,
     PipetteHolder, TipDropzone, IndividualPipetteHolder
 )
+from function_window import FunctionWindow
+
 from pipettor_plus import PipettorPlus
 class CreateLowLevelLabwareDialog(tk.Toplevel):
     """Dialog for creating low-level labware components (Well, Reservoir, IndividualPipetteHolder)"""
@@ -3608,7 +3610,7 @@ class DeckGUI:
         # Initialize Button
         ttk.Button(
             pipettor_section,
-            text="🤖 Connect and Configure Pipettor",
+            text="Connect to Pipettor",
             command=self.initialize_pipettor
         ).pack(fill=tk.X, pady=5)
 
@@ -3713,6 +3715,20 @@ class DeckGUI:
 
         # Build or rebuild the content
         self.rebuild_operations_tab()
+
+    def on_operation_complete(self):
+        """Called when an operation completes in Operations tab"""
+        # Update pipettor status display
+        self.update_pipettor_status()
+
+        # If something is selected, refresh its info
+        if hasattr(self, 'selected_item') and self.selected_item:
+            item_type, item_id = self.selected_item
+            if item_type == 'labware':
+                self.select_labware(item_id)
+            elif item_type == 'slot':
+                self.select_slot(item_id)
+
 
     def rebuild_operations_tab(self):
         """
@@ -3828,14 +3844,12 @@ class DeckGUI:
 
             return
 
-        # All good - create FunctionWindow
-        from function_window import FunctionWindow
         self.function_window = FunctionWindow(
             deck=self.deck,
             pipettor=self.pipettor,
             mode="direct",
-            parent_frame=self.operations_tab_frame
-
+            parent_frame=self.operations_tab_frame,
+            on_operation_complete=self.on_operation_complete
         )
 
     def delete_selected_lll(self):

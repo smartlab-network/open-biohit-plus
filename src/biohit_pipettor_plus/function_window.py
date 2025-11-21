@@ -26,7 +26,8 @@ class FunctionWindow:
             pipettor: PipettorPlus = None,
             mode: str = "direct",
             master: tk.Tk = None,
-            parent_frame: ttk.Frame = None
+            parent_frame: ttk.Frame = None,
+            on_operation_complete: Callable = None
     ):
         """
         Initialize FunctionWindow.
@@ -47,6 +48,7 @@ class FunctionWindow:
         self.deck = deck
         self.pipettor = pipettor
         self.mode = mode
+        self.on_operation_complete = on_operation_complete
 
         # Determine channels
         if self.pipettor and self.pipettor.multichannel:
@@ -295,7 +297,7 @@ class FunctionWindow:
         ).pack(fill=tk.X, pady=2)
 
         ttk.Button(
-            tip_frame, text="🗑️ Discard Tips",
+            tip_frame, text=" Discard Tips",
             command=lambda: self.callback_discard_tips(func_str="Discard Tips"),
             bootstyle="primary"
         ).pack(fill=tk.X, pady=2)
@@ -349,7 +351,7 @@ class FunctionWindow:
         system_frame.pack(fill=tk.X, pady=5, padx=5)
 
         ttk.Button(
-            system_frame, text="🏠 Home",
+            system_frame, text=" Home",
             command=lambda: self.callback_home(func_str="Home"),
             bootstyle="secondary"
         ).pack(fill=tk.X, pady=2)
@@ -414,6 +416,10 @@ class FunctionWindow:
                 "Success",
                 f"Operation '{self.staged_operation_name}' completed successfully!"
             )
+
+            if self.on_operation_complete:
+                self.on_operation_complete()
+
             self.clear_staged_operation()
         except Exception as e:
             messagebox.showerror(

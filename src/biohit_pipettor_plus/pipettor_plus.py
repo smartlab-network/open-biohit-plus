@@ -95,6 +95,7 @@ class PipettorPlus(Pipettor):
         self.tip_dict = {i: {} for i in range(0, self.tip_count)}
         self.has_tips = False
         self.tip_length = tip_length if tip_length is not None else self.TIP_LENGTHS[tip_volume]
+        self.tip_volume = tip_volume
         self.change_tips = Change_Tips  # control if tips are to be changed
 
     def pick_tips(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None,) -> None:
