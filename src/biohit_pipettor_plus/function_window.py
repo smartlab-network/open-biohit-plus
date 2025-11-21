@@ -140,32 +140,37 @@ class FunctionWindow:
         action_frame = ttk.Frame(staging_frame)
         action_frame.pack(fill=tk.X, pady=5)
 
+        # Configure columns with specific weights
+        action_frame.columnconfigure(0, weight=1)
+        action_frame.columnconfigure(1, weight=1)
+        action_frame.columnconfigure(2, weight=0, minsize=80)  # Fixed minimum width for Clear
+
         self.execute_button = ttk.Button(
             action_frame,
-            text="▶️ Execute Now",
+            text="Execute Now",
             command=self.execute_staged_operation,
             state='disabled',
             bootstyle="success"
         )
-        self.execute_button.pack(side=tk.LEFT, padx=5, expand=True, fill=tk.X)
+        self.execute_button.grid(row=0, column=0, sticky='ew', padx=5)
 
         self.add_to_workflow_button = ttk.Button(
             action_frame,
-            text="➕ Add to Workflow",
+            text="Add to Workflow",
             command=self.add_staged_to_workflow,
             state='disabled',
             bootstyle="info"
         )
-        self.add_to_workflow_button.pack(side=tk.LEFT, padx=5, expand=True, fill=tk.X)
+        self.add_to_workflow_button.grid(row=0, column=1, sticky='ew', padx=5)
 
         self.clear_button = ttk.Button(
             action_frame,
-            text="✖ Clear",
+            text="Clear",
             command=self.clear_staged_operation,
             state='disabled',
             bootstyle="secondary"
         )
-        self.clear_button.pack(side=tk.LEFT, padx=5, expand=True, fill=tk.X)
+        self.clear_button.grid(row=0, column=2, sticky='ew', padx=5)
 
         # === CUSTOM WORKFLOWS SECTION ===
         custom_frame = ttk.Labelframe(
@@ -177,7 +182,7 @@ class FunctionWindow:
 
         ttk.Button(
             custom_frame,
-            text="🛠️ Open Workflow Builder",
+            text="Open Workflow Builder",
             command=self.open_workflow_builder,
             bootstyle="warning"
         ).pack(fill=tk.X, pady=5)
@@ -381,11 +386,6 @@ class FunctionWindow:
             self.staged_op_text.insert(
                 1.0,
                 "No operation staged.\n\n"
-                "Click an operation button above to configure and stage an operation.\n\n"
-                "You can then:\n"
-                "  • Execute it immediately\n"
-                "  • Add it to a workflow\n"
-                "  • Clear and start over"
             )
             self.execute_button.config(state='disabled')
             self.add_to_workflow_button.config(state='disabled')
@@ -757,8 +757,6 @@ class FunctionWindow:
 
         return wells_list
 
-    # ========== OPERATION CALLBACKS ==========
-
     def callback_pick_tips(
             self,
             func_str: str,
@@ -791,19 +789,13 @@ class FunctionWindow:
             )
             self.get_master_window().wait_window(window.get_root())
 
-            selected = [(r, c) for r, row in enumerate(window.well_state)
-                        for c, v in enumerate(row) if v]
-
-            if self.channels == 8:
-                # Convert to (column, start_row)
-                start_row = min(r for r, c in selected)
-                col = selected[0][1]
-                list_col_row = [(col, start_row)]  # <-- FORMAT FOR PIPETTOR
-            else:
-                list_col_row = [(c, r) for r, c in selected]
-
-            if not list_col_row:
+            # ✅ UNIFIED: Get start positions (works for both modes!)
+            start_positions = window.get_start_positions()
+            if not start_positions:
                 return
+
+            # Convert from (row, col) to (col, row) format for pipettor
+            list_col_row = [(c, r) for r, c in start_positions]
 
             # Create function
             func = lambda lw=labware_obj, lr=list_col_row: self.pipettor.pick_tips(
@@ -812,8 +804,13 @@ class FunctionWindow:
 
             # Create details
             details = f"Labware: {labware_obj.labware_id}\n"
-            details += f"Positions: {len(list_col_row)} tips\n"
-            details += f"Wells: {', '.join([f'({r},{c})' for r, c in list_col_row[:5]])}"
+            if self.channels == 8:
+                details += f"Multichannel groups: {len(list_col_row)}\n"
+                details += f"Start positions (col:row): {', '.join([f'({c}:{r})' for c, r in list_col_row[:5]])}"
+            else:
+                details += f"Positions: {len(list_col_row)} tips\n"
+                details += f"Wells (Col:Row): {', '.join([f'({c}:{r})' for c, r in list_col_row[:5]])}"
+
             if len(list_col_row) > 5:
                 details += f"... (+{len(list_col_row) - 5} more)"
 
@@ -846,38 +843,38 @@ class FunctionWindow:
                 rows=labware_obj.holders_across_y,
                 columns=labware_obj.holders_across_x,
                 labware_id=labware_obj.labware_id,
-                max_selected=None,  # ✅ CHANGED from self.channels
+                max_selected=None,
                 master=self.get_master_window(),
-                multichannel_mode=(self.channels == 8),  # ✅ ADDED
+                multichannel_mode=(self.channels == 8),
                 title=f"Return tips to: {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False)
             )
             self.get_master_window().wait_window(window.get_root())
 
-            selected = [(r, c) for r, row in enumerate(window.well_state)
-                        for c, v in enumerate(row) if v]
-
-            # ✅ ADDED: Convert format for multi-channel
-            if self.channels == 8:
-                # Convert to (column, start_row)
-                start_row = min(r for r, c in selected)
-                col = selected[0][1]
-                list_return = [(col, start_row)]
-            else:
-                list_return = [(c, r) for r, c in selected]
-
-            if not list_return:
+            # ✅ UNIFIED: Get start positions (works for both modes!)
+            start_positions = window.get_start_positions()
+            if not start_positions:
                 return
 
-            func = lambda lw=labware_obj, lr=list_return: self.pipettor.return_tips(
+            # Convert from (row, col) to (col, row) format for pipettor
+            list_col_row = [(c, r) for r, c in start_positions]
+
+            # Create function
+            func = lambda lw=labware_obj, lr=list_col_row: self.pipettor.return_tips(
                 pipette_holder=lw, list_col_row=lr
             )
 
+            # Create details
             details = f"Labware: {labware_obj.labware_id}\n"
-            details += f"Positions: {len(list_return)} tips\n"
-            details += f"Wells: {', '.join([f'({c},{r})' for c, r in list_return[:5]])}"
-            if len(list_return) > 5:
-                details += f"... (+{len(list_return) - 5} more)"
+            if self.channels == 8:
+                details += f"Multichannel groups: {len(list_col_row)}\n"
+                details += f"Start positions (col:row): {', '.join([f'({c}:{r})' for c, r in list_col_row[:5]])}"
+            else:
+                details += f"Positions: {len(list_col_row)} tips\n"
+                details += f"Wells (Col:Row): {', '.join([f'({c}:{r})' for c, r in list_col_row[:5]])}"
+
+            if len(list_col_row) > 5:
+                details += f"... (+{len(list_col_row) - 5} more)"
 
             if self.mode == "direct":
                 self.stage_operation(func, func_str, details)
@@ -904,50 +901,82 @@ class FunctionWindow:
             )
 
         elif part == "second" and labware_obj is not None:
-            # Return old tips
-            window = WellWindow(
+            # ===== STEP 1: Return old tips =====
+            window_return = WellWindow(
                 rows=labware_obj.holders_across_y,
                 columns=labware_obj.holders_across_x,
                 labware_id=labware_obj.labware_id,
                 max_selected=None,
                 master=self.get_master_window(),
+                multichannel_mode=(self.channels == 8),
                 title=f"Return tips to: {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False)
             )
-            self.get_master_window().wait_window(window.get_root())
+            self.get_master_window().wait_window(window_return.get_root())
 
-            list_return = [(r, c) for r, row in enumerate(window.well_state)
-                           for c, active in enumerate(row) if active]
-
-            if not list_return:
+            # ✅ Get start positions for return
+            start_positions_return = window_return.get_start_positions()
+            if not start_positions_return:
                 return
 
-            # Pick new tips
-            window = WellWindow(
+            # Convert to (col, row) format
+            list_return = [(c, r) for r, c in start_positions_return]
+
+            # ===== STEP 2: Pick new tips =====
+            window_pick = WellWindow(
                 rows=labware_obj.holders_across_y,
                 columns=labware_obj.holders_across_x,
                 labware_id=labware_obj.labware_id,
                 max_selected=None,
                 master=self.get_master_window(),
-                title=f"Pick tips from: {labware_obj.labware_id}",
+                multichannel_mode=(self.channels == 8),
+                title=f"Pick new tips from: {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True)
             )
-            self.get_master_window().wait_window(window.get_root())
+            self.get_master_window().wait_window(window_pick.get_root())
 
-            list_pick = [(r, c) for r, row in enumerate(window.well_state)
-                         for c, active in enumerate(row) if active]
-
-
-            if not list_pick:
+            # ✅ Get start positions for pick
+            start_positions_pick = window_pick.get_start_positions()
+            if not start_positions_pick:
                 return
 
+            # Convert to (col, row) format
+            list_pick = [(c, r) for r, c in start_positions_pick]
+
+            # Create function
             func = lambda lw=labware_obj, lr=list_return, lp=list_pick: self.pipettor.replace_tips(
                 pipette_holder=lw, return_list_col_row=lr, pick_list_col_row=lp
             )
 
+            # Create details
             details = f"Labware: {labware_obj.labware_id}\n"
-            details += f"Return: {len(list_return)} tips to {list_return[:3]}\n"
-            details += f"Pick: {len(list_pick)} tips from {list_pick[:3]}"
+
+            if self.channels == 8:
+                # Return details
+                details += f"Return - Multichannel groups: {len(list_return)}\n"
+                details += f"  Positions (col:row): {', '.join([f'({c}:{r})' for c, r in list_return[:5]])}"
+                if len(list_return) > 5:
+                    details += f"... (+{len(list_return) - 5} more)"
+                details += "\n"
+
+                # Pick details
+                details += f"Pick - Multichannel groups: {len(list_pick)}\n"
+                details += f"  Positions (col:row): {', '.join([f'({c}:{r})' for c, r in list_pick[:5]])}"
+                if len(list_pick) > 5:
+                    details += f"... (+{len(list_pick) - 5} more)"
+            else:
+                # Return details
+                details += f"Return - Positions: {len(list_return)} tips\n"
+                details += f"  Wells (Col:Row): {', '.join([f'({c}:{r})' for c, r in list_return[:5]])}"
+                if len(list_return) > 5:
+                    details += f"... (+{len(list_return) - 5} more)"
+                details += "\n"
+
+                # Pick details
+                details += f"Pick - Positions: {len(list_pick)} tips\n"
+                details += f"  Wells (Col:Row): {', '.join([f'({c}:{r})' for c, r in list_pick[:5]])}"
+                if len(list_pick) > 5:
+                    details += f"... (+{len(list_pick) - 5} more)"
 
             if self.mode == "direct":
                 self.stage_operation(func, func_str, details)

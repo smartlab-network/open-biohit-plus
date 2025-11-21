@@ -132,12 +132,13 @@ class WellWindow:
             pady=10
         )
 
-        self.checkbutton_all = ttk.Checkbutton(
-            self.__root,
-            command=self.callback_check_all,
-            variable=self.is_check_all
-        )
-        self.checkbutton_all.grid(row=1, column=0, sticky="ns")
+        if not self.multichannel_mode:
+            self.checkbutton_all = ttk.Checkbutton(
+                self.__root,
+                command=self.callback_check_all,
+                variable=self.is_check_all
+            )
+            self.checkbutton_all.grid(row=1, column=0, sticky="ns")
 
         self.set_grid()
         self.create_well_buttons()
@@ -191,50 +192,65 @@ class WellWindow:
                                 style = "light"
                                 command = lambda c=c, r=r: self.callback_well_button(r, c)
                             else:
-                                # Some positions missing - not valid
+                                # ✅ Some positions missing - not valid but LOOKS available
                                 state = "disabled"
-                                style = "secondary"
+                                style = "light"
                                 command = None
                         else:
-                            # ✅ Not enough room for 8 tips below - disabled
-                            # But can be part of a selection from above
+                            # ✅ Not enough room for 8 tips below - disabled but LOOKS available
                             state = "disabled"
-                            style = "secondary"
+                            style = "light"
                             command = None
                     else:
                         # Single-channel mode - all available wells are clickable
                         state = "normal"
                         style = "light"
                         command = lambda c=c, r=r: self.callback_well_button(r, c)
+
+                    # Create button for available wells
+                    cur_button = ttk.Button(
+                        self.__root,
+                        text=well_name,
+                        command=command,
+                        bootstyle=style,
+                        state=state
+                    )
+                    cur_button.grid(
+                        row=r + 2,
+                        column=c + 1,
+                        sticky='nsew',
+                        ipadx=20,
+                        ipady=10,
+                        padx=2,
+                        pady=2
+                    )
+                    self.buttons[r][c] = cur_button
+
+                    # ✅ ADD HOVER BINDINGS TO ALL VALID START POSITIONS
+                    if self.multichannel_mode and state == "normal":
+                        cur_button.bind('<Enter>', lambda e, r=r, c=c: self.show_multichannel_preview(r, c))
+                        cur_button.bind('<Leave>', lambda e: self.hide_multichannel_preview())
+                        cur_button.configure(cursor="crosshair")
+
                 else:
-                    # Well not available at all
-                    state = "disabled"
-                    style = "secondary"
-                    command = None
-
-                cur_button = ttk.Button(
-                    self.__root,
-                    text=well_name,
-                    command=command,
-                    bootstyle=style,
-                    state=state
-                )
-                cur_button.grid(
-                    row=r + 2,
-                    column=c + 1,
-                    sticky='nsew',
-                    ipadx=20,
-                    ipady=10,
-                    padx=2,
-                    pady=2
-                )
-                self.buttons[r][c] = cur_button
-
-                # ✅ ADD HOVER BINDINGS TO ALL VALID START POSITIONS
-                if self.multichannel_mode and state == "normal":
-                    cur_button.bind('<Enter>', lambda e, r=r, c=c: self.show_multichannel_preview(r, c))
-                    cur_button.bind('<Leave>', lambda e: self.hide_multichannel_preview())
-                    cur_button.configure(cursor="crosshair")
+                    # ✅ Well not available - use a LABEL with red background
+                    cur_label = ttk.Label(
+                        self.__root,
+                        text=well_name,
+                        bootstyle="danger-inverse",  # Red background with white text
+                        anchor="center",
+                        font=('Arial', 10)
+                    )
+                    cur_label.grid(
+                        row=r + 2,
+                        column=c + 1,
+                        sticky='nsew',
+                        ipadx=20,
+                        ipady=10,
+                        padx=2,
+                        pady=2
+                    )
+                    self.buttons[r][c] = cur_label  # Store label in buttons array
 
     def create_check_boxes(self):
         """Create row and column checkboxes for easier multi-selection."""
@@ -321,16 +337,35 @@ class WellWindow:
         """Remove preview highlighting."""
         for r in range(self.rows):
             for c in range(self.columns):
-                if self.buttons[r][c] is not None and not self.well_state[r][c]:
-                    # ✅ Restore to original state based on whether it's a valid start position
-                    if (r, c) in self.wells_list and r + 8 <= self.rows:
-                        if all((r + i, c) in self.wells_list for i in range(8)):
-                            # Valid start position
-                            self.buttons[r][c].configure(bootstyle="light")
-                        else:
-                            self.buttons[r][c].configure(bootstyle="secondary")
-                    else:
-                        self.buttons[r][c].configure(bootstyle="secondary")
+                widget = self.buttons[r][c]
+
+                # Skip selected wells, None widgets, and Labels (unavailable wells)
+                if widget is None or self.well_state[r][c] or isinstance(widget, ttk.Label):
+                    continue
+
+                # Only reset unselected buttons
+                if (r, c) in self.wells_list:
+                    widget.configure(bootstyle="light")
+
+    def get_start_positions(self):
+        """
+        Extract start positions from current selections.
+
+        Returns
+        -------
+        list[tuple[int, int]]
+            List of (row, col) tuples representing start positions
+        """
+        if self.multichannel_mode:
+            # Find wells that are selected but don't have the one above selected
+            start_positions = []
+            for r, c in self.selected_queue:
+                if r == 0 or not self.well_state[r - 1][c]:
+                    start_positions.append((r, c))
+            return start_positions
+        else:
+            # In single-channel, all selections are start positions
+            return list(self.selected_queue)
 
     def callback_well_button(self, row: int, column: int):
         """Toggle a well button with multichannel awareness."""

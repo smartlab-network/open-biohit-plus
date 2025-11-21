@@ -3835,6 +3835,7 @@ class DeckGUI:
             pipettor=self.pipettor,
             mode="direct",
             parent_frame=self.operations_tab_frame
+
         )
 
     def delete_selected_lll(self):
@@ -5005,6 +5006,7 @@ class DeckGUI:
     def run(self):
         """Start the GUI"""
         self.root.mainloop()
+
 
 # Main entry point
 if __name__ == "__main__":
