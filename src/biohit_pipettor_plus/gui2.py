@@ -3456,6 +3456,7 @@ class DeckGUI:
                 self.labware_listbox.insert(tk.END, lw.labware_id)
 
     def create_low_level_para_tab(self):
+
         """Create the Create tab"""
 
         create_tab = ttk.Frame(self.right_panel_notebook)

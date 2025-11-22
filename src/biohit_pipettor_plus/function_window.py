@@ -258,7 +258,7 @@ class FunctionWindow:
 
         self.save_button = ttk.Button(
             self.frame_name,
-            text="💾 Save Workflow",
+            text="ðŸ’¾ Save Workflow",
             command=self.callback_save_button,
             bootstyle="success"
         )
@@ -266,7 +266,7 @@ class FunctionWindow:
 
         self.clear_queue_button = ttk.Button(
             self.frame_name,
-            text="🗑️ Clear Queue",
+            text="ðŸ—‘ï¸ Clear Queue",
             command=self.clear_workflow_queue,
             bootstyle="danger"
         )
@@ -504,7 +504,7 @@ class FunctionWindow:
             # Remove button
             remove_btn = ttk.Button(
                 frame,
-                text="✖",
+                text="âœ–",
                 width=3,
                 command=lambda i=idx: self.remove_from_queue(i),
                 bootstyle="danger-outline"
@@ -795,7 +795,7 @@ class FunctionWindow:
             )
             self.get_master_window().wait_window(window.get_root())
 
-            # ✅ UNIFIED: Get start positions (works for both modes!)
+            # âœ… UNIFIED: Get start positions (works for both modes!)
             start_positions = window.get_start_positions()
             if not start_positions:
                 return
@@ -857,7 +857,7 @@ class FunctionWindow:
             )
             self.get_master_window().wait_window(window.get_root())
 
-            # ✅ UNIFIED: Get start positions (works for both modes!)
+            # âœ… UNIFIED: Get start positions (works for both modes!)
             start_positions = window.get_start_positions()
             if not start_positions:
                 return
@@ -920,7 +920,7 @@ class FunctionWindow:
             )
             self.get_master_window().wait_window(window_return.get_root())
 
-            # ✅ Get start positions for return
+            # âœ… Get start positions for return
             start_positions_return = window_return.get_start_positions()
             if not start_positions_return:
                 return
@@ -941,7 +941,7 @@ class FunctionWindow:
             )
             self.get_master_window().wait_window(window_pick.get_root())
 
-            # ✅ Get start positions for pick
+            # âœ… Get start positions for pick
             start_positions_pick = window_pick.get_start_positions()
             if not start_positions_pick:
                 return
@@ -1043,6 +1043,7 @@ class FunctionWindow:
                 rows=labware_obj.hooks_across_y,
                 columns=labware_obj.hooks_across_x,
                 labware_id=labware_obj.labware_id,
+                max_selected=1,  # Only allow selecting ONE reservoir position
                 master=self.get_master_window(),
                 title=f"Choose source reservoir: {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True)
@@ -1050,10 +1051,11 @@ class FunctionWindow:
             self.get_master_window().wait_variable(window.safe_var)
 
             kwargs["source_labware"] = labware_obj
-            kwargs["source_positions"] = [
-                (r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
+            # For reservoir: extract first selected position as (column, row)
+            selected = [
+                (c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
             ]
-            window.show_well_window()
+            kwargs["source_positions"] = selected[0] if selected else None
             del window
 
             if not kwargs["source_positions"]:
@@ -1074,17 +1076,25 @@ class FunctionWindow:
                 rows=labware_obj._rows,
                 columns=labware_obj._columns,
                 labware_id=labware_obj.labware_id,
-                max_selected=self.channels,
+                max_selected=None,  # No limit - allow selecting multiple columns
+                multichannel_mode=(self.channels == 8),  # Enforce consecutive selection
                 master=self.get_master_window(),
                 title=f"Choose destination wells: {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False)
             )
             self.get_master_window().wait_variable(window.safe_var)
             kwargs["dest_labware"] = labware_obj
-            kwargs["dest_positions"] = [
-                (r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
-            ]
-            window.show_well_window()
+            # Convert to (column, start_row) format for pipettor backend
+            if self.channels == 8:
+                # Get start positions from multichannel selection
+                kwargs["dest_positions"] = [
+                    (c, r) for r, c in window.get_start_positions()
+                ]
+            else:
+                # Single channel: all positions
+                kwargs["dest_positions"] = [
+                    (c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
+                ]
             del window
 
             if not kwargs["dest_positions"]:
@@ -1093,7 +1103,7 @@ class FunctionWindow:
             # Get volume
             if self.mode == "builder":
                 self.clear_grid(self.second_column_frame)
-                label = ttk.Label(self.second_column_frame, text="Enter Volume per Well (µL)")
+                label = ttk.Label(self.second_column_frame, text="Enter Volume per Well (ul)")
                 label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
                 text_var = ttk.StringVar(value="100")
                 entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
@@ -1124,7 +1134,7 @@ class FunctionWindow:
             else:  # direct mode
                 volume = tk.simpledialog.askfloat(
                     "Volume",
-                    "Enter volume per well (µL):",
+                    "Enter volume per well (ul):",
                     initialvalue=100,
                     minvalue=1,
                     maxvalue=10000
@@ -1140,12 +1150,25 @@ class FunctionWindow:
                     volume_per_well=vol
                 )
 
-                details = f"Source: {kwargs['source_labware'].labware_id}\n"
-                details += f"  Reservoir: {kwargs['source_positions']}\n"
-                details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
-                details += f"  Wells: {len(kwargs['dest_positions'])} wells\n"
-                details += f"Volume: {volume} µL per well\n"
-                details += f"Total: {volume * len(kwargs['dest_positions'])} µL"
+                # Calculate actual number of wells
+                num_positions = len(kwargs['dest_positions'])
+                if self.channels == 8:
+                    total_wells = num_positions * 8  # Each position = 8 wells
+                    details = f"Source: {kwargs['source_labware'].labware_id}\n"
+                    details += f"  Reservoir: {kwargs['source_positions']}\n"
+                    details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
+                    details += f"  Columns: {num_positions} (8 wells each)\n"
+                    details += f"  Total Wells: {total_wells}\n"
+                    details += f"Volume: {volume} µL per well\n"
+                    details += f"Total Volume: {volume * total_wells} ul"
+                else:
+                    total_wells = num_positions
+                    details = f"Source: {kwargs['source_labware'].labware_id}\n"
+                    details += f"  Reservoir: {kwargs['source_positions']}\n"
+                    details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
+                    details += f"  Wells: {total_wells}\n"
+                    details += f"Volume: {volume} µL per well\n"
+                    details += f"Total Volume: {volume * total_wells} ul"
 
                 self.stage_operation(func, func_str, details)
 
@@ -1173,17 +1196,25 @@ class FunctionWindow:
                 rows=labware_obj._rows,
                 columns=labware_obj._columns,
                 labware_id=labware_obj.labware_id,
-                max_selected=self.channels,
+                max_selected=None,  # No limit - allow selecting multiple columns
+                multichannel_mode=(self.channels == 8),  # Enforce consecutive selection
                 master=self.get_master_window(),
                 title=f"Select source wells: {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True)
             )
             self.get_master_window().wait_variable(window.safe_var)
             kwargs["source_labware"] = labware_obj
-            kwargs["source_positions"] = [
-                (r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
-            ]
-            window.show_well_window()
+            # Convert to (column, start_row) format for pipettor backend
+            if self.channels == 8:
+                # Get start positions from multichannel selection
+                kwargs["source_positions"] = [
+                    (c, r) for r, c in window.get_start_positions()
+                ]
+            else:
+                # Single channel: all positions
+                kwargs["source_positions"] = [
+                    (c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
+                ]
             del window
 
             if not kwargs["source_positions"]:
@@ -1204,17 +1235,18 @@ class FunctionWindow:
                 rows=labware_obj.hooks_across_y,
                 columns=labware_obj.hooks_across_x,
                 labware_id=labware_obj.labware_id,
-                max_selected=self.channels,
+                max_selected=1,  # Only allow selecting ONE reservoir position
                 master=self.get_master_window(),
                 title=f"Select destination reservoir: {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False)
             )
             self.get_master_window().wait_variable(window.safe_var)
             kwargs["dest_labware"] = labware_obj
-            kwargs["dest_positions"] = [
-                (r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
+            # For reservoir: extract first selected position as (column, row)
+            selected = [
+                (c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
             ]
-            window.show_well_window()
+            kwargs["dest_positions"] = selected[0] if selected else None
             del window
 
             if not kwargs["dest_positions"]:
@@ -1223,7 +1255,7 @@ class FunctionWindow:
             # Get volume
             if self.mode == "builder":
                 self.clear_grid(self.second_column_frame)
-                label = ttk.Label(self.second_column_frame, text="Enter Volume per Well (µL)")
+                label = ttk.Label(self.second_column_frame, text="Enter Volume per Well (ul)")
                 label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
                 text_var = ttk.StringVar(value="100")
                 entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
@@ -1270,12 +1302,25 @@ class FunctionWindow:
                     volume_per_well=vol
                 )
 
-                details = f"Source: {kwargs['source_labware'].labware_id}\n"
-                details += f"  Wells: {len(kwargs['source_positions'])} wells\n"
-                details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
-                details += f"  Reservoir: {kwargs['dest_positions']}\n"
-                details += f"Volume: {volume} µL per well\n"
-                details += f"Total: {volume * len(kwargs['source_positions'])} µL"
+                # Calculate actual number of wells
+                num_positions = len(kwargs['source_positions'])
+                if self.channels == 8:
+                    total_wells = num_positions * 8
+                    details = f"Source: {kwargs['source_labware'].labware_id}\n"
+                    details += f"  Columns: {num_positions} (8 wells each)\n"
+                    details += f"  Total Wells: {total_wells}\n"
+                    details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
+                    details += f"  Reservoir: {kwargs['dest_positions']}\n"
+                    details += f"Volume: {volume} µL per well\n"
+                    details += f"Total Volume: {volume * total_wells} µL"
+                else:
+                    total_wells = num_positions
+                    details = f"Source: {kwargs['source_labware'].labware_id}\n"
+                    details += f"  Wells: {total_wells}\n"
+                    details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
+                    details += f"  Reservoir: {kwargs['dest_positions']}\n"
+                    details += f"Volume: {volume} µL per well\n"
+                    details += f"Total Volume: {volume * total_wells} µL"
 
                 self.stage_operation(func, func_str, details)
 
@@ -1303,17 +1348,25 @@ class FunctionWindow:
                 rows=labware_obj._rows,
                 columns=labware_obj._columns,
                 labware_id=labware_obj.labware_id,
-                max_selected=self.channels,
+                max_selected=None,  # No limit - allow selecting multiple columns
+                multichannel_mode=(self.channels == 8),  # Enforce consecutive selection
                 master=self.get_master_window(),
                 title=f"Select source wells: {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True)
             )
             self.get_master_window().wait_variable(window.safe_var)
             kwargs["source_labware"] = labware_obj
-            kwargs["source_positions"] = [
-                (r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
-            ]
-            window.show_well_window()
+            # Convert to (column, start_row) format for pipettor backend
+            if self.channels == 8:
+                # Get start positions from multichannel selection
+                kwargs["source_positions"] = [
+                    (c, r) for r, c in window.get_start_positions()
+                ]
+            else:
+                # Single channel: all positions
+                kwargs["source_positions"] = [
+                    (c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
+                ]
             del window
 
             if not kwargs["source_positions"]:
@@ -1334,17 +1387,25 @@ class FunctionWindow:
                 rows=labware_obj._rows,
                 columns=labware_obj._columns,
                 labware_id=labware_obj.labware_id,
-                max_selected=self.channels,
+                max_selected=None,  # No limit - allow selecting multiple columns
+                multichannel_mode=(self.channels == 8),  # Enforce consecutive selection
                 master=self.get_master_window(),
                 title=f"Select destination wells: {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False)
             )
             self.get_master_window().wait_variable(window.safe_var)
             kwargs["dest_labware"] = labware_obj
-            kwargs["dest_positions"] = [
-                (r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
-            ]
-            window.show_well_window()
+            # Convert to (column, start_row) format for pipettor backend
+            if self.channels == 8:
+                # Get start positions from multichannel selection
+                kwargs["dest_positions"] = [
+                    (c, r) for r, c in window.get_start_positions()
+                ]
+            else:
+                # Single channel: all positions
+                kwargs["dest_positions"] = [
+                    (c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
+                ]
             del window
 
             if not kwargs["dest_positions"]:
@@ -1353,7 +1414,7 @@ class FunctionWindow:
             # Get volume
             if self.mode == "builder":
                 self.clear_grid(self.second_column_frame)
-                label = ttk.Label(self.second_column_frame, text="Enter Volume per Well (µL)")
+                label = ttk.Label(self.second_column_frame, text="Enter Volume per Well (ul)")
                 label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
                 text_var = ttk.StringVar(value="100")
                 entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
@@ -1400,12 +1461,26 @@ class FunctionWindow:
                     volume_per_well=vol
                 )
 
-                details = f"Source: {kwargs['source_labware'].labware_id}\n"
-                details += f"  Wells: {len(kwargs['source_positions'])} wells\n"
-                details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
-                details += f"  Wells: {len(kwargs['dest_positions'])} wells\n"
-                details += f"Volume: {volume} µL per well\n"
-                details += f"Total: {volume * len(kwargs['source_positions'])} µL"
+                # Calculate actual number of wells
+                num_positions = len(kwargs['source_positions'])
+                if self.channels == 8:
+                    total_wells = num_positions * 8
+                    details = f"Source: {kwargs['source_labware'].labware_id}\n"
+                    details += f"  Columns: {num_positions} (8 wells each)\n"
+                    details += f"  Total Wells: {total_wells}\n"
+                    details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
+                    details += f"  Columns: {len(kwargs['dest_positions'])} (8 wells each)\n"
+                    details += f"  Total Wells: {len(kwargs['dest_positions']) * 8}\n"
+                    details += f"Volume: {volume} µL per well\n"
+                    details += f"Total Volume: {volume * total_wells} µL"
+                else:
+                    total_wells = num_positions
+                    details = f"Source: {kwargs['source_labware'].labware_id}\n"
+                    details += f"  Wells: {total_wells}\n"
+                    details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
+                    details += f"  Wells: {len(kwargs['dest_positions'])}\n"
+                    details += f"Volume: {volume} µL per well\n"
+                    details += f"Total Volume: {volume * total_wells} µL"
 
                 self.stage_operation(func, func_str, details)
 
@@ -1462,7 +1537,7 @@ class FunctionWindow:
             # Get volume
             if self.mode == "builder":
                 self.clear_grid(self.second_column_frame)
-                label = ttk.Label(self.second_column_frame, text="Enter Volume per Well (µL)")
+                label = ttk.Label(self.second_column_frame, text="Enter Volume per Well (ul)")
                 label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
                 text_var = ttk.StringVar(value="100")
                 entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
@@ -1491,7 +1566,7 @@ class FunctionWindow:
             else:  # direct mode
                 volume = tk.simpledialog.askfloat(
                     "Volume",
-                    "Enter volume per well (µL):",
+                    "Enter volume per well (ul):",
                     initialvalue=100,
                     minvalue=1,
                     maxvalue=10000
@@ -1508,7 +1583,7 @@ class FunctionWindow:
                 details = f"Labware: {kwargs['labware_obj'].labware_id}\n"
                 details += f"Wells: {len(kwargs['positions'])} positions\n"
                 details += f"Volume: {volume} µL per well\n"
-                details += f"Total: {volume * len(kwargs['positions'])} µL"
+                details += f"Total: {volume * len(kwargs['positions'])} ul"
 
                 self.stage_operation(func, func_str, details)
 
@@ -1565,7 +1640,7 @@ class FunctionWindow:
             # Get volume
             if self.mode == "builder":
                 self.clear_grid(self.second_column_frame)
-                label = ttk.Label(self.second_column_frame, text="Enter Volume per Well (µL)")
+                label = ttk.Label(self.second_column_frame, text="Enter Volume per Well (ul)")
                 label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
                 text_var = ttk.StringVar(value="100")
                 entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
@@ -1594,7 +1669,7 @@ class FunctionWindow:
             else:  # direct mode
                 volume = tk.simpledialog.askfloat(
                     "Volume",
-                    "Enter volume per well (µL):",
+                    "Enter volume per well (ul):",
                     initialvalue=100,
                     minvalue=1,
                     maxvalue=10000
@@ -1611,7 +1686,7 @@ class FunctionWindow:
                 details = f"Labware: {kwargs['labware_obj'].labware_id}\n"
                 details += f"Wells: {len(kwargs['positions'])} positions\n"
                 details += f"Volume: {volume} µL per well\n"
-                details += f"Total: {volume * len(kwargs['positions'])} µL"
+                details += f"Total: {volume * len(kwargs['positions'])} ul"
 
                 self.stage_operation(func, func_str, details)
 
