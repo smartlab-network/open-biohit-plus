@@ -30,21 +30,23 @@ class WellWindow:
         Wells not in this list are disabled.
     max_selected : int, optional
         Maximum number of simultaneously selected wells.
+    volume_constraints : dict[tuple[int, int], dict], optional
+        Dictionary of wells that fail volume requirements.
+        Format: {(row, col): {'reason': str, 'current_volume': float, 'required_volume': float}}
     """
 
     def __init__(self, rows: int, columns: int, labware_id: str, title: str = "",
                  master=None, wells_list: list[tuple[int, int]] = None,
-                 max_selected: int = None, multichannel_mode: bool = False):
-
-        #print("test")
+                 max_selected: int = None, multichannel_mode: bool = False,
+                 volume_constraints: dict[tuple[int, int], dict] = None):
 
         # --- Window setup ---
         if master:
             # Create as a dialog
             self.__root = ttk.Toplevel(master=master)
             self.__root.title(title if title else f"Select Wells from: {labware_id}")
-            self.__root.transient(master)  #  Stay on top of parent
-            self.__root.grab_set()  # Make modal
+            self.__root.transient(master)
+            self.__root.grab_set()
 
             # Calculate reasonable size based on grid dimensions
             cell_width = 80
@@ -68,7 +70,7 @@ class WellWindow:
                 title=f"Select Wells from Labware: {labware_id}",
                 themename="darkly"
             )
-            self.__root.geometry("1200x900")  # Reasonable default size
+            self.__root.geometry("1200x900")
 
         self.is_well_window = True
 
@@ -77,6 +79,8 @@ class WellWindow:
         self.columns = columns
         self.labware_id = labware_id
         self.wells_list = wells_list if wells_list else []
+        self.volume_constraints = volume_constraints if volume_constraints else {}
+
         if max_selected:
             self.max_selected = max_selected
         else:
@@ -147,6 +151,39 @@ class WellWindow:
         if self.wells_list:
             self.update_all_button_states()
 
+    def _format_constraint_tooltip(self, constraint_info: dict) -> str:
+        """Format constraint info into readable tooltip text."""
+        reason = constraint_info.get('reason', '')
+        if reason == 'insufficient_volume':
+            current = constraint_info.get('current_volume', 0)
+            required = constraint_info.get('required_volume', 0)
+            return f"Insufficient Volume\nCurrent: {current:.1f} µL\nRequired: {required:.1f} µL"
+        elif reason == 'overflow_risk':
+            available = constraint_info.get('available_volume', 0)
+            required = constraint_info.get('required_volume', 0)
+            return f"Overflow Risk\nAvailable: {available:.1f} µL\nNeeded: {required:.1f} µL"
+        return "Volume constraint violation"
+
+    def _create_tooltip(self, widget, text: str):
+        """Create a simple tooltip for a widget."""
+
+        def show_tooltip(event):
+            tooltip = tk.Toplevel()
+            tooltip.wm_overrideredirect(True)
+            tooltip.wm_geometry(f"+{event.x_root + 10}+{event.y_root + 10}")
+            label = tk.Label(tooltip, text=text, background="yellow", relief="solid", borderwidth=1,
+                             font=("Arial", 9))
+            label.pack()
+            widget.tooltip = tooltip
+
+        def hide_tooltip(event):
+            if hasattr(widget, 'tooltip'):
+                widget.tooltip.destroy()
+                del widget.tooltip
+
+        widget.bind('<Enter>', show_tooltip)
+        widget.bind('<Leave>', hide_tooltip)
+
     def set_grid(self):
         """Configure Tkinter grid layout for the window."""
         # Row 0: Info header
@@ -174,40 +211,43 @@ class WellWindow:
             self.is_well_window = True
 
     def create_well_buttons(self):
-        """Create a grid of well buttons with multichannel awareness."""
+        """Create a grid of well buttons with volume constraint awareness."""
         for r in range(self.rows):
             for c in range(self.columns):
                 well_name = f"{string.ascii_uppercase[r]}{c + 1}"
                 well_available = (r, c) in self.wells_list
+                has_volume_constraint = (r, c) in self.volume_constraints
 
-                if well_available:
+                if well_available and not has_volume_constraint:
+                    # Well is available AND passes volume constraints
                     if self.multichannel_mode:
-                        # ✅ Check if valid starting position (has 8 consecutive rows below)
-                        if r + 8 <= self.rows:  # Has room for 8 tips
-                            # Check all 8 positions are available
+                        # Check if valid starting position (has 8 consecutive rows below)
+                        if r + 8 <= self.rows:
+                            # Check all 8 positions are available AND pass constraints
                             all_available = all((r + i, c) in self.wells_list for i in range(8))
-                            if all_available:
-                                # ✅ VALID STARTING POSITION - make clickable
+                            all_pass_constraints = all((r + i, c) not in self.volume_constraints for i in range(8))
+                            if all_available and all_pass_constraints:
+                                # VALID STARTING POSITION - make clickable
                                 state = "normal"
                                 style = "light"
                                 command = lambda c=c, r=r: self.callback_well_button(r, c)
                             else:
-                                # ✅ Some positions missing - not valid but LOOKS available
+                                # Some positions missing or fail constraints
                                 state = "disabled"
                                 style = "light"
                                 command = None
                         else:
-                            # ✅ Not enough room for 8 tips below - disabled but LOOKS available
+                            # Not enough room for 8 tips below
                             state = "disabled"
                             style = "light"
                             command = None
                     else:
-                        # Single-channel mode - all available wells are clickable
+                        # Single-channel mode - clickable
                         state = "normal"
                         style = "light"
                         command = lambda c=c, r=r: self.callback_well_button(r, c)
 
-                    # Create button for available wells
+                    # Create button
                     cur_button = ttk.Button(
                         self.__root,
                         text=well_name,
@@ -226,18 +266,21 @@ class WellWindow:
                     )
                     self.buttons[r][c] = cur_button
 
-                    # ✅ ADD HOVER BINDINGS TO ALL VALID START POSITIONS
+                    # Add hover bindings for multichannel
                     if self.multichannel_mode and state == "normal":
                         cur_button.bind('<Enter>', lambda e, r=r, c=c: self.show_multichannel_preview(r, c))
                         cur_button.bind('<Leave>', lambda e: self.hide_multichannel_preview())
                         cur_button.configure(cursor="crosshair")
 
-                else:
-                    # ✅ Well not available - use a LABEL with red background
+                elif well_available and has_volume_constraint:
+                    # Well available but FAILS volume constraint - show as RED (same as unavailable)
+                    constraint_info = self.volume_constraints[(r, c)]
+                    tooltip_text = self._format_constraint_tooltip(constraint_info)
+
                     cur_label = ttk.Label(
                         self.__root,
                         text=well_name,
-                        bootstyle="danger-inverse",  # Red background with white text
+                        bootstyle="danger-inverse",  # Red background (same as unavailable wells)
                         anchor="center",
                         font=('Arial', 10)
                     )
@@ -250,7 +293,30 @@ class WellWindow:
                         padx=2,
                         pady=2
                     )
-                    self.buttons[r][c] = cur_label  # Store label in buttons array
+                    self.buttons[r][c] = cur_label
+
+                    # Add tooltip with volume constraint details
+                    self._create_tooltip(cur_label, tooltip_text)
+
+                else:
+                    # Well not available - RED background
+                    cur_label = ttk.Label(
+                        self.__root,
+                        text=well_name,
+                        bootstyle="danger-inverse",
+                        anchor="center",
+                        font=('Arial', 10)
+                    )
+                    cur_label.grid(
+                        row=r + 2,
+                        column=c + 1,
+                        sticky='nsew',
+                        ipadx=20,
+                        ipady=10,
+                        padx=2,
+                        pady=2
+                    )
+                    self.buttons[r][c] = cur_label
 
     def create_check_boxes(self):
         """Create row and column checkboxes for easier multi-selection."""
@@ -263,7 +329,7 @@ class WellWindow:
                 variable=self.row_vars[r]
             )
             cur_check.grid(
-                row=r + 2,  # ✅ Offset by 2
+                row=r + 2,
                 column=0,
                 sticky='ns'
             )
@@ -275,7 +341,7 @@ class WellWindow:
                 variable=self.col_vars[c]
             )
             curr_check.grid(
-                row=1,  # ✅ Row 1 (after info)
+                row=1,
                 column=c + 1,
                 sticky='ns',
                 ipady=10
@@ -325,12 +391,10 @@ class WellWindow:
         for i in range(8):
             r = row + i
             if r < self.rows and self.buttons[r][col] is not None:
-                if not self.well_state[r][col]:  # Only preview unselected wells
+                if not self.well_state[r][col]:
                     if i == 0:
-                        # ✅ Start row - orange/warning outline
                         self.buttons[r][col].configure(bootstyle="warning-outline")
                     else:
-                        # ✅ Other rows - lighter outline
                         self.buttons[r][col].configure(bootstyle="secondary-outline")
 
     def hide_multichannel_preview(self):
@@ -339,11 +403,9 @@ class WellWindow:
             for c in range(self.columns):
                 widget = self.buttons[r][c]
 
-                # Skip selected wells, None widgets, and Labels (unavailable wells)
                 if widget is None or self.well_state[r][c] or isinstance(widget, ttk.Label):
                     continue
 
-                # Only reset unselected buttons
                 if (r, c) in self.wells_list:
                     widget.configure(bootstyle="light")
 
@@ -357,65 +419,43 @@ class WellWindow:
             List of (row, col) tuples representing start positions
         """
         if self.multichannel_mode:
-            # Find wells that are selected but don't have the one above selected
             start_positions = []
             for r, c in self.selected_queue:
                 if r == 0 or not self.well_state[r - 1][c]:
                     start_positions.append((r, c))
             return start_positions
         else:
-            # In single-channel, all selections are start positions
             return list(self.selected_queue)
 
     def callback_well_button(self, row: int, column: int):
         """Toggle a well button with multichannel awareness."""
 
-        # Helper to update a well's UI state (assuming 'well' is the button object)
-        def _update_well_ui(r, c, is_selected):
-            if self.buttons[r][c] is not None:
-                # Only change the color of non-start rows if the row is actually selected
-                # Start rows handle their own color (success/light/secondary)
-                if not is_selected and (r != row or self.multichannel_mode is False):
-                    # When deselecting, restore to 'primary' (or whatever unselected color is)
-                    # In multichannel mode, non-start rows are visually 'unselected'
-                    self.buttons[r][c].configure(bootstyle="light")  # Assuming 'light' is the unselected background
-                # For simplicity, we'll let the main logic handle the start-row color change
-
         if self.multichannel_mode:
 
-            # --- Helper for clearing an 8-well block ---
             def clear_block(start_row, col):
                 for i in range(8):
                     r = start_row + i
                     if r < self.rows:
-                        # Clear internal state
                         self.well_state[r][col] = False
                         if (r, col) in self.selected_queue:
                             self.selected_queue.remove((r, col))
 
-                        # Restore UI state for the wells in the block
                         if self.buttons[r][col] is not None:
-                            # Restore non-start rows to unselected color
                             if i > 0:
                                 self.buttons[r][col].configure(bootstyle="light")
-                            # Restore the start row to its original/enabled color
                             else:
                                 is_valid = (start_row, col) in self.wells_list and start_row + 8 <= self.rows and \
                                            all((start_row + j, col) in self.wells_list for j in range(8))
                                 self.buttons[start_row][col].configure(bootstyle="light" if is_valid else "secondary")
 
-            # ✅ STEP 1: Check if this is a valid starting position
             is_valid_start_pos = (row + 8 <= self.rows and
-                                  all((row + i, column) in self.wells_list for i in range(8)))
+                                  all((row + i, column) in self.wells_list for i in range(8)) and
+                                  all((row + i, column) not in self.volume_constraints for i in range(8)))
 
             if not is_valid_start_pos:
-                # Not a valid start position - ignore click
                 return
 
-            # ✅ STEP 2: Check if THIS specific start row is already selected (i.e., this column is currently selected starting at 'row')
-            # We assume that in multichannel mode, a well is selected *only* if it's part of an 8-well block
             is_this_block_selected = self.well_state[row][column]
-            # Also check if the whole block is actually selected (safer check)
             is_full_selection_at_start = all(
                 self.well_state[row + i][column]
                 for i in range(8)
@@ -423,41 +463,28 @@ class WellWindow:
             )
 
             if is_this_block_selected and is_full_selection_at_start:
-                # ✅ DESELECT this specific 8-tip selection
                 clear_block(row, column)
 
             else:
-                # ✅ STEP 3 & 4: Check for and Auto-clear any overlapping selections
-
-                # Find the START ROW of any currently selected 8-well block in this column.
-                # A well is part of a selection if self.well_state[r][c] is True.
-                # A row 'r' is a start row if self.well_state[r][c] is True AND
-                # self.well_state[r-1][c] is False (or r=0)
-
                 existing_start_rows = []
                 for r in range(self.rows):
-                    # Is it the start of a selection?
                     is_start = self.well_state[r][column] and \
                                (r == 0 or not self.well_state[r - 1][column])
 
-                    # Check if it's a valid 8-tip starting position
                     is_valid_8_tip = (r + 8 <= self.rows and
                                       all((r + i, column) in self.wells_list for i in range(8)))
 
                     if is_start and is_valid_8_tip:
                         existing_start_rows.append(r)
 
-                # Calculate which rows the new selection would occupy
                 new_selection_rows = set(range(row, min(row + 8, self.rows)))
 
-                # Auto-clear any overlapping selections
                 for existing_start in existing_start_rows:
                     existing_rows = set(range(existing_start, min(existing_start + 8, self.rows)))
 
-                    if new_selection_rows & existing_rows:  # Overlap detected!
-                        clear_block(existing_start, column)  # Use the new helper function
+                    if new_selection_rows & existing_rows:
+                        clear_block(existing_start, column)
 
-                # ✅ STEP 5: Add new selection (internal state)
                 for i in range(8):
                     r = row + i
                     if r < self.rows:
@@ -465,38 +492,27 @@ class WellWindow:
                         if (r, column) not in self.selected_queue:
                             self.selected_queue.append((r, column))
 
-                # ✅ STEP 6: Highlight only the start row (green 'success')
                 if self.buttons[row][column] is not None:
                     self.buttons[row][column].configure(bootstyle="success")
 
-                # Update UI for the *rest* of the newly selected wells (rows +1 through +7)
                 for i in range(1, 8):
                     r = row + i
                     if r < self.rows and self.buttons[r][column] is not None:
-                        # You may want to set a different style here if non-start selected wells
-                        # need a distinct look, e.g., 'secondary' instead of 'light'
                         self.buttons[r][column].configure(bootstyle="light")
 
         else:
-            # Single-channel mode (unchanged)
+            # Single-channel mode
             if self.well_state[row][column]:
                 self.deactivate_well(row, column)
             else:
                 self.activate_well(row, column)
 
     def toggle_row(self, row: int):
-        """
-        Toggle all wells in a given row.
-
-        Parameters
-        ----------
-        row : int
-            Row index to toggle.
-        """
+        """Toggle all wells in a given row."""
         check_var = self.row_vars[row].get()
 
         for c in range(self.columns):
-            if (row, c) not in self.wells_list:
+            if (row, c) not in self.wells_list or (row, c) in self.volume_constraints:
                 continue
 
             if check_var:
@@ -507,18 +523,11 @@ class WellWindow:
                     self.deactivate_well(row, c)
 
     def toggle_column(self, column: int):
-        """
-        Toggle all wells in a given column.
-
-        Parameters
-        ----------
-        column : int
-            Column index to toggle.
-        """
+        """Toggle all wells in a given column."""
         check_var = self.col_vars[column].get()
 
         for r in range(self.rows):
-            if (r, column) not in self.wells_list:
+            if (r, column) not in self.wells_list or (r, column) in self.volume_constraints:
                 continue
 
             if check_var:
@@ -529,9 +538,7 @@ class WellWindow:
                     self.deactivate_well(r, column)
 
     def callback_check_all(self):
-        """
-        Toggle all wells in the grid using the master checkbox.
-        """
+        """Toggle all wells in the grid using the master checkbox."""
         check_var = self.is_check_all.get()
 
         for i in range(self.rows):

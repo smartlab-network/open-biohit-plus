@@ -258,7 +258,7 @@ class FunctionWindow:
 
         self.save_button = ttk.Button(
             self.frame_name,
-            text="ðŸ’¾ Save Workflow",
+            text="Save Workflow",
             command=self.callback_save_button,
             bootstyle="success"
         )
@@ -266,7 +266,7 @@ class FunctionWindow:
 
         self.clear_queue_button = ttk.Button(
             self.frame_name,
-            text="ðŸ—‘ï¸ Clear Queue",
+            text="Clear Queue",
             command=self.clear_workflow_queue,
             bootstyle="danger"
         )
@@ -504,7 +504,7 @@ class FunctionWindow:
             # Remove button
             remove_btn = ttk.Button(
                 frame,
-                text="âœ–",
+                text="trash",
                 width=3,
                 command=lambda i=idx: self.remove_from_queue(i),
                 bootstyle="danger-outline"
@@ -719,7 +719,6 @@ class FunctionWindow:
                 bootstyle="secondary"
             ).grid(column=0, row=row, sticky="ew", pady=10, padx=10)
 
-
     def get_wells_list_from_labware(
             self,
             labware_obj: Labware,
@@ -738,13 +737,10 @@ class FunctionWindow:
                 ]
 
         elif isinstance(labware_obj, ReservoirHolder):
+            # Show ALL reservoirs, let volume constraints handle availability
             wells_list = []
             for res in labware_obj.get_reservoirs():
-                if res is None:
-                    continue
-                if source and res.get_total_volume() > 0:
-                    wells_list.append((res.row, res.column))
-                elif not source and res.get_available_volume() > 0:
+                if res is not None:
                     wells_list.append((res.row, res.column))
 
         elif isinstance(labware_obj, PipetteHolder):
@@ -795,7 +791,6 @@ class FunctionWindow:
             )
             self.get_master_window().wait_window(window.get_root())
 
-            # âœ… UNIFIED: Get start positions (works for both modes!)
             start_positions = window.get_start_positions()
             if not start_positions:
                 return
@@ -857,7 +852,7 @@ class FunctionWindow:
             )
             self.get_master_window().wait_window(window.get_root())
 
-            # âœ… UNIFIED: Get start positions (works for both modes!)
+            # Get start positions (works for both modes!)
             start_positions = window.get_start_positions()
             if not start_positions:
                 return
@@ -920,7 +915,7 @@ class FunctionWindow:
             )
             self.get_master_window().wait_window(window_return.get_root())
 
-            # âœ… Get start positions for return
+            # Get start positions for return
             start_positions_return = window_return.get_start_positions()
             if not start_positions_return:
                 return
@@ -941,7 +936,7 @@ class FunctionWindow:
             )
             self.get_master_window().wait_window(window_pick.get_root())
 
-            # âœ… Get start positions for pick
+            #Get start positions for pick
             start_positions_pick = window_pick.get_start_positions()
             if not start_positions_pick:
                 return
@@ -1050,7 +1045,7 @@ class FunctionWindow:
         # Label
         ttk.Label(
             main_frame,
-            text="Volume per well (µL):",
+            text="Volume per well (ul):",
             font=('Arial', 11)
         ).pack(pady=(0, 10))
 
@@ -1101,6 +1096,110 @@ class FunctionWindow:
 
         dialog.wait_window()
         return result['volume']
+
+    def compute_volume_constraints(self, labware_obj, volume_per_well: float, is_multichannel: bool = False,
+                                   operation: str = 'removal'):
+        """
+        Compute wells that should be deactivated based on volume requirements.
+
+        Parameters
+        ----------
+        labware_obj : Labware
+            The labware object (Plate or ReservoirHolder)
+        volume_per_well : float
+            Volume per well (µL) - to be removed or added
+        is_multichannel : bool
+            Whether this is for multichannel operation
+        operation : str
+            'removal' - check if wells have enough volume to remove
+            'addition' - check if wells have enough space to add
+
+        Returns
+        -------
+        dict[tuple[int, int], dict]
+            Dictionary mapping (row, col) to constraint info for wells that should be deactivated
+        """
+        constraints = {}
+
+        if isinstance(labware_obj, Plate):
+            wells = labware_obj.get_wells()
+            for (col, row), well in wells.items():
+
+                # Determine what to check based on operation
+                if operation == 'removal':
+                    check_volume = well.get_total_volume()
+                    has_constraint = check_volume < volume_per_well
+                    reason = 'insufficient_volume'
+                    volume_key = 'current_volume'
+                else:  # addition
+                    check_volume = well.get_available_volume()
+                    has_constraint = check_volume < volume_per_well
+                    reason = 'overflow_risk'
+                    volume_key = 'available_volume'
+
+                if is_multichannel:
+                    # For multichannel, check if start position - need 8 consecutive wells
+                    if row + 8 <= labware_obj._rows:
+                        # Check all 8 wells in this column starting from this row
+                        fails_constraint = False
+                        for i in range(8):
+                            check_well = labware_obj.get_well_at(col, row + i)
+                            if check_well:
+                                if operation == 'removal':
+                                    if check_well.get_total_volume() < volume_per_well:
+                                        fails_constraint = True
+                                        break
+                                else:  # addition
+                                    if check_well.get_available_volume() < volume_per_well:
+                                        fails_constraint = True
+                                        break
+
+                        if fails_constraint:
+                            constraints[(row, col)] = {
+                                'reason': reason,
+                                volume_key: check_volume,
+                                'required_volume': volume_per_well
+                            }
+                else:
+                    # For single channel, simply check if well meets constraint
+                    if has_constraint:
+                        constraints[(row, col)] = {
+                            'reason': reason,
+                            volume_key: check_volume,
+                            'required_volume': volume_per_well
+                        }
+
+        elif isinstance(labware_obj, ReservoirHolder):
+            # For reservoirs, check total volume for all wells it will serve/receive
+            hook_to_reservoir = labware_obj.get_hook_to_reservoir_map()
+
+            for hook_id, reservoir in hook_to_reservoir.items():
+                if reservoir is not None:
+                    col, row = labware_obj.hook_id_to_position(hook_id)
+
+                    # Calculate total volume (for multichannel operations, multiply by 8)
+                    total_volume = volume_per_well * (8 if is_multichannel else 1)
+
+                    # Determine what to check based on operation
+                    if operation == 'removal':
+                        check_volume = reservoir.get_total_volume()
+                        has_constraint = check_volume < total_volume
+                        reason = 'insufficient_volume'
+                        volume_key = 'current_volume'
+                    else:  # addition
+                        check_volume = reservoir.get_available_volume()
+                        has_constraint = check_volume < total_volume
+                        reason = 'overflow_risk'
+                        volume_key = 'available_volume'
+
+                    if has_constraint:
+                        constraints[(row, col)] = {
+                            'reason': reason,
+                            volume_key: check_volume,
+                            'required_volume': total_volume
+                        }
+
+        return constraints
 
     def callback_add_medium(
             self,
@@ -1154,15 +1253,23 @@ class FunctionWindow:
 
         # --- PART 3: HANDLE PLATE SELECTION & ASK RESERVOIR ---
         elif part == "third" and labware_obj is not None:
+            # Compute volume constraints for addition (overflow check)
+            volume = kwargs.get('volume')
+            is_multichannel = (self.channels == 8)
+            volume_constraints = self.compute_volume_constraints(
+                labware_obj, volume, is_multichannel, operation='addition'
+            )
+
             window = WellWindow(
                 rows=labware_obj._rows,
                 columns=labware_obj._columns,
                 labware_id=labware_obj.labware_id,
                 max_selected=None,
-                multichannel_mode=(self.channels == 8),
+                multichannel_mode=is_multichannel,
                 master=self.get_master_window(),
                 title=f"DESTINATION: Select wells on {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False)
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False),
+                volume_constraints=volume_constraints
             )
             self.get_master_window().wait_variable(window.safe_var)
 
@@ -1188,6 +1295,16 @@ class FunctionWindow:
 
         # --- PART 4: HANDLE RESERVOIR SELECTION & EXECUTE ---
         elif part == "fourth" and labware_obj is not None:
+            # Compute volume constraints for source reservoir (insufficient volume check)
+            volume = kwargs.get('volume')
+            num_dest_positions = len(kwargs['dest_positions'])
+            is_multichannel = (self.channels == 8)
+            total_wells = num_dest_positions * 8 if is_multichannel else num_dest_positions
+            # Reservoir needs to supply all destination wells
+            volume_constraints = self.compute_volume_constraints(
+                labware_obj, volume * total_wells, is_multichannel=False, operation='removal'
+            )
+
             window = WellWindow(
                 rows=labware_obj.hooks_across_y,
                 columns=labware_obj.hooks_across_x,
@@ -1195,7 +1312,8 @@ class FunctionWindow:
                 max_selected=1,
                 master=self.get_master_window(),
                 title=f"SOURCE: Choose reservoir {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True)
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True),
+                volume_constraints=volume_constraints
             )
             self.get_master_window().wait_variable(window.safe_var)
 
@@ -1226,7 +1344,7 @@ class FunctionWindow:
                 details = f"Source: {kwargs['source_labware'].labware_id}\n  Reservoir: {kwargs['source_positions']}\n"
                 details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
                 details += f"  Columns: {kwargs['dest_positions']}\n" if self.channels == 8 else f"  Wells: {kwargs['dest_positions']}\n"
-                details += f"  Total Wells: {total_wells}\nVolume: {volume} µL per well\nTotal Volume: {total_vol} µL"
+                details += f"  Total Wells: {total_wells}\nVolume: {volume} ul per well\nTotal Volume: {total_vol} ul"
                 self.stage_operation(func, func_str, details)
 
     def callback_remove_medium(
@@ -1281,15 +1399,23 @@ class FunctionWindow:
 
         # --- PART 3: HANDLE PLATE SELECTION & ASK RESERVOIR ---
         elif part == "third" and labware_obj is not None:
+            # Compute volume constraints for removal (insufficient volume check)
+            volume = kwargs.get('volume')
+            is_multichannel = (self.channels == 8)
+            volume_constraints = self.compute_volume_constraints(
+                labware_obj, volume, is_multichannel, operation='removal'
+            )
+
             window = WellWindow(
                 rows=labware_obj._rows,
                 columns=labware_obj._columns,
                 labware_id=labware_obj.labware_id,
                 max_selected=None,
-                multichannel_mode=(self.channels == 8),
+                multichannel_mode=is_multichannel,
                 master=self.get_master_window(),
                 title=f"SOURCE: Select wells on {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True)
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True),
+                volume_constraints=volume_constraints
             )
             self.get_master_window().wait_variable(window.safe_var)
 
@@ -1315,6 +1441,15 @@ class FunctionWindow:
 
         # --- PART 4: HANDLE RESERVOIR SELECTION & EXECUTE ---
         elif part == "fourth" and labware_obj is not None:
+            # Compute volume constraints for reservoir (overflow check)
+            volume = kwargs.get('volume')
+            num_source_positions = len(kwargs['source_positions'])
+            is_multichannel = (self.channels == 8)
+            total_wells = num_source_positions * 8 if is_multichannel else num_source_positions
+            volume_constraints = self.compute_volume_constraints(
+                labware_obj, volume * total_wells, is_multichannel=False, operation='addition'
+            )
+
             window = WellWindow(
                 rows=labware_obj.hooks_across_y,
                 columns=labware_obj.hooks_across_x,
@@ -1322,7 +1457,8 @@ class FunctionWindow:
                 max_selected=1,
                 master=self.get_master_window(),
                 title=f"DESTINATION: Select reservoir {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False)
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False),
+                volume_constraints=volume_constraints
             )
             self.get_master_window().wait_variable(window.safe_var)
 
@@ -1353,7 +1489,7 @@ class FunctionWindow:
                 details = f"Source: {kwargs['source_labware'].labware_id}\n"
                 details += f"  Columns: {kwargs['source_positions']}\n" if self.channels == 8 else f"  Wells: {kwargs['source_positions']}\n"
                 details += f"Destination: {kwargs['dest_labware'].labware_id}\n  Reservoir: {kwargs['dest_positions']}\n"
-                details += f"  Total Wells: {total_wells}\nVolume: {volume} µL per well\nTotal Volume: {total_vol} µL"
+                details += f"  Total Wells: {total_wells}\nVolume: {volume} ul per well\nTotal Volume: {total_vol} ul"
                 self.stage_operation(func, func_str, details)
 
     def callback_transfer_plate_to_plate(
@@ -1409,15 +1545,23 @@ class FunctionWindow:
 
         # --- PART 3: HANDLE SOURCE SELECTION & ASK DESTINATION ---
         elif part == "third" and labware_obj is not None:
+            # Compute volume constraints for removal (insufficient volume check)
+            volume = kwargs.get('volume')
+            is_multichannel = (self.channels == 8)
+            volume_constraints = self.compute_volume_constraints(
+                labware_obj, volume, is_multichannel, operation='removal'
+            )
+
             window = WellWindow(
                 rows=labware_obj._rows,
                 columns=labware_obj._columns,
                 labware_id=labware_obj.labware_id,
                 max_selected=None,
-                multichannel_mode=(self.channels == 8),
+                multichannel_mode=is_multichannel,
                 master=self.get_master_window(),
                 title=f"SOURCE: Select wells on {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True)
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True),
+                volume_constraints=volume_constraints
             )
             self.get_master_window().wait_variable(window.safe_var)
 
@@ -1443,15 +1587,23 @@ class FunctionWindow:
 
         # --- PART 4: HANDLE DESTINATION SELECTION & EXECUTE ---
         elif part == "fourth" and labware_obj is not None:
+            # Compute volume constraints for addition (overflow check)
+            volume = kwargs.get('volume')
+            is_multichannel = (self.channels == 8)
+            volume_constraints = self.compute_volume_constraints(
+                labware_obj, volume, is_multichannel, operation='addition'
+            )
+
             window = WellWindow(
                 rows=labware_obj._rows,
                 columns=labware_obj._columns,
                 labware_id=labware_obj.labware_id,
                 max_selected=None,
-                multichannel_mode=(self.channels == 8),
+                multichannel_mode=is_multichannel,
                 master=self.get_master_window(),
                 title=f"DESTINATION: Select wells on {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False)
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False),
+                volume_constraints=volume_constraints
             )
             self.get_master_window().wait_variable(window.safe_var)
 
@@ -1498,7 +1650,7 @@ class FunctionWindow:
                 details += f"  Columns: {kwargs['source_positions']}\n" if self.channels == 8 else f"  Wells: {kwargs['source_positions']}\n"
                 details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
                 details += f"  Columns: {kwargs['dest_positions']}\n" if self.channels == 8 else f"  Wells: {kwargs['dest_positions']}\n"
-                details += f"  Total Wells: {total_wells}\nVolume: {volume} µL per well\nTotal Volume: {total_vol} µL"
+                details += f"  Total Wells: {total_wells}\nVolume: {volume} ul per well\nTotal Volume: {total_vol} ul"
                 self.stage_operation(func, func_str, details)
 
     def callback_suck(
@@ -1599,7 +1751,7 @@ class FunctionWindow:
 
                 details = f"Labware: {kwargs['labware_obj'].labware_id}\n"
                 details += f"Wells: {len(kwargs['positions'])} positions\n"
-                details += f"Volume: {volume} µL per well\n"
+                details += f"Volume: {volume} ul per well\n"
                 details += f"Total: {volume * len(kwargs['positions'])} ul"
 
                 self.stage_operation(func, func_str, details)
@@ -1702,7 +1854,7 @@ class FunctionWindow:
 
                 details = f"Labware: {kwargs['labware_obj'].labware_id}\n"
                 details += f"Wells: {len(kwargs['positions'])} positions\n"
-                details += f"Volume: {volume} µL per well\n"
+                details += f"Volume: {volume} ul per well\n"
                 details += f"Total: {volume * len(kwargs['positions'])} ul"
 
                 self.stage_operation(func, func_str, details)
