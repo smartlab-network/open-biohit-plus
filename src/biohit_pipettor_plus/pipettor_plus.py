@@ -17,6 +17,11 @@ except ImportError:
         def move_xy(self, x, y):
             print(f"Mock: move_xy({x}, {y})")
 
+        def move_x(self, x):
+            print(f"Mock: move_x({x})")
+
+        def move_y(self, y):
+                print(f"Mock: move_y({y})")
         def move_z(self, z):
             print(f"Mock: move_z({z})")
 

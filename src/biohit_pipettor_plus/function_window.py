@@ -329,6 +329,24 @@ class FunctionWindow:
         lowlevel_frame.pack(fill=tk.X, pady=5, padx=5)
 
         ttk.Button(
+            lowlevel_frame, text=" Move X",
+            command=lambda: self.callback_move_x(func_str="Move X"),
+            bootstyle="info"
+        ).pack(fill=tk.X, pady=2)
+
+        ttk.Button(
+            lowlevel_frame, text=" Move Y",
+            command=lambda: self.callback_move_y(func_str="Move Y"),
+            bootstyle="info"
+        ).pack(fill=tk.X, pady=2)
+
+        ttk.Button(
+            lowlevel_frame, text=" Move Z",
+            command=lambda: self.callback_move_z(func_str="Move Z"),
+            bootstyle="info"
+        ).pack(fill=tk.X, pady=2)
+
+        ttk.Button(
             lowlevel_frame, text=" Suck",
             command=lambda: self.callback_suck(func_str="Suck"),
             bootstyle="info"
@@ -1013,6 +1031,117 @@ class FunctionWindow:
                 self.stage_operation(func, func_str, details)
             elif self.mode == "builder":
                 self.add_current_function(func_str=func_str, func=func, labware_id=labware_obj.labware_id)
+
+    def ask_position_dialog(self, axis: str, min_val: float, max_val: float, initial_value: float = 0.0):
+        """
+        Create a focused dialog for position input.
+
+        Parameters
+        ----------
+        axis : str
+            Axis name ('X', 'Y', or 'Z')
+        min_val : float
+            Minimum valid position
+        max_val : float
+            Maximum valid position
+        initial_value : float
+            Initial value to display
+
+        Returns
+        -------
+        float or None
+            Position entered by user, or None if cancelled
+        """
+        dialog = tk.Toplevel(self.get_master_window())
+        dialog.title(f"Move {axis}")
+        dialog.geometry("350x180")
+        dialog.resizable(False, False)
+        dialog.transient(self.get_master_window())
+        dialog.grab_set()
+
+        # Center the dialog
+        dialog.update_idletasks()
+        x = (dialog.winfo_screenwidth() // 2) - (350 // 2)
+        y = (dialog.winfo_screenheight() // 2) - (180 // 2)
+        dialog.geometry(f"350x180+{x}+{y}")
+
+        result = {'position': None}
+
+        # Main frame with padding
+        main_frame = ttk.Frame(dialog, padding=20)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Label with range info
+        label_text = f"{axis} Position (mm):"
+        ttk.Label(
+            main_frame,
+            text=label_text,
+            font=('Arial', 11, 'bold')
+        ).pack(pady=(0, 5))
+
+        # Range info
+        range_text = f"Valid range: {min_val} to {max_val} mm"
+        if axis == 'Z':
+            range_text += "\n(0 = home/top position)"
+
+        ttk.Label(
+            main_frame,
+            text=range_text,
+            font=('Arial', 9),
+            foreground='gray'
+        ).pack(pady=(0, 10))
+
+        # Entry
+        position_var = tk.StringVar(value=str(initial_value))
+        entry = ttk.Entry(main_frame, textvariable=position_var, font=('Arial', 12), justify='center')
+        entry.pack(fill=tk.X, pady=(0, 15))
+        entry.select_range(0, tk.END)
+        entry.focus()
+
+        # Button frame
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill=tk.X)
+        button_frame.columnconfigure(0, weight=1)
+        button_frame.columnconfigure(1, weight=1)
+
+        def on_ok():
+            try:
+                pos = float(position_var.get())
+                if not (min_val <= pos <= max_val):
+                    messagebox.showerror(
+                        "Invalid Input",
+                        f"{axis} position must be between {min_val} and {max_val} mm",
+                        parent=dialog
+                    )
+                    return
+                result['position'] = pos
+                dialog.destroy()
+            except ValueError:
+                messagebox.showerror("Invalid Input", "Please enter a valid number", parent=dialog)
+
+        def on_cancel():
+            dialog.destroy()
+
+        ttk.Button(
+            button_frame,
+            text="OK",
+            command=on_ok,
+            bootstyle="success"
+        ).grid(row=0, column=0, sticky='ew', padx=(0, 5))
+
+        ttk.Button(
+            button_frame,
+            text="Cancel",
+            command=on_cancel,
+            bootstyle="secondary"
+        ).grid(row=0, column=1, sticky='ew', padx=(5, 0))
+
+        # Bind Enter key to OK
+        entry.bind('<Return>', lambda e: on_ok())
+        dialog.bind('<Escape>', lambda e: on_cancel())
+
+        dialog.wait_window()
+        return result['position']
 
     def ask_volume_dialog(self, title="Enter Volume", initial_value=000):
         """
@@ -1923,6 +2052,205 @@ class FunctionWindow:
             elif self.mode == "builder":
                 self.add_current_function(func_str=func_str, func=func,
                                           labware_id=kwargs["labware_obj"].labware_id)
+
+    def callback_move_x(self, func_str: str):
+        """Handle Move X operation"""
+        if self.mode == "builder":
+            self.clear_grid(self.second_column_frame)
+
+            # Create input UI
+            label = ttk.Label(
+                self.second_column_frame,
+                text="Enter X Position (mm):",
+                font=('Arial', 11, 'bold')
+            )
+            label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
+
+            # Range info
+            info_label = ttk.Label(
+                self.second_column_frame,
+                text=f"Valid range: {self.deck.range_x[0]} to {self.deck.range_x[1]} mm",
+                font=('Arial', 9),
+                foreground='gray'
+            )
+            info_label.grid(row=1, column=0, sticky="nsew", pady=2, padx=5)
+
+            text_var = ttk.StringVar(value="0.0")
+            entry = ttk.Entry(self.second_column_frame, textvariable=text_var, font=('Arial', 12))
+            entry.grid(row=2, column=0, sticky="nsew", pady=5, padx=5)
+
+            def confirm_movement():
+                try:
+                    x_pos = float(text_var.get())
+
+                    # Validate range
+                    if not (self.deck.range_x[0] <= x_pos <= self.deck.range_x[1]):
+                        messagebox.showerror(
+                            "Invalid Position",
+                            f"X position must be between {self.deck.range_x[0]} and {self.deck.range_x[1]} mm"
+                        )
+                        return
+
+                    func = lambda x=x_pos: self.pipettor.move_x(x)
+                    self.add_current_function(func_str=func_str, func=func, labware_id=f"X={x_pos}mm")
+                    self.clear_grid(self.second_column_frame)
+
+                except ValueError:
+                    messagebox.showerror("Error", "Invalid position value")
+
+            ttk.Button(
+                self.second_column_frame,
+                text="Confirm",
+                command=confirm_movement,
+                bootstyle="success"
+            ).grid(row=3, column=0, sticky="nsew", pady=5, padx=5)
+
+        else:  # Direct mode - USE NEW DIALOG
+            x_pos = self.ask_position_dialog(
+                axis='X',
+                min_val=self.deck.range_x[0],
+                max_val=self.deck.range_x[1],
+                initial_value=0.0
+            )
+
+            if x_pos is not None:
+                func = lambda x=x_pos: self.pipettor.move_x(x)
+                details = f"Move to X position: {x_pos} mm\n"
+                details += f"Range: {self.deck.range_x[0]} to {self.deck.range_x[1]} mm"
+                self.stage_operation(func, func_str, details)
+
+    def callback_move_y(self, func_str: str):
+        """Handle Move Y operation"""
+        if self.mode == "builder":
+            self.clear_grid(self.second_column_frame)
+
+            # Create input UI
+            label = ttk.Label(
+                self.second_column_frame,
+                text="Enter Y Position (mm):",
+                font=('Arial', 11, 'bold')
+            )
+            label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
+
+            # Range info
+            info_label = ttk.Label(
+                self.second_column_frame,
+                text=f"Valid range: {self.deck.range_y[0]} to {self.deck.range_y[1]} mm",
+                font=('Arial', 9),
+                foreground='gray'
+            )
+            info_label.grid(row=1, column=0, sticky="nsew", pady=2, padx=5)
+
+            text_var = ttk.StringVar(value="0.0")
+            entry = ttk.Entry(self.second_column_frame, textvariable=text_var, font=('Arial', 12))
+            entry.grid(row=2, column=0, sticky="nsew", pady=5, padx=5)
+
+            def confirm_movement():
+                try:
+                    y_pos = float(text_var.get())
+
+                    # Validate range
+                    if not (self.deck.range_y[0] <= y_pos <= self.deck.range_y[1]):
+                        messagebox.showerror(
+                            "Invalid Position",
+                            f"Y position must be between {self.deck.range_y[0]} and {self.deck.range_y[1]} mm"
+                        )
+                        return
+
+                    func = lambda y=y_pos: self.pipettor.move_y(y)
+                    self.add_current_function(func_str=func_str, func=func, labware_id=f"Y={y_pos}mm")
+                    self.clear_grid(self.second_column_frame)
+
+                except ValueError:
+                    messagebox.showerror("Error", "Invalid position value")
+
+            ttk.Button(
+                self.second_column_frame,
+                text="Confirm",
+                command=confirm_movement,
+                bootstyle="success"
+            ).grid(row=3, column=0, sticky="nsew", pady=5, padx=5)
+
+        else:  # Direct mode - USE NEW DIALOG
+            y_pos = self.ask_position_dialog(
+                axis='Y',
+                min_val=self.deck.range_y[0],
+                max_val=self.deck.range_y[1],
+                initial_value=0.0
+            )
+
+            if y_pos is not None:
+                func = lambda y=y_pos: self.pipettor.move_y(y)
+                details = f"Move to Y position: {y_pos} mm\n"
+                details += f"Range: {self.deck.range_y[0]} to {self.deck.range_y[1]} mm"
+                self.stage_operation(func, func_str, details)
+
+    def callback_move_z(self, func_str: str):
+        """Handle Move Z operation"""
+        if self.mode == "builder":
+            self.clear_grid(self.second_column_frame)
+
+            # Create input UI
+            label = ttk.Label(
+                self.second_column_frame,
+                text="Enter Z Position (mm):",
+                font=('Arial', 11, 'bold')
+            )
+            label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
+
+            # Range info with Z-specific note
+            info_label = ttk.Label(
+                self.second_column_frame,
+                text=f"Valid range: 0 to {self.deck.range_z} mm\n(0 = home/top position)",
+                font=('Arial', 9),
+                foreground='gray'
+            )
+            info_label.grid(row=1, column=0, sticky="nsew", pady=2, padx=5)
+
+            text_var = ttk.StringVar(value="0.0")
+            entry = ttk.Entry(self.second_column_frame, textvariable=text_var, font=('Arial', 12))
+            entry.grid(row=2, column=0, sticky="nsew", pady=5, padx=5)
+
+            def confirm_movement():
+                try:
+                    z_pos = float(text_var.get())
+
+                    # Validate range
+                    if not (0 <= z_pos <= self.deck.range_z):
+                        messagebox.showerror(
+                            "Invalid Position",
+                            f"Z position must be between 0 and {self.deck.range_z} mm"
+                        )
+                        return
+
+                    func = lambda z=z_pos: self.pipettor.move_z(z)
+                    self.add_current_function(func_str=func_str, func=func, labware_id=f"Z={z_pos}mm")
+                    self.clear_grid(self.second_column_frame)
+
+                except ValueError:
+                    messagebox.showerror("Error", "Invalid position value")
+
+            ttk.Button(
+                self.second_column_frame,
+                text="Confirm",
+                command=confirm_movement,
+                bootstyle="success"
+            ).grid(row=3, column=0, sticky="nsew", pady=5, padx=5)
+
+        else:  # Direct mode - USE NEW DIALOG
+            z_pos = self.ask_position_dialog(
+                axis='Z',
+                min_val=0.0,
+                max_val=self.deck.range_z,
+                initial_value=0.0
+            )
+
+            if z_pos is not None:
+                func = lambda z=z_pos: self.pipettor.move_z(z)
+                details = f"Move to Z position: {z_pos} mm\n"
+                details += f"Range: 0 to {self.deck.range_z} mm\n"
+                details += "(0 = home/top position)"
+                self.stage_operation(func, func_str, details)
 
     def callback_home(self, func_str: str):
         """Handle Home operation"""
