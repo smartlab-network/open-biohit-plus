@@ -3588,25 +3588,100 @@ class DeckGUI:
             variable=self.initialize_hw_var
         ).pack(side=tk.LEFT)
 
-        # Optional Tip Length
-        tip_length_frame = ttk.Frame(pipettor_section)
-        tip_length_frame.pack(fill=tk.X, pady=5)
-
-        # First line: label and entry
-        input_line = ttk.Frame(tip_length_frame)
-        input_line.pack(fill=tk.X)
-
-        ttk.Label(input_line, text="Tip Length (mm):").pack(side=tk.LEFT, padx=(0, 5))
-        self.tip_length_var = tk.StringVar(value="")
-        ttk.Entry(input_line, textvariable=self.tip_length_var, width=10).pack(side=tk.LEFT)
-
-        # Second line: help text
-        ttk.Label(tip_length_frame, text="(leave empty for default)",
-                  foreground='gray', font=('Arial', 11)).pack(anchor='w', padx=(0, 0))
-
         # Separator
         separator = ttk.Separator(pipettor_section, orient='horizontal')
         separator.pack(fill=tk.X, pady=10)
+
+        # Optional Parameters - Collapsible
+        self.pipettor_params_collapsible = CollapsibleFrame(pipettor_section, text="Optional Parameters")
+        self.pipettor_params_collapsible.pack(fill=tk.X, pady=5, padx=5)
+
+        # Parameters content inside collapsible frame
+        params_content = self.pipettor_params_collapsible.content_frame
+
+        # Create a frame with padding for better layout
+        params_inner = ttk.Frame(params_content, padding="10")
+        params_inner.pack(fill=tk.BOTH, expand=True)
+
+        # Info text
+        info_label = ttk.Label(
+            params_inner,
+            text="Leave fields empty to use defaults",
+            font=('Arial', 9, 'italic'),
+            foreground='gray'
+        )
+        info_label.pack(anchor='w', pady=(0, 10))
+
+        # Parameters grid
+        params_grid = ttk.Frame(params_inner)
+        params_grid.pack(fill=tk.X)
+
+        # Movement Speeds Section
+        ttk.Label(
+            params_grid,
+            text="Movement Speeds (1-9, default: 7):",
+            font=('Arial', 10, 'bold')
+        ).grid(row=0, column=0, columnspan=4, sticky='w', pady=(0, 5))
+
+        # X Speed
+        ttk.Label(params_grid, text="X Speed:").grid(row=1, column=0, sticky='w', pady=3)
+        self.x_speed_var = tk.StringVar(value="")
+        ttk.Entry(params_grid, textvariable=self.x_speed_var, width=10).grid(row=1, column=1, sticky='w', pady=3,
+                                                                             padx=(5, 15))
+
+        # Y Speed
+        ttk.Label(params_grid, text="Y Speed:").grid(row=1, column=2, sticky='w', pady=3)
+        self.y_speed_var = tk.StringVar(value="")
+        ttk.Entry(params_grid, textvariable=self.y_speed_var, width=10).grid(row=1, column=3, sticky='w', pady=3,
+                                                                             padx=(5, 0))
+
+        # Z Speed
+        ttk.Label(params_grid, text="Z Speed:").grid(row=2, column=0, sticky='w', pady=3)
+        self.z_speed_var = tk.StringVar(value="")
+        ttk.Entry(params_grid, textvariable=self.z_speed_var, width=10).grid(row=2, column=1, sticky='w', pady=3,
+                                                                             padx=(5, 15))
+
+        # Separator
+        ttk.Separator(params_grid, orient='horizontal').grid(row=3, column=0, columnspan=4, sticky='ew', pady=10)
+
+        # Piston Speeds Section
+        ttk.Label(
+            params_grid,
+            text="Piston Speeds (1-6, default: 1):",
+            font=('Arial', 10, 'bold')
+        ).grid(row=4, column=0, columnspan=4, sticky='w', pady=(0, 5))
+
+        # Aspirate Speed
+        ttk.Label(params_grid, text="Aspirate:").grid(row=5, column=0, sticky='w', pady=3)
+        self.aspirate_speed_var = tk.StringVar(value="")
+        ttk.Entry(params_grid, textvariable=self.aspirate_speed_var, width=10).grid(row=5, column=1, sticky='w', pady=3,
+                                                                                    padx=(5, 15))
+
+        # Dispense Speed
+        ttk.Label(params_grid, text="Dispense:").grid(row=5, column=2, sticky='w', pady=3)
+        self.dispense_speed_var = tk.StringVar(value="")
+        ttk.Entry(params_grid, textvariable=self.dispense_speed_var, width=10).grid(row=5, column=3, sticky='w', pady=3,
+                                                                                    padx=(5, 0))
+
+        # Separator
+        ttk.Separator(params_grid, orient='horizontal').grid(row=6, column=0, columnspan=4, sticky='ew', pady=10)
+
+        # Tip Length Section
+        ttk.Label(
+            params_grid,
+            text="Tip Length (mm, 200 & 1000ul tip already defined):",
+            font=('Arial', 10, 'bold')
+        ).grid(row=7, column=0, columnspan=4, sticky='w', pady=(0, 5))
+
+        # Tip Length
+        ttk.Label(params_grid, text="Length:").grid(row=8, column=0, sticky='w', pady=3)
+        self.tip_length_var = tk.StringVar(value="")
+        ttk.Entry(params_grid, textvariable=self.tip_length_var, width=10).grid(row=8, column=1, sticky='w', pady=3,
+                                                                                padx=(5, 15))
+
+        # Separator
+        separator2 = ttk.Separator(pipettor_section, orient='horizontal')
+        separator2.pack(fill=tk.X, pady=10)
 
         # Initialize Button
         ttk.Button(
@@ -3643,19 +3718,42 @@ class DeckGUI:
     def initialize_pipettor(self):
         """Initialize the pipettor with selected parameters"""
         try:
-            # Get parameters
+            # Get basic parameters
             tip_volume = self.tip_volume_var.get()
             multichannel = self.multichannel_var.get()
             initialize = self.initialize_hw_var.get()
-
-            # Get optional tip length
-            tip_length_str = self.tip_length_var.get().strip()
-            tip_length = float(tip_length_str) if tip_length_str else None
 
             # Validate deck exists
             if not hasattr(self, 'deck') or self.deck is None:
                 messagebox.showerror("Error", "Deck must be created before initializing pipettor")
                 return
+
+            # Helper function to get and validate speed parameters
+            def get_speed_param(var, param_name, min_val, max_val, default=None):
+                """Helper to get and validate speed parameters"""
+                value_str = var.get().strip()
+                if not value_str:
+                    return default
+                try:
+                    value = int(value_str)
+                    if value < min_val or value > max_val:
+                        raise ValueError(f"{param_name} must be between {min_val} and {max_val}")
+                    return value
+                except ValueError as e:
+                    raise ValueError(f"Invalid {param_name}: {str(e)}")
+
+            # Get movement speeds (1-9)
+            x_speed = get_speed_param(self.x_speed_var, "X Speed", 1, 9)
+            y_speed = get_speed_param(self.y_speed_var, "Y Speed", 1, 9)
+            z_speed = get_speed_param(self.z_speed_var, "Z Speed", 1, 9)
+
+            # Get piston speeds (1-6)
+            aspirate_speed = get_speed_param(self.aspirate_speed_var, "Aspirate Speed", 1, 6)
+            dispense_speed = get_speed_param(self.dispense_speed_var, "Dispense Speed", 1, 6)
+
+            # Get tip length
+            tip_length_str = self.tip_length_var.get().strip()
+            tip_length = float(tip_length_str) if tip_length_str else None
 
             # Create pipettor
             self.pipettor = PipettorPlus(
@@ -3666,25 +3764,46 @@ class DeckGUI:
                 tip_length=tip_length
             )
 
-            # Update status display
+            # Set speeds if specified
+            if x_speed is not None:
+                self.pipettor.x_speed = x_speed
+            if y_speed is not None:
+                self.pipettor.y_speed = y_speed
+            if z_speed is not None:
+                self.pipettor.z_speed = z_speed
+            if aspirate_speed is not None:
+                self.pipettor.aspirate_speed = aspirate_speed
+            if dispense_speed is not None:
+                self.pipettor.dispense_speed = dispense_speed
+
+            # Build status message
             mode = "Multichannel (8 tips)" if multichannel else "Single channel"
             tip_info = f"{tip_volume}µL tips"
             tip_length_info = f", tip length: {tip_length}mm" if tip_length else ""
             hw_status = "initialized" if initialize else "not initialized"
 
+            speed_info = []
+            if x_speed or y_speed or z_speed:
+                speed_info.append(f"Movement: X={x_speed or 7}, Y={y_speed or 7}, Z={z_speed or 7}")
+            if aspirate_speed or dispense_speed:
+                speed_info.append(f"Piston: Asp={aspirate_speed or 1}, Disp={dispense_speed or 1}")
+
             status_text = f"✓ {mode}, {tip_info}{tip_length_info}\nHardware: {hw_status}"
+            if speed_info:
+                status_text += "\n" + ", ".join(speed_info)
 
             self.pipettor_status_label.config(
                 text=status_text,
                 foreground='green'
             )
+
             if hasattr(self, 'rebuild_operations_tab'):
                 self.rebuild_operations_tab()
 
             messagebox.showinfo("Success", f"Pipettor initialized successfully!\n\n{status_text}")
 
         except ValueError as e:
-            messagebox.showerror("Invalid Input", f"Invalid tip length value:\n{str(e)}")
+            messagebox.showerror("Invalid Input", str(e))
         except Exception as e:
             messagebox.showerror("Error", f"Failed to initialize pipettor:\n{str(e)}")
             self.pipettor_status_label.config(
@@ -5021,7 +5140,6 @@ class DeckGUI:
     def run(self):
         """Start the GUI"""
         self.root.mainloop()
-
 
 # Main entry point
 if __name__ == "__main__":
