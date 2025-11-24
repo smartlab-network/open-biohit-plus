@@ -1019,6 +1019,89 @@ class FunctionWindow:
             elif self.mode == "builder":
                 self.add_current_function(func_str=func_str, func=func, labware_id=labware_obj.labware_id)
 
+    def ask_volume_dialog(self, title="Enter Volume", initial_value=000):
+        """
+        Create a simple, focused dialog for volume input.
+
+        Returns
+        -------
+        float or None
+            Volume entered by user, or None if cancelled
+        """
+        dialog = tk.Toplevel(self.get_master_window())
+        dialog.title(title)
+        dialog.geometry("300x150")
+        dialog.resizable(False, False)
+        dialog.transient(self.get_master_window())
+        dialog.grab_set()
+
+        # Center the dialog
+        dialog.update_idletasks()
+        x = (dialog.winfo_screenwidth() // 2) - (300 // 2)
+        y = (dialog.winfo_screenheight() // 2) - (150 // 2)
+        dialog.geometry(f"300x150+{x}+{y}")
+
+        result = {'volume': None}
+
+        # Main frame with padding
+        main_frame = ttk.Frame(dialog, padding=20)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Label
+        ttk.Label(
+            main_frame,
+            text="Volume per well (µL):",
+            font=('Arial', 11)
+        ).pack(pady=(0, 10))
+
+        # Entry
+        volume_var = tk.StringVar(value=str(initial_value))
+        entry = ttk.Entry(main_frame, textvariable=volume_var, font=('Arial', 12), justify='center')
+        entry.pack(fill=tk.X, pady=(0, 15))
+        entry.select_range(0, tk.END)
+        entry.focus()
+
+        # Button frame
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill=tk.X)
+        button_frame.columnconfigure(0, weight=1)
+        button_frame.columnconfigure(1, weight=1)
+
+        def on_ok():
+            try:
+                vol = float(volume_var.get())
+                if vol <= 0:
+                    messagebox.showerror("Invalid Input", "Volume must be greater than 0", parent=dialog)
+                    return
+                result['volume'] = vol
+                dialog.destroy()
+            except ValueError:
+                messagebox.showerror("Invalid Input", "Please enter a valid number", parent=dialog)
+
+        def on_cancel():
+            dialog.destroy()
+
+        ttk.Button(
+            button_frame,
+            text="OK",
+            command=on_ok,
+            bootstyle="success"
+        ).grid(row=0, column=0, sticky='ew', padx=(0, 5))
+
+        ttk.Button(
+            button_frame,
+            text="Cancel",
+            command=on_cancel,
+            bootstyle="secondary"
+        ).grid(row=0, column=1, sticky='ew', padx=(5, 0))
+
+        # Bind Enter key to OK
+        entry.bind('<Return>', lambda e: on_ok())
+        dialog.bind('<Escape>', lambda e: on_cancel())
+
+        dialog.wait_window()
+        return result['volume']
+
     def callback_add_medium(
             self,
             func_str: str,
@@ -1026,43 +1109,41 @@ class FunctionWindow:
             labware_obj=None,
             **kwargs
     ):
-        """Handle Add Medium operation"""
+        """
+        Handle Add Medium operation.
+        Order: Volume -> Destination (Plate) -> Source (Reservoir)
+        """
+        # --- PART 1: GET VOLUME ---
         if part == "first":
             if self.mode == "builder":
                 self.clear_grid(self.second_column_frame)
-            self.display_possible_labware(
-                labware_type=ReservoirHolder,
-                next_callback=self.callback_add_medium,
-                func_str=func_str,
-                part="second",
-                **kwargs
-            )
+                label = ttk.Label(self.second_column_frame, text="Step 1: Enter Volume (ul)")
+                label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
+                text_var = ttk.StringVar(value="100")
+                entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
+                entry.grid(row=1, column=0, sticky="nsew", pady=5, padx=5)
 
-        elif part == "second" and labware_obj is not None:
-            window = WellWindow(
-                rows=labware_obj.hooks_across_y,
-                columns=labware_obj.hooks_across_x,
-                labware_id=labware_obj.labware_id,
-                max_selected=1,  # Only allow selecting ONE reservoir position
-                master=self.get_master_window(),
-                title=f"Choose source reservoir: {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True)
-            )
-            self.get_master_window().wait_variable(window.safe_var)
+                def next_step():
+                    try:
+                        vol = float(text_var.get())
+                        if vol <= 0: raise ValueError
+                        self.callback_add_medium(func_str, part="second", volume=vol, **kwargs)
+                    except ValueError:
+                        messagebox.showerror("Error", "Invalid volume")
 
-            kwargs["source_labware"] = labware_obj
-            # For reservoir: extract first selected position as (column, row)
-            selected = [
-                (c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
-            ]
-            kwargs["source_positions"] = selected[0] if selected else None
-            del window
+                ttk.Button(self.second_column_frame, text="Next", command=next_step).grid(row=2, column=0,
+                                                                                          sticky="nsew", pady=5, padx=5)
 
-            if not kwargs["source_positions"]:
-                return
+            else:  # Direct mode - USE NEW DIALOG
+                volume = self.ask_volume_dialog(title="Add Medium Volume", initial_value=100)
+                if volume:
+                    self.callback_add_medium(func_str, part="second", volume=volume, **kwargs)
 
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
+        # --- PART 2: SELECT DESTINATION (PLATE) ---
+        elif part == "second":
+            if self.mode == "builder": self.clear_grid(self.second_column_frame)
+
+            kwargs['volume'] = kwargs.get('volume')
             self.display_possible_labware(
                 labware_type=Plate,
                 next_callback=self.callback_add_medium,
@@ -1071,105 +1152,81 @@ class FunctionWindow:
                 **kwargs
             )
 
+        # --- PART 3: HANDLE PLATE SELECTION & ASK RESERVOIR ---
         elif part == "third" and labware_obj is not None:
             window = WellWindow(
                 rows=labware_obj._rows,
                 columns=labware_obj._columns,
                 labware_id=labware_obj.labware_id,
-                max_selected=None,  # No limit - allow selecting multiple columns
-                multichannel_mode=(self.channels == 8),  # Enforce consecutive selection
+                max_selected=None,
+                multichannel_mode=(self.channels == 8),
                 master=self.get_master_window(),
-                title=f"Choose destination wells: {labware_obj.labware_id}",
+                title=f"DESTINATION: Select wells on {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False)
             )
             self.get_master_window().wait_variable(window.safe_var)
+
             kwargs["dest_labware"] = labware_obj
-            # Convert to (column, start_row) format for pipettor backend
             if self.channels == 8:
-                # Get start positions from multichannel selection
-                kwargs["dest_positions"] = [
-                    (c, r) for r, c in window.get_start_positions()
-                ]
+                kwargs["dest_positions"] = [(c, r) for r, c in window.get_start_positions()]
             else:
-                # Single channel: all positions
-                kwargs["dest_positions"] = [
-                    (c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
-                ]
+                kwargs["dest_positions"] = [(c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row)
+                                            if v]
             del window
 
-            if not kwargs["dest_positions"]:
-                return
+            if not kwargs["dest_positions"]: return
 
-            # Get volume
+            if self.mode == "builder": self.clear_grid(self.second_column_frame)
+
+            self.display_possible_labware(
+                labware_type=ReservoirHolder,
+                next_callback=self.callback_add_medium,
+                func_str=func_str,
+                part="fourth",
+                **kwargs
+            )
+
+        # --- PART 4: HANDLE RESERVOIR SELECTION & EXECUTE ---
+        elif part == "fourth" and labware_obj is not None:
+            window = WellWindow(
+                rows=labware_obj.hooks_across_y,
+                columns=labware_obj.hooks_across_x,
+                labware_id=labware_obj.labware_id,
+                max_selected=1,
+                master=self.get_master_window(),
+                title=f"SOURCE: Choose reservoir {labware_obj.labware_id}",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True)
+            )
+            self.get_master_window().wait_variable(window.safe_var)
+
+            kwargs["source_labware"] = labware_obj
+            selected = [(c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v]
+            kwargs["source_positions"] = selected[0] if selected else None
+            del window
+
+            if not kwargs["source_positions"]: return
+
+            volume = kwargs['volume']
+            num_positions = len(kwargs['dest_positions'])
+            total_wells = num_positions * 8 if self.channels == 8 else num_positions
+            total_vol = volume * total_wells
+
+            func = lambda kwargs=kwargs, vol=volume: self.pipettor.add_medium(
+                source=kwargs["source_labware"],
+                source_col_row=kwargs["source_positions"],
+                destination=kwargs["dest_labware"],
+                dest_col_row=kwargs["dest_positions"],
+                volume_per_well=vol
+            )
+
             if self.mode == "builder":
+                self.add_current_function(func_str=func_str, func=func, labware_id=kwargs["dest_labware"].labware_id)
                 self.clear_grid(self.second_column_frame)
-                label = ttk.Label(self.second_column_frame, text="Enter Volume per Well (ul)")
-                label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
-                text_var = ttk.StringVar(value="100")
-                entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
-                entry.grid(row=1, column=0, sticky="nsew", pady=5, padx=5)
-
-                def callback_enter_button():
-                    try:
-                        volume = float(text_var.get())
-                    except ValueError:
-                        messagebox.showerror("Error", "Invalid volume")
-                        return
-
-                    func = lambda kwargs=kwargs, vol=volume: self.pipettor.add_medium(
-                        source=kwargs["source_labware"],
-                        source_col_row=kwargs["source_positions"],
-                        destination=kwargs["dest_labware"],
-                        dest_col_row=kwargs["dest_positions"],
-                        volume_per_well=vol
-                    )
-
-                    self.add_current_function(func_str=func_str, func=func,
-                                              labware_id=kwargs["dest_labware"].labware_id)
-                    self.clear_grid(self.second_column_frame)
-
-                button = ttk.Button(self.second_column_frame, text="Confirm", command=callback_enter_button)
-                button.grid(row=2, column=0, sticky="nsew", pady=5, padx=5)
-
-            else:  # direct mode
-                volume = tk.simpledialog.askfloat(
-                    "Volume",
-                    "Enter volume per well (ul):",
-                    initialvalue=100,
-                    minvalue=1,
-                    maxvalue=10000
-                )
-                if not volume:
-                    return
-
-                func = lambda kwargs=kwargs, vol=volume: self.pipettor.add_medium(
-                    source=kwargs["source_labware"],
-                    source_col_row=kwargs["source_positions"],
-                    destination=kwargs["dest_labware"],
-                    dest_col_row=kwargs["dest_positions"],
-                    volume_per_well=vol
-                )
-
-                # Calculate actual number of wells
-                num_positions = len(kwargs['dest_positions'])
-                if self.channels == 8:
-                    total_wells = num_positions * 8  # Each position = 8 wells
-                    details = f"Source: {kwargs['source_labware'].labware_id}\n"
-                    details += f"  Reservoir: {kwargs['source_positions']}\n"
-                    details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
-                    details += f"  Columns: {num_positions} (8 wells each)\n"
-                    details += f"  Total Wells: {total_wells}\n"
-                    details += f"Volume: {volume} µL per well\n"
-                    details += f"Total Volume: {volume * total_wells} ul"
-                else:
-                    total_wells = num_positions
-                    details = f"Source: {kwargs['source_labware'].labware_id}\n"
-                    details += f"  Reservoir: {kwargs['source_positions']}\n"
-                    details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
-                    details += f"  Wells: {total_wells}\n"
-                    details += f"Volume: {volume} µL per well\n"
-                    details += f"Total Volume: {volume * total_wells} ul"
-
+            else:
+                details = f"Source: {kwargs['source_labware'].labware_id}\n  Reservoir: {kwargs['source_positions']}\n"
+                details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
+                details += f"  Columns: {kwargs['dest_positions']}\n" if self.channels == 8 else f"  Wells: {kwargs['dest_positions']}\n"
+                details += f"  Total Wells: {total_wells}\nVolume: {volume} µL per well\nTotal Volume: {total_vol} µL"
                 self.stage_operation(func, func_str, details)
 
     def callback_remove_medium(
@@ -1179,201 +1236,169 @@ class FunctionWindow:
             labware_obj=None,
             **kwargs
     ):
-        """Handle Remove Medium operation"""
+        """
+        Handle Remove Medium operation.
+        Order: Volume -> Source (Plate) -> Destination (Reservoir)
+        """
+        # --- PART 1: GET VOLUME ---
         if part == "first":
             if self.mode == "builder":
                 self.clear_grid(self.second_column_frame)
+                label = ttk.Label(self.second_column_frame, text="Step 1: Enter Volume (ul)")
+                label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
+                text_var = ttk.StringVar(value="100")
+                entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
+                entry.grid(row=1, column=0, sticky="nsew", pady=5, padx=5)
+
+                def next_step():
+                    try:
+                        vol = float(text_var.get())
+                        if vol <= 0: raise ValueError
+                        self.callback_remove_medium(func_str, part="second", volume=vol, **kwargs)
+                    except ValueError:
+                        messagebox.showerror("Error", "Invalid volume")
+
+                ttk.Button(self.second_column_frame, text="Next", command=next_step).grid(row=2, column=0,
+                                                                                          sticky="nsew", pady=5, padx=5)
+
+            else:  # Direct mode - USE NEW DIALOG
+                volume = self.ask_volume_dialog(title="Remove Medium Volume", initial_value=100)
+                if volume:
+                    self.callback_remove_medium(func_str, part="second", volume=volume, **kwargs)
+
+        # --- PART 2: SELECT SOURCE (PLATE) ---
+        elif part == "second":
+            if self.mode == "builder": self.clear_grid(self.second_column_frame)
+
+            kwargs['volume'] = kwargs.get('volume')
             self.display_possible_labware(
                 labware_type=Plate,
-                next_callback=self.callback_remove_medium,
-                func_str=func_str,
-                part="second",
-                **kwargs
-            )
-
-        elif part == "second" and labware_obj is not None:
-            window = WellWindow(
-                rows=labware_obj._rows,
-                columns=labware_obj._columns,
-                labware_id=labware_obj.labware_id,
-                max_selected=None,  # No limit - allow selecting multiple columns
-                multichannel_mode=(self.channels == 8),  # Enforce consecutive selection
-                master=self.get_master_window(),
-                title=f"Select source wells: {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True)
-            )
-            self.get_master_window().wait_variable(window.safe_var)
-            kwargs["source_labware"] = labware_obj
-            # Convert to (column, start_row) format for pipettor backend
-            if self.channels == 8:
-                # Get start positions from multichannel selection
-                kwargs["source_positions"] = [
-                    (c, r) for r, c in window.get_start_positions()
-                ]
-            else:
-                # Single channel: all positions
-                kwargs["source_positions"] = [
-                    (c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
-                ]
-            del window
-
-            if not kwargs["source_positions"]:
-                return
-
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
-            self.display_possible_labware(
-                labware_type=ReservoirHolder,
                 next_callback=self.callback_remove_medium,
                 func_str=func_str,
                 part="third",
                 **kwargs
             )
 
+        # --- PART 3: HANDLE PLATE SELECTION & ASK RESERVOIR ---
         elif part == "third" and labware_obj is not None:
+            window = WellWindow(
+                rows=labware_obj._rows,
+                columns=labware_obj._columns,
+                labware_id=labware_obj.labware_id,
+                max_selected=None,
+                multichannel_mode=(self.channels == 8),
+                master=self.get_master_window(),
+                title=f"SOURCE: Select wells on {labware_obj.labware_id}",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True)
+            )
+            self.get_master_window().wait_variable(window.safe_var)
+
+            kwargs["source_labware"] = labware_obj
+            if self.channels == 8:
+                kwargs["source_positions"] = [(c, r) for r, c in window.get_start_positions()]
+            else:
+                kwargs["source_positions"] = [(c, r) for r, row in enumerate(window.well_state) for c, v in
+                                              enumerate(row) if v]
+            del window
+
+            if not kwargs["source_positions"]: return
+
+            if self.mode == "builder": self.clear_grid(self.second_column_frame)
+
+            self.display_possible_labware(
+                labware_type=ReservoirHolder,
+                next_callback=self.callback_remove_medium,
+                func_str=func_str,
+                part="fourth",
+                **kwargs
+            )
+
+        # --- PART 4: HANDLE RESERVOIR SELECTION & EXECUTE ---
+        elif part == "fourth" and labware_obj is not None:
             window = WellWindow(
                 rows=labware_obj.hooks_across_y,
                 columns=labware_obj.hooks_across_x,
                 labware_id=labware_obj.labware_id,
-                max_selected=1,  # Only allow selecting ONE reservoir position
+                max_selected=1,
                 master=self.get_master_window(),
-                title=f"Select destination reservoir: {labware_obj.labware_id}",
+                title=f"DESTINATION: Select reservoir {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False)
             )
             self.get_master_window().wait_variable(window.safe_var)
+
             kwargs["dest_labware"] = labware_obj
-            # For reservoir: extract first selected position as (column, row)
-            selected = [
-                (c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
-            ]
+            selected = [(c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v]
             kwargs["dest_positions"] = selected[0] if selected else None
             del window
 
-            if not kwargs["dest_positions"]:
-                return
+            if not kwargs["dest_positions"]: return
 
-            # Get volume
+            volume = kwargs['volume']
+            num_positions = len(kwargs['source_positions'])
+            total_wells = num_positions * 8 if self.channels == 8 else num_positions
+            total_vol = volume * total_wells
+
+            func = lambda kwargs=kwargs, vol=volume: self.pipettor.remove_medium(
+                source=kwargs["source_labware"],
+                destination=kwargs["dest_labware"],
+                source_col_row=kwargs["source_positions"],
+                destination_col_row=kwargs["dest_positions"],
+                volume_per_well=vol
+            )
+
             if self.mode == "builder":
+                self.add_current_function(func_str=func_str, func=func, labware_id=kwargs["dest_labware"].labware_id)
                 self.clear_grid(self.second_column_frame)
-                label = ttk.Label(self.second_column_frame, text="Enter Volume per Well (ul)")
-                label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
-                text_var = ttk.StringVar(value="100")
-                entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
-                entry.grid(row=1, column=0, sticky="nsew", pady=5, padx=5)
-
-                def callback_enter_button():
-                    try:
-                        volume = float(text_var.get())
-                    except ValueError:
-                        messagebox.showerror("Error", "Invalid volume")
-                        return
-
-                    func = lambda kwargs=kwargs, vol=volume: self.pipettor.remove_medium(
-                        source=kwargs["source_labware"],
-                        destination=kwargs["dest_labware"],
-                        source_col_row=kwargs["source_positions"],
-                        destination_col_row=kwargs["dest_positions"],
-                        volume_per_well=vol
-                    )
-
-                    self.add_current_function(func_str=func_str, func=func,
-                                              labware_id=kwargs["dest_labware"].labware_id)
-                    self.clear_grid(self.second_column_frame)
-
-                button = ttk.Button(self.second_column_frame, text="Confirm", command=callback_enter_button)
-                button.grid(row=2, column=0, sticky="nsew", pady=5, padx=5)
-
-            else:  # direct mode
-                volume = tk.simpledialog.askfloat(
-                    "Volume",
-                    "Enter volume per well (µL):",
-                    initialvalue=100,
-                    minvalue=1,
-                    maxvalue=10000
-                )
-                if not volume:
-                    return
-
-                func = lambda kwargs=kwargs, vol=volume: self.pipettor.remove_medium(
-                    source=kwargs["source_labware"],
-                    destination=kwargs["dest_labware"],
-                    source_col_row=kwargs["source_positions"],
-                    destination_col_row=kwargs["dest_positions"],
-                    volume_per_well=vol
-                )
-
-                # Calculate actual number of wells
-                num_positions = len(kwargs['source_positions'])
-                if self.channels == 8:
-                    total_wells = num_positions * 8
-                    details = f"Source: {kwargs['source_labware'].labware_id}\n"
-                    details += f"  Columns: {num_positions} (8 wells each)\n"
-                    details += f"  Total Wells: {total_wells}\n"
-                    details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
-                    details += f"  Reservoir: {kwargs['dest_positions']}\n"
-                    details += f"Volume: {volume} µL per well\n"
-                    details += f"Total Volume: {volume * total_wells} µL"
-                else:
-                    total_wells = num_positions
-                    details = f"Source: {kwargs['source_labware'].labware_id}\n"
-                    details += f"  Wells: {total_wells}\n"
-                    details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
-                    details += f"  Reservoir: {kwargs['dest_positions']}\n"
-                    details += f"Volume: {volume} µL per well\n"
-                    details += f"Total Volume: {volume * total_wells} µL"
-
+            else:
+                details = f"Source: {kwargs['source_labware'].labware_id}\n"
+                details += f"  Columns: {kwargs['source_positions']}\n" if self.channels == 8 else f"  Wells: {kwargs['source_positions']}\n"
+                details += f"Destination: {kwargs['dest_labware'].labware_id}\n  Reservoir: {kwargs['dest_positions']}\n"
+                details += f"  Total Wells: {total_wells}\nVolume: {volume} µL per well\nTotal Volume: {total_vol} µL"
                 self.stage_operation(func, func_str, details)
 
     def callback_transfer_plate_to_plate(
             self,
             func_str: str,
             part: str = "first",
-            labware_obj: Plate = None,
+            labware_obj=None,
             **kwargs
     ):
-        """Handle Transfer Plate to Plate operation"""
+        """
+        Handle Transfer Plate to Plate operation.
+        Order: Volume -> Source (Plate) -> Destination (Plate)
+        Validates: Source count == Destination count
+        """
+        # --- PART 1: GET VOLUME ---
         if part == "first":
             if self.mode == "builder":
                 self.clear_grid(self.second_column_frame)
-            self.display_possible_labware(
-                labware_type=Plate,
-                next_callback=self.callback_transfer_plate_to_plate,
-                func_str=func_str,
-                part="second",
-                **kwargs
-            )
+                label = ttk.Label(self.second_column_frame, text="Step 1: Enter Volume (ul)")
+                label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
+                text_var = ttk.StringVar(value="100")
+                entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
+                entry.grid(row=1, column=0, sticky="nsew", pady=5, padx=5)
 
-        elif part == "second" and labware_obj is not None:
-            window = WellWindow(
-                rows=labware_obj._rows,
-                columns=labware_obj._columns,
-                labware_id=labware_obj.labware_id,
-                max_selected=None,  # No limit - allow selecting multiple columns
-                multichannel_mode=(self.channels == 8),  # Enforce consecutive selection
-                master=self.get_master_window(),
-                title=f"Select source wells: {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True)
-            )
-            self.get_master_window().wait_variable(window.safe_var)
-            kwargs["source_labware"] = labware_obj
-            # Convert to (column, start_row) format for pipettor backend
-            if self.channels == 8:
-                # Get start positions from multichannel selection
-                kwargs["source_positions"] = [
-                    (c, r) for r, c in window.get_start_positions()
-                ]
-            else:
-                # Single channel: all positions
-                kwargs["source_positions"] = [
-                    (c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
-                ]
-            del window
+                def next_step():
+                    try:
+                        vol = float(text_var.get())
+                        if vol <= 0: raise ValueError
+                        self.callback_transfer_plate_to_plate(func_str, part="second", volume=vol, **kwargs)
+                    except ValueError:
+                        messagebox.showerror("Error", "Invalid volume")
 
-            if not kwargs["source_positions"]:
-                return
+                ttk.Button(self.second_column_frame, text="Next", command=next_step).grid(row=2, column=0,
+                                                                                          sticky="nsew", pady=5, padx=5)
 
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
+            else:  # Direct mode - USE NEW DIALOG
+                volume = self.ask_volume_dialog(title="Transfer Volume", initial_value=100)
+                if volume:
+                    self.callback_transfer_plate_to_plate(func_str, part="second", volume=volume, **kwargs)
+
+        # --- PART 2: SELECT SOURCE (PLATE) ---
+        elif part == "second":
+            if self.mode == "builder": self.clear_grid(self.second_column_frame)
+
+            kwargs['volume'] = kwargs.get('volume')
             self.display_possible_labware(
                 labware_type=Plate,
                 next_callback=self.callback_transfer_plate_to_plate,
@@ -1382,106 +1407,98 @@ class FunctionWindow:
                 **kwargs
             )
 
+        # --- PART 3: HANDLE SOURCE SELECTION & ASK DESTINATION ---
         elif part == "third" and labware_obj is not None:
             window = WellWindow(
                 rows=labware_obj._rows,
                 columns=labware_obj._columns,
                 labware_id=labware_obj.labware_id,
-                max_selected=None,  # No limit - allow selecting multiple columns
-                multichannel_mode=(self.channels == 8),  # Enforce consecutive selection
+                max_selected=None,
+                multichannel_mode=(self.channels == 8),
                 master=self.get_master_window(),
-                title=f"Select destination wells: {labware_obj.labware_id}",
+                title=f"SOURCE: Select wells on {labware_obj.labware_id}",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True)
+            )
+            self.get_master_window().wait_variable(window.safe_var)
+
+            kwargs["source_labware"] = labware_obj
+            if self.channels == 8:
+                kwargs["source_positions"] = [(c, r) for r, c in window.get_start_positions()]
+            else:
+                kwargs["source_positions"] = [(c, r) for r, row in enumerate(window.well_state) for c, v in
+                                              enumerate(row) if v]
+            del window
+
+            if not kwargs["source_positions"]: return
+
+            if self.mode == "builder": self.clear_grid(self.second_column_frame)
+
+            self.display_possible_labware(
+                labware_type=Plate,
+                next_callback=self.callback_transfer_plate_to_plate,
+                func_str=func_str,
+                part="fourth",
+                **kwargs
+            )
+
+        # --- PART 4: HANDLE DESTINATION SELECTION & EXECUTE ---
+        elif part == "fourth" and labware_obj is not None:
+            window = WellWindow(
+                rows=labware_obj._rows,
+                columns=labware_obj._columns,
+                labware_id=labware_obj.labware_id,
+                max_selected=None,
+                multichannel_mode=(self.channels == 8),
+                master=self.get_master_window(),
+                title=f"DESTINATION: Select wells on {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False)
             )
             self.get_master_window().wait_variable(window.safe_var)
+
             kwargs["dest_labware"] = labware_obj
-            # Convert to (column, start_row) format for pipettor backend
             if self.channels == 8:
-                # Get start positions from multichannel selection
-                kwargs["dest_positions"] = [
-                    (c, r) for r, c in window.get_start_positions()
-                ]
+                kwargs["dest_positions"] = [(c, r) for r, c in window.get_start_positions()]
             else:
-                # Single channel: all positions
-                kwargs["dest_positions"] = [
-                    (c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
-                ]
+                kwargs["dest_positions"] = [(c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row)
+                                            if v]
             del window
 
-            if not kwargs["dest_positions"]:
+            if not kwargs["dest_positions"]: return
+
+            # Validation check
+            if len(kwargs["source_positions"]) != len(kwargs["dest_positions"]):
+                messagebox.showerror(
+                    "Selection Error",
+                    f"Mismatch in selected positions!\n\n"
+                    f"Source Count: {len(kwargs['source_positions'])}\n"
+                    f"Destination Count: {len(kwargs['dest_positions'])}\n\n"
+                    f"Please ensure counts match.",
+                    parent=self.get_master_window()
+                )
                 return
 
-            # Get volume
+            volume = kwargs['volume']
+            num_positions = len(kwargs['dest_positions'])
+            total_wells = num_positions * 8 if self.channels == 8 else num_positions
+            total_vol = volume * total_wells
+
+            func = lambda kwargs=kwargs, vol=volume: self.pipettor.transfer_plate_to_plate(
+                source=kwargs["source_labware"],
+                source_col_row=kwargs["source_positions"],
+                destination=kwargs["dest_labware"],
+                dest_col_row=kwargs["dest_positions"],
+                volume_per_well=vol
+            )
+
             if self.mode == "builder":
+                self.add_current_function(func_str=func_str, func=func, labware_id=kwargs["dest_labware"].labware_id)
                 self.clear_grid(self.second_column_frame)
-                label = ttk.Label(self.second_column_frame, text="Enter Volume per Well (ul)")
-                label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
-                text_var = ttk.StringVar(value="100")
-                entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
-                entry.grid(row=1, column=0, sticky="nsew", pady=5, padx=5)
-
-                def callback_enter_button():
-                    try:
-                        volume = float(text_var.get())
-                    except ValueError:
-                        messagebox.showerror("Error", "Invalid volume")
-                        return
-
-                    func = lambda kwargs=kwargs, vol=volume: self.pipettor.transfer_plate_to_plate(
-                        source=kwargs["source_labware"],
-                        source_col_row=kwargs["source_positions"],
-                        destination=kwargs["dest_labware"],
-                        dest_col_row=kwargs["dest_positions"],
-                        volume_per_well=vol
-                    )
-
-                    self.add_current_function(func_str=func_str, func=func,
-                                              labware_id=kwargs["dest_labware"].labware_id)
-                    self.clear_grid(self.second_column_frame)
-
-                button = ttk.Button(self.second_column_frame, text="Confirm", command=callback_enter_button)
-                button.grid(row=2, column=0, sticky="nsew", pady=5, padx=5)
-
-            else:  # direct mode
-                volume = tk.simpledialog.askfloat(
-                    "Volume",
-                    "Enter volume per well (µL):",
-                    initialvalue=100,
-                    minvalue=1,
-                    maxvalue=10000
-                )
-                if not volume:
-                    return
-
-                func = lambda kwargs=kwargs, vol=volume: self.pipettor.transfer_plate_to_plate(
-                    source=kwargs["source_labware"],
-                    source_col_row=kwargs["source_positions"],
-                    destination=kwargs["dest_labware"],
-                    dest_col_row=kwargs["dest_positions"],
-                    volume_per_well=vol
-                )
-
-                # Calculate actual number of wells
-                num_positions = len(kwargs['source_positions'])
-                if self.channels == 8:
-                    total_wells = num_positions * 8
-                    details = f"Source: {kwargs['source_labware'].labware_id}\n"
-                    details += f"  Columns: {num_positions} (8 wells each)\n"
-                    details += f"  Total Wells: {total_wells}\n"
-                    details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
-                    details += f"  Columns: {len(kwargs['dest_positions'])} (8 wells each)\n"
-                    details += f"  Total Wells: {len(kwargs['dest_positions']) * 8}\n"
-                    details += f"Volume: {volume} µL per well\n"
-                    details += f"Total Volume: {volume * total_wells} µL"
-                else:
-                    total_wells = num_positions
-                    details = f"Source: {kwargs['source_labware'].labware_id}\n"
-                    details += f"  Wells: {total_wells}\n"
-                    details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
-                    details += f"  Wells: {len(kwargs['dest_positions'])}\n"
-                    details += f"Volume: {volume} µL per well\n"
-                    details += f"Total Volume: {volume * total_wells} µL"
-
+            else:
+                details = f"Source: {kwargs['source_labware'].labware_id}\n"
+                details += f"  Columns: {kwargs['source_positions']}\n" if self.channels == 8 else f"  Wells: {kwargs['source_positions']}\n"
+                details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
+                details += f"  Columns: {kwargs['dest_positions']}\n" if self.channels == 8 else f"  Wells: {kwargs['dest_positions']}\n"
+                details += f"  Total Wells: {total_wells}\nVolume: {volume} µL per well\nTotal Volume: {total_vol} µL"
                 self.stage_operation(func, func_str, details)
 
     def callback_suck(

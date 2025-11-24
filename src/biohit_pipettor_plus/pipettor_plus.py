@@ -1461,7 +1461,7 @@ class PipettorPlus(Pipettor):
             return items[0].position
 
         # Multichannel: calculate center of span
-        if len(items) != self.tip_count:
+        if len(items) != self.tip_count and items[0].each_tip_needs_separate_item() == False:
             raise ValueError(
                 f"Multichannel requires {self.tip_count} items, got {len(items)}"
             )
