@@ -3041,7 +3041,7 @@ class CollapsibleFrame(ttk.Frame):
         self.toggle_btn = ttk.Label(self.title_frame, text="▶", width=2)
         self.toggle_btn.pack(side="left", padx=5)
 
-        self.title_lbl = ttk.Label(self.title_frame, text=text, font=("Arial", 14, "bold"))
+        self.title_lbl = ttk.Label(self.title_frame, text=text, font=("Arial", 12, "bold"))
         self.title_lbl.pack(side="left", pady=2)
 
         # Content frame (initially hidden)
@@ -3616,6 +3616,10 @@ class DeckGUI:
         params_grid = ttk.Frame(params_inner)
         params_grid.pack(fill=tk.X)
 
+        # Configure column weights so entries don't overflow
+        params_grid.columnconfigure(1, weight=1)
+        params_grid.columnconfigure(3, weight=1)
+
         # Movement Speeds Section
         ttk.Label(
             params_grid,
@@ -3626,20 +3630,20 @@ class DeckGUI:
         # X Speed
         ttk.Label(params_grid, text="X Speed:").grid(row=1, column=0, sticky='w', pady=3)
         self.x_speed_var = tk.StringVar(value="")
-        ttk.Entry(params_grid, textvariable=self.x_speed_var, width=10).grid(row=1, column=1, sticky='w', pady=3,
-                                                                             padx=(5, 15))
+        ttk.Entry(params_grid, textvariable=self.x_speed_var, width=8).grid(row=1, column=1, sticky='ew', pady=3,
+                                                                            padx=(5, 10))
 
         # Y Speed
-        ttk.Label(params_grid, text="Y Speed:").grid(row=1, column=2, sticky='w', pady=3)
+        ttk.Label(params_grid, text="Y Speed:").grid(row=1, column=2, sticky='w', pady=3, padx=(10, 0))
         self.y_speed_var = tk.StringVar(value="")
-        ttk.Entry(params_grid, textvariable=self.y_speed_var, width=10).grid(row=1, column=3, sticky='w', pady=3,
-                                                                             padx=(5, 0))
+        ttk.Entry(params_grid, textvariable=self.y_speed_var, width=8).grid(row=1, column=3, sticky='ew', pady=3,
+                                                                            padx=(5, 0))
 
         # Z Speed
         ttk.Label(params_grid, text="Z Speed:").grid(row=2, column=0, sticky='w', pady=3)
         self.z_speed_var = tk.StringVar(value="")
-        ttk.Entry(params_grid, textvariable=self.z_speed_var, width=10).grid(row=2, column=1, sticky='w', pady=3,
-                                                                             padx=(5, 15))
+        ttk.Entry(params_grid, textvariable=self.z_speed_var, width=8).grid(row=2, column=1, sticky='ew', pady=3,
+                                                                            padx=(5, 10))
 
         # Separator
         ttk.Separator(params_grid, orient='horizontal').grid(row=3, column=0, columnspan=4, sticky='ew', pady=10)
@@ -3654,14 +3658,14 @@ class DeckGUI:
         # Aspirate Speed
         ttk.Label(params_grid, text="Aspirate:").grid(row=5, column=0, sticky='w', pady=3)
         self.aspirate_speed_var = tk.StringVar(value="")
-        ttk.Entry(params_grid, textvariable=self.aspirate_speed_var, width=10).grid(row=5, column=1, sticky='w', pady=3,
-                                                                                    padx=(5, 15))
+        ttk.Entry(params_grid, textvariable=self.aspirate_speed_var, width=8).grid(row=5, column=1, sticky='ew', pady=3,
+                                                                                   padx=(5, 10))
 
         # Dispense Speed
-        ttk.Label(params_grid, text="Dispense:").grid(row=5, column=2, sticky='w', pady=3)
+        ttk.Label(params_grid, text="Dispense:").grid(row=5, column=2, sticky='w', pady=3, padx=(10, 0))
         self.dispense_speed_var = tk.StringVar(value="")
-        ttk.Entry(params_grid, textvariable=self.dispense_speed_var, width=10).grid(row=5, column=3, sticky='w', pady=3,
-                                                                                    padx=(5, 0))
+        ttk.Entry(params_grid, textvariable=self.dispense_speed_var, width=8).grid(row=5, column=3, sticky='ew', pady=3,
+                                                                                   padx=(5, 0))
 
         # Separator
         ttk.Separator(params_grid, orient='horizontal').grid(row=6, column=0, columnspan=4, sticky='ew', pady=10)
@@ -3669,15 +3673,15 @@ class DeckGUI:
         # Tip Length Section
         ttk.Label(
             params_grid,
-            text="Tip Length (mm, 200 & 1000ul tip already defined):",
+            text="Tip Length (mm, 200 & 1000µL tip already defined):",
             font=('Arial', 10, 'bold')
         ).grid(row=7, column=0, columnspan=4, sticky='w', pady=(0, 5))
 
         # Tip Length
         ttk.Label(params_grid, text="Length:").grid(row=8, column=0, sticky='w', pady=3)
         self.tip_length_var = tk.StringVar(value="")
-        ttk.Entry(params_grid, textvariable=self.tip_length_var, width=10).grid(row=8, column=1, sticky='w', pady=3,
-                                                                                padx=(5, 15))
+        ttk.Entry(params_grid, textvariable=self.tip_length_var, width=8).grid(row=8, column=1, sticky='ew', pady=3,
+                                                                               padx=(5, 10))
 
         # Separator
         separator2 = ttk.Separator(pipettor_section, orient='horizontal')
