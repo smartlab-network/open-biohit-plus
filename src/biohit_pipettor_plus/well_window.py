@@ -99,8 +99,8 @@ class WellWindow:
 
         if self.multichannel_mode:
             self.channels = 8
-        else:
-            self.max_selected = max_selected if max_selected else self.rows * self.columns
+
+        self.max_selected = max_selected if max_selected else self.rows * self.columns
 
         # Add info label at top
         info_frame = ttk.Frame(self.__root)
@@ -432,29 +432,36 @@ class WellWindow:
 
         if self.multichannel_mode:
 
+            # --- Helper for clearing an 8-well block ---
             def clear_block(start_row, col):
                 for i in range(8):
                     r = start_row + i
                     if r < self.rows:
+                        # Clear internal state
                         self.well_state[r][col] = False
                         if (r, col) in self.selected_queue:
                             self.selected_queue.remove((r, col))
 
+                        # Restore UI state for the wells in the block
                         if self.buttons[r][col] is not None:
+                            # Restore non-start rows to unselected color
                             if i > 0:
                                 self.buttons[r][col].configure(bootstyle="light")
+                            # Restore the start row to its original/enabled color
                             else:
                                 is_valid = (start_row, col) in self.wells_list and start_row + 8 <= self.rows and \
                                            all((start_row + j, col) in self.wells_list for j in range(8))
                                 self.buttons[start_row][col].configure(bootstyle="light" if is_valid else "secondary")
 
+            # ✅ STEP 1: Check if this is a valid starting position
             is_valid_start_pos = (row + 8 <= self.rows and
-                                  all((row + i, column) in self.wells_list for i in range(8)) and
-                                  all((row + i, column) not in self.volume_constraints for i in range(8)))
+                                  all((row + i, column) in self.wells_list for i in range(8)))
 
             if not is_valid_start_pos:
+                # Not a valid start position - ignore click
                 return
 
+            # ✅ STEP 2: Check if THIS specific start row is already selected
             is_this_block_selected = self.well_state[row][column]
             is_full_selection_at_start = all(
                 self.well_state[row + i][column]
@@ -463,9 +470,19 @@ class WellWindow:
             )
 
             if is_this_block_selected and is_full_selection_at_start:
+                # ✅ DESELECT this specific 8-tip selection
                 clear_block(row, column)
 
             else:
+                # ✅ STEP 3: Check if max_selected limit reached - AUTO-DESELECT OLDEST (FIFO)
+                current_start_positions = self.get_start_positions()
+                if len(current_start_positions) >= self.max_selected:
+                    # FIFO: Auto-deselect the OLDEST starting position
+                    oldest_start_row, oldest_start_col = current_start_positions[0]
+                    clear_block(oldest_start_row, oldest_start_col)
+
+                # ✅ STEP 4 & 5: Check for and Auto-clear any overlapping selections
+
                 existing_start_rows = []
                 for r in range(self.rows):
                     is_start = self.well_state[r][column] and \
@@ -485,6 +502,7 @@ class WellWindow:
                     if new_selection_rows & existing_rows:
                         clear_block(existing_start, column)
 
+                # ✅ STEP 6: Add new selection (internal state)
                 for i in range(8):
                     r = row + i
                     if r < self.rows:
@@ -492,6 +510,7 @@ class WellWindow:
                         if (r, column) not in self.selected_queue:
                             self.selected_queue.append((r, column))
 
+                # ✅ STEP 7: Highlight only the start row (green 'success')
                 if self.buttons[row][column] is not None:
                     self.buttons[row][column].configure(bootstyle="success")
 

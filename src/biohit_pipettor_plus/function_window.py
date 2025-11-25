@@ -329,24 +329,6 @@ class FunctionWindow:
         lowlevel_frame.pack(fill=tk.X, pady=5, padx=5)
 
         ttk.Button(
-            lowlevel_frame, text=" Move X",
-            command=lambda: self.callback_move_x(func_str="Move X"),
-            bootstyle="info"
-        ).pack(fill=tk.X, pady=2)
-
-        ttk.Button(
-            lowlevel_frame, text=" Move Y",
-            command=lambda: self.callback_move_y(func_str="Move Y"),
-            bootstyle="info"
-        ).pack(fill=tk.X, pady=2)
-
-        ttk.Button(
-            lowlevel_frame, text=" Move Z",
-            command=lambda: self.callback_move_z(func_str="Move Z"),
-            bootstyle="info"
-        ).pack(fill=tk.X, pady=2)
-
-        ttk.Button(
             lowlevel_frame, text=" Suck",
             command=lambda: self.callback_suck(func_str="Suck"),
             bootstyle="info"
@@ -358,12 +340,6 @@ class FunctionWindow:
             bootstyle="info"
         ).pack(fill=tk.X, pady=2)
 
-        ttk.Button(
-            lowlevel_frame, text=" Spit All",
-            command=lambda: self.callback_spit_all(func_str="Spit All"),
-            bootstyle="info"
-        ).pack(fill=tk.X, pady=2)
-
         # System
         system_frame = ttk.Labelframe(parent_frame, text="System", padding=10)
         system_frame.pack(fill=tk.X, pady=5, padx=5)
@@ -371,6 +347,24 @@ class FunctionWindow:
         ttk.Button(
             system_frame, text=" Home",
             command=lambda: self.callback_home(func_str="Home"),
+            bootstyle="secondary"
+        ).pack(fill=tk.X, pady=2)
+
+        ttk.Button(
+            system_frame, text=" Move X",
+            command=lambda: self.callback_move_x(func_str="Move X"),
+            bootstyle="secondary"
+        ).pack(fill=tk.X, pady=2)
+
+        ttk.Button(
+            system_frame, text=" Move Y",
+            command=lambda: self.callback_move_y(func_str="Move Y"),
+            bootstyle="secondary"
+        ).pack(fill=tk.X, pady=2)
+
+        ttk.Button(
+            system_frame, text=" Move Z",
+            command=lambda: self.callback_move_z(func_str="Move Z"),
             bootstyle="secondary"
         ).pack(fill=tk.X, pady=2)
 
@@ -651,7 +645,8 @@ class FunctionWindow:
         else:  # DIRECT MODE
             # Create selection dialog
             dialog = tk.Toplevel(self.get_master_window())
-            dialog.title(f"Select {labware_type.__name__}")
+            #dialog.title(f"Select {labware_type.__name__}")
+            dialog.title(f"Select labware")
             dialog.geometry("400x500")
             dialog.transient(self.get_master_window())
             dialog.grab_set()
@@ -717,7 +712,8 @@ class FunctionWindow:
             if not found_labware:
                 ttk.Label(
                     frame,
-                    text=f"No {labware_type.__name__} found on deck",
+                    #text=f"No {labware_type.__name__} found on deck",
+                    text=f"No labware found on deck",
                     font=('Arial', 12),
                     foreground='red'
                 ).grid(column=0, row=0, pady=20, padx=20)
@@ -1790,100 +1786,130 @@ class FunctionWindow:
             **kwargs
     ):
         """Handle Suck operation"""
+
+        if part == "first" and not self.pipettor.has_tips:
+            messagebox.showerror("Error", "Pick tips first")
+            return
+
+        # --- PART 1: GET VOLUME ---
         if part == "first":
             if self.mode == "builder":
                 self.clear_grid(self.second_column_frame)
-            self.display_possible_labware(
-                labware_type=Labware,
-                next_callback=self.callback_suck,
-                func_str=func_str,
-                part="second",
-                **kwargs
-            )
-
-        elif part == "second" and labware_obj is not None:
-            # Determine dimensions
-            if isinstance(labware_obj, ReservoirHolder):
-                rows, columns = labware_obj.hooks_across_y, labware_obj.hooks_across_x
-            elif isinstance(labware_obj, PipetteHolder):
-                rows, columns = labware_obj.holders_across_y, labware_obj.holders_across_x
-            elif isinstance(labware_obj, Plate):
-                rows, columns = labware_obj._rows, labware_obj._columns
-            else:
-                return
-
-            window = WellWindow(
-                rows=rows,
-                columns=columns,
-                labware_id=labware_obj.labware_id,
-                max_selected=self.channels,
-                master=self.get_master_window(),
-                title=f"Select wells to suck from: {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True)
-            )
-            self.get_master_window().wait_variable(window.safe_var)
-            kwargs["labware_obj"] = labware_obj
-            kwargs["positions"] = [
-                (r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
-            ]
-            window.show_well_window()
-            del window
-
-            if not kwargs["positions"]:
-                return
-
-            # Get volume
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
-                label = ttk.Label(self.second_column_frame, text="Enter Volume per Well (ul)")
+                label = ttk.Label(self.second_column_frame, text="Step 1: Enter Volume (ul)")
                 label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
                 text_var = ttk.StringVar(value="100")
                 entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
                 entry.grid(row=1, column=0, sticky="nsew", pady=5, padx=5)
 
-                def callback_enter_button():
+                def next_step():
                     try:
-                        volume = float(text_var.get())
+                        vol = float(text_var.get())
+                        if vol <= 0: raise ValueError
+                        self.callback_suck(func_str, part="second", volume=vol, **kwargs)
                     except ValueError:
                         messagebox.showerror("Error", "Invalid volume")
-                        return
 
-                    func = lambda kwargs=kwargs, vol=volume: self.pipettor.suck(
-                        source=kwargs["labware_obj"],
-                        source_col_row=kwargs["positions"],
-                        volume=vol
-                    )
-
-                    self.add_current_function(func_str=func_str, func=func,
-                                              labware_id=kwargs["labware_obj"].labware_id)
-                    self.clear_grid(self.second_column_frame)
-
-                button = ttk.Button(self.second_column_frame, text="Confirm", command=callback_enter_button)
-                button.grid(row=2, column=0, sticky="nsew", pady=5, padx=5)
-
-            else:  # direct mode
-                volume = tk.simpledialog.askfloat(
-                    "Volume",
-                    "Enter volume per well (ul):",
-                    initialvalue=100,
-                    minvalue=1,
-                    maxvalue=10000
+                ttk.Button(self.second_column_frame, text="Next", command=next_step).grid(
+                    row=2, column=0, sticky="nsew", pady=5, padx=5
                 )
-                if not volume:
+
+            else:  # Direct mode
+                volume = self.ask_volume_dialog(title="Suck Volume", initial_value=100)
+                if volume:
+                    self.callback_suck(func_str, part="second", volume=volume, **kwargs)
+
+        # --- PART 2: SELECT LABWARE ---
+        elif part == "second":
+            if self.mode == "builder":
+                self.clear_grid(self.second_column_frame)
+
+            kwargs['volume'] = kwargs.get('volume')
+            self.display_possible_labware(
+                labware_type=(Plate, ReservoirHolder),
+                next_callback=self.callback_suck,
+                func_str=func_str,
+                part="third",
+                **kwargs
+            )
+
+        # --- PART 3: HANDLE LABWARE SELECTION & EXECUTE ---
+        elif part == "third" and labware_obj is not None:
+            # Determine dimensions
+            if isinstance(labware_obj, ReservoirHolder):
+                rows, columns = labware_obj.hooks_across_y, labware_obj.hooks_across_x
+            elif isinstance(labware_obj, Plate):
+                rows, columns = labware_obj._rows, labware_obj._columns
+            else:
+                messagebox.showerror("Error", "Invalid labware type for suck operation")
+                return
+
+            # Compute volume constraints for removal (insufficient volume check)
+            volume = kwargs.get('volume')
+
+            if volume > (self.pipettor.tip_volume - (self.pipettor.get_total_tip_volume()/self.channels)):
+                messagebox.showerror("Error", "Volume too high")
+                return
+
+            is_multichannel = (self.channels == 8)
+            total_volume = volume * self.channels
+
+            # For ReservoirHolder with multichannel, we need total volume (not per-tip)
+            if isinstance(labware_obj, ReservoirHolder):
+                # Reservoir serves all tips, so check against total volume
+                volume_constraints = self.compute_volume_constraints(
+                    labware_obj, total_volume, is_multichannel=False, operation='removal'
+                )
+            else:
+                # Plate: each well serves one tip
+                volume_constraints = self.compute_volume_constraints(
+                    labware_obj, volume, is_multichannel, operation='removal'
+                )
+
+            window = WellWindow(
+                rows=rows,
+                columns=columns,
+                labware_id=labware_obj.labware_id,
+                max_selected=1,  # Only ONE position allowed
+                master=self.get_master_window(),
+                multichannel_mode=False if isinstance(labware_obj, ReservoirHolder) else is_multichannel,
+                title=f"Select position to suck from: {labware_obj.labware_id}",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True),
+                volume_constraints=volume_constraints
+            )
+            self.get_master_window().wait_window(window.get_root())
+
+            # Get the single position
+            if isinstance(labware_obj, Plate) and is_multichannel:
+                # For multichannel plate operations
+                start_positions = window.get_start_positions()
+                if not start_positions:
                     return
+                position = (start_positions[0][1], start_positions[0][0])  # Convert (row, col) to (col, row)
+            else:
+                # For single-channel or reservoir operations
+                selected = [(c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v]
+                if not selected:
+                    return
+                position = selected[0]
 
-                func = lambda kwargs=kwargs, vol=volume: self.pipettor.suck(
-                    source=kwargs["labware_obj"],
-                    source_col_row=kwargs["positions"],
-                    volume=vol
-                )
+            # Create function, volume is total_volume according to definition of suck in pipettor_plus
+            func = lambda lw=labware_obj, pos=position, vol=total_volume: self.pipettor.suck(
+                source=lw,
+                source_col_row=pos,
+                volume=vol
+            )
 
-                details = f"Labware: {kwargs['labware_obj'].labware_id}\n"
-                details += f"Wells: {len(kwargs['positions'])} positions\n"
-                details += f"Volume: {volume} ul per well\n"
-                details += f"Total: {volume * len(kwargs['positions'])} ul"
+            # Create details
+            details = f"Labware: {labware_obj.labware_id}\n"
+            details += f"Position (Col:Row): {position}\n"
+            details += f"Total Volume: {total_volume} ul"
+            if is_multichannel and isinstance(labware_obj, Plate):
+                details += f"\nVolume per tip: {volume} ul"
 
+            if self.mode == "direct":
                 self.stage_operation(func, func_str, details)
+            elif self.mode == "builder":
+                self.add_current_function(func_str=func_str, func=func, labware_id=labware_obj.labware_id)
 
     def callback_spit(
             self,
@@ -1892,166 +1918,132 @@ class FunctionWindow:
             labware_obj: Labware = None,
             **kwargs
     ):
+
         """Handle Spit operation"""
+
+        if part == "first" and not self.pipettor.has_tips:
+            messagebox.showerror("Error", "Pick tips first")
+            return
+
+        # --- PART 1: GET VOLUME ---
         if part == "first":
             if self.mode == "builder":
                 self.clear_grid(self.second_column_frame)
-            self.display_possible_labware(
-                labware_type=Labware,
-                next_callback=self.callback_spit,
-                func_str=func_str,
-                part="second",
-                **kwargs
-            )
-
-        elif part == "second" and labware_obj is not None:
-            # Determine dimensions
-            if isinstance(labware_obj, ReservoirHolder):
-                rows, columns = labware_obj.hooks_across_y, labware_obj.hooks_across_x
-            elif isinstance(labware_obj, PipetteHolder):
-                rows, columns = labware_obj.holders_across_y, labware_obj.holders_across_x
-            elif isinstance(labware_obj, Plate):
-                rows, columns = labware_obj._rows, labware_obj._columns
-            else:
-                return
-
-            window = WellWindow(
-                rows=rows,
-                columns=columns,
-                max_selected=self.channels,
-                labware_id=labware_obj.labware_id,
-                master=self.get_master_window(),
-                title=f"Select wells to spit into: {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False)
-            )
-            self.get_master_window().wait_variable(window.safe_var)
-            kwargs["labware_obj"] = labware_obj
-            kwargs["positions"] = [
-                (r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
-            ]
-            window.show_well_window()
-            del window
-
-            if not kwargs["positions"]:
-                return
-
-            # Get volume
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
-                label = ttk.Label(self.second_column_frame, text="Enter Volume per Well (ul)")
+                label = ttk.Label(self.second_column_frame, text="Step 1: Enter Volume (ul)")
                 label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
                 text_var = ttk.StringVar(value="100")
                 entry = ttk.Entry(self.second_column_frame, textvariable=text_var)
                 entry.grid(row=1, column=0, sticky="nsew", pady=5, padx=5)
 
-                def callback_enter_button():
+                def next_step():
                     try:
-                        volume = float(text_var.get())
+                        vol = float(text_var.get())
+                        if vol <= 0: raise ValueError
+                        self.callback_spit(func_str, part="second", volume=vol, **kwargs)
                     except ValueError:
                         messagebox.showerror("Error", "Invalid volume")
-                        return
 
-                    func = lambda kwargs=kwargs, vol=volume: self.pipettor.spit(
-                        destination=kwargs["labware_obj"],
-                        dest_col_row=kwargs["positions"],
-                        volume=vol
-                    )
-
-                    self.add_current_function(func_str=func_str, func=func,
-                                              labware_id=kwargs["labware_obj"].labware_id)
-                    self.clear_grid(self.second_column_frame)
-
-                button = ttk.Button(self.second_column_frame, text="Confirm", command=callback_enter_button)
-                button.grid(row=2, column=0, sticky="nsew", pady=5, padx=5)
-
-            else:  # direct mode
-                volume = tk.simpledialog.askfloat(
-                    "Volume",
-                    "Enter volume per well (ul):",
-                    initialvalue=100,
-                    minvalue=1,
-                    maxvalue=10000
-                )
-                if not volume:
-                    return
-
-                func = lambda kwargs=kwargs, vol=volume: self.pipettor.spit(
-                    destination=kwargs["labware_obj"],
-                    dest_col_row=kwargs["positions"],
-                    volume=vol
+                ttk.Button(self.second_column_frame, text="Next", command=next_step).grid(
+                    row=2, column=0, sticky="nsew", pady=5, padx=5
                 )
 
-                details = f"Labware: {kwargs['labware_obj'].labware_id}\n"
-                details += f"Wells: {len(kwargs['positions'])} positions\n"
-                details += f"Volume: {volume} ul per well\n"
-                details += f"Total: {volume * len(kwargs['positions'])} ul"
+            else:  # Direct mode
+                volume = self.ask_volume_dialog(title="Spit Volume", initial_value=100)
+                if volume:
+                    self.callback_spit(func_str, part="second", volume=volume, **kwargs)
 
-                self.stage_operation(func, func_str, details)
-
-    def callback_spit_all(
-            self,
-            func_str: str,
-            part: str = "first",
-            labware_obj: Labware = None,
-            **kwargs
-    ):
-        """Handle Spit All operation"""
-        if part == "first":
+        # --- PART 2: SELECT LABWARE ---
+        elif part == "second":
             if self.mode == "builder":
                 self.clear_grid(self.second_column_frame)
+
+            kwargs['volume'] = kwargs.get('volume')
             self.display_possible_labware(
-                labware_type=Labware,
-                next_callback=self.callback_spit_all,
+                labware_type=(Plate, ReservoirHolder),
+                next_callback=self.callback_spit,
                 func_str=func_str,
-                part="second",
+                part="third",
                 **kwargs
             )
 
-        elif part == "second" and labware_obj is not None:
+        # --- PART 3: HANDLE LABWARE SELECTION & EXECUTE ---
+        elif part == "third" and labware_obj is not None:
             # Determine dimensions
             if isinstance(labware_obj, ReservoirHolder):
                 rows, columns = labware_obj.hooks_across_y, labware_obj.hooks_across_x
-            elif isinstance(labware_obj, PipetteHolder):
-                rows, columns = labware_obj.holders_across_y, labware_obj.holders_across_x
             elif isinstance(labware_obj, Plate):
                 rows, columns = labware_obj._rows, labware_obj._columns
             else:
+                messagebox.showerror("Error", "Invalid labware type for spit operation")
                 return
+
+            # Compute volume constraints for addition (overflow check)
+            volume = kwargs.get('volume')
+            if volume > (self.pipettor.get_total_tip_volume()/self.channels):
+                messagebox.showerror("Error", "Not enough liquid in tip")
+                return
+
+            is_multichannel = (self.channels == 8)
+            total_volume = volume * self.channels
+
+            # For ReservoirHolder with multichannel, we need total volume (not per-tip)
+            if isinstance(labware_obj, ReservoirHolder):
+                # Reservoir receives all tips, so check against total volume
+                volume_constraints = self.compute_volume_constraints(
+                    labware_obj, total_volume, is_multichannel=False, operation='addition'
+                )
+            else:
+                # Plate: each well receives from one tip
+                volume_constraints = self.compute_volume_constraints(
+                    labware_obj, volume, is_multichannel, operation='addition'
+                )
 
             window = WellWindow(
                 rows=rows,
                 columns=columns,
                 labware_id=labware_obj.labware_id,
-                max_selected=self.channels,
+                max_selected=1,  # Only ONE position allowed
                 master=self.get_master_window(),
-                title=f"Select wells to spit all into: {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False)
+                multichannel_mode=False if isinstance(labware_obj, ReservoirHolder) else is_multichannel,
+                # Multichannel only for Plate
+                title=f"Select position to spit into: {labware_obj.labware_id}",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False),
+                volume_constraints=volume_constraints
             )
-            self.get_master_window().wait_variable(window.safe_var)
-            kwargs["labware_obj"] = labware_obj
-            kwargs["positions"] = [
-                (r, c) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v
-            ]
-            window.show_well_window()
-            del window
+            self.get_master_window().wait_window(window.get_root())
 
-            if not kwargs["positions"]:
-                return
+            # Get the single position
+            if isinstance(labware_obj, Plate) and is_multichannel:
+                # For multichannel plate operations
+                start_positions = window.get_start_positions()
+                if not start_positions:
+                    return
+                position = (start_positions[0][1], start_positions[0][0])  # Convert (row, col) to (col, row)
+            else:
+                # For single-channel or reservoir operations
+                selected = [(c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v]
+                if not selected:
+                    return
+                position = selected[0]
 
-            func = lambda kwargs=kwargs: self.pipettor.spit_all(
-                destination=kwargs["labware_obj"],
-                dest_col_row=kwargs["positions"]
+            # Create function
+            func = lambda lw=labware_obj, pos=position, vol=total_volume: self.pipettor.spit(
+                destination=lw,
+                dest_col_row=pos,
+                volume=vol
             )
 
-            details = f"Labware: {kwargs['labware_obj'].labware_id}\n"
-            details += f"Wells: {len(kwargs['positions'])} positions\n"
-            details += "Action: Spit all remaining liquid"
+            # Create details
+            details = f"Labware: {labware_obj.labware_id}\n"
+            details += f"Position (Col:Row): {position}\n"
+            details += f"Total Volume: {total_volume} ul"
+            if is_multichannel and isinstance(labware_obj, Plate):
+                details += f"\nVolume per tip: {volume} ul"
 
             if self.mode == "direct":
                 self.stage_operation(func, func_str, details)
             elif self.mode == "builder":
-                self.add_current_function(func_str=func_str, func=func,
-                                          labware_id=kwargs["labware_obj"].labware_id)
+                self.add_current_function(func_str=func_str, func=func, labware_id=labware_obj.labware_id)
 
     def callback_move_x(self, func_str: str):
         """Handle Move X operation"""

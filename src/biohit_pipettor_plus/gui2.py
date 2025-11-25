@@ -336,7 +336,7 @@ class CreateLowLevelLabwareDialog(tk.Toplevel):
                     labware_id=labware_id,
                     is_occupied=is_occupied
                 )
-            print(self.result.to_dict())
+            #print(self.result.to_dict())
             self.destroy()
 
         except ValueError as e:
@@ -4105,7 +4105,7 @@ class DeckGUI:
 
         if dialog.result:
             new_labware = dialog.result
-            print(new_labware.to_dict())
+            #print(new_labware.to_dict())
             # Store newly created component if needed
             if isinstance(dialog.result, Plate) and dialog.selected_well:
                 if dialog.selected_well not in self.available_wells:
@@ -5081,7 +5081,7 @@ class DeckGUI:
                     'available_reservoirs': [res.to_dict() for res in self.available_reservoirs],
                     'available_individual_holders': [holder.to_dict() for holder in self.available_individual_holders]
                 }
-                print(data)
+                #print(data)
                 with open(filename, 'w') as f:
                     json.dump(data, f, indent=2)
                 messagebox.showinfo("Success", f"Deck saved to {filename}")
@@ -5105,7 +5105,7 @@ class DeckGUI:
                     # Old format - just deck
                     self.deck = Serializable.from_dict(data)
 
-                print(data)
+                #print(data)
                 # Load unplaced labware if present
                 self.unplaced_labware = []
                 if 'unplaced_labware' in data:
