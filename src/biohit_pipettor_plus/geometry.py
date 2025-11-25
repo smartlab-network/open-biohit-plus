@@ -27,13 +27,6 @@ def calculate_liquid_height(item: 'Labware') -> float:
     -------
     float
         Height of liquid surface from container bottom (mm)
-
-    Examples
-    --------
-    >>> well = Well(size_x=6.4, size_y=6.4, size_z=10, capacity=200, shape="u_bottom")
-    >>> well.add_content("PBS", 100)
-    >>> height = calculate_liquid_height(well)
-    >>> print(f"Liquid height: {height:.1f}mm")
     """
     # Check if item has volume tracking
     if not hasattr(item, 'get_total_volume') or not hasattr(item, 'capacity'):

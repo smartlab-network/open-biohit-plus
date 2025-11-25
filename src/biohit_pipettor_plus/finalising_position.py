@@ -33,8 +33,8 @@ plate1 = Plate(
     113.4, 65, 53, 6, 8,
     well=example_well,
     offset=(12.2, 1),
-    add_height=-3,
-    remove_height=-10
+    add_height=3,
+    remove_height=0.5
 )
 deck1.add_labware(plate1, slot_id="slot4", min_z=0, x_spacing=18, y_spacing=9)
 
@@ -51,8 +51,8 @@ reservoirHolder = ReservoirHolder(
     offset=(4, 0),
     hooks_across_x=7,
     hooks_across_y=1,
-    add_height=-10,
-    remove_height=-51,
+    add_height=70,
+    remove_height=20,
     reservoir_template=example_reservoir
 )
 deck1.add_labware(reservoirHolder, slot_id="slot5", min_z=0, x_spacing=17.25)
@@ -63,8 +63,8 @@ pipette_holder = PipetteHolder(
     size_x=102, size_y=65, size_z=49,
     offset=(12.85, 6.1),
     holders_across_x=12, holders_across_y=8,
-    remove_height=10,
-    add_height=-15,
+    remove_height=9,
+    add_height=-14,
     individual_holder=ExamplePipetteHolder
 )
 deck1.add_labware(pipette_holder, slot_id="slot3", min_z=0, x_spacing=9)
@@ -76,7 +76,7 @@ tip_dropzone = TipDropzone(
     size_z=20,
     offset=(10, 5),
     labware_id="dropzone_1",
-    drop_height_relative=-15
+    drop_height_relative=0
 )
 deck1.add_labware(tip_dropzone, slot_id="slot1", min_z=0)
 print(deck1.to_dict())
