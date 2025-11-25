@@ -30,9 +30,9 @@ example_well = Well(
 )
 
 plate1 = Plate(
-    118.1, 65, 53, 6, 8,
+    113.4, 65, 53, 6, 8,
     well=example_well,
-    offset=(14.05, 1),
+    offset=(12.2, 1),
     add_height=-3,
     remove_height=-10
 )
@@ -45,10 +45,10 @@ example_reservoir = Reservoir(
     content={"water": 20000}
 )
 reservoirHolder = ReservoirHolder(
-    size_x=118,
+    size_x=115.5,
     size_y=79,
     size_z=66,
-    offset=(-5.75, 0),
+    offset=(4, 0),
     hooks_across_x=7,
     hooks_across_y=1,
     add_height=-10,
@@ -60,14 +60,14 @@ deck1.add_labware(reservoirHolder, slot_id="slot5", min_z=0, x_spacing=17.25)
 # Create pipette holder
 ExamplePipetteHolder = IndividualPipetteHolder(0.8, 0.8, 1)
 pipette_holder = PipetteHolder(
-    size_x=110.2, size_y=75.2, size_z=49,
-    offset=(5.6, 6.1),
+    size_x=102, size_y=65, size_z=49,
+    offset=(12.85, 6.1),
     holders_across_x=12, holders_across_y=8,
     remove_height=10,
     add_height=-15,
     individual_holder=ExamplePipetteHolder
 )
-deck1.add_labware(pipette_holder, slot_id="slot3", min_z=0)
+deck1.add_labware(pipette_holder, slot_id="slot3", min_z=0, x_spacing=9)
 
 # Create tip dropzone
 tip_dropzone = TipDropzone(

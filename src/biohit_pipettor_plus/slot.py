@@ -79,7 +79,7 @@ class Slot(Serializable):
             raise ValueError("Labware not in labware stack")
 
         offset_x, offset_y = lw.offset
-        x_corner = min(self.range_x[0], self.range_x[1]) + offset_x
+        x_corner = max(self.range_x[0], self.range_x[1]) - offset_x
         y_corner = min(self.range_y[0], self.range_y[1]) + offset_y
 
         #position is slot corner + offset of the labware.

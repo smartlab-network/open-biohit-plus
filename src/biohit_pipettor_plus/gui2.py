@@ -1257,7 +1257,7 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
 
         # Left: Canvas with grid
         canvas_container = ttk.Labelframe(content_frame,
-                                          text="Grid View (Click item to select) - Column 0 is RIGHTMOST", padding="5")
+                                          text="Grid View (Click item to select)", padding="5")
         canvas_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
 
         # Create canvas WITHOUT scrollbars (we'll fit everything to view)
@@ -1287,12 +1287,12 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
         btn_frame.pack(fill=tk.X, pady=(10, 0))
 
         if isinstance(self.labware, PipetteHolder):
-            ttk.Button(btn_frame, text="📝 Place / Remove",
+            ttk.Button(btn_frame, text=" Place / Remove",
                        command=self.edit_selected_item).pack(fill=tk.X, pady=2)
         elif isinstance(self.labware, ReservoirHolder) or isinstance(self.labware, Plate):
-            ttk.Button(btn_frame, text="📝 Manage content",
+            ttk.Button(btn_frame, text=" Manage content",
                       command=self.edit_selected_item).pack(fill=tk.X, pady=2)
-        ttk.Button(btn_frame, text="🔄 Refresh View",
+        ttk.Button(btn_frame, text=" Refresh View",
                    command=self.refresh_view).pack(fill=tk.X, pady=2)
         ttk.Button(btn_frame, text="Clear Selection",
                    command=self.clear_selection).pack(fill=tk.X, pady=2)
@@ -1407,8 +1407,7 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
 
         # Draw column labels (RIGHT TO LEFT - col 0 is rightmost)
         for col in range(cols):
-            display_col = cols - 1 - col  # Flip: col 0 appears at right
-            x = padding + display_col * cell_size + cell_size / 2
+            x = padding + col * cell_size + cell_size / 2
             self.canvas.create_text(
                 x, padding - 15,
                 text=str(col),
@@ -1433,9 +1432,7 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
                 if not well:
                     continue
 
-                display_col = cols - 1 - col  # Flip for display
-
-                x1 = padding + display_col * cell_size
+                x1 = padding + col * cell_size
                 y1 = padding + row * cell_size
                 x2 = x1 + cell_size
                 y2 = y1 + cell_size
@@ -1483,14 +1480,13 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
         # Draw hook labels (numbering right to left, top to bottom)
         for row in range(hooks_y):
             for col in range(hooks_x):
-                display_col = hooks_x - 1 - col
                 hook_id = holder.position_to_hook_id(col, row)
 
-                x = padding + display_col * cell_size + cell_size / 2
+                x = padding + col * cell_size + cell_size / 2
                 y = padding + row * cell_size + cell_size / 2
 
                 # Draw background
-                x1 = padding + display_col * cell_size
+                x1 = padding + col * cell_size
                 y1 = padding + row * cell_size
                 x2 = x1 + cell_size
                 y2 = y1 + cell_size
@@ -1524,13 +1520,9 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
             min_col, max_col = min(cols), max(cols)
             min_row, max_row = min(rows), max(rows)
 
-            # Right-to-left display
-            display_min_col = hooks_x - 1 - max_col
-            display_max_col = hooks_x - 1 - min_col
-
-            x1 = padding + display_min_col * cell_size
+            x1 = padding + min_col * cell_size
             y1 = padding + min_row * cell_size
-            x2 = padding + (display_max_col + 1) * cell_size
+            x2 = padding + (max_col + 1) * cell_size
             y2 = padding + (max_row + 1) * cell_size
 
             # Draw reservoir
@@ -1544,8 +1536,7 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
 
             # Label - scale font
             font_size = max(8, min(int(cell_size / 8), 12))
-            label = f"{reservoir.labware_id}\n"
-            label += f"Pos: ({reservoir.column},{reservoir.row})\n"
+            label = f"Pos: ({reservoir.column},{reservoir.row})\n"
             vol = reservoir.get_total_volume()
             if vol >= 1000:
                 label += f"{vol / 1000:.1f}mL"
@@ -1571,8 +1562,7 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
 
         # Draw column labels (RIGHT TO LEFT - col 0 is rightmost)
         for col in range(holders_x):
-            display_col = holders_x - 1 - col  # Flip: col 0 appears at right
-            x = padding + display_col * cell_size + cell_size / 2
+            x = padding + col * cell_size + cell_size / 2
             self.canvas.create_text(
                 x, padding - 15,
                 text=str(col),
@@ -1597,9 +1587,7 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
                 if not individual:
                     continue
 
-                display_col = holders_x - 1 - col  # Flip for display
-
-                x1 = padding + display_col * cell_size
+                x1 = padding + col * cell_size
                 y1 = padding + row * cell_size
                 x2 = x1 + cell_size
                 y2 = y1 + cell_size
@@ -2225,8 +2213,8 @@ class EditLabwareDialog(tk.Toplevel):
                     tags='grid'
                 )
 
-                # Draw hook ID (right to left numbering)
-                hook_id = holder.position_to_hook_id(holder.hooks_across_x - 1 - col, row)
+                # Draw hook ID
+                hook_id = holder.position_to_hook_id(col, row)
                 self.hook_canvas.create_text(
                     (x1 + x2) / 2, (y1 + y2) / 2,
                     text=str(hook_id),
@@ -2256,13 +2244,9 @@ class EditLabwareDialog(tk.Toplevel):
         min_row, max_row = min(rows), max(rows)
 
         # Calculate bounding box (accounting for right-to-left display)
-        # Display col: holder.hooks_across_x - 1 - actual_col
-        display_min_col = holder.hooks_across_x - 1 - max_col
-        display_max_col = holder.hooks_across_x - 1 - min_col
-
-        x1 = padding + display_min_col * cell_width
+        x1 = padding + min_col * cell_width
         y1 = padding + min_row * cell_height
-        x2 = padding + (display_max_col + 1) * cell_width
+        x2 = padding + (max_col + 1) * cell_width
         y2 = padding + (max_row + 1) * cell_height
 
         # Draw reservoir block
@@ -2275,9 +2259,10 @@ class EditLabwareDialog(tk.Toplevel):
         )
 
         # Draw reservoir label
+        hook_str = ','.join(map(str, reservoir.hook_ids))
         text_id = self.hook_canvas.create_text(
             (x1 + x2) / 2, (y1 + y2) / 2,
-            text=f"{reservoir.labware_id}\n({len(reservoir.hook_ids)} hooks)",
+            text=f"{hook_str}\n",
             font=('Arial', 9, 'bold'),
             tags=('reservoir', f'res_{id(reservoir)}')
         )
@@ -2367,17 +2352,17 @@ class EditLabwareDialog(tk.Toplevel):
 
         if isinstance(labware, Plate):
             errors, warnings = self.validate_plate_dimensions(
-                labware, new_size_x, new_size_y, new_size_z, new_offset  # ✅ Added new_size_z
+                labware, new_size_x, new_size_y, new_size_z, new_offset
             )
 
         elif isinstance(labware, PipetteHolder):
             errors, warnings = self.validate_pipette_holder_dimensions(
-                labware, new_size_x, new_size_y, new_size_z, new_offset  # ✅ Added new_size_z
+                labware, new_size_x, new_size_y, new_size_z, new_offset
             )
 
         elif isinstance(labware, ReservoirHolder):
             errors, warnings = self.validate_reservoir_holder_dimensions(
-                labware, new_size_x, new_size_y, new_size_z, new_offset  # ✅ Added new_size_z
+                labware, new_size_x, new_size_y, new_size_z, new_offset
             )
 
         return errors, warnings
@@ -4451,7 +4436,7 @@ class DeckGUI:
             return
 
         x1, y1 = self.mm_to_canvas(lw.position[0], lw.position[1])
-        x2, y2 = self.mm_to_canvas(lw.position[0] + lw.size_x, lw.position[1] + lw.size_y)
+        x2, y2 = self.mm_to_canvas(lw.position[0] - lw.size_x, lw.position[1] + lw.size_y)
 
         # Draw labware rectangle
         self.canvas.create_rectangle(

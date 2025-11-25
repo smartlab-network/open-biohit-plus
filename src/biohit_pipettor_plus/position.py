@@ -22,9 +22,9 @@ class Position_allocator:
         Parameters
         ----------
         x_corner : float
-            X coordinate of the slot's corner.
+            X coordinate of the slot's corner. Left
         y_corner : float
-            Y coordinate of the slot's corner.
+            Y coordinate of the slot's corner. Top
         lw : Labware
             Labware object to place.
         x_spacing : float
@@ -66,7 +66,7 @@ class Position_allocator:
 
         for i in range(rows):
             for j in range(columns):
-                x_pos = x_corner + j * x_spacing
+                x_pos = x_corner - j * x_spacing
                 y_pos = y_corner + i * y_spacing
                 location = (f"{j},{i}")
                 positions.append((x_pos, y_pos, location))
@@ -121,8 +121,8 @@ class Position_allocator:
                 hook_x = round((sum(xs) / len(xs)), 2)
                 hook_y = round((sum(ys) / len(ys)), 2)
 
-            # Step 2: Add half the reservoir size to get center
-            center_x = round(hook_x + (res.size_x  / 2) + res.offset[0], 2)
+            # Step 2: Add half the reservoir size to get center + any offset
+            center_x = round(hook_x - (res.size_x  / 2) - res.offset[0], 2)
             center_y = round(hook_y + (res.size_y / 2) + res.offset[1], 2)
             res.position = (center_x, center_y)
 
@@ -156,7 +156,7 @@ class Position_allocator:
                 if idx < len(positions):
                     x_pos, y_pos, _ = positions[idx]
                     # Add half of well size to get center position
-                    center_x = round(x_pos + (well.size_x / 2) + well.offset[0], 2)
+                    center_x = round(x_pos - (well.size_x / 2) - well.offset[0], 2)
                     center_y = round(y_pos + (well.size_y / 2) + well.offset[1], 2)
                     well.position = (center_x, center_y)
 
@@ -188,6 +188,6 @@ class Position_allocator:
 
                 x_pos, y_pos, _ = positions[idx]
                 # Add half of holder size to get center position
-                center_x = round(x_pos + (individual_holder.size_x / 2) + individual_holder.offset[0], 2)
+                center_x = round(x_pos - (individual_holder.size_x / 2) - individual_holder.offset[0], 2)
                 center_y = round(y_pos + (individual_holder.size_y / 2) + individual_holder.offset[1], 2)
                 individual_holder.position = (center_x, center_y)
