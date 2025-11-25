@@ -61,7 +61,6 @@ from geometry import (
 Change_Tips = 0
 MAX_BATCH_SIZE = 5
 
-
 class PipettorPlus(Pipettor):
     TIP_LENGTHS = {
         200: 38,  # 200µL increase height by 38mm after being attached
@@ -646,9 +645,6 @@ class PipettorPlus(Pipettor):
         print("✓ Plate-to-plate transfer complete\n")
 
 
-        # These are helper methods for the PipettorPlus class
-        # Add them to your class definition
-
     def suck(self, source: Labware, source_col_row: tuple[int, int], volume: float) -> None:
         """
         Aspirate from a source labware.
@@ -733,25 +729,6 @@ class PipettorPlus(Pipettor):
             # Just do physical movement without content tracking
             self._dispense_physical_only(destination, dest_col, dest_row, volume)
             print(f"  → Dispensed {volume}µL to {destination.labware_id} at {dest_col_row}")
-
-    def spit_all(self, destination: Labware, dest_col_row: tuple[int, int]) -> None:
-        """
-        Dispense ALL content from tips to a destination labware.
-
-        Parameters
-        ----------
-        destination : Labware
-            Destination labware
-        dest_col_row : tuple[int, int]
-            (Column, Row) position in destination labware
-        """
-        total_volume = self.get_total_tip_volume()
-
-        if total_volume <= 0:
-            raise ValueError("No content in tips to dispense")
-
-        print(f"  → Dispensing all content: {total_volume}µL")
-        self.spit(destination, dest_col_row, total_volume)
 
     def add_content(self, content_type: str, volume: float, tip_index: int = None) -> None:
         """
