@@ -8,6 +8,10 @@ from well_window import WellWindow
 from deck import Deck
 from labware import Labware, PipetteHolder, Plate, TipDropzone, ReservoirHolder
 from pipettor_plus import PipettorPlus
+from workflow import Workflow, WorkflowState, Operation, OperationType
+from workflow_executor import WorkflowExecutor, ExecutionResult, ExecutionStatus
+from operation_builder import OperationBuilder
+import os
 
 
 class FunctionWindow:
@@ -57,6 +61,19 @@ class FunctionWindow:
             self.channels = 1
 
         # Workflow state
+        if mode == "builder":
+            self.workflow = Workflow(name="New Workflow")
+            self.workflow_state = WorkflowState(deck)
+            self.saved_workflows: dict[str, Workflow] = {}
+            self.workflows_dir = "saved_workflows"
+            os.makedirs(self.workflows_dir, exist_ok=True)
+            self.load_saved_workflows()
+        else:
+            self.workflow = None
+            self.workflow_state = None
+            self.saved_workflows = {}
+
+        #for direct mode
         self.custom_funcs_dict: dict[str, list[Callable]] = {}
         self.current_func_list: list[Callable] = []
         self.current_func_details: list[str] = []  # For display
@@ -79,11 +96,46 @@ class FunctionWindow:
                 self.window_build_func = ttk.Toplevel(master)
             else:
                 self.window_build_func = ttk.Window(themename="darkly")
-            self.window_build_func.geometry("1400x800")
+
+            self.window_build_func.geometry("1200x750")
             self.window_build_func.title("Workflow Builder")
+            self.window_build_func.attributes('-topmost', False)
+
+            self.window_build_func.transient(master)  # Tells window manager this belongs to 'master'
+            self.window_build_func.grab_set()  # Freezes interaction with other windows
+            self.window_build_func.focus_set()  # Moves keyboard focus here
+
             self.container = self.window_build_func
             self.is_toplevel = True
             self.create_builder_mode_ui()
+
+    def load_saved_workflows(self) -> None:
+        """Load all saved workflows from disk"""
+        if not os.path.exists(self.workflows_dir):
+            return
+
+        for filename in os.listdir(self.workflows_dir):
+            if filename.endswith('.json'):
+                try:
+                    filepath = os.path.join(self.workflows_dir, filename)
+                    workflow = Workflow.load_from_file(filepath)
+                    self.saved_workflows[workflow.name] = workflow
+                except Exception as e:
+                    print(f"Error loading workflow {filename}: {e}")
+
+    def save_workflow_to_disk(self, workflow: Workflow) -> None:
+        """Save workflow to disk"""
+        filename = f"{workflow.name.replace(' ', '_')}_{workflow.workflow_id[:8]}.json"
+        filepath = os.path.join(self.workflows_dir, filename)
+        workflow.save_to_file(filepath)
+
+    def delete_workflow_from_disk(self, workflow: Workflow) -> None:
+        """Delete workflow file from disk"""
+        for filename in os.listdir(self.workflows_dir):
+            if workflow.workflow_id in filename:
+                filepath = os.path.join(self.workflows_dir, filename)
+                os.remove(filepath)
+                break
 
     # ========== UI CREATION ==========
 
@@ -211,7 +263,7 @@ class FunctionWindow:
             self.window_build_func,
             text="Build Custom Workflow",
             anchor="center",
-            font=('Helvetica', 18)
+            font=('Helvetica', 14)
         )
         self.label_header.grid(row=0, column=0, columnspan=3, sticky="nsew", pady=10)
 
@@ -231,7 +283,7 @@ class FunctionWindow:
         queue_label = ttk.Label(
             self.window_build_func,
             text="Workflow Queue",
-            font=('Helvetica', 14, 'bold')
+            font=('Helvetica', 14)
         )
         queue_label.grid(row=0, column=2, sticky="ew", padx=10)
 
@@ -264,6 +316,14 @@ class FunctionWindow:
         )
         self.save_button.grid(row=1, column=1, sticky="ew", padx=5)
 
+        self.execute_workflow_button = ttk.Button(
+            self.frame_name,
+            text="Execute Workflow",
+            command=self.execute_workflow_in_builder,
+            bootstyle="success"
+        )
+        self.execute_workflow_button.grid(row=1, column=3, sticky="ew", padx=5)
+
         self.clear_queue_button = ttk.Button(
             self.frame_name,
             text="Clear Queue",
@@ -271,6 +331,78 @@ class FunctionWindow:
             bootstyle="danger"
         )
         self.clear_queue_button.grid(row=1, column=2, sticky="ew")
+        self.update_operation_button_states()
+
+    def execute_workflow_in_builder(self):
+        """Execute the current workflow from builder mode"""
+        if not self.workflow or not self.workflow.operations:
+            messagebox.showwarning("Empty Workflow", "No operations to execute")
+            return
+
+        if not self.pipettor:
+            messagebox.showerror("Error", "No pipettor connected")
+            return
+
+        # Confirm
+        if not messagebox.askyesno(
+                "Execute Workflow",
+                f"Execute workflow with {len(self.workflow.operations)} operations?"
+        ):
+            return
+
+        # Create progress window
+        progress_window = ttk.Toplevel(self.window_build_func)
+        progress_window.title("Executing Workflow")
+        progress_window.geometry("400x200")
+        progress_window.transient(self.window_build_func)
+        progress_window.grab_set()
+
+        progress_label = ttk.Label(
+            progress_window,
+            text=f"Executing: {self.workflow.name}",
+            font=("Helvetica", 12, "bold")
+        )
+        progress_label.pack(pady=10)
+
+        progress_bar = ttk.Progressbar(
+            progress_window,
+            mode='determinate',
+            length=300
+        )
+        progress_bar.pack(pady=10)
+
+        status_label = ttk.Label(progress_window, text="Starting...")
+        status_label.pack(pady=5)
+
+        # Execute
+        executor = WorkflowExecutor(self.pipettor, self.deck)
+
+        def on_progress(completed, total):
+            progress_bar['value'] = (completed / total) * 100
+            status_label.config(text=f"Operation {completed}/{total}")
+            progress_window.update()
+
+        executor.on_progress = on_progress
+
+        try:
+            result = executor.execute_workflow(self.workflow)
+            progress_window.destroy()
+
+            if result.success:
+                messagebox.showinfo(
+                    "Success",
+                    f"Workflow completed successfully!\\n"
+                    f"{result.operations_completed} operations executed."
+                )
+            else:
+                messagebox.showerror(
+                    "Workflow Failed",
+                    f"Workflow failed at operation {result.failed_operation_index + 1}:\\n\\n"
+                    f"{result.error_message}"
+                )
+        except Exception as e:
+            progress_window.destroy()
+            messagebox.showerror("Error", f"Workflow execution failed:\\n\\n{str(e)}")
 
     def place_operation_buttons(self, parent_frame):
         """Place all operation buttons (shared between modes)"""
@@ -278,95 +410,138 @@ class FunctionWindow:
         tip_frame = ttk.Labelframe(parent_frame, text="Tip Management", padding=10)
         tip_frame.pack(fill=tk.X, pady=5, padx=5)
 
-        ttk.Button(
+        self.pick_tips_btn = ttk.Button(  
             tip_frame, text=" Pick Tips",
             command=lambda: self.callback_pick_tips(func_str="Pick Tips"),
             bootstyle="primary"
-        ).pack(fill=tk.X, pady=2)
+        )
+        self.pick_tips_btn.pack(fill=tk.X, pady=2)
 
-        ttk.Button(
+        self.return_tips_btn = ttk.Button(  
             tip_frame, text=" Return Tips",
             command=lambda: self.callback_return_tips(func_str="Return Tips"),
             bootstyle="primary"
-        ).pack(fill=tk.X, pady=2)
+        )
+        self.return_tips_btn.pack(fill=tk.X, pady=2)
 
-        ttk.Button(
+        self.replace_tips_btn = ttk.Button(  
             tip_frame, text=" Replace Tips",
             command=lambda: self.callback_replace_tips(func_str="Replace Tips"),
             bootstyle="primary"
-        ).pack(fill=tk.X, pady=2)
+        )
+        self.replace_tips_btn.pack(fill=tk.X, pady=2)
 
-        ttk.Button(
+        self.discard_tips_btn = ttk.Button(  
             tip_frame, text=" Discard Tips",
             command=lambda: self.callback_discard_tips(func_str="Discard Tips"),
             bootstyle="primary"
-        ).pack(fill=tk.X, pady=2)
+        )
+        self.discard_tips_btn.pack(fill=tk.X, pady=2)
 
         # Liquid Handling
         liquid_frame = ttk.Labelframe(parent_frame, text="Liquid Handling", padding=10)
         liquid_frame.pack(fill=tk.X, pady=5, padx=5)
 
-        ttk.Button(
+        self.add_medium_btn = ttk.Button(  
             liquid_frame, text=" Add Medium",
             command=lambda: self.callback_add_medium(func_str="Add Medium"),
             bootstyle="success"
-        ).pack(fill=tk.X, pady=2)
+        )
+        self.add_medium_btn.pack(fill=tk.X, pady=2)
 
-        ttk.Button(
+        self.remove_medium_btn = ttk.Button(  
             liquid_frame, text=" Remove Medium",
             command=lambda: self.callback_remove_medium(func_str="Remove Medium"),
             bootstyle="success"
-        ).pack(fill=tk.X, pady=2)
+        )
+        self.remove_medium_btn.pack(fill=tk.X, pady=2)
 
-        ttk.Button(
+        self.transfer_plate_btn = ttk.Button(  
             liquid_frame, text=" Transfer Plate to Plate",
             command=lambda: self.callback_transfer_plate_to_plate(func_str="Transfer Plate to Plate"),
             bootstyle="success"
-        ).pack(fill=tk.X, pady=2)
+        )
+        self.transfer_plate_btn.pack(fill=tk.X, pady=2)
 
         # Low-level Operations
-        lowlevel_frame = ttk.Labelframe(parent_frame, text="Low-Level", padding=10)
-        lowlevel_frame.pack(fill=tk.X, pady=5, padx=5)
+        low_level_frame = ttk.Labelframe(parent_frame, text="Low-Level", padding=10)
+        low_level_frame.pack(fill=tk.X, pady=5, padx=5)
 
-        ttk.Button(
-            lowlevel_frame, text=" Suck",
+        self.suck_btn = ttk.Button(
+            low_level_frame, text=" Suck",
             command=lambda: self.callback_suck(func_str="Suck"),
             bootstyle="info"
-        ).pack(fill=tk.X, pady=2)
+        )
+        self.suck_btn.pack(fill=tk.X, pady=2)
 
-        ttk.Button(
-            lowlevel_frame, text=" Spit",
+        self.spit_btn = ttk.Button(
+            low_level_frame, text=" Spit",
             command=lambda: self.callback_spit(func_str="Spit"),
             bootstyle="info"
-        ).pack(fill=tk.X, pady=2)
+        )
+        self.spit_btn.pack(fill=tk.X, pady=2)
 
         # System
         system_frame = ttk.Labelframe(parent_frame, text="System", padding=10)
         system_frame.pack(fill=tk.X, pady=5, padx=5)
 
-        ttk.Button(
+        self.home_btn = ttk.Button(
             system_frame, text=" Home",
             command=lambda: self.callback_home(func_str="Home"),
             bootstyle="secondary"
-        ).pack(fill=tk.X, pady=2)
+        )
+        self.home_btn.pack(fill=tk.X, pady=2)
 
-        ttk.Button(
+        self.move_x_btn = ttk.Button(
             system_frame, text=" Move X",
             command=lambda: self.callback_move_x(func_str="Move X"),
             bootstyle="secondary"
-        ).pack(fill=tk.X, pady=2)
+        )
+        self.move_x_btn.pack(fill=tk.X, pady=2)
 
-        ttk.Button(
+        self.move_y_btn = ttk.Button(
             system_frame, text=" Move Y",
             command=lambda: self.callback_move_y(func_str="Move Y"),
             bootstyle="secondary"
-        ).pack(fill=tk.X, pady=2)
+        )
+        self.move_y_btn.pack(fill=tk.X, pady=2)
 
-        ttk.Button(
+        self.move_z_btn = ttk.Button(
             system_frame, text=" Move Z",
             command=lambda: self.callback_move_z(func_str="Move Z"),
             bootstyle="secondary"
-        ).pack(fill=tk.X, pady=2)
+        )
+        self.move_z_btn.pack(fill=tk.X, pady=2)
+
+    def update_operation_button_states(self):
+        """Enable/disable operation buttons based on workflow state"""
+        if self.mode != "builder":
+            return
+
+        if self.workflow_state.has_tips:
+            # Tips attached - DISABLE pick, ENABLE everything else
+            self.pick_tips_btn.config(state='disabled')
+
+            self.return_tips_btn.config(state='normal')
+            self.replace_tips_btn.config(state='normal')
+            self.discard_tips_btn.config(state='normal')
+            self.add_medium_btn.config(state='normal')
+            self.remove_medium_btn.config(state='normal')
+            self.transfer_plate_btn.config(state='normal')
+            self.suck_btn.config(state='normal')
+            self.spit_btn.config(state='normal')
+
+        else:
+            # No tips - ENABLE pick, DISABLE everything else
+            self.pick_tips_btn.config(state='normal')
+            self.return_tips_btn.config(state='disabled')
+            self.replace_tips_btn.config(state='disabled')
+            self.discard_tips_btn.config(state='disabled')
+            self.add_medium_btn.config(state='disabled')
+            self.remove_medium_btn.config(state='disabled')
+            self.transfer_plate_btn.config(state='disabled')
+            self.suck_btn.config(state='disabled')
+            self.spit_btn.config(state='disabled')
 
     # ========== STAGING OPERATIONS (DIRECT MODE) ==========
 
@@ -490,25 +665,30 @@ class FunctionWindow:
         for widget in self.third_column_frame.winfo_children():
             widget.destroy()
 
-        if not self.current_func_list:
+        if not self.workflow or not self.workflow.operations:
             ttk.Label(
                 self.third_column_frame,
-                text="No operations in queue\n\nClick operation buttons to add",
+                text="No operations in queue\\n\\nClick operation buttons to add",
                 font=("Helvetica", 12),
                 foreground="gray"
             ).pack(pady=20)
             return
 
         # Display each operation
-        for idx, detail in enumerate(self.current_func_details):
+        for idx, operation in enumerate(self.workflow.operations):
             frame = ttk.Frame(self.third_column_frame)
             frame.grid(row=idx, column=0, sticky="ew", pady=2, padx=5)
             frame.columnconfigure(0, weight=1)
 
-            # Operation label
+            # Operation label - show type and brief description
+            op_text = f"{idx + 1}. {operation.operation_type.value}"
+            # Add key parameter info
+            if 'labware_id' in operation.parameters:
+                op_text += f": {operation.parameters['labware_id']}"
+
             label = ttk.Label(
                 frame,
-                text=f"{idx + 1}. {detail}",
+                text=op_text,
                 font=("Helvetica", 11)
             )
             label.grid(row=0, column=0, sticky="w")
@@ -516,12 +696,63 @@ class FunctionWindow:
             # Remove button
             remove_btn = ttk.Button(
                 frame,
-                text="trash",
+                text="🗑",
                 width=3,
-                command=lambda i=idx: self.remove_from_queue(i),
+                command=lambda i=idx: self.remove_operation_from_workflow(i),
                 bootstyle="danger-outline"
             )
-            remove_btn.grid(row=0, column=1, sticky="e", padx=5)
+            remove_btn.grid(row=0, column=1, sticky="e", padx=2)
+
+            # Info button to show full details
+            info_btn = ttk.Button(
+                frame,
+                text="ℹ",
+                width=3,
+                command=lambda op=operation: self.show_operation_details(op),
+                bootstyle="info-outline"
+            )
+            info_btn.grid(row=0, column=2, sticky="e", padx=2)
+        self.update_operation_button_states()
+
+    def remove_operation_from_workflow(self, index: int):
+        """Remove operation and rebuild virtual state"""
+        if 0 <= index < len(self.workflow.operations):
+            self.workflow.remove_operation(index)
+
+            # Rebuild virtual state from scratch
+            self.workflow_state.reset()
+            for op in self.workflow.operations:
+                self.workflow_state.apply_operation(op)
+
+            self.display_workflow_queue()
+
+    def show_operation_details(self, operation: Operation):
+        """Show detailed information about an operation"""
+        details_window = ttk.Toplevel(self.window_build_func)
+        details_window.title(f"Operation Details")
+        details_window.geometry("500x400")
+        details_window.transient(self.window_build_func)
+
+        # Details text
+        text = tk.Text(details_window, wrap=tk.WORD, font=("Courier", 10))
+        text.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        # Format operation details
+        details = f"Operation Type: {operation.operation_type.value}\n"
+        details += f"Description: {operation.description}\n"
+        details += "Parameters:\n"
+        for key, value in operation.parameters.items():
+            details += f"  {key}: {value}\n"
+
+        text.insert(1.0, details)
+        text.config(state='disabled')
+
+        # Close button
+        ttk.Button(
+            details_window,
+            text="Close",
+            command=details_window.destroy
+        ).pack(pady=10)
 
     def remove_from_queue(self, index: int):
         """Remove operation from workflow queue"""
@@ -541,34 +772,29 @@ class FunctionWindow:
             self.display_workflow_queue()
 
     def callback_save_button(self):
-        """Save workflow"""
-        if not self.current_func_list:
+        """Save workflow to disk"""
+        if not self.workflow or not self.workflow.operations:
             messagebox.showwarning("Empty Workflow", "Please add operations to the workflow first")
             return
 
+        # Get name from entry
         name = self.entry_name.get().strip()
         if not name:
             name = f"Workflow_{uuid.uuid4().hex[:8]}"
 
-        # Ensure unique name
-        i = 1
-        original_name = name
-        while name in self.custom_funcs_dict:
-            name = f"{original_name}_{i}"
-            i += 1
+        # Update workflow name
+        self.workflow.name = name
 
-        # Save workflow
-        self.custom_funcs_dict[name] = self.current_func_list.copy()
+        # Save to disk
+        self.save_workflow_to_disk(self.workflow)
 
-        # Clear queue
-        self.current_func_list = []
-        self.current_func_details = []
-        self.display_workflow_queue()
-        self.entry_name.delete(0, tk.END)
+        # Update in-memory cache
+        self.saved_workflows[self.workflow.name] = self.workflow
 
         messagebox.showinfo(
             "Saved",
-            f"Workflow '{name}' saved with {len(self.custom_funcs_dict[name])} operations!"
+            f"Workflow '{self.workflow.name}' saved with {len(self.workflow.operations)} operations!\n"
+            f"File: saved_workflows/{self.workflow.name.replace(' ', '_')}_{self.workflow.workflow_id[:8]}.json"
         )
 
     def open_workflow_builder(self):
@@ -736,38 +962,116 @@ class FunctionWindow:
     def get_wells_list_from_labware(
             self,
             labware_obj: Labware,
-            source: bool = False
+            source: bool = False,
+            workflow_state: WorkflowState = None
     ) -> list[tuple[int, int]]:
-        """Get available wells from labware based on type and context"""
-        if isinstance(labware_obj, Plate):
-            rows, columns = labware_obj._rows, labware_obj._columns
-            wells_list = [(r, c) for r in range(rows) for c in range(columns)]
+        """
+        Get available wells from labware based on type and context.
 
-            if source:
-                # Filter to wells with content
-                wells_list = [
-                    (r, c) for (r, c) in wells_list
-                    if labware_obj.get_well_at(c, r).get_total_volume() > 0
-                ]
+        Parameters
+        ----------
+        labware_obj : Labware
+            The labware to get wells from
+        source : bool
+            True if selecting source positions (occupied/filled)
+            False if selecting destination positions (empty/available)
+        workflow_state : WorkflowState, optional
+            If provided, use virtual state instead of actual labware state
+
+        Returns
+        -------
+        list[tuple[int, int]]
+            List of (row, col) positions that are available for selection
+        """
+        use_virtual = workflow_state is not None
+
+        if isinstance(labware_obj, Plate):
+            if use_virtual:
+                # Use virtual state
+                labware_state = workflow_state.get_labware_state(labware_obj.labware_id)
+                if labware_state and labware_state['type'] == 'plate':
+                    wells_list = []
+                    for well_id, well_state in labware_state['wells'].items():
+                        row = well_state['row']
+                        col = well_state['column']
+
+                        if source:
+                            # Source: need wells with volume > 0
+                            total_volume = sum(well_state['content'].values())
+                            if total_volume > 0:
+                                wells_list.append((row, col))
+                        else:
+                            # Destination: all wells available (volume check happens elsewhere)
+                            wells_list.append((row, col))
+                else:
+                    wells_list = []
+            else:
+                # Use actual state
+                rows, columns = labware_obj._rows, labware_obj._columns
+                wells_list = []
+
+                for r in range(rows):
+                    for c in range(columns):
+                        if source:
+                            # Source: check if well has content
+                            well = labware_obj.get_well_at(c, r)
+                            if well and well.get_total_volume() > 0:
+                                wells_list.append((r, c))
+                        else:
+                            # Destination: all wells available
+                            wells_list.append((r, c))
 
         elif isinstance(labware_obj, ReservoirHolder):
-            # Show ALL reservoirs, let volume constraints handle availability
-            wells_list = []
-            for res in labware_obj.get_reservoirs():
-                if res is not None:
-                    wells_list.append((res.row, res.column))
+            if use_virtual:
+                # Use virtual state
+                labware_state = workflow_state.get_labware_state(labware_obj.labware_id)
+                if labware_state and labware_state['type'] == 'reservoir_holder':
+                    wells_list = []
+                    for res_id, res_state in labware_state['reservoirs'].items():
+                        row = res_state['row']
+                        col = res_state['column']
+                        wells_list.append((row, col))
+                else:
+                    wells_list = []
+            else:
+                # Use actual state - show all reservoirs
+                wells_list = []
+                for res in labware_obj.get_reservoirs():
+                    if res is not None:
+                        wells_list.append((res.row, res.column))
 
         elif isinstance(labware_obj, PipetteHolder):
-            if source:
-                wells_list = [
-                    (holder.row, holder.column)
-                    for holder in labware_obj.get_occupied_holders()
-                ]
+            if use_virtual:
+                # Use virtual state
+                labware_state = workflow_state.get_labware_state(labware_obj.labware_id)
+                if labware_state and labware_state['type'] == 'pipette_holder':
+                    wells_list = []
+                    for tip_id, tip_state in labware_state['tips'].items():
+                        row = tip_state['row']
+                        col = tip_state['column']
+
+                        if source:
+                            if tip_state['is_occupied']:
+                                wells_list.append((row, col))
+                        else:
+                            if not tip_state['is_occupied']:
+                                wells_list.append((row, col))
+                else:
+                    wells_list = []
             else:
-                wells_list = [
-                    (holder.row, holder.column)
-                    for holder in labware_obj.get_available_holders()
-                ]
+                # Use actual state
+                if source:
+                    # Source: get occupied holders (tips present)
+                    wells_list = [
+                        (holder.row, holder.column)
+                        for holder in labware_obj.get_occupied_holders()
+                    ]
+                else:
+                    # Destination: get available holders (no tips)
+                    wells_list = [
+                        (holder.row, holder.column)
+                        for holder in labware_obj.get_available_holders()
+                    ]
         else:
             raise TypeError(f"Unsupported labware type: {type(labware_obj)}")
 
@@ -793,31 +1097,33 @@ class FunctionWindow:
             )
 
         elif part == "second" and labware_obj is not None:
+            # Get virtual state if in builder mode
+            wf_state = self.workflow_state if self.mode == "builder" else None
+
             window = WellWindow(
                 rows=labware_obj.holders_across_y,
                 columns=labware_obj.holders_across_x,
                 labware_id=labware_obj.labware_id,
-                max_selected=None,
+                max_selected=1 if self.mode == "builder" else None, # only way to allow tracking in the builder mode
                 master=self.get_master_window(),
                 multichannel_mode=(self.channels == 8),
                 title=f"Pick tips from: {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True)
+                wells_list=self.get_wells_list_from_labware(
+                    labware_obj=labware_obj,
+                    source=True,
+                    workflow_state=wf_state  # Pass virtual state
+                )
             )
             self.get_master_window().wait_window(window.get_root())
 
             start_positions = window.get_start_positions()
-            if not start_positions:
+            if not start_positions or not window.confirmed:
                 return
 
             # Convert from (row, col) to (col, row) format for pipettor
             list_col_row = [(c, r) for r, c in start_positions]
 
-            # Create function
-            func = lambda lw=labware_obj, lr=list_col_row: self.pipettor.pick_tips(
-                pipette_holder=lw, list_col_row=lr
-            )
-
-            # Create details
+            # Create details string
             details = f"Labware: {labware_obj.labware_id}\n"
             if self.channels == 8:
                 details += f"Multichannel groups: {len(list_col_row)}\n"
@@ -830,9 +1136,29 @@ class FunctionWindow:
                 details += f"... (+{len(list_col_row) - 5} more)"
 
             if self.mode == "direct":
+                # Direct mode: create lambda for immediate execution
+                func = lambda lw=labware_obj, lr=list_col_row: self.pipettor.pick_tips(
+                    pipette_holder=lw, list_col_row=lr
+                )
                 self.stage_operation(func, func_str, details)
+
             elif self.mode == "builder":
-                self.add_current_function(func_str=func_str, func=func, labware_id=labware_obj.labware_id)
+                # Builder mode: create Operation object
+                operation = OperationBuilder.build_pick_tips(
+                    labware_id=labware_obj.labware_id,
+                    positions=list_col_row,
+                    channels=self.channels
+                )
+
+                # Add to workflow
+                self.workflow.add_operation(operation)
+
+                # Update virtual state
+                self.workflow_state.apply_operation(operation)
+
+                # Refresh display
+                self.display_workflow_queue()
+                self.clear_grid(self.second_column_frame)
 
     def callback_return_tips(
             self,
@@ -854,30 +1180,31 @@ class FunctionWindow:
             )
 
         elif part == "second" and labware_obj is not None:
+            # Get virtual state if in builder mode
+            wf_state = self.workflow_state if self.mode == "builder" else None
+
             window = WellWindow(
                 rows=labware_obj.holders_across_y,
                 columns=labware_obj.holders_across_x,
                 labware_id=labware_obj.labware_id,
-                max_selected=None,
+                max_selected=1 if self.mode == "builder" else None,  # ✅ Add max_selected
                 master=self.get_master_window(),
                 multichannel_mode=(self.channels == 8),
                 title=f"Return tips to: {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False)
+                wells_list=self.get_wells_list_from_labware(
+                    labware_obj=labware_obj,
+                    source=False,  # Empty positions
+                    workflow_state=wf_state  # ✅ Pass virtual state
+                )
             )
             self.get_master_window().wait_window(window.get_root())
 
-            # Get start positions (works for both modes!)
             start_positions = window.get_start_positions()
-            if not start_positions:
+            if not start_positions or not window.confirmed:  # ✅ Check confirmed
                 return
 
             # Convert from (row, col) to (col, row) format for pipettor
             list_col_row = [(c, r) for r, c in start_positions]
-
-            # Create function
-            func = lambda lw=labware_obj, lr=list_col_row: self.pipettor.return_tips(
-                pipette_holder=lw, list_col_row=lr
-            )
 
             # Create details
             details = f"Labware: {labware_obj.labware_id}\n"
@@ -892,9 +1219,29 @@ class FunctionWindow:
                 details += f"... (+{len(list_col_row) - 5} more)"
 
             if self.mode == "direct":
+                # Direct mode: lambda
+                func = lambda lw=labware_obj, lr=list_col_row: self.pipettor.return_tips(
+                    pipette_holder=lw, list_col_row=lr
+                )
                 self.stage_operation(func, func_str, details)
+
             elif self.mode == "builder":
-                self.add_current_function(func_str=func_str, func=func, labware_id=labware_obj.labware_id)
+                # ✅ Builder mode: Operation object (NOT lambda!)
+                operation = OperationBuilder.build_return_tips(
+                    labware_id=labware_obj.labware_id,
+                    positions=list_col_row,
+                    channels=self.channels
+                )
+
+                # Add to workflow
+                self.workflow.add_operation(operation)
+
+                # Update virtual state
+                self.workflow_state.apply_operation(operation)
+
+                # Refresh display
+                self.display_workflow_queue()
+                self.clear_grid(self.second_column_frame)
 
     def callback_replace_tips(
             self,
@@ -950,7 +1297,7 @@ class FunctionWindow:
             )
             self.get_master_window().wait_window(window_pick.get_root())
 
-            #Get start positions for pick
+            # Get start positions for pick
             start_positions_pick = window_pick.get_start_positions()
             if not start_positions_pick:
                 return

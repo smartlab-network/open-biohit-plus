@@ -40,6 +40,7 @@ class WellWindow:
                  max_selected: int = None, multichannel_mode: bool = False,
                  volume_constraints: dict[tuple[int, int], dict] = None):
 
+        self.confirmed = False
         # --- Window setup ---
         if master:
             # Create as a dialog
@@ -573,5 +574,6 @@ class WellWindow:
 
     def callback_save(self):
         """Save and close the window."""
+        self.confirmed = True
         self.safe_var.set(True)
         self.__root.destroy()

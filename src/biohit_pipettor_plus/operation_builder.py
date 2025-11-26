@@ -1,0 +1,218 @@
+"""
+Operation builders for FunctionWindow.
+
+These helper functions convert UI inputs into Operation objects,
+separating the UI logic from operation creation logic.
+"""
+
+from workflow import Operation, OperationType
+from labware import Labware
+
+
+class OperationBuilder:
+    """Helper class to build Operation objects from UI inputs"""
+
+    @staticmethod
+    def build_pick_tips(labware_id: str, positions: list[tuple[int, int]], channels: int) -> Operation:
+        """
+        Build a PICK_TIPS operation.
+
+        Parameters
+        ----------
+        labware_id : str
+            ID of the tip holder
+        positions : list[tuple[int, int]]
+            List of (col, row) positions
+        channels : int
+            Number of channels (1 or 8)
+
+        Returns
+        -------
+        Operation
+        """
+        description = f"Pick tips from {labware_id}"
+        if channels == 8:
+            description += f" ({len(positions)} multichannel groups)"
+        else:
+            description += f" ({len(positions)} tips)"
+
+        return Operation(
+            operation_type=OperationType.PICK_TIPS,
+            parameters={
+                'labware_id': labware_id,
+                'positions': positions
+            },
+            description=description
+        )
+
+    @staticmethod
+    def build_return_tips(labware_id: str, positions: list[tuple[int, int]], channels: int) -> Operation:
+        """Build a RETURN_TIPS operation"""
+        description = f"Return tips to {labware_id}"
+        if channels == 8:
+            description += f" ({len(positions)} multichannel groups)"
+        else:
+            description += f" ({len(positions)} tips)"
+
+        return Operation(
+            operation_type=OperationType.RETURN_TIPS,
+            parameters={
+                'labware_id': labware_id,
+                'positions': positions
+            },
+            description=description
+        )
+
+    @staticmethod
+    def build_replace_tips(
+            return_labware_id: str,
+            return_positions: list[tuple[int, int]],
+            pick_labware_id: str,
+            pick_positions: list[tuple[int, int]],
+            channels: int
+    ) -> Operation:
+        """Build a REPLACE_TIPS operation"""
+        description = f"Replace tips: {return_labware_id} → {pick_labware_id}"
+
+        return Operation(
+            operation_type=OperationType.REPLACE_TIPS,
+            parameters={
+                'return_labware_id': return_labware_id,
+                'return_positions': return_positions,
+                'pick_labware_id': pick_labware_id,
+                'pick_positions': pick_positions
+            },
+            description=description
+        )
+
+    @staticmethod
+    def build_discard_tips(labware_id: str, positions: list[tuple[int, int]] = None) -> Operation:
+        """Build a DISCARD_TIPS operation"""
+        description = f"Discard tips to {labware_id}"
+
+        params = {'labware_id': labware_id}
+        if positions:
+            params['positions'] = positions
+
+        return Operation(
+            operation_type=OperationType.DISCARD_TIPS,
+            parameters=params,
+            description=description
+        )
+
+    @staticmethod
+    def build_add_medium(
+            source_labware_id: str,
+            source_positions: list,
+            dest_labware_id: str,
+            dest_positions: list[tuple[int, int]],
+            volume: float,
+            channels: int,
+            **optional_params
+    ) -> Operation:
+        """Build an ADD_MEDIUM operation"""
+        total_wells = len(dest_positions) * (8 if channels == 8 else 1)
+        total_volume = volume * total_wells
+
+        description = (
+            f"Add medium: {source_labware_id} → {dest_labware_id} "
+            f"({volume}µL/well, {total_wells} wells, {total_volume}µL total)"
+        )
+
+        params = {
+            'source_labware_id': source_labware_id,
+            'source_positions': source_positions,
+            'dest_labware_id': dest_labware_id,
+            'dest_positions': dest_positions,
+            'volume': volume,
+            'channels': channels
+        }
+
+        # Add optional parameters if provided
+        for key in ['x_speed', 'y_speed', 'z_speed', 'aspirate_speed', 'dispense_speed']:
+            if key in optional_params and optional_params[key] is not None:
+                params[key] = optional_params[key]
+
+        return Operation(
+            operation_type=OperationType.ADD_MEDIUM,
+            parameters=params,
+            description=description
+        )
+
+    @staticmethod
+    def build_remove_medium(
+            source_labware_id: str,
+            source_positions: list[tuple[int, int]],
+            dest_labware_id: str,
+            dest_positions: list,
+            volume: float,
+            channels: int,
+            **optional_params
+    ) -> Operation:
+        """Build a REMOVE_MEDIUM operation"""
+        total_wells = len(source_positions) * (8 if channels == 8 else 1)
+        total_volume = volume * total_wells
+
+        description = (
+            f"Remove medium: {source_labware_id} → {dest_labware_id} "
+            f"({volume}µL/well, {total_wells} wells, {total_volume}µL total)"
+        )
+
+        params = {
+            'source_labware_id': source_labware_id,
+            'source_positions': source_positions,
+            'dest_labware_id': dest_labware_id,
+            'dest_positions': dest_positions,
+            'volume': volume,
+            'channels': channels
+        }
+
+        # Add optional parameters if provided
+        for key in ['x_speed', 'y_speed', 'z_speed', 'aspirate_speed', 'dispense_speed']:
+            if key in optional_params and optional_params[key] is not None:
+                params[key] = optional_params[key]
+
+        return Operation(
+            operation_type=OperationType.REMOVE_MEDIUM,
+            parameters=params,
+            description=description
+        )
+
+    @staticmethod
+    def build_transfer_plate_to_plate(
+            source_labware_id: str,
+            source_positions: list[tuple[int, int]],
+            dest_labware_id: str,
+            dest_positions: list[tuple[int, int]],
+            volume: float,
+            channels: int,
+            **optional_params
+    ) -> Operation:
+        """Build a TRANSFER_PLATE_TO_PLATE operation"""
+        total_wells = len(source_positions) * (8 if channels == 8 else 1)
+        total_volume = volume * total_wells
+
+        description = (
+            f"Transfer: {source_labware_id} → {dest_labware_id} "
+            f"({volume}µL/well, {total_wells} wells, {total_volume}µL total)"
+        )
+
+        params = {
+            'source_labware_id': source_labware_id,
+            'source_positions': source_positions,
+            'dest_labware_id': dest_labware_id,
+            'dest_positions': dest_positions,
+            'volume': volume,
+            'channels': channels
+        }
+
+        # Add optional parameters if provided
+        for key in ['x_speed', 'y_speed', 'z_speed', 'aspirate_speed', 'dispense_speed']:
+            if key in optional_params and optional_params[key] is not None:
+                params[key] = optional_params[key]
+
+        return Operation(
+            operation_type=OperationType.TRANSFER_PLATE_TO_PLATE,
+            parameters=params,
+            description=description
+        )
