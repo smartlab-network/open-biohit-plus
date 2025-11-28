@@ -1,8 +1,7 @@
 """
 Workflow system for laboratory automation.
 
-This module provides a serializable, inspectable workflow system that replaces
-the previous lambda-based approach. It enables:
+This module provides a serializable, inspectable workflow system. It enables:
 - JSON persistence of workflows
 - Virtual deck state tracking during workflow building
 - Proper execution with error handling
@@ -144,8 +143,8 @@ class WorkflowState:
                 for (col, row), holder in top_lw.get_individual_holders().items():
                     tip_states[(col, row)] = {
                         'is_occupied': holder.is_occupied,
-                        'row': row,
-                        'column': col
+                        'column': col,
+                        'row': row
                     }
                 state[slot_id] = {
                     'type': 'pipette_holder',
@@ -160,8 +159,8 @@ class WorkflowState:
                     res_key = (res.column, res.row)
                     reservoir_states[res_key] = {
                         'content': copy.deepcopy(res.content),
+                        'column': res.column,
                         'row': res.row,
-                        'column': res.column
                     }
                 state[slot_id] = {
                     'type': 'reservoir_holder',
@@ -210,51 +209,85 @@ class WorkflowState:
 
     def _apply_pick_tips(self, params: dict) -> None:
         """Apply pick tips operation to virtual state"""
+
+        if self.has_tips:
+            raise ValueError(
+                "Cannot pick tips: pipettor already has tips attached. "
+            )
+
         labware_id = params['labware_id']
         positions = params['positions']
+        channels = params.get('channels')
 
         for slot_id, labware_state in self.virtual_deck_state.items():
             if labware_state['labware_id'] == labware_id:
                 if labware_state['type'] == 'pipette_holder':
-                    # Mark tips as not occupied (picked up)
-                    for pos in positions:
+
+                    # Mark tips as not occupied
+                    all_positions = []
+                    for col, row in positions:
+                        for i in range(channels):
+                            all_positions.append((col, row + i))
+
+                    for pos in all_positions:
                         if pos in labware_state['tips']:
                             labware_state['tips'][pos]['is_occupied'] = False
 
                     self.has_tips = True
+
                 break
 
     def _apply_return_tips(self, params: dict) -> None:
         """Apply return tips operation to virtual state"""
+
+        if not self.has_tips:
+            raise ValueError("Cannot return tips: pipettor has no tips attached")
+
         labware_id = params['labware_id']
         positions = params['positions']
+        channels = params.get('channels')
 
         for slot_id, labware_state in self.virtual_deck_state.items():
             if labware_state['labware_id'] == labware_id:
                 if labware_state['type'] == 'pipette_holder':
+
                     # Mark tips as occupied (returned)
-                    for pos in positions:
+                    all_positions = []
+                    for col, row in positions:
+                        for i in range(channels):
+                            all_positions.append((col, row + i))
+
+                    for pos in all_positions:
                         if pos in labware_state['tips']:
                             labware_state['tips'][pos]['is_occupied'] = True
 
                     self.has_tips = False
+
                 break
 
     def _apply_replace_tips(self, params: dict) -> None:
         """Apply replace tips operation to virtual state"""
+
+        if not self.has_tips:
+            raise ValueError("Cannot replace tips: pipettor has no tips attached")
         # This is pick + return in sequence
         self._apply_return_tips({
             'labware_id': params['return_labware_id'],
-            'positions': params['return_positions']
+            'positions': params['return_positions'],
+            'channels': params['channels'],
         })
         self._apply_pick_tips({
             'labware_id': params['pick_labware_id'],
-            'positions': params['pick_positions']
+            'positions': params['pick_positions'],
+            'channels': params['channels']
         })
 
     def _apply_discard_tips(self, params: dict) -> None:
         """Apply discard tips operation to virtual state"""
         # Tips are removed from pipettor
+
+        if not self.has_tips:
+            raise ValueError("Cannot discard tips: pipettor has no tips attached")
         self.has_tips = False
 
     def _apply_add_medium(self, params: dict) -> None:
@@ -397,6 +430,7 @@ class Workflow:
     def add_operation(self, operation: Operation) -> None:
         """Add an operation to the workflow"""
         self.operations.append(operation)
+        print(operation)
 
     def remove_operation(self, index: int) -> None:
         """Remove an operation by index"""

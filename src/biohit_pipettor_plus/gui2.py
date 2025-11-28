@@ -842,7 +842,7 @@ class ConfigureReservoirTemplateDialog(tk.Toplevel):
         ttk.Entry(placement_frame, textvariable=self.hook_ids_var).grid(row=1, column=0, columnspan=2, sticky='ew',
                                                                         padx=5, pady=(0, 10))
 
-        ttk.Label(placement_frame, text="* If hook id is provided, the reservoir is only added to the specified hook.\n Otherwise, copies of reservoir populate the entire reservoirHolder * \n").grid(row=2, column=0, columnspan=2,
+        ttk.Label(placement_frame, text="* If hook id is provided, the reservoir is only added to the specified hook.\n Otherwise, copies of reservoir populate the entire reservoirHolder. \n This can be changed later on in edit when unplaced  * \n").grid(row=2, column=0, columnspan=2,
                                                                                sticky='w', padx=5)
         ttk.Label(placement_frame,
                   text="** Hook Numbering: Right to left, top to bottom.\n" \
@@ -1005,7 +1005,7 @@ class EditWellContentDialog(tk.Toplevel):
 
     def clear_all(self):
         """Clear all content"""
-        if messagebox.askyesno("Confirm", "Clear all content from this well?"):
+        if messagebox.askyesno("Confirm", "Clear all content from this well?", default="yes"):
             self.well.clear_content()
             messagebox.showinfo("Success", "Content cleared")
 
@@ -1119,7 +1119,7 @@ class EditReservoirContentDialog(tk.Toplevel):
 
     def clear_all(self):
         """Clear all content"""
-        if messagebox.askyesno("Confirm", "Clear all content from this reservoir?"):
+        if messagebox.askyesno("Confirm", "Clear all content from this reservoir?", default="yes"):
             self.reservoir.clear_content()
             messagebox.showinfo("Success", "Content cleared")
 
@@ -3558,7 +3558,7 @@ class DeckGUI:
         self.multichannel_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(
             multichannel_frame,
-            text="Multichannel (8 tips)",
+            text="Multichannel (consecutive tips)",
             variable=self.multichannel_var
         ).pack(side=tk.LEFT)
 
@@ -3614,19 +3614,19 @@ class DeckGUI:
 
         # X Speed
         ttk.Label(params_grid, text="X Speed:").grid(row=1, column=0, sticky='w', pady=3)
-        self.x_speed_var = tk.StringVar(value="")
+        self.x_speed_var = tk.StringVar(value="7")
         ttk.Entry(params_grid, textvariable=self.x_speed_var, width=8).grid(row=1, column=1, sticky='ew', pady=3,
                                                                             padx=(5, 10))
 
         # Y Speed
         ttk.Label(params_grid, text="Y Speed:").grid(row=1, column=2, sticky='w', pady=3, padx=(10, 0))
-        self.y_speed_var = tk.StringVar(value="")
+        self.y_speed_var = tk.StringVar(value="7")
         ttk.Entry(params_grid, textvariable=self.y_speed_var, width=8).grid(row=1, column=3, sticky='ew', pady=3,
                                                                             padx=(5, 0))
 
         # Z Speed
         ttk.Label(params_grid, text="Z Speed:").grid(row=2, column=0, sticky='w', pady=3)
-        self.z_speed_var = tk.StringVar(value="")
+        self.z_speed_var = tk.StringVar(value="7")
         ttk.Entry(params_grid, textvariable=self.z_speed_var, width=8).grid(row=2, column=1, sticky='ew', pady=3,
                                                                             padx=(5, 10))
 
@@ -3642,13 +3642,13 @@ class DeckGUI:
 
         # Aspirate Speed
         ttk.Label(params_grid, text="Aspirate:").grid(row=5, column=0, sticky='w', pady=3)
-        self.aspirate_speed_var = tk.StringVar(value="")
+        self.aspirate_speed_var = tk.StringVar(value="1")
         ttk.Entry(params_grid, textvariable=self.aspirate_speed_var, width=8).grid(row=5, column=1, sticky='ew', pady=3,
                                                                                    padx=(5, 10))
 
         # Dispense Speed
         ttk.Label(params_grid, text="Dispense:").grid(row=5, column=2, sticky='w', pady=3, padx=(10, 0))
-        self.dispense_speed_var = tk.StringVar(value="")
+        self.dispense_speed_var = tk.StringVar(value="1")
         ttk.Entry(params_grid, textvariable=self.dispense_speed_var, width=8).grid(row=5, column=3, sticky='ew', pady=3,
                                                                                    padx=(5, 0))
 
@@ -3658,7 +3658,7 @@ class DeckGUI:
         # Tip Length Section
         ttk.Label(
             params_grid,
-            text="Tip Length (mm, 200 & 1000µL tip already defined):",
+            text="Tip Length (mm, Leave blank if unsure):",
             font=('Arial', 10, 'bold')
         ).grid(row=7, column=0, columnspan=4, sticky='w', pady=(0, 5))
 
@@ -3766,7 +3766,7 @@ class DeckGUI:
                 self.pipettor.dispense_speed = dispense_speed
 
             # Build status message
-            mode = "Multichannel (8 tips)" if multichannel else "Single channel"
+            mode = "Multichannel (consecutive tips)" if multichannel else "Single channel"
             tip_info = f"{tip_volume}µL tips"
             tip_length_info = f", tip length: {tip_length}mm" if tip_length else ""
             hw_status = "initialized" if initialize else "not initialized"
@@ -5086,11 +5086,7 @@ class DeckGUI:
                 # Load deck
                 if 'deck' in data:
                     self.deck = Serializable.from_dict(data['deck'])
-                else:
-                    # Old format - just deck
-                    self.deck = Serializable.from_dict(data)
 
-                #print(data)
                 # Load unplaced labware if present
                 self.unplaced_labware = []
                 if 'unplaced_labware' in data:
@@ -5131,10 +5127,39 @@ class DeckGUI:
         self.root.mainloop()
 
 # Main entry point
+"""
 if __name__ == "__main__":
     # Create a sample deck for testing
     deck = Deck(range_x=(0, 265), range_y=(0, 244), deck_id="test_deck", range_z=141)
 
     # Run GUI
     gui = DeckGUI(deck)
+    gui.run()
+"""
+
+if __name__ == "__main__":
+    import json
+    import os
+    from serializable import Serializable
+
+    # Load deck from Downloads
+    deck_file = os.path.expanduser("~/Downloads/deck1.json")
+
+    with open(deck_file, "r") as f:
+        data = json.load(f)
+
+    deck = Serializable.from_dict(data['deck'])
+
+    # Initialize pipettor as multichannel with 1000µL capacity
+    pipettor = PipettorPlus(
+        tip_volume=1000, multichannel=True, deck=deck,
+    )
+
+    # Run GUI
+    gui = DeckGUI(deck)
+    gui.pipettor = pipettor
+
+    if hasattr(gui, 'rebuild_operations_tab'):
+        gui.rebuild_operations_tab()
+
     gui.run()

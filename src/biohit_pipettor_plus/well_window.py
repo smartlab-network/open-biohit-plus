@@ -2,6 +2,7 @@ import ttkbootstrap as ttk
 import tkinter as tk
 import string
 from collections import deque
+from labware import Pipettors_in_Multi
 
 
 class WellWindow:
@@ -97,9 +98,7 @@ class WellWindow:
 
         self.buttons = [[None for _ in range(self.columns)] for _ in range(self.rows)]
         self.multichannel_mode = multichannel_mode
-
-        if self.multichannel_mode:
-            self.channels = 8
+        self.channels = Pipettors_in_Multi if self.multichannel_mode else 1
 
         self.max_selected = max_selected if max_selected else self.rows * self.columns
 
@@ -222,11 +221,11 @@ class WellWindow:
                 if well_available and not has_volume_constraint:
                     # Well is available AND passes volume constraints
                     if self.multichannel_mode:
-                        # Check if valid starting position (has 8 consecutive rows below)
-                        if r + 8 <= self.rows:
-                            # Check all 8 positions are available AND pass constraints
-                            all_available = all((r + i, c) in self.wells_list for i in range(8))
-                            all_pass_constraints = all((r + i, c) not in self.volume_constraints for i in range(8))
+                        # Check if valid starting position (has enough consecutive rows below)
+                        if r + self.channels <= self.rows:
+                            # Check all  positions are available AND pass constraints
+                            all_available = all((r + i, c) in self.wells_list for i in range(self.channels))
+                            all_pass_constraints = all((r + i, c) not in self.volume_constraints for i in range(self.channels))
                             if all_available and all_pass_constraints:
                                 # VALID STARTING POSITION - make clickable
                                 state = "normal"
@@ -238,7 +237,7 @@ class WellWindow:
                                 style = "light"
                                 command = None
                         else:
-                            # Not enough room for 8 tips below
+                            # Not enough room for consecutive tips below
                             state = "disabled"
                             style = "light"
                             command = None
@@ -388,8 +387,8 @@ class WellWindow:
         self.buttons[row][col].configure(bootstyle="light")
 
     def show_multichannel_preview(self, row: int, col: int):
-        """Highlight all 8 wells that will be selected with preview colors."""
-        for i in range(8):
+        """Highlight all consecutive wells that will be selected with preview colors."""
+        for i in range(self.channels):
             r = row + i
             if r < self.rows and self.buttons[r][col] is not None:
                 if not self.well_state[r][col]:
@@ -433,9 +432,9 @@ class WellWindow:
 
         if self.multichannel_mode:
 
-            # --- Helper for clearing an 8-well block ---
+            # --- Helper for clearing a well block ---
             def clear_block(start_row, col):
-                for i in range(8):
+                for i in range(self.channels):
                     r = start_row + i
                     if r < self.rows:
                         # Clear internal state
@@ -450,13 +449,13 @@ class WellWindow:
                                 self.buttons[r][col].configure(bootstyle="light")
                             # Restore the start row to its original/enabled color
                             else:
-                                is_valid = (start_row, col) in self.wells_list and start_row + 8 <= self.rows and \
-                                           all((start_row + j, col) in self.wells_list for j in range(8))
+                                is_valid = (start_row, col) in self.wells_list and start_row + self.channels <= self.rows and \
+                                           all((start_row + j, col) in self.wells_list for j in range(self.channels))
                                 self.buttons[start_row][col].configure(bootstyle="light" if is_valid else "secondary")
 
             # ✅ STEP 1: Check if this is a valid starting position
-            is_valid_start_pos = (row + 8 <= self.rows and
-                                  all((row + i, column) in self.wells_list for i in range(8)))
+            is_valid_start_pos = (row + self.channels <= self.rows and
+                                  all((row + i, column) in self.wells_list for i in range(self.channels)))
 
             if not is_valid_start_pos:
                 # Not a valid start position - ignore click
@@ -466,12 +465,12 @@ class WellWindow:
             is_this_block_selected = self.well_state[row][column]
             is_full_selection_at_start = all(
                 self.well_state[row + i][column]
-                for i in range(8)
+                for i in range(self.channels)
                 if row + i < self.rows
             )
 
             if is_this_block_selected and is_full_selection_at_start:
-                # ✅ DESELECT this specific 8-tip selection
+                # ✅ DESELECT this specific multi-tip selection
                 clear_block(row, column)
 
             else:
@@ -489,22 +488,22 @@ class WellWindow:
                     is_start = self.well_state[r][column] and \
                                (r == 0 or not self.well_state[r - 1][column])
 
-                    is_valid_8_tip = (r + 8 <= self.rows and
-                                      all((r + i, column) in self.wells_list for i in range(8)))
+                    is_valid_multi_tip = (r + self.channels <= self.rows and
+                                      all((r + i, column) in self.wells_list for i in range(self.channels)))
 
-                    if is_start and is_valid_8_tip:
+                    if is_start and is_valid_multi_tip:
                         existing_start_rows.append(r)
 
-                new_selection_rows = set(range(row, min(row + 8, self.rows)))
+                new_selection_rows = set(range(row, min(row + self.channels, self.rows)))
 
                 for existing_start in existing_start_rows:
-                    existing_rows = set(range(existing_start, min(existing_start + 8, self.rows)))
+                    existing_rows = set(range(existing_start, min(existing_start + self.channels, self.rows)))
 
                     if new_selection_rows & existing_rows:
                         clear_block(existing_start, column)
 
                 # ✅ STEP 6: Add new selection (internal state)
-                for i in range(8):
+                for i in range(self.channels):
                     r = row + i
                     if r < self.rows:
                         self.well_state[r][column] = True
@@ -515,7 +514,7 @@ class WellWindow:
                 if self.buttons[row][column] is not None:
                     self.buttons[row][column].configure(bootstyle="success")
 
-                for i in range(1, 8):
+                for i in range(1, self.channels):
                     r = row + i
                     if r < self.rows and self.buttons[r][column] is not None:
                         self.buttons[r][column].configure(bootstyle="light")

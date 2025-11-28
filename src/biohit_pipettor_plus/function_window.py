@@ -53,21 +53,14 @@ class FunctionWindow:
         self.pipettor = pipettor
         self.mode = mode
         self.on_operation_complete = on_operation_complete
-
-        # Determine channels
-        if self.pipettor and self.pipettor.multichannel:
-            self.channels = 8
-        else:
-            self.channels = 1
+        self.channels = self.pipettor.tip_count
+        self.multichannel = self.pipettor.multichannel
 
         # Workflow state
         if mode == "builder":
             self.workflow = Workflow(name="New Workflow")
             self.workflow_state = WorkflowState(deck)
             self.saved_workflows: dict[str, Workflow] = {}
-            self.workflows_dir = "saved_workflows"
-            os.makedirs(self.workflows_dir, exist_ok=True)
-            self.load_saved_workflows()
         else:
             self.workflow = None
             self.workflow_state = None
@@ -97,7 +90,7 @@ class FunctionWindow:
             else:
                 self.window_build_func = ttk.Window(themename="darkly")
 
-            self.window_build_func.geometry("1200x750")
+            self.window_build_func.geometry("1300x750")
             self.window_build_func.title("Workflow Builder")
             self.window_build_func.attributes('-topmost', False)
 
@@ -167,8 +160,81 @@ class FunctionWindow:
             self.control_frame,
             text="Pipetting Operations",
             font=('Arial', 14, 'bold')
-        ).pack(pady=10)
+        ).pack(pady=5)
 
+        # === CUSTOM WORKFLOWS SECTION ===
+        workflows_frame = ttk.Labelframe(
+            self.control_frame,
+            text="Custom Workflows",
+            padding=10
+        )
+        workflows_frame.pack(fill=tk.X, padx=10, pady=5)
+
+        # Top buttons: Create New and Load from File
+        top_buttons_frame = ttk.Frame(workflows_frame)
+        top_buttons_frame.pack(fill=tk.X, pady=(0, 5))
+
+        ttk.Button(
+            top_buttons_frame,
+            text=" Create New Workflow",
+            command=self.open_workflow_builder,
+            bootstyle="success"
+        ).pack(side=tk.LEFT, padx=2, fill=tk.X, expand=True)
+
+        ttk.Button(
+            top_buttons_frame,
+            text=" Load from File",
+            command=self.load_workflow_from_file,
+            bootstyle="info"
+        ).pack(side=tk.LEFT, padx=2, fill=tk.X, expand=True)
+
+        # Workflow listbox with scrollbar
+        listbox_frame = ttk.Frame(workflows_frame)
+        listbox_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+
+        scrollbar = ttk.Scrollbar(listbox_frame, orient=tk.VERTICAL)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.workflows_listbox = tk.Listbox(
+            listbox_frame,
+            font=('Arial', 10),
+            height=5,
+            yscrollcommand=scrollbar.set
+        )
+        self.workflows_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.config(command=self.workflows_listbox.yview)
+
+        # Workflow action buttons
+        workflow_buttons_frame = ttk.Frame(workflows_frame)
+        workflow_buttons_frame.pack(fill=tk.X, pady=5)
+
+        ttk.Button(
+            workflow_buttons_frame,
+            text=" Execute",
+            command=self.execute_selected_workflow,
+            bootstyle="primary"
+        ).pack(side=tk.LEFT, padx=2, fill=tk.X, expand=True)
+
+        ttk.Button(
+            workflow_buttons_frame,
+            text=" Save to File",
+            command=self.save_selected_workflow_to_file,
+            bootstyle="warning"
+        ).pack(side=tk.LEFT, padx=2, fill=tk.X, expand=True)
+
+        ttk.Button(
+            workflow_buttons_frame,
+            text=" Delete",
+            command=self.delete_selected_workflow,
+            bootstyle="danger"
+        ).pack(side=tk.LEFT, padx=2, fill=tk.X, expand=True)
+
+        # Initialize with empty workflow dict
+        self.workflows_in_memory = {}  # Stores workflows created in this session
+        self.refresh_workflows_list()
+
+        # Operation buttons
+        self.place_operation_buttons(self.control_frame)
         # Operation buttons
         self.place_operation_buttons(self.control_frame)
 
@@ -197,7 +263,7 @@ class FunctionWindow:
         # Configure columns with specific weights
         action_frame.columnconfigure(0, weight=1)
         action_frame.columnconfigure(1, weight=1)
-        action_frame.columnconfigure(2, weight=0, minsize=80)  # Fixed minimum width for Clear
+        action_frame.columnconfigure(2, weight=0, minsize=80)
 
         self.execute_button = ttk.Button(
             action_frame,
@@ -208,15 +274,6 @@ class FunctionWindow:
         )
         self.execute_button.grid(row=0, column=0, sticky='ew', padx=5)
 
-        self.add_to_workflow_button = ttk.Button(
-            action_frame,
-            text="Add to Workflow",
-            command=self.add_staged_to_workflow,
-            state='disabled',
-            bootstyle="info"
-        )
-        self.add_to_workflow_button.grid(row=0, column=1, sticky='ew', padx=5)
-
         self.clear_button = ttk.Button(
             action_frame,
             text="Clear",
@@ -224,29 +281,7 @@ class FunctionWindow:
             state='disabled',
             bootstyle="secondary"
         )
-        self.clear_button.grid(row=0, column=2, sticky='ew', padx=5)
-
-        # === CUSTOM WORKFLOWS SECTION ===
-        custom_frame = ttk.Labelframe(
-            self.control_frame,
-            text="Custom Workflows",
-            padding=10
-        )
-        custom_frame.pack(fill=tk.X, padx=10, pady=5)
-
-        ttk.Button(
-            custom_frame,
-            text="Open Workflow Builder",
-            command=self.open_workflow_builder,
-            bootstyle="warning"
-        ).pack(fill=tk.X, pady=5)
-
-        # Saved workflows will appear here
-        self.saved_workflows_frame = ttk.Frame(custom_frame)
-        self.saved_workflows_frame.pack(fill=tk.X, pady=5)
-
-        # Initialize display
-        self.update_staged_display()
+        self.clear_button.grid(row=0, column=1, sticky='ew', padx=5)
 
     def create_builder_mode_ui(self):
         """Create full UI for workflow builder in separate window"""
@@ -308,21 +343,13 @@ class FunctionWindow:
         self.entry_name = ttk.Entry(self.frame_name)
         self.entry_name.grid(row=1, column=0, sticky="ew", padx=(0, 10))
 
-        self.save_button = ttk.Button(
+        self.create_button = ttk.Button(
             self.frame_name,
-            text="Save Workflow",
-            command=self.callback_save_button,
+            text="Create Workflow",
+            command=self.callback_create_button,
             bootstyle="success"
         )
-        self.save_button.grid(row=1, column=1, sticky="ew", padx=5)
-
-        self.execute_workflow_button = ttk.Button(
-            self.frame_name,
-            text="Execute Workflow",
-            command=self.execute_workflow_in_builder,
-            bootstyle="success"
-        )
-        self.execute_workflow_button.grid(row=1, column=3, sticky="ew", padx=5)
+        self.create_button.grid(row=1, column=1, sticky="ew", padx=5)
 
         self.clear_queue_button = ttk.Button(
             self.frame_name,
@@ -332,6 +359,194 @@ class FunctionWindow:
         )
         self.clear_queue_button.grid(row=1, column=2, sticky="ew")
         self.update_operation_button_states()
+
+    def refresh_workflows_list(self):
+        """Reload workflows from disk and update listbox"""
+        if self.mode != "direct":
+            return
+
+        # Reload workflows from disk
+        self.saved_workflows = {}
+        self.load_saved_workflows()
+
+        # Clear listbox
+        self.workflows_listbox.delete(0, tk.END)
+
+        # Populate with workflow names
+        if self.saved_workflows:
+            for workflow_name in sorted(self.saved_workflows.keys()):
+                workflow = self.saved_workflows[workflow_name]
+                display_text = f"{workflow_name} ({len(workflow.operations)} ops)"
+                self.workflows_listbox.insert(tk.END, display_text)
+        else:
+            self.workflows_listbox.insert(tk.END, "(No saved workflows)")
+
+    def execute_selected_workflow(self):
+        """Execute the workflow selected in the listbox"""
+        selection = self.workflows_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("No Selection", "Please select a workflow to execute")
+            return
+
+        # Get workflow name
+        selected_text = self.workflows_listbox.get(selection[0])
+        if selected_text == "(No saved workflows)":
+            return
+
+        # Extract workflow name (before the " (X ops)" part)
+        workflow_name = selected_text.split(" (")[0]
+        workflow = self.saved_workflows.get(workflow_name)
+
+        if not workflow:
+            messagebox.showerror("Error", f"Workflow '{workflow_name}' not found")
+            return
+
+        # Confirm execution
+        if not messagebox.askyesno(
+                "Execute Workflow",
+                f"Execute workflow '{workflow_name}' with {len(workflow.operations)} operations?"
+        ):
+            return
+
+        # Create progress window
+        progress_window = tk.Toplevel(self.get_master_window())
+        progress_window.title("Executing Workflow")
+        progress_window.geometry("400x200")
+        progress_window.transient(self.get_master_window())
+        progress_window.grab_set()
+
+        progress_label = ttk.Label(
+            progress_window,
+            text=f"Executing: {workflow_name}",
+            font=("Helvetica", 12, "bold")
+        )
+        progress_label.pack(pady=10)
+
+        progress_bar = ttk.Progressbar(
+            progress_window,
+            mode='determinate',
+            length=300
+        )
+        progress_bar.pack(pady=10)
+
+        status_label = ttk.Label(progress_window, text="Starting...")
+        status_label.pack(pady=5)
+
+        # Execute
+        executor = WorkflowExecutor(self.pipettor, self.deck)
+
+        def on_progress(completed, total):
+            progress_bar['value'] = (completed / total) * 100
+            status_label.config(text=f"Operation {completed}/{total}")
+            progress_window.update()
+
+        executor.on_progress = on_progress
+
+        try:
+            result = executor.execute_workflow(workflow)
+            progress_window.destroy()
+
+            if result.success:
+                messagebox.showinfo(
+                    "Success",
+                    f"Workflow '{workflow_name}' completed!\n"
+                    f"{result.operations_completed} operations executed."
+                )
+
+                # Call completion callback if set
+                if self.on_operation_complete:
+                    self.on_operation_complete()
+            else:
+                messagebox.showerror(
+                    "Workflow Failed",
+                    f"Workflow failed at operation {result.failed_operation_index + 1}:\n\n"
+                    f"{result.error_message}"
+                )
+        except Exception as e:
+            progress_window.destroy()
+            messagebox.showerror("Error", f"Workflow execution failed:\n\n{str(e)}")
+
+    def edit_selected_workflow(self):
+        """Open workflow builder to edit the selected workflow"""
+        selection = self.workflows_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("No Selection", "Please select a workflow to edit")
+            return
+
+        # Get workflow name
+        selected_text = self.workflows_listbox.get(selection[0])
+        if selected_text == "(No saved workflows)":
+            return
+
+        workflow_name = selected_text.split(" (")[0]
+        workflow = self.saved_workflows.get(workflow_name)
+
+        if not workflow:
+            messagebox.showerror("Error", f"Workflow '{workflow_name}' not found")
+            return
+
+        # Open workflow builder with this workflow loaded
+        builder = FunctionWindow(
+            deck=self.deck,
+            pipettor=self.pipettor,
+            mode="builder",
+            master=self.container.winfo_toplevel()
+        )
+
+        # Load the workflow into the builder
+        builder.workflow = workflow
+        builder.entry_name.delete(0, tk.END)
+        builder.entry_name.insert(0, workflow.name)
+
+        # Rebuild virtual state
+        builder.workflow_state.reset()
+        for op in workflow.operations:
+            builder.workflow_state.apply_operation(op)
+
+        # Display operations
+        builder.display_workflow_queue()
+        builder.update_operation_button_states()
+
+    def delete_selected_workflow(self):
+        """Delete the selected workflow"""
+        selection = self.workflows_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("No Selection", "Please select a workflow to delete")
+            return
+
+        # Get workflow name
+        selected_text = self.workflows_listbox.get(selection[0])
+        if selected_text == "(No saved workflows)":
+            return
+
+        workflow_name = selected_text.split(" (")[0]
+        workflow = self.saved_workflows.get(workflow_name)
+
+        if not workflow:
+            messagebox.showerror("Error", f"Workflow '{workflow_name}' not found")
+            return
+
+        # Confirm deletion
+        if not messagebox.askyesno(
+                "Confirm Delete",
+                f"Are you sure you want to delete workflow '{workflow_name}'?\n\n"
+                f"This action cannot be undone."
+        ):
+            return
+
+        # Delete from disk
+        try:
+            self.delete_workflow_from_disk(workflow)
+
+            # Remove from memory
+            del self.saved_workflows[workflow_name]
+
+            # Refresh listbox
+            self.refresh_workflows_list()
+
+            messagebox.showinfo("Deleted", f"Workflow '{workflow_name}' has been deleted.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to delete workflow:\n\n{str(e)}")
 
     def execute_workflow_in_builder(self):
         """Execute the current workflow from builder mode"""
@@ -492,19 +707,12 @@ class FunctionWindow:
         )
         self.home_btn.pack(fill=tk.X, pady=2)
 
-        self.move_x_btn = ttk.Button(
-            system_frame, text=" Move X",
-            command=lambda: self.callback_move_x(func_str="Move X"),
+        self.move_xy_btn = ttk.Button(
+            system_frame, text=" Move X, Y",
+            command=lambda: self.callback_move_xy(func_str="Move X, Y"),
             bootstyle="secondary"
         )
-        self.move_x_btn.pack(fill=tk.X, pady=2)
-
-        self.move_y_btn = ttk.Button(
-            system_frame, text=" Move Y",
-            command=lambda: self.callback_move_y(func_str="Move Y"),
-            bootstyle="secondary"
-        )
-        self.move_y_btn.pack(fill=tk.X, pady=2)
+        self.move_xy_btn.pack(fill=tk.X, pady=2)
 
         self.move_z_btn = ttk.Button(
             system_frame, text=" Move Z",
@@ -614,32 +822,6 @@ class FunctionWindow:
                 f"Operation '{self.staged_operation_name}' failed:\n\n{str(e)}"
             )
 
-    def add_staged_to_workflow(self):
-        """Add staged operation to workflow builder"""
-        if self.staged_operation is None:
-            return
-
-        # Open workflow builder
-        builder = FunctionWindow(
-            deck=self.deck,
-            pipettor=self.pipettor,
-            mode="builder",
-            master=self.container.winfo_toplevel()
-        )
-
-        # Add the staged operation
-        builder.current_func_list.append(self.staged_operation)
-        builder.current_func_details.append(f"{self.staged_operation_name}")
-        builder.display_workflow_queue()
-
-        messagebox.showinfo(
-            "Added",
-            f"Operation '{self.staged_operation_name}' added to workflow builder.\n\n"
-            "Add more operations and save your workflow."
-        )
-
-        self.clear_staged_operation()
-
     def clear_staged_operation(self):
         """Clear the staging area"""
         self.staged_operation = None
@@ -715,16 +897,54 @@ class FunctionWindow:
         self.update_operation_button_states()
 
     def remove_operation_from_workflow(self, index: int):
-        """Remove operation and rebuild virtual state"""
+        """Remove operation and rebuild virtual state with detailed error reporting"""
         if 0 <= index < len(self.workflow.operations):
+            removed_op = self.workflow.operations[index]
             self.workflow.remove_operation(index)
 
             # Rebuild virtual state from scratch
             self.workflow_state.reset()
-            for op in self.workflow.operations:
-                self.workflow_state.apply_operation(op)
 
-            self.display_workflow_queue()
+            failed_at_index = None
+            error_message = None
+
+            try:
+                for i, op in enumerate(self.workflow.operations):
+                    try:
+                        self.workflow_state.apply_operation(op)
+                    except ValueError as e:
+                        # Track which operation failed
+                        failed_at_index = i
+                        error_message = str(e)
+                        raise  # Re-raise to exit the loop
+
+                # Success - display updated queue
+                self.display_workflow_queue()
+                self.update_operation_button_states()
+
+            except ValueError:
+                # Build detailed error message
+                error_details = f"Removing operation #{index + 1} ({removed_op.operation_type.value}) "
+                error_details += f"creates an invalid workflow.\n\n"
+                error_details += f"❌ Operation #{failed_at_index + 2} fails:\n"
+                error_details += f"   Type: {self.workflow.operations[failed_at_index].operation_type.value}\n"
+                error_details += f"   Error: {error_message}\n\n"
+
+                messagebox.showerror(
+                    "Invalid Workflow",
+                    error_details
+                )
+
+                # Restore the operation
+                self.workflow.operations.insert(index, removed_op)
+
+                # Rebuild state with restored operation
+                self.workflow_state.reset()
+                for op in self.workflow.operations:
+                    self.workflow_state.apply_operation(op)
+
+                self.display_workflow_queue()
+                self.update_operation_button_states()
 
     def show_operation_details(self, operation: Operation):
         """Show detailed information about an operation"""
@@ -763,16 +983,22 @@ class FunctionWindow:
 
     def clear_workflow_queue(self):
         """Clear all operations from queue"""
-        if not self.current_func_list:
+        if not self.workflow or not self.workflow.operations:
             return
 
-        if messagebox.askyesno("Confirm", "Clear all operations from queue?"):
-            self.current_func_list = []
-            self.current_func_details = []
-            self.display_workflow_queue()
+        if messagebox.askyesno("Confirm", "Clear all operations from queue?", default="yes"):
+            # Clear workflow operations
+            self.workflow.operations.clear()
 
-    def callback_save_button(self):
-        """Save workflow to disk"""
+            # Reset virtual state
+            self.workflow_state.reset()
+
+            # Refresh display
+            self.display_workflow_queue()
+            self.update_operation_button_states()
+
+    def callback_create_button(self):
+        """Save workflow to disk and close builder"""
         if not self.workflow or not self.workflow.operations:
             messagebox.showwarning("Empty Workflow", "Please add operations to the workflow first")
             return
@@ -796,6 +1022,10 @@ class FunctionWindow:
             f"Workflow '{self.workflow.name}' saved with {len(self.workflow.operations)} operations!\n"
             f"File: saved_workflows/{self.workflow.name.replace(' ', '_')}_{self.workflow.workflow_id[:8]}.json"
         )
+
+        # Close the builder window
+        if self.is_toplevel and hasattr(self, 'window_build_func'):
+            self.window_build_func.destroy()
 
     def open_workflow_builder(self):
         """Open workflow builder window from direct mode"""
@@ -1098,7 +1328,7 @@ class FunctionWindow:
 
         elif part == "second" and labware_obj is not None:
             # Get virtual state if in builder mode
-            wf_state = self.workflow_state if self.mode == "builder" else None
+            vf_state = self.workflow_state if self.mode == "builder" else None
 
             window = WellWindow(
                 rows=labware_obj.holders_across_y,
@@ -1106,12 +1336,12 @@ class FunctionWindow:
                 labware_id=labware_obj.labware_id,
                 max_selected=1 if self.mode == "builder" else None, # only way to allow tracking in the builder mode
                 master=self.get_master_window(),
-                multichannel_mode=(self.channels == 8),
+                multichannel_mode=self.multichannel,
                 title=f"Pick tips from: {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(
                     labware_obj=labware_obj,
                     source=True,
-                    workflow_state=wf_state  # Pass virtual state
+                    workflow_state=vf_state  # Pass virtual state
                 )
             )
             self.get_master_window().wait_window(window.get_root())
@@ -1125,13 +1355,7 @@ class FunctionWindow:
 
             # Create details string
             details = f"Labware: {labware_obj.labware_id}\n"
-            if self.channels == 8:
-                details += f"Multichannel groups: {len(list_col_row)}\n"
-                details += f"Start positions (col:row): {', '.join([f'({c}:{r})' for c, r in list_col_row[:5]])}"
-            else:
-                details += f"Positions: {len(list_col_row)} tips\n"
-                details += f"Wells (Col:Row): {', '.join([f'({c}:{r})' for c, r in list_col_row[:5]])}"
-
+            details += f"Start positions (col:row): {', '.join([f'({c}:{r})' for c, r in list_col_row[:5]])}"
             if len(list_col_row) > 5:
                 details += f"... (+{len(list_col_row) - 5} more)"
 
@@ -1149,16 +1373,7 @@ class FunctionWindow:
                     positions=list_col_row,
                     channels=self.channels
                 )
-
-                # Add to workflow
-                self.workflow.add_operation(operation)
-
-                # Update virtual state
-                self.workflow_state.apply_operation(operation)
-
-                # Refresh display
-                self.display_workflow_queue()
-                self.clear_grid(self.second_column_frame)
+                self.builder_config(operation)
 
     def callback_return_tips(
             self,
@@ -1181,26 +1396,26 @@ class FunctionWindow:
 
         elif part == "second" and labware_obj is not None:
             # Get virtual state if in builder mode
-            wf_state = self.workflow_state if self.mode == "builder" else None
+            vf_state = self.workflow_state if self.mode == "builder" else None
 
             window = WellWindow(
                 rows=labware_obj.holders_across_y,
                 columns=labware_obj.holders_across_x,
                 labware_id=labware_obj.labware_id,
-                max_selected=1 if self.mode == "builder" else None,  # ✅ Add max_selected
+                max_selected=1 if self.mode == "builder" else None,
                 master=self.get_master_window(),
-                multichannel_mode=(self.channels == 8),
+                multichannel_mode= self.multichannel,
                 title=f"Return tips to: {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(
                     labware_obj=labware_obj,
                     source=False,  # Empty positions
-                    workflow_state=wf_state  # ✅ Pass virtual state
+                    workflow_state=vf_state
                 )
             )
             self.get_master_window().wait_window(window.get_root())
 
             start_positions = window.get_start_positions()
-            if not start_positions or not window.confirmed:  # ✅ Check confirmed
+            if not start_positions or not window.confirmed:
                 return
 
             # Convert from (row, col) to (col, row) format for pipettor
@@ -1208,13 +1423,7 @@ class FunctionWindow:
 
             # Create details
             details = f"Labware: {labware_obj.labware_id}\n"
-            if self.channels == 8:
-                details += f"Multichannel groups: {len(list_col_row)}\n"
-                details += f"Start positions (col:row): {', '.join([f'({c}:{r})' for c, r in list_col_row[:5]])}"
-            else:
-                details += f"Positions: {len(list_col_row)} tips\n"
-                details += f"Wells (Col:Row): {', '.join([f'({c}:{r})' for c, r in list_col_row[:5]])}"
-
+            details += f"Start positions (col:row): {', '.join([f'({c}:{r})' for c, r in list_col_row[:5]])}"
             if len(list_col_row) > 5:
                 details += f"... (+{len(list_col_row) - 5} more)"
 
@@ -1226,22 +1435,13 @@ class FunctionWindow:
                 self.stage_operation(func, func_str, details)
 
             elif self.mode == "builder":
-                # ✅ Builder mode: Operation object (NOT lambda!)
+
                 operation = OperationBuilder.build_return_tips(
                     labware_id=labware_obj.labware_id,
                     positions=list_col_row,
                     channels=self.channels
                 )
-
-                # Add to workflow
-                self.workflow.add_operation(operation)
-
-                # Update virtual state
-                self.workflow_state.apply_operation(operation)
-
-                # Refresh display
-                self.display_workflow_queue()
-                self.clear_grid(self.second_column_frame)
+                self.builder_config(operation)
 
     def callback_replace_tips(
             self,
@@ -1263,22 +1463,29 @@ class FunctionWindow:
             )
 
         elif part == "second" and labware_obj is not None:
+            # Get virtual state if in builder mode
+            vf_state = self.workflow_state if self.mode == "builder" else None
+
             # ===== STEP 1: Return old tips =====
             window_return = WellWindow(
                 rows=labware_obj.holders_across_y,
                 columns=labware_obj.holders_across_x,
                 labware_id=labware_obj.labware_id,
-                max_selected=None,
+                max_selected=1 if self.mode == "builder" else None,
                 master=self.get_master_window(),
-                multichannel_mode=(self.channels == 8),
+                multichannel_mode=self.multichannel,
                 title=f"Return tips to: {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False)
+                wells_list=self.get_wells_list_from_labware(
+                    labware_obj=labware_obj,
+                    source=False,  # Empty positions
+                    workflow_state=vf_state
+                )
             )
             self.get_master_window().wait_window(window_return.get_root())
 
             # Get start positions for return
             start_positions_return = window_return.get_start_positions()
-            if not start_positions_return:
+            if not start_positions_return or not window_return.confirmed:
                 return
 
             # Convert to (col, row) format
@@ -1289,61 +1496,53 @@ class FunctionWindow:
                 rows=labware_obj.holders_across_y,
                 columns=labware_obj.holders_across_x,
                 labware_id=labware_obj.labware_id,
-                max_selected=None,
+                max_selected=1 if self.mode == "builder" else None,
                 master=self.get_master_window(),
-                multichannel_mode=(self.channels == 8),
+                multichannel_mode=self.multichannel,
                 title=f"Pick new tips from: {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True)
+                wells_list=self.get_wells_list_from_labware(
+                    labware_obj=labware_obj,
+                    source=True,
+                    workflow_state=vf_state
+                )
             )
             self.get_master_window().wait_window(window_pick.get_root())
 
             # Get start positions for pick
             start_positions_pick = window_pick.get_start_positions()
-            if not start_positions_pick:
+            if not start_positions_pick or not window_pick.confirmed:
                 return
 
             # Convert to (col, row) format
             list_pick = [(c, r) for r, c in start_positions_pick]
 
-            # Create function
-            func = lambda lw=labware_obj, lr=list_return, lp=list_pick: self.pipettor.replace_tips(
-                pipette_holder=lw, return_list_col_row=lr, pick_list_col_row=lp
-            )
-
             # Create details
             details = f"Labware: {labware_obj.labware_id}\n"
-
-            if self.channels == 8:
-                # Return details
-                details += f"Return - Multichannel groups: {len(list_return)}\n"
-                details += f"  Positions (col:row): {', '.join([f'({c}:{r})' for c, r in list_return[:5]])}"
-                if len(list_return) > 5:
-                    details += f"... (+{len(list_return) - 5} more)"
-                details += "\n"
-
-                # Pick details
-                details += f"Pick - Multichannel groups: {len(list_pick)}\n"
-                details += f"  Positions (col:row): {', '.join([f'({c}:{r})' for c, r in list_pick[:5]])}"
-                if len(list_pick) > 5:
-                    details += f"... (+{len(list_pick) - 5} more)"
-            else:
-                # Return details
-                details += f"Return - Positions: {len(list_return)} tips\n"
-                details += f"  Wells (Col:Row): {', '.join([f'({c}:{r})' for c, r in list_return[:5]])}"
-                if len(list_return) > 5:
-                    details += f"... (+{len(list_return) - 5} more)"
-                details += "\n"
-
-                # Pick details
-                details += f"Pick - Positions: {len(list_pick)} tips\n"
-                details += f"  Wells (Col:Row): {', '.join([f'({c}:{r})' for c, r in list_pick[:5]])}"
-                if len(list_pick) > 5:
-                    details += f"... (+{len(list_pick) - 5} more)"
+            details += f"Return positions (col:row): {', '.join([f'({c}:{r})' for c, r in list_return[:5]])}"
+            if len(list_return) > 5:
+                details += f"... (+{len(list_return) - 5} more)"
+            details += "\n"
+            details += f"Pick positions (col:row): {', '.join([f'({c}:{r})' for c, r in list_pick[:5]])}"
+            if len(list_pick) > 5:
+                details += f"... (+{len(list_pick) - 5} more)"
 
             if self.mode == "direct":
+                # Direct mode: lambda
+                func = lambda lw=labware_obj, lr=list_return, lp=list_pick: self.pipettor.replace_tips(
+                    pipette_holder=lw, return_list_col_row=lr, pick_list_col_row=lp
+                )
                 self.stage_operation(func, func_str, details)
+
             elif self.mode == "builder":
-                self.add_current_function(func_str=func_str, func=func, labware_id=labware_obj.labware_id)
+                # Builder mode: create Operation object
+                operation = OperationBuilder.build_replace_tips(
+                    return_labware_id=labware_obj.labware_id,
+                    return_positions=list_return,
+                    pick_labware_id=labware_obj.labware_id,
+                    pick_positions=list_pick,
+                    channels=self.channels
+                )
+                self.builder_config(operation)
 
     def callback_discard_tips(
             self,
@@ -1365,15 +1564,31 @@ class FunctionWindow:
             )
 
         elif part == "second" and labware_obj is not None:
-            func = lambda lw=labware_obj: self.pipettor.discard_tips(lw)
-
             details = f"Dropzone: {labware_obj.labware_id}\n"
             details += "Action: Discard all tips"
 
             if self.mode == "direct":
+                # Direct mode: lambda
+                func = lambda lw=labware_obj: self.pipettor.discard_tips(lw)
                 self.stage_operation(func, func_str, details)
+
             elif self.mode == "builder":
-                self.add_current_function(func_str=func_str, func=func, labware_id=labware_obj.labware_id)
+                # Builder mode: create Operation object
+                operation = OperationBuilder.build_discard_tips(
+                    labware_id=labware_obj.labware_id,
+                )
+                self.builder_config(operation)
+
+    def builder_config(self, operation: Operation) -> None:
+        # Add the operation to workflow
+        self.workflow.add_operation(operation)
+
+        # Update virtual state
+        self.workflow_state.apply_operation(operation)
+
+        # Refresh display
+        self.display_workflow_queue()
+        self.clear_grid(self.second_column_frame)
 
     def ask_position_dialog(self, axis: str, min_val: float, max_val: float, initial_value: float = 0.0):
         """
@@ -1591,6 +1806,10 @@ class FunctionWindow:
         dict[tuple[int, int], dict]
             Dictionary mapping (row, col) to constraint info for wells that should be deactivated
         """
+        if not labware_obj.each_tip_needs_separate_item():
+            is_multichannel = False
+            print(f"{labware_obj} multichannel mode turned off")
+
         constraints = {}
 
         if isinstance(labware_obj, Plate):
@@ -1610,11 +1829,11 @@ class FunctionWindow:
                     volume_key = 'available_volume'
 
                 if is_multichannel:
-                    # For multichannel, check if start position - need 8 consecutive wells
-                    if row + 8 <= labware_obj._rows:
-                        # Check all 8 wells in this column starting from this row
+                    # For multichannel, check if start position - need consecutive wells
+                    if row + self.channels <= labware_obj._rows:
+                        # Check all wells in this column starting from this row
                         fails_constraint = False
-                        for i in range(8):
+                        for i in range(self.channels):
                             check_well = labware_obj.get_well_at(col, row + i)
                             if check_well:
                                 if operation == 'removal':
@@ -1649,8 +1868,8 @@ class FunctionWindow:
                 if reservoir is not None:
                     col, row = labware_obj.hook_id_to_position(hook_id)
 
-                    # Calculate total volume (for multichannel operations, multiply by 8)
-                    total_volume = volume_per_well * (8 if is_multichannel else 1)
+                    # Calculate total volume
+                    total_volume = volume_per_well * self.channels
 
                     # Determine what to check based on operation
                     if operation == 'removal':
@@ -1727,9 +1946,8 @@ class FunctionWindow:
         elif part == "third" and labware_obj is not None:
             # Compute volume constraints for addition (overflow check)
             volume = kwargs.get('volume')
-            is_multichannel = (self.channels == 8)
             volume_constraints = self.compute_volume_constraints(
-                labware_obj, volume, is_multichannel, operation='addition'
+                labware_obj, volume, self.multichannel, operation='addition'
             )
 
             window = WellWindow(
@@ -1737,7 +1955,7 @@ class FunctionWindow:
                 columns=labware_obj._columns,
                 labware_id=labware_obj.labware_id,
                 max_selected=None,
-                multichannel_mode=is_multichannel,
+                multichannel_mode=self.multichannel,
                 master=self.get_master_window(),
                 title=f"DESTINATION: Select wells on {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False),
@@ -1746,7 +1964,7 @@ class FunctionWindow:
             self.get_master_window().wait_variable(window.safe_var)
 
             kwargs["dest_labware"] = labware_obj
-            if self.channels == 8:
+            if self.multichannel:
                 kwargs["dest_positions"] = [(c, r) for r, c in window.get_start_positions()]
             else:
                 kwargs["dest_positions"] = [(c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row)
@@ -1770,11 +1988,9 @@ class FunctionWindow:
             # Compute volume constraints for source reservoir (insufficient volume check)
             volume = kwargs.get('volume')
             num_dest_positions = len(kwargs['dest_positions'])
-            is_multichannel = (self.channels == 8)
-            total_wells = num_dest_positions * 8 if is_multichannel else num_dest_positions
-            # Reservoir needs to supply all destination wells
+            total_wells = num_dest_positions * self.channels
             volume_constraints = self.compute_volume_constraints(
-                labware_obj, volume * total_wells, is_multichannel=False, operation='removal'
+                labware_obj, volume * total_wells, self.multichannel, operation='removal'
             )
 
             window = WellWindow(
@@ -1782,6 +1998,7 @@ class FunctionWindow:
                 columns=labware_obj.hooks_across_x,
                 labware_id=labware_obj.labware_id,
                 max_selected=1,
+                multichannel_mode=False if not labware_obj.each_tip_needs_separate_item() else self.multichannel,
                 master=self.get_master_window(),
                 title=f"SOURCE: Choose reservoir {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True),
@@ -1798,7 +2015,7 @@ class FunctionWindow:
 
             volume = kwargs['volume']
             num_positions = len(kwargs['dest_positions'])
-            total_wells = num_positions * 8 if self.channels == 8 else num_positions
+            total_wells = num_positions * self.channels
             total_vol = volume * total_wells
 
             func = lambda kwargs=kwargs, vol=volume: self.pipettor.add_medium(
@@ -1815,7 +2032,7 @@ class FunctionWindow:
             else:
                 details = f"Source: {kwargs['source_labware'].labware_id}\n  Reservoir: {kwargs['source_positions']}\n"
                 details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
-                details += f"  Columns: {kwargs['dest_positions']}\n" if self.channels == 8 else f"  Wells: {kwargs['dest_positions']}\n"
+                details += f"  Columns: {kwargs['dest_positions']}\n" if self.multichannel else f"  Wells: {kwargs['dest_positions']}\n"
                 details += f"  Total Wells: {total_wells}\nVolume: {volume} ul per well\nTotal Volume: {total_vol} ul"
                 self.stage_operation(func, func_str, details)
 
@@ -1873,9 +2090,8 @@ class FunctionWindow:
         elif part == "third" and labware_obj is not None:
             # Compute volume constraints for removal (insufficient volume check)
             volume = kwargs.get('volume')
-            is_multichannel = (self.channels == 8)
             volume_constraints = self.compute_volume_constraints(
-                labware_obj, volume, is_multichannel, operation='removal'
+                labware_obj, volume, self.multichannel, operation='removal'
             )
 
             window = WellWindow(
@@ -1883,7 +2099,7 @@ class FunctionWindow:
                 columns=labware_obj._columns,
                 labware_id=labware_obj.labware_id,
                 max_selected=None,
-                multichannel_mode=is_multichannel,
+                multichannel_mode=self.multichannel,
                 master=self.get_master_window(),
                 title=f"SOURCE: Select wells on {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True),
@@ -1892,7 +2108,7 @@ class FunctionWindow:
             self.get_master_window().wait_variable(window.safe_var)
 
             kwargs["source_labware"] = labware_obj
-            if self.channels == 8:
+            if self.multichannel:
                 kwargs["source_positions"] = [(c, r) for r, c in window.get_start_positions()]
             else:
                 kwargs["source_positions"] = [(c, r) for r, row in enumerate(window.well_state) for c, v in
@@ -1916,10 +2132,9 @@ class FunctionWindow:
             # Compute volume constraints for reservoir (overflow check)
             volume = kwargs.get('volume')
             num_source_positions = len(kwargs['source_positions'])
-            is_multichannel = (self.channels == 8)
-            total_wells = num_source_positions * 8 if is_multichannel else num_source_positions
+            total_wells = num_source_positions * self.channels
             volume_constraints = self.compute_volume_constraints(
-                labware_obj, volume * total_wells, is_multichannel=False, operation='addition'
+                labware_obj, volume * total_wells, self.multichannel, operation='addition'
             )
 
             window = WellWindow(
@@ -1927,6 +2142,7 @@ class FunctionWindow:
                 columns=labware_obj.hooks_across_x,
                 labware_id=labware_obj.labware_id,
                 max_selected=1,
+                multichannel_mode=False if not labware_obj.each_tip_needs_separate_item() else self.multichannel,
                 master=self.get_master_window(),
                 title=f"DESTINATION: Select reservoir {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False),
@@ -1943,7 +2159,7 @@ class FunctionWindow:
 
             volume = kwargs['volume']
             num_positions = len(kwargs['source_positions'])
-            total_wells = num_positions * 8 if self.channels == 8 else num_positions
+            total_wells = num_positions * self.channels
             total_vol = volume * total_wells
 
             func = lambda kwargs=kwargs, vol=volume: self.pipettor.remove_medium(
@@ -1959,7 +2175,7 @@ class FunctionWindow:
                 self.clear_grid(self.second_column_frame)
             else:
                 details = f"Source: {kwargs['source_labware'].labware_id}\n"
-                details += f"  Columns: {kwargs['source_positions']}\n" if self.channels == 8 else f"  Wells: {kwargs['source_positions']}\n"
+                details += f"  Columns: {kwargs['source_positions']}\n" if self.multichannel else f"  Wells: {kwargs['source_positions']}\n"
                 details += f"Destination: {kwargs['dest_labware'].labware_id}\n  Reservoir: {kwargs['dest_positions']}\n"
                 details += f"  Total Wells: {total_wells}\nVolume: {volume} ul per well\nTotal Volume: {total_vol} ul"
                 self.stage_operation(func, func_str, details)
@@ -2019,9 +2235,8 @@ class FunctionWindow:
         elif part == "third" and labware_obj is not None:
             # Compute volume constraints for removal (insufficient volume check)
             volume = kwargs.get('volume')
-            is_multichannel = (self.channels == 8)
             volume_constraints = self.compute_volume_constraints(
-                labware_obj, volume, is_multichannel, operation='removal'
+                labware_obj, volume, self.multichannel, operation='removal'
             )
 
             window = WellWindow(
@@ -2029,7 +2244,7 @@ class FunctionWindow:
                 columns=labware_obj._columns,
                 labware_id=labware_obj.labware_id,
                 max_selected=None,
-                multichannel_mode=is_multichannel,
+                multichannel_mode=self.multichannel,
                 master=self.get_master_window(),
                 title=f"SOURCE: Select wells on {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True),
@@ -2038,7 +2253,7 @@ class FunctionWindow:
             self.get_master_window().wait_variable(window.safe_var)
 
             kwargs["source_labware"] = labware_obj
-            if self.channels == 8:
+            if self.multichannel:
                 kwargs["source_positions"] = [(c, r) for r, c in window.get_start_positions()]
             else:
                 kwargs["source_positions"] = [(c, r) for r, row in enumerate(window.well_state) for c, v in
@@ -2061,9 +2276,8 @@ class FunctionWindow:
         elif part == "fourth" and labware_obj is not None:
             # Compute volume constraints for addition (overflow check)
             volume = kwargs.get('volume')
-            is_multichannel = (self.channels == 8)
             volume_constraints = self.compute_volume_constraints(
-                labware_obj, volume, is_multichannel, operation='addition'
+                labware_obj, volume, self.multichannel, operation='addition'
             )
 
             window = WellWindow(
@@ -2071,7 +2285,7 @@ class FunctionWindow:
                 columns=labware_obj._columns,
                 labware_id=labware_obj.labware_id,
                 max_selected=None,
-                multichannel_mode=is_multichannel,
+                multichannel_mode=self.multichannel,
                 master=self.get_master_window(),
                 title=f"DESTINATION: Select wells on {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False),
@@ -2080,7 +2294,7 @@ class FunctionWindow:
             self.get_master_window().wait_variable(window.safe_var)
 
             kwargs["dest_labware"] = labware_obj
-            if self.channels == 8:
+            if self.multichannel:
                 kwargs["dest_positions"] = [(c, r) for r, c in window.get_start_positions()]
             else:
                 kwargs["dest_positions"] = [(c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row)
@@ -2103,7 +2317,7 @@ class FunctionWindow:
 
             volume = kwargs['volume']
             num_positions = len(kwargs['dest_positions'])
-            total_wells = num_positions * 8 if self.channels == 8 else num_positions
+            total_wells = num_positions * self.channels
             total_vol = volume * total_wells
 
             func = lambda kwargs=kwargs, vol=volume: self.pipettor.transfer_plate_to_plate(
@@ -2119,9 +2333,9 @@ class FunctionWindow:
                 self.clear_grid(self.second_column_frame)
             else:
                 details = f"Source: {kwargs['source_labware'].labware_id}\n"
-                details += f"  Columns: {kwargs['source_positions']}\n" if self.channels == 8 else f"  Wells: {kwargs['source_positions']}\n"
+                details += f"  Columns: {kwargs['source_positions']}\n" if self.multichannel else f"  Wells: {kwargs['source_positions']}\n"
                 details += f"Destination: {kwargs['dest_labware'].labware_id}\n"
-                details += f"  Columns: {kwargs['dest_positions']}\n" if self.channels == 8 else f"  Wells: {kwargs['dest_positions']}\n"
+                details += f"  Columns: {kwargs['dest_positions']}\n" if self.multichannel else f"  Wells: {kwargs['dest_positions']}\n"
                 details += f"  Total Wells: {total_wells}\nVolume: {volume} ul per well\nTotal Volume: {total_vol} ul"
                 self.stage_operation(func, func_str, details)
 
@@ -2197,20 +2411,11 @@ class FunctionWindow:
                 messagebox.showerror("Error", "Volume too high")
                 return
 
-            is_multichannel = (self.channels == 8)
             total_volume = volume * self.channels
 
-            # For ReservoirHolder with multichannel, we need total volume (not per-tip)
-            if isinstance(labware_obj, ReservoirHolder):
-                # Reservoir serves all tips, so check against total volume
-                volume_constraints = self.compute_volume_constraints(
-                    labware_obj, total_volume, is_multichannel=False, operation='removal'
-                )
-            else:
-                # Plate: each well serves one tip
-                volume_constraints = self.compute_volume_constraints(
-                    labware_obj, volume, is_multichannel, operation='removal'
-                )
+            volume_constraints = self.compute_volume_constraints(
+                labware_obj, volume, self.multichannel, operation='removal'
+            )
 
             window = WellWindow(
                 rows=rows,
@@ -2218,7 +2423,7 @@ class FunctionWindow:
                 labware_id=labware_obj.labware_id,
                 max_selected=1,  # Only ONE position allowed
                 master=self.get_master_window(),
-                multichannel_mode=False if isinstance(labware_obj, ReservoirHolder) else is_multichannel,
+                multichannel_mode=False if not labware_obj.each_tip_needs_separate_item() else self.multichannel,
                 title=f"Select position to suck from: {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True),
                 volume_constraints=volume_constraints
@@ -2226,7 +2431,7 @@ class FunctionWindow:
             self.get_master_window().wait_window(window.get_root())
 
             # Get the single position
-            if isinstance(labware_obj, Plate) and is_multichannel:
+            if isinstance(labware_obj, Plate) and self.multichannel:
                 # For multichannel plate operations
                 start_positions = window.get_start_positions()
                 if not start_positions:
@@ -2250,7 +2455,7 @@ class FunctionWindow:
             details = f"Labware: {labware_obj.labware_id}\n"
             details += f"Position (Col:Row): {position}\n"
             details += f"Total Volume: {total_volume} ul"
-            if is_multichannel and isinstance(labware_obj, Plate):
+            if self.multichannel and isinstance(labware_obj, Plate):
                 details += f"\nVolume per tip: {volume} ul"
 
             if self.mode == "direct":
@@ -2330,20 +2535,11 @@ class FunctionWindow:
                 messagebox.showerror("Error", "Not enough liquid in tip")
                 return
 
-            is_multichannel = (self.channels == 8)
             total_volume = volume * self.channels
 
-            # For ReservoirHolder with multichannel, we need total volume (not per-tip)
-            if isinstance(labware_obj, ReservoirHolder):
-                # Reservoir receives all tips, so check against total volume
-                volume_constraints = self.compute_volume_constraints(
-                    labware_obj, total_volume, is_multichannel=False, operation='addition'
-                )
-            else:
-                # Plate: each well receives from one tip
-                volume_constraints = self.compute_volume_constraints(
-                    labware_obj, volume, is_multichannel, operation='addition'
-                )
+            volume_constraints = self.compute_volume_constraints(
+                labware_obj, volume, self.multichannel, operation='addition'
+            )
 
             window = WellWindow(
                 rows=rows,
@@ -2351,7 +2547,7 @@ class FunctionWindow:
                 labware_id=labware_obj.labware_id,
                 max_selected=1,  # Only ONE position allowed
                 master=self.get_master_window(),
-                multichannel_mode=False if isinstance(labware_obj, ReservoirHolder) else is_multichannel,
+                multichannel_mode=False if not labware_obj.each_tip_needs_separate_item() else self.multichannel,
                 # Multichannel only for Plate
                 title=f"Select position to spit into: {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False),
@@ -2360,7 +2556,7 @@ class FunctionWindow:
             self.get_master_window().wait_window(window.get_root())
 
             # Get the single position
-            if isinstance(labware_obj, Plate) and is_multichannel:
+            if isinstance(labware_obj, Plate) and self.multichannel:
                 # For multichannel plate operations
                 start_positions = window.get_start_positions()
                 if not start_positions:
@@ -2384,7 +2580,7 @@ class FunctionWindow:
             details = f"Labware: {labware_obj.labware_id}\n"
             details += f"Position (Col:Row): {position}\n"
             details += f"Total Volume: {total_volume} ul"
-            if is_multichannel and isinstance(labware_obj, Plate):
+            if self.multichannel and isinstance(labware_obj, Plate):
                 details += f"\nVolume per tip: {volume} ul"
 
             if self.mode == "direct":
@@ -2392,37 +2588,59 @@ class FunctionWindow:
             elif self.mode == "builder":
                 self.add_current_function(func_str=func_str, func=func, labware_id=labware_obj.labware_id)
 
-    def callback_move_x(self, func_str: str):
-        """Handle Move X operation"""
+    def callback_move_xy(self, func_str: str):
+        """Handle Move X and Y operation"""
         if self.mode == "builder":
             self.clear_grid(self.second_column_frame)
 
-            # Create input UI
-            label = ttk.Label(
+            # Create input UI for X position
+            x_label = ttk.Label(
                 self.second_column_frame,
                 text="Enter X Position (mm):",
                 font=('Arial', 11, 'bold')
             )
-            label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
+            x_label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
 
-            # Range info
-            info_label = ttk.Label(
+            # X Range info
+            x_info_label = ttk.Label(
                 self.second_column_frame,
                 text=f"Valid range: {self.deck.range_x[0]} to {self.deck.range_x[1]} mm",
                 font=('Arial', 9),
                 foreground='gray'
             )
-            info_label.grid(row=1, column=0, sticky="nsew", pady=2, padx=5)
+            x_info_label.grid(row=1, column=0, sticky="nsew", pady=2, padx=5)
 
-            text_var = ttk.StringVar(value="0.0")
-            entry = ttk.Entry(self.second_column_frame, textvariable=text_var, font=('Arial', 12))
-            entry.grid(row=2, column=0, sticky="nsew", pady=5, padx=5)
+            x_text_var = ttk.StringVar(value="0.0")
+            x_entry = ttk.Entry(self.second_column_frame, textvariable=x_text_var, font=('Arial', 12))
+            x_entry.grid(row=2, column=0, sticky="nsew", pady=5, padx=5)
+
+            # Create input UI for Y position
+            y_label = ttk.Label(
+                self.second_column_frame,
+                text="Enter Y Position (mm):",
+                font=('Arial', 11, 'bold')
+            )
+            y_label.grid(column=0, row=3, sticky="nsew", pady=(15, 5), padx=5)
+
+            # Y Range info
+            y_info_label = ttk.Label(
+                self.second_column_frame,
+                text=f"Valid range: {self.deck.range_y[0]} to {self.deck.range_y[1]} mm",
+                font=('Arial', 9),
+                foreground='gray'
+            )
+            y_info_label.grid(row=4, column=0, sticky="nsew", pady=2, padx=5)
+
+            y_text_var = ttk.StringVar(value="0.0")
+            y_entry = ttk.Entry(self.second_column_frame, textvariable=y_text_var, font=('Arial', 12))
+            y_entry.grid(row=5, column=0, sticky="nsew", pady=5, padx=5)
 
             def confirm_movement():
                 try:
-                    x_pos = float(text_var.get())
+                    x_pos = float(x_text_var.get())
+                    y_pos = float(y_text_var.get())
 
-                    # Validate range
+                    # Validate X range
                     if not (self.deck.range_x[0] <= x_pos <= self.deck.range_x[1]):
                         messagebox.showerror(
                             "Invalid Position",
@@ -2430,65 +2648,7 @@ class FunctionWindow:
                         )
                         return
 
-                    func = lambda x=x_pos: self.pipettor.move_x(x)
-                    self.add_current_function(func_str=func_str, func=func, labware_id=f"X={x_pos}mm")
-                    self.clear_grid(self.second_column_frame)
-
-                except ValueError:
-                    messagebox.showerror("Error", "Invalid position value")
-
-            ttk.Button(
-                self.second_column_frame,
-                text="Confirm",
-                command=confirm_movement,
-                bootstyle="success"
-            ).grid(row=3, column=0, sticky="nsew", pady=5, padx=5)
-
-        else:  # Direct mode - USE NEW DIALOG
-            x_pos = self.ask_position_dialog(
-                axis='X',
-                min_val=self.deck.range_x[0],
-                max_val=self.deck.range_x[1],
-                initial_value=0.0
-            )
-
-            if x_pos is not None:
-                func = lambda x=x_pos: self.pipettor.move_x(x)
-                details = f"Move to X position: {x_pos} mm\n"
-                details += f"Range: {self.deck.range_x[0]} to {self.deck.range_x[1]} mm"
-                self.stage_operation(func, func_str, details)
-
-    def callback_move_y(self, func_str: str):
-        """Handle Move Y operation"""
-        if self.mode == "builder":
-            self.clear_grid(self.second_column_frame)
-
-            # Create input UI
-            label = ttk.Label(
-                self.second_column_frame,
-                text="Enter Y Position (mm):",
-                font=('Arial', 11, 'bold')
-            )
-            label.grid(column=0, row=0, sticky="nsew", pady=5, padx=5)
-
-            # Range info
-            info_label = ttk.Label(
-                self.second_column_frame,
-                text=f"Valid range: {self.deck.range_y[0]} to {self.deck.range_y[1]} mm",
-                font=('Arial', 9),
-                foreground='gray'
-            )
-            info_label.grid(row=1, column=0, sticky="nsew", pady=2, padx=5)
-
-            text_var = ttk.StringVar(value="0.0")
-            entry = ttk.Entry(self.second_column_frame, textvariable=text_var, font=('Arial', 12))
-            entry.grid(row=2, column=0, sticky="nsew", pady=5, padx=5)
-
-            def confirm_movement():
-                try:
-                    y_pos = float(text_var.get())
-
-                    # Validate range
+                    # Validate Y range
                     if not (self.deck.range_y[0] <= y_pos <= self.deck.range_y[1]):
                         messagebox.showerror(
                             "Invalid Position",
@@ -2496,8 +2656,8 @@ class FunctionWindow:
                         )
                         return
 
-                    func = lambda y=y_pos: self.pipettor.move_y(y)
-                    self.add_current_function(func_str=func_str, func=func, labware_id=f"Y={y_pos}mm")
+                    func = lambda x=x_pos, y=y_pos: self.pipettor.move_xy(x, y)
+                    self.add_current_function(func_str=func_str, func=func, labware_id=f"X={x_pos}mm, Y={y_pos}mm")
                     self.clear_grid(self.second_column_frame)
 
                 except ValueError:
@@ -2508,21 +2668,82 @@ class FunctionWindow:
                 text="Confirm",
                 command=confirm_movement,
                 bootstyle="success"
-            ).grid(row=3, column=0, sticky="nsew", pady=5, padx=5)
+            ).grid(row=6, column=0, sticky="nsew", pady=(10, 5), padx=5)
 
-        else:  # Direct mode - USE NEW DIALOG
-            y_pos = self.ask_position_dialog(
-                axis='Y',
-                min_val=self.deck.range_y[0],
-                max_val=self.deck.range_y[1],
-                initial_value=0.0
+        else:  # Direct mode - USE CUSTOM DIALOG
+            x_pos, y_pos = self.ask_xy_position_dialog(
+                x_min=self.deck.range_x[0],
+                x_max=self.deck.range_x[1],
+                y_min=self.deck.range_y[0],
+                y_max=self.deck.range_y[1],
+                x_initial=0.0,
+                y_initial=0.0
             )
 
-            if y_pos is not None:
-                func = lambda y=y_pos: self.pipettor.move_y(y)
-                details = f"Move to Y position: {y_pos} mm\n"
-                details += f"Range: {self.deck.range_y[0]} to {self.deck.range_y[1]} mm"
+            if x_pos is not None and y_pos is not None:
+                func = lambda x=x_pos, y=y_pos: self.pipettor.move_xy(x, y)
+                details = f"Move to X: {x_pos} mm, Y: {y_pos} mm\n"
+                details += f"X Range: {self.deck.range_x[0]} to {self.deck.range_x[1]} mm\n"
+                details += f"Y Range: {self.deck.range_y[0]} to {self.deck.range_y[1]} mm"
                 self.stage_operation(func, func_str, details)
+
+    def ask_xy_position_dialog(self, x_min, x_max, y_min, y_max, x_initial=0.0, y_initial=0.0):
+        """Show dialog to get both X and Y positions"""
+        dialog = tk.Toplevel(self.get_master_window())
+        dialog.title("Move X & Y Position")
+        dialog.geometry("400x350")
+        dialog.transient(self.get_master_window())
+        dialog.grab_set()
+
+        result = {'x': None, 'y': None}
+
+        # X Position section
+        ttk.Label(dialog, text="X Position (mm):", font=('Arial', 11, 'bold')).pack(pady=(20, 5))
+        ttk.Label(dialog, text=f"Range: {x_min} to {x_max} mm", font=('Arial', 9), foreground='gray').pack()
+
+        x_var = tk.StringVar(value=str(x_initial))
+        x_entry = ttk.Entry(dialog, textvariable=x_var, font=('Arial', 12), width=20)
+        x_entry.pack(pady=5)
+
+        # Y Position section
+        ttk.Label(dialog, text="Y Position (mm):", font=('Arial', 11, 'bold')).pack(pady=(20, 5))
+        ttk.Label(dialog, text=f"Range: {y_min} to {y_max} mm", font=('Arial', 9), foreground='gray').pack()
+
+        y_var = tk.StringVar(value=str(y_initial))
+        y_entry = ttk.Entry(dialog, textvariable=y_var, font=('Arial', 12), width=20)
+        y_entry.pack(pady=5)
+
+        def on_ok():
+            try:
+                x_val = float(x_var.get())
+                y_val = float(y_var.get())
+
+                if not (x_min <= x_val <= x_max):
+                    messagebox.showerror("Invalid Input", f"X position must be between {x_min} and {x_max} mm")
+                    return
+
+                if not (y_min <= y_val <= y_max):
+                    messagebox.showerror("Invalid Input", f"Y position must be between {y_min} and {y_max} mm")
+                    return
+
+                result['x'] = x_val
+                result['y'] = y_val
+                dialog.destroy()
+            except ValueError:
+                messagebox.showerror("Invalid Input", "Please enter valid numeric values")
+
+        def on_cancel():
+            dialog.destroy()
+
+        button_frame = ttk.Frame(dialog)
+        button_frame.pack(pady=20)
+
+        ttk.Button(button_frame, text="OK", command=on_ok, bootstyle="success", width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Cancel", command=on_cancel, bootstyle="secondary", width=10).pack(side='left',
+                                                                                                         padx=5)
+
+        dialog.wait_window()
+        return result['x'], result['y']
 
     def callback_move_z(self, func_str: str):
         """Handle Move Z operation"""

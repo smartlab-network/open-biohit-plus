@@ -24,23 +24,19 @@ class OperationBuilder:
         positions : list[tuple[int, int]]
             List of (col, row) positions
         channels : int
-            Number of channels (1 or 8)
+            Number of channels
 
         Returns
         -------
         Operation
         """
-        description = f"Pick tips from {labware_id}"
-        if channels == 8:
-            description += f" ({len(positions)} multichannel groups)"
-        else:
-            description += f" ({len(positions)} tips)"
-
+        description = f"Pick tips from {labware_id} at {positions}"
         return Operation(
             operation_type=OperationType.PICK_TIPS,
             parameters={
                 'labware_id': labware_id,
-                'positions': positions
+                'positions': positions,
+                'channels': channels,
             },
             description=description
         )
@@ -48,17 +44,13 @@ class OperationBuilder:
     @staticmethod
     def build_return_tips(labware_id: str, positions: list[tuple[int, int]], channels: int) -> Operation:
         """Build a RETURN_TIPS operation"""
-        description = f"Return tips to {labware_id}"
-        if channels == 8:
-            description += f" ({len(positions)} multichannel groups)"
-        else:
-            description += f" ({len(positions)} tips)"
-
+        description = f"Return tips to {labware_id} at {positions}"
         return Operation(
             operation_type=OperationType.RETURN_TIPS,
             parameters={
                 'labware_id': labware_id,
-                'positions': positions
+                'positions': positions,
+                'channels': channels
             },
             description=description
         )
@@ -72,7 +64,8 @@ class OperationBuilder:
             channels: int
     ) -> Operation:
         """Build a REPLACE_TIPS operation"""
-        description = f"Replace tips: {return_labware_id} → {pick_labware_id}"
+        description = (f"Replace tips: return to {return_labware_id} at {return_positions} "
+                       f"& pick from {pick_labware_id} at {pick_positions}")
 
         return Operation(
             operation_type=OperationType.REPLACE_TIPS,
@@ -80,7 +73,8 @@ class OperationBuilder:
                 'return_labware_id': return_labware_id,
                 'return_positions': return_positions,
                 'pick_labware_id': pick_labware_id,
-                'pick_positions': pick_positions
+                'pick_positions': pick_positions,
+                'channels': channels,
             },
             description=description
         )
@@ -89,10 +83,7 @@ class OperationBuilder:
     def build_discard_tips(labware_id: str, positions: list[tuple[int, int]] = None) -> Operation:
         """Build a DISCARD_TIPS operation"""
         description = f"Discard tips to {labware_id}"
-
         params = {'labware_id': labware_id}
-        if positions:
-            params['positions'] = positions
 
         return Operation(
             operation_type=OperationType.DISCARD_TIPS,
