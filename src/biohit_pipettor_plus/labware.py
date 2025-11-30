@@ -491,6 +491,13 @@ class Well(Labware):
         """
         return content_type in self.content and self.content[content_type] > 0
 
+    def get_state_snapshot(self) -> dict:
+        return {'content': self.content.copy()}
+
+    def restore_state_snapshot(self, snapshot: dict) -> None:
+        """Restore state from snapshot"""
+        self.content = snapshot['content'].copy()
+
     def to_dict(self) -> dict:
         """
         Serialize the Well to a dictionary for JSON export.
@@ -625,7 +632,6 @@ class Plate(Labware):
 
         self.place_wells()
 
-
     def place_wells(self):
         """Create wells across the grid using the template well."""
         for x in range(self._columns):
@@ -675,6 +681,18 @@ class Plate(Labware):
             if well:
                 wells.append(well)
         return wells
+
+    def get_state_snapshot(self) -> dict:
+        """Return deep copy of all wells' state"""
+        return {
+            'wells': {pos: well.get_state_snapshot()
+                      for pos, well in self._Plate__wells.items()}
+        }
+
+    def restore_state_snapshot(self, snapshot: dict) -> None:
+        """Restore all wells' state from snapshot"""
+        for pos, well_snapshot in snapshot['wells'].items():
+            self._Plate__wells[pos].restore_state_snapshot(well_snapshot)
 
     def to_dict(self):
         """Serialize the Plate instance to a dictionary."""
@@ -837,6 +855,14 @@ class IndividualPipetteHolder(Labware):
         Returns bool.True if available (not occupied), False otherwise.
         """
         return not self.is_occupied
+
+    def get_state_snapshot(self) -> dict:
+        """Return deep copy of mutable state"""
+        return {'is_occupied': self.is_occupied}
+
+    def restore_state_snapshot(self, snapshot: dict) -> None:
+        """Restore state from snapshot"""
+        self.is_occupied = snapshot['is_occupied']
 
     def to_dict(self) -> dict:
         """
@@ -1240,6 +1266,18 @@ class PipetteHolder(Labware):
 
         return available_positions
 
+    def get_state_snapshot(self) -> dict:
+        """Return deep copy of all holders' state"""
+        return {
+            'holders': {pos: holder.get_state_snapshot()
+                        for pos, holder in self._PipetteHolder__individual_holders.items()}
+        }
+
+    def restore_state_snapshot(self, snapshot: dict) -> None:
+        """Restore all holders' state from snapshot"""
+        for pos, holder_snapshot in snapshot['holders'].items():
+            self._PipetteHolder__individual_holders[pos].restore_state_snapshot(holder_snapshot)
+
     def to_dict(self) -> dict:
         """
         Serialize the PipetteHolder instance to a dictionary.
@@ -1261,8 +1299,6 @@ class PipetteHolder(Labware):
         }
         })
         return base
-
-
 
     @classmethod
     def _from_dict(cls, data: dict) -> "PipetteHolder":
@@ -1561,6 +1597,14 @@ class Reservoir(Labware):
             True if content type is present
         """
         return content_type in self.content and self.content[content_type] > 0
+
+    def get_state_snapshot(self) -> dict:
+        """Return deep copy of mutable state"""
+        return {'content': self.content.copy()}
+
+    def restore_state_snapshot(self, snapshot: dict) -> None:
+        """Restore state from snapshot"""
+        self.content = snapshot['content'].copy()
 
     def is_waste_reservoir(self) -> bool:
         """
@@ -2059,6 +2103,22 @@ class ReservoirHolder(Labware):
             if res.has_content_type(content_type)
         ]
 
+    def get_state_snapshot(self) -> dict:
+        """Return deep copy of all reservoirs' state"""
+        # Get unique reservoirs and snapshot each once
+        snapshots = {}
+        for reservoir in self.get_reservoirs():
+            snapshots[reservoir.labware_id] = reservoir.get_state_snapshot()
+        return {'reservoirs': snapshots}
+
+    def restore_state_snapshot(self, snapshot: dict) -> None:
+        """Restore all reservoirs' state from snapshot"""
+        reservoir_snapshots = snapshot['reservoirs']
+        # Restore each unique reservoir
+        for reservoir in self.get_reservoirs():
+            if reservoir.labware_id in reservoir_snapshots:
+                reservoir.restore_state_snapshot(reservoir_snapshots[reservoir.labware_id])
+
     def to_dict(self) -> dict:
         """Serialize the ReservoirHolder instance to a dictionary."""
         base = super().to_dict()
@@ -2167,6 +2227,14 @@ class TipDropzone(Labware):
         super().__init__(size_x=size_x, size_y=size_y, size_z=size_z, offset=offset, labware_id=labware_id,
                          position=position, can_be_stacked_upon=can_be_stacked_upon)
         self.drop_height_relative = drop_height_relative
+
+    def get_state_snapshot(self) -> dict:
+        """Return empty snapshot - TipDropzone has no mutable state"""
+        return {}
+
+    def restore_state_snapshot(self, snapshot: dict) -> None:
+        """No-op - TipDropzone has no mutable state to restore"""
+        pass
 
     def to_dict(self) -> dict:
         """

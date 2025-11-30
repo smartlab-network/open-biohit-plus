@@ -6,6 +6,7 @@ from slot import Slot
 from labware import (Labware, Plate, ReservoirHolder, Reservoir,
                      PipetteHolder, TipDropzone, Well, IndividualPipetteHolder)
 from biohit_pipettor_plus.control_json import read_json, write_json, save_deck_for_gui
+from pipettor_plus import PipettorPlus
 
 # Create deck
 deck1 = Deck((0, 265), (0, 244), range_z=141, deck_id="deck")
@@ -110,3 +111,6 @@ save_deck_for_gui(
 print(plate1.to_dict())
 print(reservoirHolder.to_dict())
 print(pipette_holder.to_dict())
+
+p = PipettorPlus(1000, multichannel=True, deck = deck1)
+print(p.push_state())

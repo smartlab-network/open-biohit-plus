@@ -73,7 +73,6 @@ class PipettorPlus(Pipettor):
         1000 : 219,  
     }"""
 
-
     def __init__(self, tip_volume: Literal[200, 1000], *, multichannel: bool,  initialize: bool = True, deck: Deck, tip_length: float = None):
         """
         Interface to the Biohit Robo pipettor with deck/slot/labware structure
@@ -93,14 +92,68 @@ class PipettorPlus(Pipettor):
         self.multichannel = multichannel
         self._deck = deck
         self._slots: dict[str, Slot] = deck.slots
+        self._simulation_mode = False
 
         #creates a dict of all tips, each tips having its own dict where content and volume in tip can be stored.
+        self.tip_length = tip_length if tip_length is not None else self.TIP_LENGTHS[tip_volume]
         self.tip_count = Pipettors_in_Multi if self.multichannel else 1
         self.tip_dict = {i: {} for i in range(0, self.tip_count)}
         self.has_tips = False
-        self.tip_length = tip_length if tip_length is not None else self.TIP_LENGTHS[tip_volume]
         self.tip_volume = tip_volume
         self.change_tips = Change_Tips  # control if tips are to be changed
+
+    def push_state(self):
+        """Save complete state snapshot for later restoration."""
+
+        snapshot = {}
+
+        for slot_id, slot in self._slots.items():
+            if not slot.labware_stack:
+                continue
+
+            # Get topmost labware (highest max_z)
+            top_lw_id, (top_lw, (min_z, max_z)) = max(
+                slot.labware_stack.items(),
+                key=lambda item: item[1][1][1]  # item[1][1][1] = max_z
+            )
+
+            snapshot[top_lw.labware_id] = top_lw.get_state_snapshot()
+
+        return {
+            'has_tips': self.has_tips,
+            'tip_dict': {k: v.copy() for k, v in self.tip_dict.items()},
+            'simulation_mode': self._simulation_mode,
+            'deck_state': snapshot
+        }
+
+    def pop_state(self, snapshot):
+        """Restore pipettor and deck state from snapshot."""
+        self.has_tips = snapshot['has_tips']
+        self.tip_dict = {k: v.copy() for k, v in snapshot['tip_dict'].items()}
+        self._simulation_mode = snapshot['simulation_mode']
+
+        deck_state_data = snapshot['deck_state']
+
+        for slot_id, slot in self._slots.items():
+            if not slot.labware_stack:
+                continue
+
+            # Get topmost labware
+            top_lw_id, (top_lw, (min_z, max_z)) = max(
+                slot.labware_stack.items(),
+                key=lambda item: item[1][1][1]
+            )
+
+            if top_lw.labware_id in deck_state_data:
+                top_lw.restore_state_snapshot(deck_state_data[top_lw.labware_id])
+
+    def set_simulation_mode(self, enabled: bool) -> None:
+        """Enable or disable simulation mode."""
+        self._simulation_mode = enabled
+        if enabled:
+            print("  → Simulation mode ENABLED (hardware calls will be skipped)")
+        else:
+            print("  → Simulation mode DISABLED (hardware calls will execute)")
 
     def pick_tips(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None,) -> None:
         """
@@ -191,26 +244,29 @@ class PipettorPlus(Pipettor):
 
                 # FIXED: Calculate center position
                 x, y = self._get_robot_xy_position(holders_to_use)
-                self.move_xy(x, y)
 
                 # Pick tips at the specified height
                 first_holder = holders_to_use[0]
                 relative_z = getattr(pipette_holder, 'remove_height', pipette_holder.size_z)
                 pipettor_z = self._get_pipettor_z_coord(pipette_holder, relative_z, child_item=first_holder)
-                self.pick_tip(pipettor_z)  # remove_height
+
+                if not self._simulation_mode:
+                    self.move_xy(x, y)
+                    self.pick_tip(pipettor_z)
 
                 # Mark all 8 tips in this column as removed
                 pipette_holder.remove_consecutive_pipettes_multi([col], start_row)
                 self.has_tips = True
 
                 print(f"✓ Successfully picked 8 tips from column {col}, rows {start_row} to {start_row + 7}")
-                return  # Successfully picked, exit function
+                return  # Successfully picked
 
             except CommandFailed as e:
                 print(f"✗ Failed to pick tips from column {col}, row {start_row}: {e}")
                 continue
             finally:
-                self.move_z(0)
+                if not self._simulation_mode:
+                    self.move_z(0)
 
         # If we got here, all attempts failed
         raise RuntimeError(
@@ -254,10 +310,12 @@ class PipettorPlus(Pipettor):
                     continue
 
                 x, y = holder.position
-                self.move_xy(x, y)
+
                 relative_z = getattr(pipette_holder, 'remove_height', pipette_holder.size_z)
                 pipettor_z = self._get_pipettor_z_coord(pipette_holder, relative_z, child_item=holder)
-                self.pick_tip(pipettor_z)
+                if not self._simulation_mode:
+                    self.move_xy(x, y)
+                    self.pick_tip(pipettor_z)
 
                 holder.is_occupied = False
                 self.has_tips = True
@@ -269,7 +327,8 @@ class PipettorPlus(Pipettor):
                 print(f"✗ Failed to pick tip from column {col}, row {row}: {e}")
                 continue
             finally:
-                self.move_z(0)
+                if not self._simulation_mode:
+                    self.move_z(0)
 
         raise RuntimeError(
             f"Failed to pick tip from any of the specified locations {list_col_row}."
@@ -351,27 +410,29 @@ class PipettorPlus(Pipettor):
                     continue
 
                 x, y = self._get_robot_xy_position(holders_to_use)
-                self.move_xy(x, y)
 
                 # Return tips at the specified height
                 first_holder = holders_to_use[0]
                 relative_z = getattr(pipette_holder, 'add_height', pipette_holder.size_z)
                 pipettor_z = self._get_pipettor_z_coord(pipette_holder, relative_z, child_item=first_holder)
 
-                self.move_z(pipettor_z)
-                self.eject_tip()
+                if not self._simulation_mode:
+                    self.move_xy(x, y)
+                    self.move_z(pipettor_z)
+                    self.eject_tip()
                 # Mark all 8 positions in this column as occupied
                 pipette_holder.place_consecutive_pipettes_multi([col], start_row)
                 self.initialize_tips()
 
                 print(f"✓ Successfully returned 8 tips to column {col}, rows {start_row} to {start_row + 7}")
-                return  # Successfully returned, exit function
+                return
 
             except CommandFailed as e:
                 print(f"✗ Failed to return tips to column {col}, row {start_row}: {e}")
                 continue
             finally:
-                self.move_z(0)
+                if not self._simulation_mode:
+                    self.move_z(0)
 
         # If we got here, all attempts failed
         raise RuntimeError(
@@ -419,11 +480,13 @@ class PipettorPlus(Pipettor):
                     continue
 
                 x, y = holder.position
-                self.move_xy(x, y)
                 relative_z = getattr(pipette_holder, 'add_height', pipette_holder.size_z)
                 pipettor_z = self._get_pipettor_z_coord(pipette_holder, relative_z, child_item=holder)
-                self.move_z(pipettor_z)  # return_height
-                self.eject_tip()
+
+                if not self._simulation_mode:
+                    self.move_xy(x, y)
+                    self.move_z(pipettor_z)  # return_height
+                    self.eject_tip()
 
                 holder.is_occupied = True
                 self.initialize_tips()
@@ -435,15 +498,19 @@ class PipettorPlus(Pipettor):
                 print(f"✗ Failed to return tip to column {col}, row {row}: {e}")
                 continue
             finally:
-                self.move_z(0)
+                if not self._simulation_mode:
+                    self.move_z(0)
 
         raise RuntimeError(
             f"Failed to return tip to any of the specified locations {list_col_row}. "
             f"Tip still attached to pipettor."
         )
 
-    def replace_tips(self, pipette_holder: PipetteHolder,  return_list_col_row: List[tuple[int, int]] = None,
+    def replace_tips(self, pipette_holder: PipetteHolder, pick_pipette_holder:PipetteHolder = None,
+                     return_list_col_row: List[tuple[int, int]] = None,
                      pick_list_col_row: List[tuple[int, int]] = None ) -> None:
+        if not pick_pipette_holder:
+            pick_pipette_holder = pipette_holder
 
         if self.multichannel:
             # get list of available holders
@@ -451,18 +518,18 @@ class PipettorPlus(Pipettor):
                 return_list_col_row = pipette_holder.get_available_holder_multi()
             # get list of occupied holders
             if not pick_list_col_row:
-                pick_list_col_row = pipette_holder.get_occupied_holder_multi()
+                pick_list_col_row = pick_pipette_holder.get_occupied_holder_multi()
 
         else:
             if not return_list_col_row:
                 available_holders = pipette_holder.get_available_holders()
                 return_list_col_row = [(h.column, h.row) for h in available_holders]  # Convert to list of available_holders !
             if not pick_list_col_row:
-                occupied_holders = pipette_holder.get_occupied_holders()
+                occupied_holders = pick_pipette_holder.get_occupied_holders()
                 pick_list_col_row = [(h.column, h.row) for h in occupied_holders]  # Convert to list of occupied_holders!
 
         self.return_tips(pipette_holder, list_col_row=return_list_col_row)
-        self.pick_tips(pipette_holder, list_col_row=pick_list_col_row)
+        self.pick_tips(pick_pipette_holder, list_col_row=pick_list_col_row)
 
     def discard_tips(self, tip_dropzone: Labware) -> None:
         """
@@ -479,18 +546,17 @@ class PipettorPlus(Pipettor):
         if not isinstance(tip_dropzone, TipDropzone):
             raise ValueError("discard_tips only works with TipDropzone")
 
-        # convert height using _get_pipettor_z_coord
         x, y = tip_dropzone.position
-        self.move_xy(x, y)
-
-        # Convert relative height (from bottom) to pipettor coordinate
         relative_z = tip_dropzone.drop_height_relative
         pipettor_z = self._get_pipettor_z_coord(tip_dropzone, relative_z, child_item=None)
 
-        self.move_z(pipettor_z)
-        self.eject_tip()
+        if not self._simulation_mode:
+            self.move_xy(x, y)
+            self.move_z(pipettor_z)
+            self.eject_tip()
+            self.move_z(0)
+
         self.initialize_tips()
-        self.move_z(0)
 
     def add_medium(self, source: ReservoirHolder, source_col_row: tuple[int, int],
                    volume_per_well: float, destination: Plate,
@@ -815,8 +881,9 @@ class PipettorPlus(Pipettor):
                     del tip_content[content_type]
 
     def home(self):
-        self.move_z(0)
-        self.move_xy(0, 0)
+        if not self._simulation_mode:
+            self.move_z(0)
+            self.move_xy(0, 0)
 
     # Helper Functions. Not necessarily available for GUI
     def _validate_transfer(self, source, source_positions, destination, destination_positions,
@@ -1078,7 +1145,6 @@ class PipettorPlus(Pipettor):
 
         # Calculate center position for robot movement
         x, y = self._get_robot_xy_position(items)
-        self.move_xy(x, y)
 
         # Use first item for height calculation (all items should be at same Z level)
         item = items[0]
@@ -1105,9 +1171,11 @@ class PipettorPlus(Pipettor):
             print(f"  → Fallback aspiration: 5 mm above bottom")
 
         pipettor_z = self._get_pipettor_z_coord(parent_labware, relative_z, child_item=item)
-        self.move_z(pipettor_z)
-        self.aspirate(volume / self.tip_count)
-        self.move_z(0)
+        if not self._simulation_mode:
+            self.move_xy(x, y)
+            self.move_z(pipettor_z)
+            self.aspirate(volume / self.tip_count)
+            self.move_z(0)
 
     def _move_to_and_dispense(self, items: List[Labware], volume: float) -> None:
         """
@@ -1127,7 +1195,6 @@ class PipettorPlus(Pipettor):
 
         # Calculate center position for robot movement
         x, y = self._get_robot_xy_position(items)
-        self.move_xy(x, y)
 
         # Use first item for height calculation
         item = items[0]
@@ -1142,9 +1209,11 @@ class PipettorPlus(Pipettor):
             print(f"  → Fallback dispensing: 10 mm from bottom")
 
         pipettor_z = self._get_pipettor_z_coord(parent_labware, relative_z, child_item=item)
-        self.move_z(pipettor_z)
-        self.dispense(volume / self.tip_count)
-        self.move_z(0)
+        if not self._simulation_mode:
+            self.move_xy(x, y)
+            self.move_z(pipettor_z)
+            self.dispense(volume / self.tip_count)
+            self.move_z(0)
 
     def _supports_content_management(self, labware: Labware, col: int, row: int) -> bool:
         """Check if labware supports content tracking at this position."""
