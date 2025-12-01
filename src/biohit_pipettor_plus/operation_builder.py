@@ -99,7 +99,6 @@ class OperationBuilder:
             dest_positions: list[tuple[int, int]],
             volume: float,
             channels: int,
-            **optional_params
     ) -> Operation:
         """Build an ADD_MEDIUM operation"""
         total_wells = len(dest_positions) * (8 if channels == 8 else 1)
@@ -119,11 +118,6 @@ class OperationBuilder:
             'channels': channels
         }
 
-        # Add optional parameters if provided
-        for key in ['x_speed', 'y_speed', 'z_speed', 'aspirate_speed', 'dispense_speed']:
-            if key in optional_params and optional_params[key] is not None:
-                params[key] = optional_params[key]
-
         return Operation(
             operation_type=OperationType.ADD_MEDIUM,
             parameters=params,
@@ -138,7 +132,6 @@ class OperationBuilder:
             dest_positions: list,
             volume: float,
             channels: int,
-            **optional_params
     ) -> Operation:
         """Build a REMOVE_MEDIUM operation"""
         total_wells = len(source_positions) * (8 if channels == 8 else 1)
@@ -158,11 +151,6 @@ class OperationBuilder:
             'channels': channels
         }
 
-        # Add optional parameters if provided
-        for key in ['x_speed', 'y_speed', 'z_speed', 'aspirate_speed', 'dispense_speed']:
-            if key in optional_params and optional_params[key] is not None:
-                params[key] = optional_params[key]
-
         return Operation(
             operation_type=OperationType.REMOVE_MEDIUM,
             parameters=params,
@@ -177,7 +165,6 @@ class OperationBuilder:
             dest_positions: list[tuple[int, int]],
             volume: float,
             channels: int,
-            **optional_params
     ) -> Operation:
         """Build a TRANSFER_PLATE_TO_PLATE operation"""
         total_wells = len(source_positions) * (8 if channels == 8 else 1)
@@ -197,13 +184,69 @@ class OperationBuilder:
             'channels': channels
         }
 
-        # Add optional parameters if provided
-        for key in ['x_speed', 'y_speed', 'z_speed', 'aspirate_speed', 'dispense_speed']:
-            if key in optional_params and optional_params[key] is not None:
-                params[key] = optional_params[key]
 
         return Operation(
             operation_type=OperationType.TRANSFER_PLATE_TO_PLATE,
             parameters=params,
             description=description
+        )
+
+    @staticmethod
+    def build_suck(labware_id: str, position: tuple[int, int], volume: float, channels: int) -> Operation:
+        """Build suck operation"""
+        return Operation(
+            operation_type=OperationType.SUCK,
+            description=f"Suck {volume}µL from {labware_id}",
+            parameters={
+                'labware_id': labware_id,
+                'position': position,
+                'volume': volume,
+                'channels': channels
+            }
+        )
+
+    @staticmethod
+    def build_spit(labware_id: str, position: tuple[int, int], volume: float, channels: int) -> Operation:
+        """Build spit operation"""
+        return Operation(
+            operation_type=OperationType.SPIT,
+            description=f"Spit {volume}µL to {labware_id}",
+            parameters={
+                'labware_id': labware_id,
+                'position': position,
+                'volume': volume,
+                'channels': channels
+            }
+        )
+
+    @staticmethod
+    def build_home() -> Operation:
+        """Build home operation"""
+        return Operation(
+            operation_type=OperationType.HOME,
+            description="Move pipettor to home position",
+            parameters={}
+        )
+
+    @staticmethod
+    def build_move_xy(x: float, y: float) -> Operation:
+        """Build move XY operation"""
+        return Operation(
+            operation_type=OperationType.MOVE_XY,
+            description=f"Move to X={x}mm, Y={y}mm",
+            parameters={
+                'x': x,
+                'y': y
+            }
+        )
+
+    @staticmethod
+    def build_move_z(z: float) -> Operation:
+        """Build move Z operation"""
+        return Operation(
+            operation_type=OperationType.MOVE_Z,
+            description=f"Move to Z={z}mm",
+            parameters={
+                'z': z
+            }
         )

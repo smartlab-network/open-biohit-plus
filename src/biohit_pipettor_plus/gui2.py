@@ -3608,7 +3608,7 @@ class DeckGUI:
         # Movement Speeds Section
         ttk.Label(
             params_grid,
-            text="Movement Speeds (1-9, default: 7):",
+            text="Movement Speeds (1-8, default: 7):",
             font=('Arial', 10, 'bold')
         ).grid(row=0, column=0, columnspan=4, sticky='w', pady=(0, 5))
 
@@ -3732,9 +3732,9 @@ class DeckGUI:
                     raise ValueError(f"Invalid {param_name}: {str(e)}")
 
             # Get movement speeds (1-9)
-            x_speed = get_speed_param(self.x_speed_var, "X Speed", 1, 9)
-            y_speed = get_speed_param(self.y_speed_var, "Y Speed", 1, 9)
-            z_speed = get_speed_param(self.z_speed_var, "Z Speed", 1, 9)
+            x_speed = get_speed_param(self.x_speed_var, "X Speed", 1, 8)
+            y_speed = get_speed_param(self.y_speed_var, "Y Speed", 1, 8)
+            z_speed = get_speed_param(self.z_speed_var, "Z Speed", 1, 8)
 
             # Get piston speeds (1-6)
             aspirate_speed = get_speed_param(self.aspirate_speed_var, "Aspirate Speed", 1, 6)
@@ -3860,97 +3860,10 @@ class DeckGUI:
 
             ttk.Label(
                 warning_frame,
-                text="⚠️ Pipettor Not Initialized",
+                text="Initialize Pipettor ",
                 font=('Arial', 16, 'bold'),
                 foreground='red'
             ).pack(pady=(20, 10))
-
-            ttk.Label(
-                warning_frame,
-                text="Please configure the pipettor in the\n'Low level parameters' tab first.",
-                font=('Arial', 11),
-                justify=tk.CENTER
-            ).pack(pady=10)
-
-            ttk.Button(
-                warning_frame,
-                text="🔄 Refresh Operations Tab",
-                command=self.rebuild_operations_tab,
-                #bootstyle="warning"
-            ).pack(pady=20)
-
-            return
-
-        # Check deck status
-        if not self.deck.slots:
-            # Show deck warning
-            warning_frame = ttk.Frame(
-                self.operations_tab_frame,
-                relief=tk.RIDGE,
-                borderwidth=2
-            )
-            warning_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-            ttk.Label(
-                warning_frame,
-                text="⚠️ Empty Deck",
-                font=('Arial', 16, 'bold'),
-                foreground='orange'
-            ).pack(pady=(20, 10))
-
-            ttk.Label(
-                warning_frame,
-                text="Please add slots and labware to the deck first.\n\nGo to 'Deck Editor' tab to set up your deck.",
-                font=('Arial', 11),
-                justify=tk.CENTER
-            ).pack(pady=10)
-
-            ttk.Button(
-                warning_frame,
-                text="🔄 Refresh Operations Tab",
-                command=self.rebuild_operations_tab,
-                #bootstyle="info"
-            ).pack(pady=20)
-
-            return
-
-        # Check if deck has any labware
-        has_labware = False
-        for slot in self.deck.slots.values():
-            if slot.labware_stack:
-                has_labware = True
-                break
-
-        if not has_labware:
-            # Show labware warning
-            warning_frame = ttk.Frame(
-                self.operations_tab_frame,
-                relief=tk.RIDGE,
-                borderwidth=2
-            )
-            warning_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-            ttk.Label(
-                warning_frame,
-                text="⚠️ No Labware on Deck",
-                font=('Arial', 16, 'bold'),
-                foreground='orange'
-            ).pack(pady=(20, 10))
-
-            ttk.Label(
-                warning_frame,
-                text="Please place labware on the deck first.\n\nGo to 'Deck Editor' tab to place labware on slots.",
-                font=('Arial', 11),
-                justify=tk.CENTER
-            ).pack(pady=10)
-
-            ttk.Button(
-                warning_frame,
-                text="🔄 Refresh Operations Tab",
-                command=self.rebuild_operations_tab,
-                #bootstyle="info"
-            ).pack(pady=20)
-
             return
 
         self.function_window = FunctionWindow(
@@ -4011,6 +3924,14 @@ class DeckGUI:
             for holder in self.available_individual_holders:
                 self.lll_listbox.insert(tk.END, holder.labware_id or f"Holder {len(self.available_individual_holders)}")
 
+            # Auto-select first item if list is not empty
+            if self.lll_listbox.size() > 0:
+                self.lll_listbox.selection_set(0)
+                self.lll_listbox.activate(0)
+                self.lll_listbox.see(0)
+                # Trigger the selection event to update info panel
+                self.on_lll_select()
+
     def on_lll_select(self, event=None):
         """Handle LLL listbox selection"""
         selection = self.lll_listbox.curselection()
@@ -4044,12 +3965,10 @@ class DeckGUI:
             self.create_info_text.delete(1.0, tk.END)
             self.create_info_text.insert(1.0, info)
 
-    def update_info_in_both_tabs(self, text):
+    def update_selection_info(self, text):
         """Update info text in both Deck Editor and Create Labware tabs"""
         self.info_text.delete(1.0, tk.END)
         self.info_text.insert(1.0, text)
-        self.create_info_text.delete(1.0, tk.END)
-        self.create_info_text.insert(1.0, text)
 
     def create_low_level_labware(self):
         """Open dialog to create low-level labware components and update UI."""
@@ -4079,7 +3998,6 @@ class DeckGUI:
 
             # 3. Update the listbox in the main 'Create Labware' tab
             # This function will clear and repopulate self.lll_listbox
-            # using the now updated self.available_X lists based on self.lll_type.get().
             self.update_lll_list()
 
     def create_labware(self):
@@ -4574,7 +4492,7 @@ class DeckGUI:
         info += f"Range Z: {slot.range_z}\n\n"
         info += "Status: Unplaced"
 
-        self.update_info_in_both_tabs(info)
+        self.update_selection_info(info)
 
     def show_unplaced_labware_info(self, lw):
         """Show info for unplaced labware"""
@@ -4605,7 +4523,7 @@ class DeckGUI:
 
         if hasattr(lw, 'drop_height'):
             info += f"\nDrop Height: {lw.drop_height} mm\n"
-        self.update_info_in_both_tabs(info)
+        self.update_selection_info(info)
 
     # Slot management methods
     def place_selected_unplaced_slot(self):
@@ -4866,6 +4784,9 @@ class DeckGUI:
 
     def select_slot(self, slot_id):
         """Highlight and show info for a slot"""
+
+        # switch panel
+        self.right_panel_notebook.select(0)
         self.clear_selection()
         self.labware_listbox.selection_clear(0, tk.END)
 
@@ -4908,7 +4829,7 @@ class DeckGUI:
         for lw_id in slot.labware_stack.keys():
             info += f"  - {lw_id}\n"
 
-        self.update_info_in_both_tabs(info)
+        self.update_selection_info(info)
 
         listbox = self.slots_listbox
         listbox.selection_clear(0, tk.END)
@@ -4924,6 +4845,8 @@ class DeckGUI:
 
     def select_labware(self, lw_id):
         """Highlight and show info for placed labware."""
+
+        self.right_panel_notebook.select(0)
         self.clear_selection()
         self.slots_listbox.selection_clear(0, tk.END)
         self.selected_item = ('labware', lw_id)
@@ -4982,7 +4905,7 @@ class DeckGUI:
         if hasattr(lw, 'drop_height'):
             info += f"\nDrop Height: {lw.drop_height} mm\n"
 
-        self.update_info_in_both_tabs(info)
+        self.update_selection_info(info)
 
         listbox = self.labware_listbox
 
@@ -5036,8 +4959,8 @@ class DeckGUI:
 
         # --- 3. Clear Information Panel (MUST ALWAYS HAPPEN) ---
         # This call is now outside the 'if self.selected_item:' block,
-        # guaranteeing the info panel is cleared regardless of selection origin.
-        self.update_info_in_both_tabs("")
+        # guaranteeing the info panel is cleared regardless of selection origin
+        self.update_selection_info("")
 
     def zoom_in(self):
         """Zoom in"""
@@ -5136,7 +5059,6 @@ if __name__ == "__main__":
     gui = DeckGUI(deck)
     gui.run()
 """
-
 if __name__ == "__main__":
     import json
     import os

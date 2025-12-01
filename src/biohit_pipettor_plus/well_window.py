@@ -218,14 +218,40 @@ class WellWindow:
                 well_available = (r, c) in self.wells_list
                 has_volume_constraint = (r, c) in self.volume_constraints
 
-                if well_available and not has_volume_constraint:
-                    # Well is available AND passes volume constraints
+                if has_volume_constraint:
+                    # Well FAILS volume constraint - show as RED with tooltip
+                    constraint_info = self.volume_constraints[(r, c)]
+                    tooltip_text = self._format_constraint_tooltip(constraint_info)
+
+                    cur_label = ttk.Label(
+                        self.__root,
+                        text=well_name,
+                        bootstyle="danger-inverse",  # Red background
+                        anchor="center",
+                        font=('Arial', 10)
+                    )
+                    cur_label.grid(
+                        row=r + 2,
+                        column=c + 1,
+                        sticky='nsew',
+                        ipadx=20,
+                        ipady=10,
+                        padx=2,
+                        pady=2
+                    )
+                    self.buttons[r][c] = cur_label
+
+                    self._create_tooltip(cur_label, tooltip_text)
+
+                elif well_available:
+                    # Well is available AND passes volume constraints - make it clickable
                     if self.multichannel_mode:
                         # Check if valid starting position (has enough consecutive rows below)
                         if r + self.channels <= self.rows:
-                            # Check all  positions are available AND pass constraints
+                            # Check all positions are available AND pass constraints
                             all_available = all((r + i, c) in self.wells_list for i in range(self.channels))
-                            all_pass_constraints = all((r + i, c) not in self.volume_constraints for i in range(self.channels))
+                            all_pass_constraints = all(
+                                (r + i, c) not in self.volume_constraints for i in range(self.channels))
                             if all_available and all_pass_constraints:
                                 # VALID STARTING POSITION - make clickable
                                 state = "normal"
@@ -272,38 +298,12 @@ class WellWindow:
                         cur_button.bind('<Leave>', lambda e: self.hide_multichannel_preview())
                         cur_button.configure(cursor="crosshair")
 
-                elif well_available and has_volume_constraint:
-                    # Well available but FAILS volume constraint - show as RED (same as unavailable)
-                    constraint_info = self.volume_constraints[(r, c)]
-                    tooltip_text = self._format_constraint_tooltip(constraint_info)
-
-                    cur_label = ttk.Label(
-                        self.__root,
-                        text=well_name,
-                        bootstyle="danger-inverse",  # Red background (same as unavailable wells)
-                        anchor="center",
-                        font=('Arial', 10)
-                    )
-                    cur_label.grid(
-                        row=r + 2,
-                        column=c + 1,
-                        sticky='nsew',
-                        ipadx=20,
-                        ipady=10,
-                        padx=2,
-                        pady=2
-                    )
-                    self.buttons[r][c] = cur_label
-
-                    # Add tooltip with volume constraint details
-                    self._create_tooltip(cur_label, tooltip_text)
-
                 else:
-                    # Well not available - RED background
+                    # Well not available AND no volume constraint info - just unavailable
                     cur_label = ttk.Label(
                         self.__root,
                         text=well_name,
-                        bootstyle="danger-inverse",
+                        bootstyle="danger-inverse",  # Red background
                         anchor="center",
                         font=('Arial', 10)
                     )

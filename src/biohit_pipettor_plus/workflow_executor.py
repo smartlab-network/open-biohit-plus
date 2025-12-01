@@ -14,7 +14,6 @@ from enum import Enum
 import traceback
 
 from workflow import Workflow, Operation, OperationType
-from labware import Plate, PipetteHolder, ReservoirHolder, TipDropzone
 
 
 class ExecutionStatus(Enum):
@@ -168,43 +167,35 @@ class WorkflowExecutor:
             labware = get_labware(params['labware_id'])
             self.pipettor.pick_tips(
                 pipette_holder=labware,
-                col_row=params['positions']
+                list_col_row=params['positions']
             )
 
         elif op_type == OperationType.RETURN_TIPS:
             labware = get_labware(params['labware_id'])
             self.pipettor.return_tips(
                 pipette_holder=labware,
-                col_row=params['positions']
+                list_col_row=params['positions']
             )
 
         elif op_type == OperationType.REPLACE_TIPS:
             return_labware = get_labware(params['return_labware_id'])
             pick_labware = get_labware(params['pick_labware_id'])
             self.pipettor.replace_tips(
-                current_pipette_holder=return_labware,
-                new_pipette_holder=pick_labware,
-                current_col_row=params['return_positions'],
-                new_col_row=params['pick_positions']
+                pipette_holder=return_labware,
+                pick_pipette_holder=pick_labware,
+                return_list_col_row=params['return_positions'],
+                pick_list_col_row=params['pick_positions']
             )
 
         elif op_type == OperationType.DISCARD_TIPS:
             labware = get_labware(params['labware_id'])
             self.pipettor.discard_tips(
                 tip_dropzone=labware,
-                col_row=params.get('positions')
             )
 
         elif op_type == OperationType.ADD_MEDIUM:
             source = get_labware(params['source_labware_id'])
             dest = get_labware(params['dest_labware_id'])
-
-            # Extract optional parameters
-            x_speed = params.get('x_speed')
-            y_speed = params.get('y_speed')
-            z_speed = params.get('z_speed')
-            aspirate_speed = params.get('aspirate_speed')
-            dispense_speed = params.get('dispense_speed')
 
             self.pipettor.add_medium(
                 source=source,
@@ -212,22 +203,11 @@ class WorkflowExecutor:
                 destination=dest,
                 dest_col_row=params['dest_positions'],
                 volume_per_well=params['volume'],
-                x_speed=x_speed,
-                y_speed=y_speed,
-                z_speed=z_speed,
-                aspirate_speed=aspirate_speed,
-                dispense_speed=dispense_speed
             )
 
         elif op_type == OperationType.REMOVE_MEDIUM:
             source = get_labware(params['source_labware_id'])
             dest = get_labware(params['dest_labware_id'])
-
-            x_speed = params.get('x_speed')
-            y_speed = params.get('y_speed')
-            z_speed = params.get('z_speed')
-            aspirate_speed = params.get('aspirate_speed')
-            dispense_speed = params.get('dispense_speed')
 
             self.pipettor.remove_medium(
                 source=source,
@@ -235,22 +215,11 @@ class WorkflowExecutor:
                 source_col_row=params['source_positions'],
                 destination_col_row=params['dest_positions'],
                 volume_per_well=params['volume'],
-                x_speed=x_speed,
-                y_speed=y_speed,
-                z_speed=z_speed,
-                aspirate_speed=aspirate_speed,
-                dispense_speed=dispense_speed
             )
 
         elif op_type == OperationType.TRANSFER_PLATE_TO_PLATE:
             source = get_labware(params['source_labware_id'])
             dest = get_labware(params['dest_labware_id'])
-
-            x_speed = params.get('x_speed')
-            y_speed = params.get('y_speed')
-            z_speed = params.get('z_speed')
-            aspirate_speed = params.get('aspirate_speed')
-            dispense_speed = params.get('dispense_speed')
 
             self.pipettor.transfer_plate_to_plate(
                 source=source,
@@ -258,58 +227,31 @@ class WorkflowExecutor:
                 source_col_row=params['source_positions'],
                 dest_col_row=params['dest_positions'],
                 volume_per_well=params['volume'],
-                x_speed=x_speed,
-                y_speed=y_speed,
-                z_speed=z_speed,
-                aspirate_speed=aspirate_speed,
-                dispense_speed=dispense_speed
+            )
+        elif op_type == OperationType.SUCK:
+            labware = get_labware(params['labware_id'])
+            self.pipettor.suck(
+                source=labware,
+                source_col_row=params['position'],
+                volume=params['volume']
             )
 
-        elif op_type == OperationType.TRANSFER_RESERVOIR_TO_PLATE:
-            source = get_labware(params['source_labware_id'])
-            dest = get_labware(params['dest_labware_id'])
-
-            x_speed = params.get('x_speed')
-            y_speed = params.get('y_speed')
-            z_speed = params.get('z_speed')
-            aspirate_speed = params.get('aspirate_speed')
-            dispense_speed = dispense_speed.get('dispense_speed')
-
-            self.pipettor.add_medium(
-                source=source,
-                source_col_row=params['source_positions'],
-                destination=dest,
-                dest_col_row=params['dest_positions'],
-                volume_per_well=params['volume'],
-                x_speed=x_speed,
-                y_speed=y_speed,
-                z_speed=z_speed,
-                aspirate_speed=aspirate_speed,
-                dispense_speed=dispense_speed
+        elif op_type == OperationType.SPIT:
+            labware = get_labware(params['labware_id'])
+            self.pipettor.spit(
+                destination=labware,
+                dest_col_row=params['position'],
+                volume=params['volume']
             )
 
-        elif op_type == OperationType.TRANSFER_PLATE_TO_RESERVOIR:
-            source = get_labware(params['source_labware_id'])
-            dest = get_labware(params['dest_labware_id'])
+        elif op_type == OperationType.HOME:
+            self.pipettor.home()
 
-            x_speed = params.get('x_speed')
-            y_speed = params.get('y_speed')
-            z_speed = params.get('z_speed')
-            aspirate_speed = params.get('aspirate_speed')
-            dispense_speed = params.get('dispense_speed')
+        elif op_type == OperationType.MOVE_XY:
+            self.pipettor.move_xy(params['x'], params['y'])
 
-            self.pipettor.remove_medium(
-                source=source,
-                destination=dest,
-                source_col_row=params['source_positions'],
-                destination_col_row=params['dest_positions'],
-                volume_per_well=params['volume'],
-                x_speed=x_speed,
-                y_speed=y_speed,
-                z_speed=z_speed,
-                aspirate_speed=aspirate_speed,
-                dispense_speed=dispense_speed
-            )
+        elif op_type == OperationType.MOVE_Z:
+            self.pipettor.move_z(params['z'])
 
         else:
             raise ValueError(f"Unknown operation type: {op_type}")
