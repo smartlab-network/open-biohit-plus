@@ -1,18 +1,13 @@
 import json
 from pathlib import Path
-from serializable import CLASS_REGISTRY, Serializable
+from .serializable import Serializable
 
 
 def get_json_dir() -> Path:
     """
     Returns the directory path where the JSON file will be stored.
-
-    Returns
-    -------
-    Path
-        Path object for the storage directory.
     """
-    return Path("C:/ProgramData/biohit")
+    return Path("../C:/ProgramData/biohit")
 
 
 def get_json_path() -> Path:

@@ -4,19 +4,15 @@ import uuid
 from typing import Callable, Optional
 from tkinter import messagebox, filedialog
 
-
 from .well_window import WellWindow
-from ..deck import Deck
-from ..labware_classes import *
 from .collapsible_frame import CollapsibleFrame
-from ..pipettor_plus import PipettorPlus
-
+from ..pipettor_plus.pipettor_plus import PipettorPlus
+from ..deck_structure import *
 from ..operations.workflow import Workflow
 from ..operations.operation import Operation
 from ..operations.operationtype import OperationType
 from ..operations.operation_builder import OperationBuilder
 from ..operations.operation_logger import OperationLogger
-from ..operations.workflow_executor import WorkflowExecutor
 
 import os
 import copy

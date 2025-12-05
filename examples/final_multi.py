@@ -3,10 +3,7 @@ import sys
 sys.path.append(r"/src/biohit_pipettor_plus")
 
 #from pipettor_plus import PipettorPlus
-from .deck import Deck
-from .slot import Slot
-from .labware_classes import *
-
+from src.biohit_pipettor_plus.deck_structure import *
 
 #to troubleshoot
 deck1 = Deck((0, 265), (0, 244), range_z=141, deck_id="trial")
@@ -101,7 +98,7 @@ test_reservoir = reservoirs[1]
 #p.add_medium(reservoirHolder, (1,0), 50, plate1, dest_col_row=[(0,1), (5,5)])
 
 
-from geometry import (
+from src.biohit_pipettor_plus.pipettor_plus.geometry import (
     calculate_liquid_height,
     calculate_dynamic_remove_height,
 

@@ -2,7 +2,7 @@ import ttkbootstrap as ttk
 import tkinter as tk
 import string
 from collections import deque
-from ..labware_classes.labware import Pipettors_in_Multi
+from ..pipettor_plus.pipettor_constants import Pipettors_in_Multi
 
 class WellWindow:
     """

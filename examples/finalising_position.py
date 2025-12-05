@@ -1,12 +1,9 @@
 import sys
 sys.path.append(r"/src/biohit_pipettor_plus")
 
-from .deck import Deck
-from .slot import Slot
-from .labware_classes import *
-
-from .control_json import read_json, write_json, save_deck_for_gui
-from .pipettor_plus import PipettorPlus
+from src.biohit_pipettor_plus.deck_structure import *
+from src.biohit_pipettor_plus.deck_structure.control_json import read_json, write_json, save_deck_for_gui
+from src.biohit_pipettor_plus.pipettor_plus.pipettor_plus import PipettorPlus
 
 # Create deck
 deck1 = Deck((0, 265), (0, 244), range_z=141, deck_id="deck")

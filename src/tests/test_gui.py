@@ -1,4 +1,4 @@
-from src.biohit_pipettor_plus.control_json import read_json
+from src.biohit_pipettor_plus.deck_structure.control_json import read_json
 from src.biohit_pipettor_plus.gui import Gui
 restored_deck = read_json("deck1")
 

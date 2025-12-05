@@ -1,9 +1,6 @@
 from biohit_pipettor import Deck
 from biohit_pipettor_plus.slot import Slot
 from biohit_pipettor_plus.labware import Plate, PipetteHolder, TipDropzone, ReservoirHolder, IndividualPipetteHolder, Well
-from ..biohit_pipettor_plus.serializable import Serializable
-import json
-from ..biohit_pipettor_plus.control_json import read_json, write_json
 
 deck1 = Deck((0, 500), (0, 500), "deck1")
 

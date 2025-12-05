@@ -44,36 +44,18 @@ except ImportError:
         pass
 
 #from biohit_pipettor import Pipettor
-from typing import Literal, List
-from math import ceil
-
-from .deck import Deck
-from .slot import Slot
-from .labware_classes import *
-from .labware_classes.labware import Pipettors_in_Multi
-from .geometry import (
-    calculate_liquid_height,
-    calculate_dynamic_remove_height,
-)
+from ..deck_structure import *
+from .pipettor_constants import Pipettors_in_Multi, MAX_BATCH_SIZE, Change_Tips, TIP_LENGTHS
+from .geometry import (calculate_liquid_height, calculate_dynamic_remove_height)
 
 import time
 import os
 import subprocess
+from typing import Literal, List
+from math import ceil
 
-Change_Tips = 0
-MAX_BATCH_SIZE = 5
 
 class PipettorPlus(Pipettor):
-    TIP_LENGTHS = {
-        200: 38,  # 200µL increase height by 38mm after being attached
-        1000: 90,  # 1000µL tips are 81mm after being attached
-    }
-    """
-    https://shop.sartorius.com/medias/rLINE-dispensing-module.pdf?context=bWFzdGVyfGRvY3VtZW50c3wxMDQ1NjEzfGFwcGxpY2F0aW9uL3BkZnxhRGhoTDJoaE1pODVPVEEyT0RReE9UYzJPRFl5fGFkZmZmYzFjM2UzYjAwNjI2ODA3MmVmZmYxMWU4NDExZTVlOWMyNTFjNmYzYjZmY2M3Y2ZkODgxMDEzN2U1MDg
-    Pipettor_length = {
-        200: 190,
-        1000 : 219,  
-    }"""
 
     def __init__(self, tip_volume: Literal[200, 1000], *, multichannel: bool,  initialize: bool = True, deck: Deck, tip_length: float = None):
         """
@@ -97,7 +79,7 @@ class PipettorPlus(Pipettor):
         self._simulation_mode = False
 
         #creates a dict of all tips, each tips having its own dict where content and volume in tip can be stored.
-        self.tip_length = tip_length if tip_length is not None else self.TIP_LENGTHS[tip_volume]
+        self.tip_length = tip_length if tip_length is not None else TIP_LENGTHS[tip_volume]
         self.tip_count = Pipettors_in_Multi if self.multichannel else 1
         self.tip_dict = {i: {} for i in range(0, self.tip_count)}
         self.has_tips = False

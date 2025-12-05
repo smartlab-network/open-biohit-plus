@@ -1,12 +1,11 @@
 from typing import Literal
 
 import uuid
-from ..serializable  import Serializable, register_class
+from ..serializable import Serializable, register_class
+from ...pipettor_plus.pipettor_constants import Pipettors_in_Multi, Spacing_Between_Adjacent_Pipettor
 
-Pipettors_in_Multi = 8
 Default_Reservoir_Capacity = 30000
 Default_well_capacity = 1000
-Spacing_Between_Adjacent_Pipettor = 2  #(adjust value based on multi pipettor used.)
 Defined_shape = Literal["rectangular", "circular", "conical", "u_bottom"]
 
 @register_class
