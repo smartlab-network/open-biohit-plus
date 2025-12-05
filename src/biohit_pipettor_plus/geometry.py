@@ -9,7 +9,7 @@ import math
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .labware import Labware
+    from src.biohit_pipettor_plus.labware_classes.labware import Labware
 
 
 def calculate_liquid_height(item: 'Labware') -> float:

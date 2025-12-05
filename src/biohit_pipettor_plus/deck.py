@@ -1,6 +1,7 @@
-from slot import Slot
-from labware import Labware, Plate, ReservoirHolder, PipetteHolder
-from serializable import Serializable, register_class
+from .slot import Slot
+from .labware_classes import *
+from .serializable import Serializable, register_class
+
 from typing import Optional
 
 
@@ -49,7 +50,7 @@ class Deck(Serializable):
 
         Parameters
         ----------
-        slot : Slot
+        slots : list of slots
             The slot to add to the deck.
         Raises
         ------
@@ -143,6 +144,10 @@ class Deck(Serializable):
             ID of the slot where the labware will be placed.
         min_z : float
             Starting Z coordinate within the slot.
+        x_spacing : float
+            X spacing of the labware.
+        y_spacing : float
+            Y spacing of the labware.
 
         Raises
         ------
@@ -201,7 +206,7 @@ class Deck(Serializable):
         #topmost level removal
         stack_keys = list(slot.labware_stack.keys())
         if not stack_keys:
-            # Should not happen if get_slot_for_labware worked, but safe to check
+            # This should not happen assuming get_slot_for_labware works, but safe to check
             raise ValueError(f"Internal error: Slot '{slot_id}' is unexpectedly empty.")
 
         topmost_lw_id = stack_keys[-1]
@@ -306,8 +311,6 @@ class Deck(Serializable):
             Find the slot ID containing the given labware_id.
             Parameters
             ---------
-            deck : Deck
-                The Deck instance to search.
             labware_id : str
                 The ID of the labware to locate.
 

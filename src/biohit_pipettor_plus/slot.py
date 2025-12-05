@@ -1,7 +1,7 @@
 from typing import Dict, List
-from labware import Labware, ReservoirHolder, PipetteHolder, Plate
-from serializable import Serializable, register_class
-from position import Position_allocator
+from .labware_classes import *
+from .serializable import Serializable, register_class
+from .position import Position_allocator
 
 @register_class
 class Slot(Serializable):

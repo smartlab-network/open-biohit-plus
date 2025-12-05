@@ -1,6 +1,5 @@
-from typing import Tuple, List, Dict
-from labware import Labware, ReservoirHolder, Reservoir, Plate, PipetteHolder
-from serializable import Serializable, register_class
+from .labware_classes import *
+from .serializable import register_class
 
 
 @register_class

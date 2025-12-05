@@ -9,43 +9,11 @@ This module handles the execution of workflows, providing:
 """
 
 from typing import Callable, Optional
-from dataclasses import dataclass
-from enum import Enum
+from .workflow import Workflow
+from .operation import Operation
+from .operationtype import OperationType
+from .executionresult import ExecutionResult
 import traceback
-
-from workflow import Workflow, Operation, OperationType
-
-
-class ExecutionStatus(Enum):
-    """Status of workflow execution"""
-    NOT_STARTED = "not_started"
-    RUNNING = "running"
-    PAUSED = "paused"
-    COMPLETED = "completed"
-    FAILED = "failed"
-
-
-@dataclass
-class ExecutionResult:
-    """Result of workflow execution"""
-    status: ExecutionStatus
-    operations_completed: int
-    total_operations: int
-    error_message: Optional[str] = None
-    failed_operation_index: Optional[int] = None
-
-    @property
-    def success(self) -> bool:
-        """Check if execution was successful"""
-        return self.status == ExecutionStatus.COMPLETED
-
-    @property
-    def progress_percent(self) -> float:
-        """Get progress as percentage"""
-        if self.total_operations == 0:
-            return 0.0
-        return (self.operations_completed / self.total_operations) * 100
-
 
 class WorkflowExecutor:
     """
@@ -65,11 +33,20 @@ class WorkflowExecutor:
         """
         self.pipettor = pipettor
         self.deck = deck
-        self.status = ExecutionStatus.NOT_STARTED
+        self.current_result = ExecutionResult(
+            status=ExecutionResult.NOT_STARTED,
+            operations_completed=0,
+            total_operations=0
+        )
         self.current_operation_index = 0
         self.on_progress: Optional[Callable[[int, int], None]] = None
         self.on_operation_complete: Optional[Callable[[int, Operation], None]] = None
         self.on_error: Optional[Callable[[int, Operation, str], None]] = None
+
+    @property
+    def status(self) -> str:
+        """Get current execution status"""
+        return self.current_result.status
 
     def execute_workflow(self, workflow: Workflow, start_from: int = 0) -> ExecutionResult:
         """
@@ -87,10 +64,14 @@ class WorkflowExecutor:
         ExecutionResult
             Result of execution
         """
-        self.status = ExecutionStatus.RUNNING
-        self.current_operation_index = start_from
-
         total_ops = len(workflow.operations)
+
+        self.current_result = ExecutionResult(
+            status=ExecutionResult.RUNNING,
+            operations_completed=start_from,
+            total_operations=total_ops
+        )
+        self.current_operation_index = start_from
 
         try:
             for i in range(start_from, total_ops):
@@ -100,6 +81,9 @@ class WorkflowExecutor:
                 # Execute operation
                 self.execute_single_operation(operation)
 
+                # Update progress
+                self.current_result.operations_completed = i + 1
+
                 # Call progress callback
                 if self.on_progress:
                     self.on_progress(i + 1, total_ops)
@@ -108,28 +92,23 @@ class WorkflowExecutor:
                 if self.on_operation_complete:
                     self.on_operation_complete(i, operation)
 
-            self.status = ExecutionStatus.COMPLETED
-            return ExecutionResult(
-                status=ExecutionStatus.COMPLETED,
-                operations_completed=total_ops,
-                total_operations=total_ops
-            )
+            # Mark as completed
+            self.current_result.status = ExecutionResult.COMPLETED
+            return self.current_result
 
         except Exception as e:
-            self.status = ExecutionStatus.FAILED
             error_msg = f"{type(e).__name__}: {str(e)}\n\n{traceback.format_exc()}"
+
+            # Update result with failure info
+            self.current_result.status = ExecutionResult.FAILED
+            self.current_result.error_message = error_msg
+            self.current_result.failed_operation_index = self.current_operation_index
 
             # Call error callback
             if self.on_error:
                 self.on_error(self.current_operation_index, operation, error_msg)
 
-            return ExecutionResult(
-                status=ExecutionStatus.FAILED,
-                operations_completed=self.current_operation_index,
-                total_operations=total_ops,
-                error_message=error_msg,
-                failed_operation_index=self.current_operation_index
-            )
+            return self.current_result
 
     def execute_single_operation(self, operation: Operation) -> None:
         """
@@ -142,6 +121,21 @@ class WorkflowExecutor:
         """
         op_type = operation.operation_type
         params = operation.parameters
+
+        # Validate channel mode compatibility
+        if 'channels' in params:
+            operation_channels = params['channels']
+            current_channels = self.pipettor.tip_count
+
+            if operation_channels != current_channels:
+                op_mode = "single-channel" if operation_channels == 1 else "multichannel"
+                current_mode = "single-channel" if current_channels == 1 else "multichannel"
+
+                raise ValueError(
+                    f"Operation mode mismatch: This operation was created for {op_mode} mode, "
+                    f"but pipettor is currently in {current_mode} mode. "
+                    f"Please edit operation or reinitialise the pipettor in {op_mode} mode to execute this workflow."
+                )
 
         # Get labware objects from deck
         labware_cache = {}
@@ -228,6 +222,47 @@ class WorkflowExecutor:
                 dest_col_row=params['dest_positions'],
                 volume_per_well=params['volume'],
             )
+
+        elif op_type == OperationType.REMOVE_AND_ADD:
+            # Get labware
+            plate = get_labware(params['plate_labware_id'])
+            remove_reservoir = get_labware(params['remove_reservoir_id'])
+            source_reservoir = get_labware(params['source_reservoir_id'])
+
+            volume = params['volume']
+            channels = params['channels']
+            plate_positions = params['plate_positions']
+            remove_position = params['remove_position']
+            source_position = params['source_position']
+
+            # Calculate how many positions we can handle per trip
+            tip_capacity = self.pipettor.tip_volume
+            positions_per_trip = int(tip_capacity / volume)
+            if positions_per_trip < 1:
+                positions_per_trip = 1  # At minimum, handle one position per trip
+
+            # Batch the positions
+            for i in range(0, len(plate_positions), positions_per_trip):
+                batch = plate_positions[i:i + positions_per_trip]
+
+                # Step 1: Remove from plate to remove reservoir
+                self.pipettor.remove_medium(
+                    source=plate,
+                    destination=remove_reservoir,
+                    source_col_row=batch,
+                    destination_col_row=remove_position,
+                    volume_per_well=volume,
+                )
+
+                # Step 2: Add fresh medium from source reservoir to plate
+                self.pipettor.add_medium(
+                    source=source_reservoir,
+                    source_col_row=source_position,
+                    destination=plate,
+                    dest_col_row=batch,
+                    volume_per_well=volume,
+                )
+
         elif op_type == OperationType.SUCK:
             labware = get_labware(params['labware_id'])
             self.pipettor.suck(
@@ -243,7 +278,6 @@ class WorkflowExecutor:
                 dest_col_row=params['position'],
                 volume=params['volume']
             )
-
         elif op_type == OperationType.HOME:
             self.pipettor.home()
 
@@ -252,6 +286,12 @@ class WorkflowExecutor:
 
         elif op_type == OperationType.MOVE_Z:
             self.pipettor.move_z(params['z'])
+
+        elif op_type == OperationType.MEASURE_FOC:
+            self.pipettor.measure_foc(
+                seconds=params['wait_seconds'],
+                platename=params['plate_name'],
+            )
 
         else:
             raise ValueError(f"Unknown operation type: {op_type}")

@@ -1,22 +1,20 @@
 # gui2.py - Enhanced Tkinter GUI for Deck Editor with Low-Level Labware Support
-
 import tkinter as tk
 from tkinter import messagebox, filedialog, simpledialog
 import ttkbootstrap as ttk
+from .collapsible_frame import CollapsibleFrame
+from ..serializable import Serializable
 import json
-
+import os
 import copy
-# Import your existing classes
-from deck import Deck
-from slot import Slot
-from serializable import Serializable
-from labware import (
-     Well, Reservoir, Plate, ReservoirHolder,
-    PipetteHolder, TipDropzone, IndividualPipetteHolder
-)
-from function_window import FunctionWindow
 
-from pipettor_plus import PipettorPlus
+from ..deck import Deck
+from ..slot import Slot
+from ..labware_classes import *
+
+from .function_window import FunctionWindow
+from ..pipettor_plus import PipettorPlus
+
 class CreateLowLevelLabwareDialog(tk.Toplevel):
     """Dialog for creating low-level labware components (Well, Reservoir, IndividualPipetteHolder)"""
     def __init__(self, parent, initial_type=None):
@@ -981,8 +979,6 @@ class EditWellContentDialog(tk.Toplevel):
             self.add_type_var.set("")
             self.add_volume_var.set("")
 
-            messagebox.showinfo("Success", f"Added {volume}µL of {content_type}")
-
         except ValueError as e:
             messagebox.showerror("Error", str(e))
 
@@ -998,8 +994,6 @@ class EditWellContentDialog(tk.Toplevel):
             self.well.remove_content(volume)
             self.remove_volume_var.set("")
 
-            messagebox.showinfo("Success", f"Removed {volume}µL")
-
         except ValueError as e:
             messagebox.showerror("Error", str(e))
 
@@ -1007,8 +1001,6 @@ class EditWellContentDialog(tk.Toplevel):
         """Clear all content"""
         if messagebox.askyesno("Confirm", "Clear all content from this well?", default="yes"):
             self.well.clear_content()
-            messagebox.showinfo("Success", "Content cleared")
-
     def on_done(self):
         """Close dialog"""
         self.result = True
@@ -1095,8 +1087,6 @@ class EditReservoirContentDialog(tk.Toplevel):
             self.add_type_var.set("")
             self.add_volume_var.set("")
 
-            messagebox.showinfo("Success", f"Added {volume}µL of {content_type}")
-
         except ValueError as e:
             messagebox.showerror("Error", str(e))
 
@@ -1112,8 +1102,6 @@ class EditReservoirContentDialog(tk.Toplevel):
             self.reservoir.remove_content(volume)
             self.remove_volume_var.set("")
 
-            messagebox.showinfo("Success", f"Removed {volume}µL")
-
         except ValueError as e:
             messagebox.showerror("Error", str(e))
 
@@ -1121,8 +1109,6 @@ class EditReservoirContentDialog(tk.Toplevel):
         """Clear all content"""
         if messagebox.askyesno("Confirm", "Clear all content from this reservoir?", default="yes"):
             self.reservoir.clear_content()
-            messagebox.showinfo("Success", "Content cleared")
-
     def on_done(self):
         """Close dialog"""
         self.result = True
@@ -1186,7 +1172,6 @@ class EditHolderOccupancyDialog(tk.Toplevel):
         """Place a tip"""
         try:
             self.holder.place_pipette()
-            messagebox.showinfo("Success", "Tip placed")
             # Update dialog to show new status
             self.destroy()
             # Reopen with updated status
@@ -1198,7 +1183,6 @@ class EditHolderOccupancyDialog(tk.Toplevel):
         """Remove a tip"""
         try:
             self.holder.remove_pipette()
-            messagebox.showinfo("Success", "Tip removed")
             # Update dialog to show new status
             self.destroy()
             # Reopen with updated status
@@ -2313,8 +2297,6 @@ class EditLabwareDialog(tk.Toplevel):
                 # Redraw
                 self.draw_hook_grid()
 
-                messagebox.showinfo("Success", f"Reservoir '{reservoir_copy.labware_id}' placed at hooks {hook_ids}!")
-
             except ValueError as e:
                 messagebox.showerror("Error", f"Failed to place reservoir:\n{str(e)}")
 
@@ -2339,8 +2321,6 @@ class EditLabwareDialog(tk.Toplevel):
 
             # Redraw
             self.draw_hook_grid()
-
-            messagebox.showinfo("Success", "Reservoir removed!")
 
         except ValueError as e:
             messagebox.showerror("Error", f"Failed to remove reservoir:\n{str(e)}")
@@ -3014,42 +2994,6 @@ class AddLabwareToSlotDialog(tk.Toplevel):
         self.result = None
         self.destroy()
 
-class CollapsibleFrame(ttk.Frame):
-    """A frame that can be collapsed/expanded by clicking on its title."""
-    def __init__(self, parent, text, **kw):
-        super().__init__(parent, **kw)
-
-        # Title bar
-        self.title_frame = ttk.Frame(self)
-        self.title_frame.pack(fill="x", expand=False)
-
-        self.toggle_btn = ttk.Label(self.title_frame, text="▶", width=2)
-        self.toggle_btn.pack(side="left", padx=5)
-
-        self.title_lbl = ttk.Label(self.title_frame, text=text, font=("Arial", 12, "bold"))
-        self.title_lbl.pack(side="left", pady=2)
-
-        # Content frame (initially hidden)
-        self.content_frame = ttk.Frame(self)
-        self.content_frame.pack(fill="both", expand=True)
-        self.content_frame.pack_forget()  # start collapsed
-
-        # Bind click
-        self.title_frame.bind("<Button-1>", self.toggle)
-        self.toggle_btn.bind("<Button-1>", self.toggle)
-        self.title_lbl.bind("<Button-1>", self.toggle)
-
-        self.is_expanded = False
-
-    def toggle(self, event=None):
-        if self.is_expanded:
-            self.content_frame.pack_forget()
-            self.toggle_btn.config(text="▶")
-        else:
-            self.content_frame.pack(fill="both", expand=True)
-            self.toggle_btn.config(text="▼")
-        self.is_expanded = not self.is_expanded
-
 class DeckGUI:
     def __init__(self, deck=None):
         self.root = tk.Tk()
@@ -3082,6 +3026,7 @@ class DeckGUI:
         # View toggles for slots and labware
         self.slot_view_mode = tk.StringVar(value="unplaced")  # "placed" or "unplaced"
         self.labware_view_mode = tk.StringVar(value="unplaced")  # "placed" or "unplaced"
+        self.foc_bat_script_path = None
 
         self.setup_ui()
         # Delay initial draw until window is fully rendered
@@ -3251,7 +3196,6 @@ class DeckGUI:
 
         # We'll update this dynamically
         self.update_slots_buttons()
-
 
         # ===== LABWARE SECTION WITH TOGGLE =====
         labware_main_frame = ttk.Labelframe(control_frame, text="Labware", padding=10)
@@ -3443,7 +3387,6 @@ class DeckGUI:
     def create_low_level_para_tab(self):
 
         """Create the Create tab"""
-
         create_tab = ttk.Frame(self.right_panel_notebook)
         self.right_panel_notebook.add(create_tab, text="Low level parameters")
 
@@ -3488,17 +3431,18 @@ class DeckGUI:
         create_canvas.bind('<Leave>', unbind_create_mousewheel)
 
         # === SELECTION INFO PANEL ===
-        self.create_info_frame = ttk.Labelframe(create_control_frame, text="Selection Info", padding=10)
+        self.create_info_frame = CollapsibleFrame(create_control_frame, text="Selection Info")
         self.create_info_frame.pack(fill=tk.BOTH, pady=5, padx=5)
 
-        self.create_info_text = tk.Text(self.create_info_frame, height=10, wrap=tk.WORD)
-        self.create_info_text.pack(fill=tk.BOTH, expand=True)
+        # Text box inside content_frame
+        self.create_info_text = tk.Text(self.create_info_frame.content_frame, height=10, wrap=tk.WORD)
+        self.create_info_text.pack(fill=tk.BOTH, expand=True, padx=10, pady=(10, 5))
 
-        # === CONTROL BUTTONS ===
-        create_btn_frame = ttk.Frame(create_control_frame)
-        create_btn_frame.pack(fill=tk.X, pady=5, padx=5)
+        # Button also inside content_frame
+        create_btn_frame = ttk.Frame(self.create_info_frame.content_frame)
+        create_btn_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
 
-        ttk.Button(create_btn_frame, text="Clear Selection", command=self.clear_selection).pack(fill=tk.X, pady=2)
+        ttk.Button(create_btn_frame, text="Clear Selection", command=self.clear_selection).pack(fill=tk.X)
 
         # === CREATE SECTIONS ===
         # Low-Level Labware section
@@ -3535,6 +3479,35 @@ class DeckGUI:
 
         ttk.Button(lll_btn_frame, text="Create Low-Level Lw", command=self.create_low_level_labware).pack( expand=True, fill=tk.X, padx=5, pady=5)
         ttk.Button(lll_btn_frame, text="Delete Selected", command=self.delete_selected_lll).pack( expand=True, fill=tk.X, padx=5, pady=5)
+
+        # FOC Configuration Section
+        foc_section = ttk.Labelframe(create_control_frame, text="FOC Measurement Configuration", padding=15)
+        foc_section.pack(fill=tk.X, pady=10, padx=5)
+
+        ttk.Label(
+            foc_section,
+            text="Configure the path to the FOC measurement batch script:",
+            font=('Arial', 10),
+            wraplength=350
+        ).pack(anchor='w', pady=(0, 10))
+
+        # Status Display
+        self.foc_config_status_frame = ttk.Labelframe(foc_section, text="FOC Status", padding=10)
+        self.foc_config_status_frame.pack(fill=tk.X, pady=5)
+
+        self.foc_config_status_label = ttk.Label(
+            self.foc_config_status_frame,
+            text="Not configured",
+            foreground='gray'
+        )
+        self.foc_config_status_label.pack(anchor='w')
+
+        # Configure Button
+        ttk.Button(
+            foc_section,
+            text="Open FOC Script Location",
+            command=self.configure_foc_script
+        ).pack(fill=tk.X, pady=5)
 
         pipettor_section = ttk.Labelframe(create_control_frame, text="Pipettor Configuration", padding=15)
         pipettor_section.pack(fill=tk.X, pady=10, padx=5)
@@ -3690,6 +3663,46 @@ class DeckGUI:
         )
         self.pipettor_status_label.pack(anchor='w')
 
+    def configure_foc_script(self):
+        """Open file dialog to configure FOC measurement script path"""
+
+        # Browse for BAT file
+        filename = filedialog.askopenfilename(
+            title="Select FOC48.bat Script",
+            filetypes=[("Batch files", "*.bat"), ("All files", "*.*")],
+            initialdir="C:\\labhub\\Import\\" if os.path.exists("C:\\labhub\\Import\\") else None
+        )
+
+        if filename:
+
+            plate_name = simpledialog.askstring(
+                "FOC Configuration",
+                "Enter plate name for FOC measurements:",
+                initialvalue=""
+            )
+
+            if not plate_name or not plate_name.strip():
+                messagebox.showwarning("Warning", "Plate name is required for FOC configuration")
+                return
+
+            plate_name = plate_name.strip()
+
+            self.foc_bat_script_path = filename
+            self.foc_plate_name = plate_name
+
+            self.foc_config_status_label.config(
+                text=f"✓ Configured: {os.path.basename(filename)}",
+                foreground='green'
+            )
+
+            if hasattr(self, 'pipettor') and self.pipettor:
+                self.pipettor.foc_bat_script_path = filename
+                self.pipettor.foc_plate_name = plate_name
+
+            #udpate buttons in function window
+            if hasattr(self, 'function_window') and self.function_window:
+                self.function_window.update_foc_section()
+
     def update_pipettor_status(self):
         """Update the pipettor status display"""
         if hasattr(self, 'pipettor_status_label'):
@@ -3765,6 +3778,15 @@ class DeckGUI:
             if dispense_speed is not None:
                 self.pipettor.dispense_speed = dispense_speed
 
+            if hasattr(self, 'foc_bat_script_path'):
+                self.pipettor.foc_bat_script_path = self.foc_bat_script_path
+            if hasattr(self, 'foc_plate_name'):
+                self.pipettor.foc_plate_name = self.foc_plate_name
+
+            # Update FOC section in Operations tab
+            if hasattr(self, 'function_window') and self.function_window:
+                self.function_window.update_foc_section()
+
             # Build status message
             mode = "Multichannel (consecutive tips)" if multichannel else "Single channel"
             tip_info = f"{tip_volume}µL tips"
@@ -3788,8 +3810,6 @@ class DeckGUI:
 
             if hasattr(self, 'rebuild_operations_tab'):
                 self.rebuild_operations_tab()
-
-            messagebox.showinfo("Success", f"Pipettor initialized successfully!\n\n{status_text}")
 
         except ValueError as e:
             messagebox.showerror("Invalid Input", str(e))
@@ -3829,15 +3849,6 @@ class DeckGUI:
         """Called when an operation completes in Operations tab"""
         # Update pipettor status display
         self.update_pipettor_status()
-
-        # If something is selected, refresh its info
-        if hasattr(self, 'selected_item') and self.selected_item:
-            item_type, item_id = self.selected_item
-            if item_type == 'labware':
-                self.select_labware(item_id)
-            elif item_type == 'slot':
-                self.select_slot(item_id)
-
 
     def rebuild_operations_tab(self):
         """
@@ -3888,21 +3899,18 @@ class DeckGUI:
             if messagebox.askyesno("Confirm Delete",
                                    f"Are you sure you want to delete Well '{component.labware_id or 'Unnamed'}'?"):
                 del self.available_wells[index]
-                messagebox.showinfo("Success", f"{lll_type} deleted!")
 
         elif lll_type == "Reservoir":
             component = self.available_reservoirs[index]
             if messagebox.askyesno("Confirm Delete",
                                    f"Are you sure you want to delete Reservoir '{component.labware_id or 'Unnamed'}'?"):
                 del self.available_reservoirs[index]
-                messagebox.showinfo("Success", f"{lll_type} deleted!")
 
         elif lll_type == "IndividualPipetteHolder":
             component = self.available_individual_holders[index]
             if messagebox.askyesno("Confirm Delete",
                                    f"Are you sure you want to delete IndividualPipetteHolder '{component.labware_id or 'Unnamed'}'?"):
                 del self.available_individual_holders[index]
-                messagebox.showinfo("Success", f"{lll_type} deleted!")
         else:
             return
 
@@ -3985,16 +3993,10 @@ class DeckGUI:
             # 2. Add to appropriate list and show success message
             if isinstance(component, Well):
                 self.available_wells.append(component)
-                messagebox.showinfo("Success",
-                                    f"Well '{component.labware_id}' created!\nYou can now use it when creating a Plate.")
             elif isinstance(component, Reservoir):
                 self.available_reservoirs.append(component)
-                messagebox.showinfo("Success",
-                                    f"Reservoir '{component.labware_id}' created!\nYou can now use it when creating a ReservoirHolder.")
             elif isinstance(component, IndividualPipetteHolder):
                 self.available_individual_holders.append(component)
-                messagebox.showinfo("Success",
-                                    f"IndividualPipetteHolder '{component.labware_id}' created!\nYou can now use it when creating a PipetteHolder.")
 
             # 3. Update the listbox in the main 'Create Labware' tab
             # This function will clear and repopulate self.lll_listbox
@@ -4021,8 +4023,6 @@ class DeckGUI:
             self.labware_view_mode.set("unplaced")
             self.update_labware_list()
             self.select_newly_created_labware(new_labware)
-            messagebox.showinfo("Success",
-                                f"Labware '{dialog.result.labware_id}' created!\nSwitch to 'Unplaced' view to place it on a slot.")
 
     def select_newly_created_labware(self, labware_component):
         """Selects the newly created Labware in the main Labware listbox."""
@@ -4073,7 +4073,6 @@ class DeckGUI:
             self.draw_deck()
             if hasattr(self, 'rebuild_operations_tab'):
                 self.rebuild_operations_tab()
-            messagebox.showinfo("Success", "New deck created!")
 
     def create_slot(self):
         """Open dialog to create a new slot"""
@@ -4087,9 +4086,6 @@ class DeckGUI:
             if self.slot_view_mode.get() == "unplaced":
                 self.update_slots_list()
                 self.select_newly_created_slot(new_slot)
-
-            messagebox.showinfo("Success",
-                                f"Slot created!\nclick 'Place Slot' to add it to the deck.")
 
     def select_newly_created_slot(self, slot_component):
         """Selects the newly created Slot in the main Slots listbox."""
@@ -4129,9 +4125,6 @@ class DeckGUI:
                 self.draw_deck()
                 if hasattr(self, 'rebuild_operations_tab'):
                     self.rebuild_operations_tab()
-
-                messagebox.showinfo("Success",
-                                    f"Labware '{labware.labware_id}' placed on slot '{dialog.result['slot_id']}'!")
             except ValueError as e:
                 messagebox.showerror("Error", str(e))
 
@@ -4554,8 +4547,6 @@ class DeckGUI:
         if hasattr(self, 'rebuild_operations_tab'):
             self.rebuild_operations_tab()
 
-        messagebox.showinfo("Success", f"Slot '{slot.slot_id}' placed on deck!")
-
     def unplace_selected_slot(self, slot_id=None):
         """
         Removes a placed slot from the deck and makes it an unplaced slot.
@@ -4607,9 +4598,6 @@ class DeckGUI:
 
         if unplaced_labware_list:
             lw_list = ", ".join([lw.labware_id for lw in unplaced_labware_list])
-            messagebox.showinfo("Unplaced", f"Slot {slot_id} and contained labware ({lw_list}) unplaced successfully.")
-        else:
-            messagebox.showinfo("Unplaced", f"Slot {slot_id} unplaced successfully.")
         return
 
     def unplace_selected_labware(self, lw_id=None):
@@ -4645,7 +4633,6 @@ class DeckGUI:
         if hasattr(self, 'rebuild_operations_tab'):
             self.rebuild_operations_tab()
 
-        messagebox.showinfo("Unplaced", f"Labware {lw_id} unplaced successfully.")
         return
 
     def edit_selected_unplaced_slot(self):
@@ -4667,7 +4654,6 @@ class DeckGUI:
             # 2. Re-select the edited slot
             self.update_slots_list()
             self.select_newly_created_slot(slot)
-            messagebox.showinfo("Success", f"Slot '{slot.slot_id}' updated!")
 
     def delete_selected_unplaced_slot(self):
         """Delete selected unplaced slot"""
@@ -4681,7 +4667,6 @@ class DeckGUI:
         if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete slot '{slot.slot_id}'?"):
             self.unplaced_slots.remove(slot)
             self.update_slots_list()
-            messagebox.showinfo("Success", f"Slot '{slot.slot_id}' deleted!")
 
     # Labware management methods
     def place_selected_unplaced(self):
@@ -4709,7 +4694,6 @@ class DeckGUI:
         if dialog.result:
             self.update_labware_list()
             self.show_unplaced_labware_info(labware)
-            messagebox.showinfo("Success", f"Labware '{labware.labware_id}' updated!")
 
     def delete_selected_unplaced_labware(self):
         """Delete selected unplaced labware"""
@@ -4723,7 +4707,6 @@ class DeckGUI:
         if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete labware '{labware.labware_id}'?"):
             self.unplaced_labware.remove(labware)
             self.update_labware_list()
-            messagebox.showinfo("Success", f"Labware '{labware.labware_id}' deleted!")
 
     def validate_slot_placement(self, slot):
         """Validate that a slot can be placed on the deck"""
@@ -4992,7 +4975,6 @@ class DeckGUI:
                 #print(data)
                 with open(filename, 'w') as f:
                     json.dump(data, f, indent=2)
-                messagebox.showinfo("Success", f"Deck saved to {filename}")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to save: {str(e)}")
 
@@ -5041,7 +5023,6 @@ class DeckGUI:
                 self.draw_deck()
                 if hasattr(self, 'rebuild_operations_tab'):
                     self.rebuild_operations_tab()
-                messagebox.showinfo("Success", f"Deck loaded from {filename}")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load: {str(e)}")
 
@@ -5060,9 +5041,6 @@ if __name__ == "__main__":
     gui.run()
 """
 if __name__ == "__main__":
-    import json
-    import os
-    from serializable import Serializable
 
     # Load deck from Downloads
     deck_file = os.path.expanduser("~/Downloads/deck1.json")

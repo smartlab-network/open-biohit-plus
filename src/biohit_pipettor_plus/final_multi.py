@@ -1,13 +1,11 @@
-import subprocess
-import time
 import sys
 
 sys.path.append(r"/src/biohit_pipettor_plus")
 
 #from pipettor_plus import PipettorPlus
-from deck import Deck
-from slot import Slot
-from labware import Labware, Plate, ReservoirHolder, Reservoir, PipetteHolder, TipDropzone, Well, IndividualPipetteHolder
+from .deck import Deck
+from .slot import Slot
+from .labware_classes import *
 
 
 #to troubleshoot

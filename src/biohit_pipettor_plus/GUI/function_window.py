@@ -2,17 +2,24 @@ import ttkbootstrap as ttk
 import tkinter as tk
 import uuid
 from typing import Callable, Optional
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 
-from well_window import WellWindow
-from deck import Deck
-from labware import Labware, PipetteHolder, Plate, TipDropzone, ReservoirHolder
-from pipettor_plus import PipettorPlus
-from workflow import Workflow, Operation, OperationType
-from workflow_executor import WorkflowExecutor, ExecutionResult, ExecutionStatus
-from operation_builder import OperationBuilder
+
+from .well_window import WellWindow
+from ..deck import Deck
+from ..labware_classes import *
+from .collapsible_frame import CollapsibleFrame
+from ..pipettor_plus import PipettorPlus
+
+from ..operations.workflow import Workflow
+from ..operations.operation import Operation
+from ..operations.operationtype import OperationType
+from ..operations.operation_builder import OperationBuilder
+from ..operations.operation_logger import OperationLogger
+from ..operations.workflow_executor import WorkflowExecutor
+
 import os
-from operation_logger import OperationLogger
+import copy
 
 class FunctionWindow:
     """
@@ -56,17 +63,25 @@ class FunctionWindow:
         self.channels = self.pipettor.tip_count
         self.multichannel = self.pipettor.multichannel
 
-        # Workflow state
         if mode == "builder":
             self._state_snapshot = self.pipettor.push_state()
             self.pipettor.set_simulation_mode(True)
             self.workflow = Workflow(name="New Workflow")
             self.parent_function_window = None
+            self.workflow_validated = False
+            self.edit_mode = False
+            self.edit_index = None
+            self.selected_operations = set()  # Set of indices
+            self.clipboard_operations = []  # List of Operation objects
         else:
             self.workflow = None
             self.workflows_in_memory = {}
-            self.workflows_dir = "saved_workflows"
+            self.workflows_dir = "../saved_workflows"
             os.makedirs(self.workflows_dir, exist_ok=True)
+
+            self.operation_logger = OperationLogger()
+
+
 
         #for direct mode
         self.custom_funcs_dict: dict[str, list[Callable]] = {}
@@ -77,6 +92,7 @@ class FunctionWindow:
         self.staged_operation: Optional[Callable] = None
         self.staged_operation_name: Optional[str] = None
         self.staged_operation_details: Optional[str] = None
+        self.staged_operation_validated: bool = False
 
         # Get available labware
         self.dict_top_labware = self.get_top_labwares()
@@ -86,6 +102,7 @@ class FunctionWindow:
             self.container = parent_frame
             self.is_toplevel = False
             self.create_direct_mode_ui()
+
         elif mode == "builder":
             if isinstance(master, (ttk.Window, tk.Tk)):
                 self.window_build_func = ttk.Toplevel(master)
@@ -236,10 +253,10 @@ class FunctionWindow:
 
         self.execute_button = ttk.Button(
             action_frame,
-            text="Execute Now",
-            command=self.execute_staged_operation,
+            text="Validate",
+            command=self.validate_staged_operation,
             state='disabled',
-            bootstyle="success"
+            bootstyle="warning"
         )
         self.execute_button.grid(row=0, column=0, sticky='ew', padx=5)
 
@@ -254,6 +271,42 @@ class FunctionWindow:
 
         # Operation buttons
         self.place_operation_buttons(self.control_frame)
+
+    def validate_staged_operation(self):
+        """Validate the staged operation in simulation mode"""
+        if self.staged_operation is None:
+            return
+
+        try:
+            # Save current state
+            state_snapshot = self.pipettor.push_state()
+
+            # Enable simulation mode
+            self.pipettor.set_simulation_mode(True)
+
+            # Try to execute in simulation
+            self.staged_operation.execute(self.pipettor, self.deck)
+
+            # Restore state
+            self.pipettor.pop_state(state_snapshot)
+
+            # Mark as validated
+            self.staged_operation_validated = True
+            self.update_staged_display()
+
+            messagebox.showinfo(
+                "Validation Successful",
+                f"Operation '{self.staged_operation.operation_type.value}' is valid and ready to execute."
+            )
+
+        except Exception as e:
+            # Restore state on error
+            self.pipettor.pop_state(state_snapshot)
+
+            messagebox.showerror(
+                "Validation Failed",
+                f"Operation validation failed:\n\n{str(e)}"
+            )
 
     def create_builder_mode_ui(self):
         """Create full UI for workflow builder in separate window with scrolling"""
@@ -322,24 +375,85 @@ class FunctionWindow:
         self.stage_label = ttk.Label(
             content_frame,  # Changed
             text="",
-            font=('Arial', 10),
+            font=('Arial', 14),
             foreground="gray"
         )
         self.stage_label.grid(row=1, column=1, sticky="ew", padx=5, pady=2)
 
+        self.edit_info_label = ttk.Label(
+            content_frame,
+            text="",
+            font=('Arial', 10, 'bold'),
+            foreground="orange"
+        )
+        self.edit_info_label.grid(row=2, column=1, sticky="ew", padx=5, pady=2)
+
         self.second_column_frame = ttk.Frame(content_frame)  # Changed
-        self.second_column_frame.grid(row=2, column=1, rowspan=9, sticky="nsew")
+        self.second_column_frame.grid(row=3, column=1, rowspan=9, sticky="nsew")
         self.second_column_frame.columnconfigure(0, weight=1)
         for i in range(10):
             self.second_column_frame.rowconfigure(i, weight=1)
 
-        # Right column: Workflow queue
-        queue_label = ttk.Label(
-            content_frame,  # Changed
+        # Right column
+        queue_header_frame = ttk.Frame(content_frame)
+        queue_header_frame.grid(row=0, column=2, sticky="ew", padx=10, pady=5)
+
+        # Title (left)
+        title_label = ttk.Label(
+            queue_header_frame,
             text="Workflow Queue",
             font=('Helvetica', 14)
         )
-        queue_label.grid(row=0, column=2, sticky="ew", padx=10)
+        title_label.grid(row=0, column=0, sticky="w")
+
+        # --- Controls container (right side) ---
+        controls_frame = ttk.Frame(queue_header_frame)
+        controls_frame.grid(row=0, column=1, sticky="e")
+
+        # Copy button
+        self.copy_btn = ttk.Button(
+            controls_frame,
+            text="Copy",
+            command=self.copy_selected_operations,
+            state='disabled',
+            bootstyle="info-outline",
+            width=8
+        )
+        self.copy_btn.grid(row=0, column=0, padx=3)
+
+        # Paste button
+        self.paste_btn = ttk.Button(
+            controls_frame,
+            text="Paste",
+            command=self.paste_operations,
+            state='disabled',
+            bootstyle="success-outline",
+            width=8
+        )
+        self.paste_btn.grid(row=0, column=1, padx=3)
+
+        # Paste position entry
+        self.paste_position_var = tk.StringVar(value="After selected")
+
+        # Paste position entry
+        self.paste_position_var = tk.StringVar(value="End")
+
+        # Paste position entry
+        self.paste_position_var = tk.StringVar(value="End")
+
+        paste_position_menu = ttk.Combobox(
+            controls_frame,
+            textvariable=self.paste_position_var,
+            values=["End", "Top", "Or enter index..."],
+            width=12
+        )
+        paste_position_menu.grid(row=0, column=2, padx=3)
+
+        paste_position_menu.config(state='disabled')
+        self.paste_position_menu = paste_position_menu
+
+        # Stretch title column
+        queue_header_frame.columnconfigure(0, weight=1)
 
         self.third_column_frame = ttk.Frame(content_frame)  # Changed
         self.third_column_frame.grid(row=1, column=2, rowspan=9, sticky="nsew", padx=5)
@@ -456,48 +570,62 @@ class FunctionWindow:
         )
         self.transfer_plate_btn.pack(fill=tk.X, pady=2)
 
-        # Low-level Operations
-        low_level_frame = ttk.Labelframe(parent_frame, text="Low-Level", padding=10)
-        low_level_frame.pack(fill=tk.X, pady=5, padx=5)
+        self.remove_and_add_btn = ttk.Button(
+            liquid_frame, text=" Remove & Add (Batched)",
+            command=lambda: self.callback_remove_and_add(func_str="Remove & Add"),
+            bootstyle="success"
+        )
+        self.remove_and_add_btn.pack(fill=tk.X, pady=2)
 
+        self.foc_frame = ttk.Labelframe(parent_frame, text=" FOC Measurement", padding=5)
+        self.foc_frame.pack(fill=tk.X, pady=5, padx=5)
+
+        # Initial population of FOC section
+        self.update_foc_section()
+
+        self.low_level_collapsible = CollapsibleFrame(parent_frame, text="Low-Level")
+        self.low_level_collapsible.pack(fill=tk.X, pady=5, padx=5)
+
+        # Put buttons inside the content_frame
         self.suck_btn = ttk.Button(
-            low_level_frame, text=" Suck",
+            self.low_level_collapsible.content_frame, text=" Suck",
             command=lambda: self.callback_suck(func_str="Suck"),
             bootstyle="info"
         )
-        self.suck_btn.pack(fill=tk.X, pady=2)
+        self.suck_btn.pack(fill=tk.X, pady=2, padx=5)
 
         self.spit_btn = ttk.Button(
-            low_level_frame, text=" Spit",
+            self.low_level_collapsible.content_frame, text=" Spit",
             command=lambda: self.callback_spit(func_str="Spit"),
             bootstyle="info"
         )
-        self.spit_btn.pack(fill=tk.X, pady=2)
+        self.spit_btn.pack(fill=tk.X, pady=2, padx=5)
 
-        # System
-        system_frame = ttk.Labelframe(parent_frame, text="System", padding=10)
-        system_frame.pack(fill=tk.X, pady=5, padx=5)
+        # === SYSTEM OPERATIONS - COLLAPSIBLE ===
+        self.system_collapsible = CollapsibleFrame(parent_frame, text="System")
+        self.system_collapsible.pack(fill=tk.X, pady=5, padx=5)
 
+        # Put buttons inside the content_frame
         self.home_btn = ttk.Button(
-            system_frame, text=" Home",
+            self.system_collapsible.content_frame, text=" Home",
             command=lambda: self.callback_home(func_str="Home"),
             bootstyle="secondary"
         )
-        self.home_btn.pack(fill=tk.X, pady=2)
+        self.home_btn.pack(fill=tk.X, pady=2, padx=5)
 
         self.move_xy_btn = ttk.Button(
-            system_frame, text=" Move X, Y",
+            self.system_collapsible.content_frame, text=" Move X, Y",
             command=lambda: self.callback_move_xy(func_str="Move X, Y"),
             bootstyle="secondary"
         )
-        self.move_xy_btn.pack(fill=tk.X, pady=2)
+        self.move_xy_btn.pack(fill=tk.X, pady=2, padx=5)
 
         self.move_z_btn = ttk.Button(
-            system_frame, text=" Move Z",
+            self.system_collapsible.content_frame, text=" Move Z",
             command=lambda: self.callback_move_z(func_str="Move Z"),
             bootstyle="secondary"
         )
-        self.move_z_btn.pack(fill=tk.X, pady=2)
+        self.move_z_btn.pack(fill=tk.X, pady=2, padx=5)
 
     def reorder_operation(self, current_index: int):
         """
@@ -508,6 +636,7 @@ class FunctionWindow:
         current_index : int
             Current 0-based index of the operation to move
         """
+        self.clear_edit_mode()
         if current_index >= len(self.workflow.operations):
             return
 
@@ -527,6 +656,11 @@ class FunctionWindow:
         if new_position is None or new_position == current_index:
             return  # Cancelled or same position
 
+        # Update selection if this operation was selected
+        if current_index in self.selected_operations:
+            self.selected_operations.discard(current_index)
+            self.selected_operations.add(new_position)
+
         # Perform the reorder - NO VALIDATION
         operation = self.workflow.operations.pop(current_index)
         self.workflow.operations.insert(new_position, operation)
@@ -541,37 +675,15 @@ class FunctionWindow:
 
         # Update display
         self.display_workflow_queue()
-    # ========== STAGING OPERATIONS (DIRECT MODE) ==========
-    def edit_operation(self, index: int):
-        """Edit an existing operation in the workflow"""
+
+    def launch_edit_callback(self, index: int):
+        """Launch the appropriate callback for editing this operation"""
+
         if index >= len(self.workflow.operations):
             return
 
         operation = self.workflow.operations[index]
 
-        # Reset pipettor and replay up to this operation (not including it)
-        self.pipettor.pop_state(self._state_snapshot)
-        self._state_snapshot = self.pipettor.push_state()
-        self.pipettor.set_simulation_mode(True)
-
-        try:
-            # Replay operations before this one
-            for i in range(index):
-                self.workflow.operations[i].execute(self.pipettor, self.deck)
-
-            # Launch appropriate callback with edit_mode flag
-            self.launch_edit_callback(operation, index)
-
-        except Exception as e:
-            messagebox.showerror(
-                "Edit Failed",
-                f"Cannot replay workflow to this point:\n\n{str(e)}"
-            )
-            # Reset back to full workflow state
-            self.reset_to_full_workflow()
-
-    def launch_edit_callback(self, operation: Operation, index: int):
-        """Launch the appropriate callback for editing this operation"""
         op_type = operation.operation_type
 
         # Store edit context
@@ -580,6 +692,12 @@ class FunctionWindow:
 
         # Clear middle column
         self.clear_grid(self.second_column_frame)
+
+        params = operation.parameters
+        formatted_text = "\n".join([f"{key}: {value}" for key, value in params.items()])
+
+        # Update the label
+        self.edit_info_label.config(text=formatted_text)
 
         # Launch appropriate callback based on operation type
         if op_type == OperationType.PICK_TIPS:
@@ -606,57 +724,18 @@ class FunctionWindow:
             self.callback_move_z(func_str="Move Z", edit_mode=True)
         elif op_type == OperationType.HOME:
             self.callback_home(func_str="Home", edit_mode=True)
+        elif op_type == OperationType.MEASURE_FOC:
+            self.callback_measure_foc(func_str="Measure FOC", edit_mode=True)
+        elif op_type == OperationType.REMOVE_AND_ADD:
+            self.callback_remove_and_add(func_str="Remove and Add", edit_mode=True)
 
-    def reset_to_full_workflow(self):
-        """Reset pipettor and replay entire workflow"""
-        self.pipettor.pop_state(self._state_snapshot)
-        self._state_snapshot = self.pipettor.push_state()
-        self.pipettor.set_simulation_mode(True)
 
-        for op in self.workflow.operations:
-            op.execute(self.pipettor, self.deck)
 
-    def edit_selected_workflow(self):
-        """Open workflow builder to edit the selected workflow"""
-        selection = self.workflows_listbox.curselection()
-        if not selection:
-            messagebox.showwarning("No Selection", "Please select a workflow to edit")
-            return
-
-        selected_text = self.workflows_listbox.get(selection[0])
-        if selected_text == "(No saved workflows)":
-            return
-
-        workflow_name = selected_text.split(" (")[0]
-        workflow = self.workflows_in_memory.get(workflow_name)
-
-        if not workflow:
-            messagebox.showerror("Error", f"Workflow '{workflow_name}' not found")
-            return
-
-        # Open workflow builder with this workflow loaded
-        builder = FunctionWindow(
-            deck=self.deck,
-            pipettor=self.pipettor,
-            mode="builder",
-            master=self.container.winfo_toplevel()
-        )
-
-        # Load the workflow into the builder
-        builder.workflow = workflow
-        builder.entry_name.delete(0, tk.END)
-        builder.entry_name.insert(0, workflow.name)
-
-        # Replay operations on pipettor (in simulation mode)
-        for op in workflow.operations:
-            op.execute(builder.pipettor, builder.deck)
-
-        # Display operations
-        builder.display_workflow_queue()
-
+    # ========== STAGING OPERATIONS (DIRECT MODE) ==========
     def stage_operation(self, operation: Operation):
         """Stage an operation for immediate execution"""
         self.staged_operation = operation  # Operation object
+        self.staged_operation_validated = False
         self.update_staged_display()
 
     def update_staged_display(self):
@@ -679,14 +758,24 @@ class FunctionWindow:
             display_text = header  + params
             self.staged_op_text.insert(1.0, display_text)
 
-            self.execute_button.config(state='normal')
+            if self.staged_operation_validated:
+                self.execute_button.config(
+                    text="Execute",
+                    state='normal',
+                    bootstyle="success",
+                    command=self.execute_staged_operation
+                )
+            else:
+                self.execute_button.config(
+                    text="Validate",
+                    state='normal',
+                    bootstyle="warning",
+                    command=self.validate_staged_operation
+                )
+
             self.clear_button.config(state='normal')
-
             self.execute_button.focus_set()  # Set focus to execute button
-
-            # Bind Enter key to execute (unbind first to avoid duplicates)
-            self.container.winfo_toplevel().unbind('<Return>')
-            self.container.winfo_toplevel().bind('<Return>', lambda e: self.execute_staged_operation())
+            self.execute_button.bind('<Return>', lambda e: self.execute_button.invoke())
 
         self.staged_op_text.config(state='disabled')
 
@@ -695,13 +784,22 @@ class FunctionWindow:
         if self.staged_operation is None:
             return
 
+        # Require validation first
+        if not self.staged_operation_validated:
+            messagebox.showwarning(
+                "Not Validated",
+                "Please validate the operation before executing."
+            )
+            return
+
         try:
             # Use operation.execute() from workflow.py
             self.staged_operation.execute(self.pipettor, self.deck)
 
-            messagebox.showinfo(
-                "Success",
-                f"Operation '{self.staged_operation.operation_type.value}' completed!"
+            # Log success
+            self.operation_logger.log_success(
+                mode="direct",
+                operation=self.staged_operation
             )
 
             if self.on_operation_complete:
@@ -711,6 +809,13 @@ class FunctionWindow:
             self.container.winfo_toplevel().focus_force()
 
         except Exception as e:
+            # Log failure
+            self.operation_logger.log_failure(
+                mode="direct",
+                operation=self.staged_operation,
+                error_message=str(e)
+            )
+
             messagebox.showerror(
                 "Error",
                 f"Operation failed:\n\n{str(e)}"
@@ -721,7 +826,9 @@ class FunctionWindow:
         self.staged_operation = None
         self.staged_operation_name = None
         self.staged_operation_details = None
-        self.container.winfo_toplevel().unbind('<Return>')
+        self.staged_operation_validated = False
+        if hasattr(self, 'execute_button'):
+            self.execute_button.unbind('<Return>')
         self.update_staged_display()
 
     def callback_close_builder(self):
@@ -738,6 +845,47 @@ class FunctionWindow:
         if self.mode == "builder":
             self.pipettor.pop_state(self._state_snapshot)
         self.window_build_func.destroy()
+
+    def callback_measure_foc(self, func_str: str, edit_mode: bool = False):
+        """Handle FOC measurement operation"""
+        if not edit_mode:
+            self.clear_edit_mode()
+
+        # Ask for wait time using the generic dialog
+        wait_time = self.ask_volume_dialog(
+            title="FOC Measurement Wait Time",
+            initial_value=0,
+            label_text="Incubation time (sec):"
+        )
+
+        if wait_time is None:
+            return  # User cancelled
+
+        # Convert to int
+        wait_time = int(wait_time)
+
+        if self.mode == "builder":
+            plate_name = self.pipettor.foc_plate_name
+
+            operation = OperationBuilder.build_measure_foc(
+                wait_seconds=wait_time,
+                plate_name=plate_name
+            )
+
+            self.builder_config(operation)
+
+        else:  # direct mode
+            try:
+                self.pipettor.measure_foc(
+                    seconds=wait_time,
+                    platename=self.pipettor.foc_plate_name
+                )
+
+                if self.on_operation_complete:
+                    self.on_operation_complete()
+
+            except Exception as e:
+                messagebox.showerror("Error", f"FOC measurement failed:\n{str(e)}")
 
     def callback_execute_workflow(self):
         """Create workflow, execute immediately, and close"""
@@ -766,23 +914,65 @@ class FunctionWindow:
         # Execute workflow on parent's pipettor
         if hasattr(self, 'parent_function_window') and self.parent_function_window:
             parent = self.parent_function_window
-            executor = WorkflowExecutor(parent.pipettor, parent.deck)
 
+            # Log workflow start
+            parent.operation_logger.log_workflow_start(
+                workflow_name=name,
+                num_operations=len(self.workflow.operations)
+            )
+
+            # Execute operations one by one with logging
             try:
-                result = executor.execute_workflow(self.workflow)
+                for i, operation in enumerate(self.workflow.operations):
+                    try:
+                        operation.execute(parent.pipettor, parent.deck)
 
-                if result.success:
-                    messagebox.showinfo(
-                        "Success",
-                        f"Workflow '{name}' completed!\n{result.operations_completed} operations executed."
-                    )
-                    if parent.on_operation_complete:
-                        parent.on_operation_complete()
-                else:
-                    messagebox.showerror(
-                        "Workflow Failed",
-                        f"Workflow failed at operation {result.failed_operation_index + 1}:\n\n{result.error_message}"
-                    )
+                        # Log each successful operation
+                        parent.operation_logger.log_success(
+                            mode="builder",
+                            operation=operation,
+                            workflow_name=name
+                        )
+
+                    except Exception as op_error:
+                        # Log the failed operation
+                        parent.operation_logger.log_failure(
+                            mode="builder",
+                            operation=operation,
+                            error_message=str(op_error),
+                            workflow_name=name
+                        )
+
+                        # Log workflow failure
+                        parent.operation_logger.log_workflow_failed(
+                            workflow_name=name,
+                            failed_at=i,
+                            total_operations=len(self.workflow.operations),
+                            error_message=str(op_error)
+                        )
+
+                        # Show error and exit
+                        messagebox.showerror(
+                            "Workflow Failed",
+                            f"Workflow failed at operation {i + 1}:\n\n{str(op_error)}"
+                        )
+                        return
+
+                # All operations succeeded
+                parent.operation_logger.log_workflow_complete(
+                    workflow_name=name,
+                    num_completed=len(self.workflow.operations),
+                    total_operations=len(self.workflow.operations)
+                )
+
+                messagebox.showinfo(
+                    "Success",
+                    f"Workflow '{name}' completed!\n{len(self.workflow.operations)} operations executed."
+                )
+
+                if parent.on_operation_complete:
+                    parent.on_operation_complete()
+
             except Exception as e:
                 messagebox.showerror("Execution Error", f"Failed to execute workflow:\n\n{str(e)}")
 
@@ -801,13 +991,8 @@ class FunctionWindow:
         builder.parent_function_window = self
 
         if hasattr(builder, 'window_build_func'):
-            def on_close():
-                if self.mode == "builder":
-                    self.pipettor.pop_state(self._state_snapshot)
-                builder.window_build_func.destroy()
-                self.refresh_workflows_list()
+            builder.window_build_func.protocol("WM_DELETE_WINDOW", builder.callback_close_builder)
 
-            builder.window_build_func.protocol("WM_DELETE_WINDOW", on_close)
     def add_current_function(self, func: Callable, func_str: str, labware_id: str):
         """Add function to workflow queue (builder mode)"""
         self.current_func_list.append(func)
@@ -840,12 +1025,21 @@ class FunctionWindow:
             frame.columnconfigure(0, weight=1)  # Label column expands
 
             # Operation label
+            var = tk.BooleanVar(value=(idx in self.selected_operations))
+            checkbox = ttk.Checkbutton(
+                frame,
+                variable=var,
+                command=lambda i=idx, v=var: self.toggle_operation_selection(i, v),
+                bootstyle="round-toggle"
+            )
+            checkbox.grid(row=0, column=0, sticky="w", padx=(5, 2))
+
             op_text = f"{idx + 1}. {operation.operation_type.value}"
             if 'labware_id' in operation.parameters:
                 op_text += f": {operation.parameters['labware_id']}"
 
             label = ttk.Label(frame, text=op_text, font=("Helvetica", 11))
-            label.grid(row=0, column=0, sticky="w", padx=5)
+            label.grid(row=0, column=1, sticky="w", padx=5)
 
             # Move button (NEW)
             move_btn = ttk.Button(
@@ -855,17 +1049,17 @@ class FunctionWindow:
                 command=lambda i=idx: self.reorder_operation(i),
                 bootstyle="info-outline"
             )
-            move_btn.grid(row=0, column=1, sticky="e", padx=2)
+            move_btn.grid(row=0, column=2, sticky="e", padx=2)
 
             # Edit button
             edit_btn = ttk.Button(
                 frame,
                 text="✏",
                 width=3,
-                command=lambda i=idx: self.edit_operation(i),
+                command=lambda i=idx: self.launch_edit_callback(i),
                 bootstyle="warning-outline"
             )
-            edit_btn.grid(row=0, column=2, sticky="e", padx=2)
+            edit_btn.grid(row=0, column=3, sticky="e", padx=2)
 
             # Info button
             info_btn = ttk.Button(
@@ -875,7 +1069,7 @@ class FunctionWindow:
                 command=lambda op=operation: self.show_operation_details(op),
                 bootstyle="info-outline"
             )
-            info_btn.grid(row=0, column=3, sticky="e", padx=2)
+            info_btn.grid(row=0, column=4, sticky="e", padx=2)
 
             # Remove button
             remove_btn = ttk.Button(
@@ -885,9 +1079,209 @@ class FunctionWindow:
                 command=lambda i=idx: self.remove_operation_from_workflow(i),
                 bootstyle="danger-outline"
             )
-            remove_btn.grid(row=0, column=4, sticky="e", padx=2)
-
+            remove_btn.grid(row=0, column=5, sticky="e", padx=2)
+        self.update_copy_paste_buttons()
     # --- Helper Methods ---
+    def clear_edit_mode(self):
+        """Clear edit mode when starting a fresh operation"""
+        if hasattr(self, 'edit_mode'):
+            self.edit_mode = False
+        if hasattr(self, 'edit_index'):
+            self.edit_index = None
+        # Clear edit info label
+        if hasattr(self, 'edit_info_label'):
+            self.edit_info_label.config(text="")
+
+    def toggle_operation_selection(self, index: int, var: tk.BooleanVar):
+        """Toggle selection state of an operation"""
+        if var.get():
+            self.selected_operations.add(index)
+        else:
+            self.selected_operations.discard(index)
+
+        self.update_copy_paste_buttons()
+
+    def update_copy_paste_buttons(self):
+        """Update copy/paste button and combobox states"""
+        # Enable copy button if selections exist
+        if self.selected_operations:
+            self.copy_btn.config(state='normal')
+        else:
+            self.copy_btn.config(state='disabled')
+
+        # Enable paste button and combobox if clipboard has operations
+        if self.clipboard_operations:
+            self.paste_btn.config(state='normal')
+            self.paste_position_menu.config(state='normal')
+        else:
+            self.paste_btn.config(state='disabled')
+            self.paste_position_menu.config(state='disabled')
+
+    def update_foc_section(self):
+        if not hasattr(self, 'foc_frame'):
+            return
+
+        # Clear frame
+        for w in self.foc_frame.winfo_children():
+            w.destroy()
+
+        # Check config
+        foc_configured = (
+                hasattr(self.pipettor, 'foc_bat_script_path')
+                and self.pipettor.foc_bat_script_path
+                and os.path.exists(self.pipettor.foc_bat_script_path)
+                and hasattr(self.pipettor, 'foc_plate_name')
+                and self.pipettor.foc_plate_name
+        )
+
+        if foc_configured:
+            # Show configured status
+            ttk.Label(
+                self.foc_frame,
+                text=f"✓ Plate: {self.pipettor.foc_plate_name}",
+                foreground='green',
+                font=('Arial', 9, 'bold')
+            ).pack(anchor='w', pady=(0, 5))
+
+            # Run button - opens dialog when clicked
+            ttk.Button(
+                self.foc_frame,
+                text="▶ Run FOC Measurement",
+                command=lambda: self.callback_measure_foc(func_str="Measure FOC"),
+                bootstyle="success"
+            ).pack(fill=tk.X, pady=5)
+        else:
+            # Not configured
+            ttk.Button(
+                self.foc_frame,
+                text="Measure FOC",
+                command=None,
+                state="disabled"
+            ).pack(fill="x", pady=(0, 5))
+
+            ttk.Label(
+                self.foc_frame,
+                text="Configure FOC script and plate name\nin 'Low level parameters' tab.",
+                foreground="gray",
+                font=('Arial', 9, 'italic'),
+                justify=tk.LEFT
+            ).pack(anchor="w")
+
+    def execute_foc_measurement(self):
+        """Execute FOC measurement with parameters from input fields"""
+        try:
+            # Get and validate inputs
+            wait_time = int(self.foc_wait_time_var.get())
+            plate_name = self.pipettor.foc_plate_name
+
+            if not plate_name:
+                messagebox.showerror("Error", "Please enter a plate name")
+                return
+
+            if self.mode == "builder":
+                # Create operation and add to workflow
+                operation = OperationBuilder.build_measure_foc(
+                    wait_seconds=wait_time,
+                    plate_name=plate_name
+                )
+                self.builder_config(operation)
+
+            else:
+                # Execute
+                self.pipettor.measure_foc(
+                    seconds=wait_time,
+                    platename=plate_name,
+                )
+
+                if self.on_operation_complete:
+                    self.on_operation_complete()
+
+        except ValueError:
+            messagebox.showerror("Error", "Wait time must be a valid number")
+        except Exception as e:
+            messagebox.showerror("Error", f"FOC failed:\n{str(e)}")
+
+    def copy_selected_operations(self):
+        """Copy selected operations to clipboard"""
+        if not self.selected_operations:
+            return
+
+        # Sort indices to maintain order
+        sorted_indices = sorted(self.selected_operations)
+
+        # Deep copy the selected operations
+        self.clipboard_operations = [
+            copy.deepcopy(self.workflow.operations[i])
+            for i in sorted_indices
+        ]
+
+        # Clear selection
+        self.selected_operations.clear()
+
+        # Update display
+        self.display_workflow_queue()
+
+    def paste_operations(self):
+        """Paste operations from clipboard at specified position"""
+        if not self.clipboard_operations:
+            return
+
+        # Get paste position value
+        position_str = self.paste_position_var.get().strip()
+
+        # Determine insert position
+        if position_str.lower() == "end":
+            insert_pos = len(self.workflow.operations)
+
+        elif position_str.lower() == "top":
+            insert_pos = 0
+
+        elif position_str.lower() == "or enter index...":
+            # User didn't change from hint - default to end
+            insert_pos = len(self.workflow.operations)
+
+        else:
+            # Try to parse as integer index
+            try:
+                # Convert to 0-based index (user enters 1-based)
+                insert_pos = int(position_str) - 1
+
+                # Clamp to valid range
+                insert_pos = max(0, min(insert_pos, len(self.workflow.operations)))
+
+            except ValueError:
+                # Invalid input - default to end silently
+                insert_pos = len(self.workflow.operations)
+
+        # Deep copy from clipboard and insert at position
+        num_pasted = len(self.clipboard_operations)
+
+        for i, op in enumerate(self.clipboard_operations):
+            new_op = copy.deepcopy(op)
+            self.workflow.operations.insert(insert_pos + i, new_op)
+
+        # Update selection indices (shift operations after insert point)
+        new_selection = set()
+        for idx in self.selected_operations:
+            if idx >= insert_pos:
+                new_selection.add(idx + num_pasted)
+            else:
+                new_selection.add(idx)
+        self.selected_operations = new_selection
+
+        # Mark as unvalidated
+        self.workflow_validated = False
+        self.validate_execute_btn.config(
+            text="Validate",
+            bootstyle="warning",
+            command=self.callback_validate_workflow
+        )
+
+        # Update display
+        self.display_workflow_queue()
+
+        # Reset to "End" for next paste
+        self.paste_position_var.set("End")
     def ask_position_in_second_frame(self, total_ops: int, default_position: int, operation_name: str) -> int:
         """
         Display position selector in second frame.
@@ -984,8 +1378,18 @@ class FunctionWindow:
 
     def remove_operation_from_workflow(self, index: int):
         """Remove operation - NO VALIDATION"""
+        self.clear_edit_mode()
         if 0 <= index < len(self.workflow.operations):
             self.workflow.remove_operation(index)
+
+            #update selection indices
+            new_selection = set()
+            for i in self.selected_operations:
+                if i < index:
+                    new_selection.add(i)
+                elif i > index:
+                    new_selection.add(i - 1)
+            self.selected_operations = new_selection
 
             # Mark as unvalidated
             self.workflow_validated = False
@@ -996,10 +1400,10 @@ class FunctionWindow:
 
     def show_operation_details(self, operation: Operation):
         """Show detailed information about an operation"""
-        details_window = ttk.Toplevel(self.window_build_func)
+        details_window = ttk.Toplevel(self.get_master_window())
         details_window.title(f"Operation Details")
         details_window.geometry("500x400")
-        details_window.transient(self.window_build_func)
+        details_window.transient(self.get_master_window())
 
         # Details text
         text = tk.Text(details_window, wrap=tk.WORD, font=("Courier", 10))
@@ -1098,8 +1502,6 @@ class FunctionWindow:
 
     def load_workflow_from_file(self):
         """Load a workflow from JSON file into memory"""
-        from tkinter import filedialog
-
         filepath = filedialog.askopenfilename(
             title="Load Workflow",
             initialdir=self.workflows_dir,
@@ -1180,12 +1582,7 @@ class FunctionWindow:
 
         # Set up close handler
         if hasattr(builder, 'window_build_func'):
-            def on_close():
-                builder.pipettor.pop_state(builder._state_snapshot)
-                builder.window_build_func.destroy()
-                self.refresh_workflows_list()
-
-            builder.window_build_func.protocol("WM_DELETE_WINDOW", on_close)
+            builder.window_build_func.protocol("WM_DELETE_WINDOW", builder.callback_close_builder)
 
     def save_selected_workflow_to_file(self):
         """Save the selected workflow to a JSON file (with file dialog)"""
@@ -1206,8 +1603,6 @@ class FunctionWindow:
             return
 
         # Ask user where to save with file dialog
-        from tkinter import filedialog
-
         default_filename = f"{workflow.name.replace(' ', '_')}_{workflow.workflow_id[:8]}.json"
 
         filepath = filedialog.asksaveasfilename(
@@ -1300,6 +1695,10 @@ class FunctionWindow:
         """Display selectable labware buttons"""
         if self.mode == "builder":
             target_frame = self.second_column_frame
+
+            #parameters are printed on start_row = 0
+            if hasattr(self, 'edit_mode') and self.edit_mode:
+                start_row = 1
 
             for slot_id, labware in self.dict_top_labware.items():
                 if not isinstance(labware, labware_type):
@@ -1479,40 +1878,17 @@ class FunctionWindow:
         """Add or replace operation in workflow - NO VALIDATION"""
 
         if hasattr(self, 'edit_mode') and self.edit_mode:
-            # EDIT MODE
-            current_position = self.edit_index
-
-            # Ask for position
-            new_position = self.ask_position_in_second_frame(
-                total_ops=len(self.workflow.operations),
-                default_position=current_position,
-                operation_name=operation.operation_type.value
-            )
-
-            if new_position is None:
-                self.edit_mode = False
-                self.edit_index = None
-                self.clear_grid(self.second_column_frame)
-                return
-
             # Replace operation
             self.workflow.operations[self.edit_index] = operation
-
-            # Move if position changed
-            if new_position != current_position:
-                op = self.workflow.operations.pop(self.edit_index)
-                self.workflow.operations.insert(new_position, op)
-
             self.edit_mode = False
             self.edit_index = None
 
+            if hasattr(self, 'edit_info_label'):
+                self.edit_info_label.config(text="")
+
         else:
             # NORMAL MODE
-            new_position = self.ask_position_in_second_frame(
-                total_ops=len(self.workflow.operations),
-                default_position=len(self.workflow.operations),
-                operation_name=operation.operation_type.value
-            )
+            new_position = len(self.workflow.operations)
 
             if new_position is None:
                 self.clear_grid(self.second_column_frame)
@@ -1523,7 +1899,7 @@ class FunctionWindow:
 
         # Mark as unvalidated
         self.workflow_validated = False
-        self.validate_execute_btn.config(text="Validate", bootstyle="warning")
+        self.validate_execute_btn.config(text="Validate", bootstyle="warning", command=self.callback_validate_workflow)
 
         # Refresh display
         self.display_workflow_queue()
@@ -1732,14 +2108,13 @@ class FunctionWindow:
         # If single axis, return float. If multiple, return tuple.
         return final_values[0] if len(final_values) == 1 else tuple(final_values)
 
-    def ask_volume_dialog(self, title="Enter Volume", initial_value=000):
+    def ask_volume_dialog(self, title="Enter Volume", initial_value=0, label_text="Volume per well (ul):"):
         """
-        Create a simple, focused dialog for volume input.
+        Create a simple, focused dialog for numeric input.
 
         Returns
         -------
-        float or None
-            Volume entered by user, or None if cancelled
+            Value entered by user(float), or None if cancelled
         """
         dialog = tk.Toplevel(self.get_master_window())
         dialog.title(title)
@@ -1754,7 +2129,7 @@ class FunctionWindow:
         y = (dialog.winfo_screenheight() // 2) - (150 // 2)
         dialog.geometry(f"300x150+{x}+{y}")
 
-        result = {'volume': None}
+        result = {'value': None}
 
         # Main frame with padding
         main_frame = ttk.Frame(dialog, padding=20)
@@ -1763,13 +2138,13 @@ class FunctionWindow:
         # Label
         ttk.Label(
             main_frame,
-            text="Volume per well (ul):",
+            text=label_text,
             font=('Arial', 11)
         ).pack(pady=(0, 10))
 
         # Entry
-        volume_var = tk.StringVar(value=str(initial_value))
-        entry = ttk.Entry(main_frame, textvariable=volume_var, font=('Arial', 12), justify='center')
+        value_var = tk.StringVar(value=str(initial_value))
+        entry = ttk.Entry(main_frame, textvariable=value_var, font=('Arial', 12), justify='center')
         entry.pack(fill=tk.X, pady=(0, 15))
         entry.select_range(0, tk.END)
         entry.focus()
@@ -1782,11 +2157,11 @@ class FunctionWindow:
 
         def on_ok():
             try:
-                vol = float(volume_var.get())
-                if vol <= 0:
-                    messagebox.showerror("Invalid Input", "Volume must be greater than 0", parent=dialog)
+                val = float(value_var.get())
+                if val < 0:
+                    messagebox.showerror("Invalid Input", "Value must be non-negative", parent=dialog)
                     return
-                result['volume'] = vol
+                result['value'] = val
                 dialog.destroy()
             except ValueError:
                 messagebox.showerror("Invalid Input", "Please enter a valid number", parent=dialog)
@@ -1813,7 +2188,7 @@ class FunctionWindow:
         dialog.bind('<Escape>', lambda e: on_cancel())
 
         dialog.wait_window()
-        return result['volume']
+        return result['value']
 
     def compute_volume_constraints(self, labware_obj, volume_per_well: float, is_multichannel: bool = False,
                                    operation: str = 'removal'):
@@ -1927,7 +2302,10 @@ class FunctionWindow:
 
         """Handle Pick Tips operation"""
         if part == "first":
-            self.set_stage("")
+            if not edit_mode:  # Only clear if not explicitly in edit mode
+                self.clear_edit_mode()
+
+            self.set_stage("choose labware to pick tip from")
             
             if self.mode == "builder":
                 self.clear_grid(self.second_column_frame)
@@ -1952,7 +2330,8 @@ class FunctionWindow:
                 wells_list=self.get_wells_list_from_labware(
                     labware_obj=labware_obj,
                     source=True,
-                )
+                ) if self.mode == "direct" else [(r, c) for r in range(labware_obj.holders_across_y)
+                                               for c in range(labware_obj.holders_across_x)]
             )
             self.get_master_window().wait_window(window.get_root())
 
@@ -1980,11 +2359,14 @@ class FunctionWindow:
             func_str: str,
             part: str = "first",
             labware_obj: PipetteHolder = None,
+            edit_mode: bool = False,
             **kwargs
     ):
         """Handle Return Tips operation"""
         if part == "first":
-            self.set_stage("")
+            if not edit_mode:  # Only clear if not explicitly in edit mode
+                self.clear_edit_mode()
+            self.set_stage("choose labware to return tip to")
             if self.mode == "builder":
                 self.clear_grid(self.second_column_frame)
             self.display_possible_labware(
@@ -2008,7 +2390,8 @@ class FunctionWindow:
                 wells_list=self.get_wells_list_from_labware(
                     labware_obj=labware_obj,
                     source=False,  # Empty positions
-                )
+                ) if self.mode == "direct" else [(r, c) for r in range(labware_obj.holders_across_y)
+                                               for c in range(labware_obj.holders_across_x)]
             )
             self.get_master_window().wait_window(window.get_root())
 
@@ -2037,10 +2420,13 @@ class FunctionWindow:
             func_str: str,
             part: str = "first",
             labware_obj: PipetteHolder = None,
+            edit_mode: bool = False,
             **kwargs
     ):
         """Handle Replace Tips operation"""
         if part == "first":
+            if not edit_mode:  # Only clear if not explicitly in edit mode
+                self.clear_edit_mode()
             self.set_stage("")
             # Ask for RETURN labware
             if self.mode == "builder":
@@ -2070,7 +2456,8 @@ class FunctionWindow:
                 wells_list=self.get_wells_list_from_labware(
                     labware_obj=labware_obj,
                     source=False,  # Empty positions
-                )
+                ) if self.mode == "direct" else [(r, c) for r in range(labware_obj.holders_across_y)
+                                               for c in range(labware_obj.holders_across_x)]
             )
             self.get_master_window().wait_window(window_return.get_root())
 
@@ -2110,7 +2497,8 @@ class FunctionWindow:
                 wells_list=self.get_wells_list_from_labware(
                     labware_obj=labware_obj,
                     source=True,
-                )
+                ) if self.mode == "direct" else [(r, c) for r in range(labware_obj.holders_across_y)
+                                               for c in range(labware_obj.holders_across_x)]
             )
             self.get_master_window().wait_window(window_pick.get_root())
 
@@ -2142,14 +2530,18 @@ class FunctionWindow:
             func_str: str,
             part: str = "first",
             labware_obj: TipDropzone = None,
+            edit_mode: bool = False,
             **kwargs
     ):
         """Handle Discard Tips operation"""
         if part == "first":
-            self.set_stage("")
+            if not edit_mode:  # Only clear if not explicitly in edit mode
+                self.clear_edit_mode()
+            self.set_stage("choose labware to discard tips to")
 
             if self.mode == "builder":
                 self.clear_grid(self.second_column_frame)
+
             self.display_possible_labware(
                 labware_type=TipDropzone,
                 next_callback=self.callback_discard_tips,
@@ -2174,6 +2566,7 @@ class FunctionWindow:
             func_str: str,
             part: str = "first",
             labware_obj=None,
+            edit_mode: bool = False,
             **kwargs
     ):
         """
@@ -2182,6 +2575,8 @@ class FunctionWindow:
         """
         # --- PART 1: GET VOLUME ---
         if part == "first":
+            if not edit_mode:  # Only clear if not explicitly in edit mode
+                self.clear_edit_mode()
             self.set_stage("")
             volume = self.ask_volume_dialog(title="Add Medium Volume", initial_value=100)
             if volume:
@@ -2209,6 +2604,7 @@ class FunctionWindow:
                 labware_obj, volume, self.multichannel, operation='addition'
             )
 
+
             window = WellWindow(
                 rows=labware_obj._rows,
                 columns=labware_obj._columns,
@@ -2218,7 +2614,7 @@ class FunctionWindow:
                 master=self.get_master_window(),
                 title=f"DESTINATION: Select wells on {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False),
-                volume_constraints=volume_constraints
+                volume_constraints= volume_constraints if self.mode == "direct" else {}
             )
             self.get_master_window().wait_variable(window.safe_var)
 
@@ -2262,7 +2658,7 @@ class FunctionWindow:
                 master=self.get_master_window(),
                 title=f"SOURCE: Choose reservoir {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True),
-                volume_constraints=volume_constraints
+                volume_constraints= volume_constraints if self.mode == "direct" else {}
             )
             self.get_master_window().wait_variable(window.safe_var)
 
@@ -2293,6 +2689,7 @@ class FunctionWindow:
             func_str: str,
             part: str = "first",
             labware_obj=None,
+            edit_mode: bool = False,
             **kwargs
     ):
         """
@@ -2301,6 +2698,8 @@ class FunctionWindow:
         """
         # --- PART 1: GET VOLUME ---
         if part == "first":
+            if not edit_mode:  # Only clear if not explicitly in edit mode
+                self.clear_edit_mode()
             self.set_stage("")
             volume = self.ask_volume_dialog(title="Remove Medium Volume", initial_value=100)
             if volume:
@@ -2337,7 +2736,7 @@ class FunctionWindow:
                 master=self.get_master_window(),
                 title=f"SOURCE: Select wells on {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True),
-                volume_constraints=volume_constraints
+                volume_constraints= volume_constraints if self.mode == "direct" else {}
             )
             self.get_master_window().wait_variable(window.safe_var)
 
@@ -2382,7 +2781,7 @@ class FunctionWindow:
                 master=self.get_master_window(),
                 title=f"DESTINATION: Select reservoir {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False),
-                volume_constraints=volume_constraints
+                volume_constraints= volume_constraints if self.mode == "direct" else {}
             )
             self.get_master_window().wait_variable(window.safe_var)
 
@@ -2415,6 +2814,7 @@ class FunctionWindow:
             func_str: str,
             part: str = "first",
             labware_obj=None,
+            edit_mode: bool = False,
             **kwargs
     ):
         """
@@ -2424,6 +2824,8 @@ class FunctionWindow:
         """
         # --- PART 1: GET VOLUME ---
         if part == "first":
+            if not edit_mode:  # Only clear if not explicitly in edit mode
+                self.clear_edit_mode()
             self.set_stage("")
             volume = self.ask_volume_dialog(title="Transfer Medium Volume", initial_value=100)
             if volume:
@@ -2462,7 +2864,7 @@ class FunctionWindow:
                 master=self.get_master_window(),
                 title=f"SOURCE: Select wells on {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True),
-                volume_constraints=volume_constraints
+                volume_constraints= volume_constraints if self.mode == "direct" else {}
             )
             self.get_master_window().wait_variable(window.safe_var)
 
@@ -2506,7 +2908,7 @@ class FunctionWindow:
                 master=self.get_master_window(),
                 title=f"DESTINATION: Select wells on {labware_obj.labware_id}",
                 wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False),
-                volume_constraints=volume_constraints
+                volume_constraints= volume_constraints if self.mode == "direct" else {}
             )
             self.get_master_window().wait_variable(window.safe_var)
 
@@ -2549,11 +2951,181 @@ class FunctionWindow:
             elif self.mode == "builder":
                 self.builder_config(operation)
 
+    def callback_remove_and_add(
+            self,
+            func_str: str,
+            part: str = "first",
+            labware_obj=None,
+            edit_mode: bool = False,
+            **kwargs
+    ):
+        """
+        Handle Remove & Add operation (batched).
+        1. Select wells on plate
+        2. Remove medium to remove reservoir
+        3. Add fresh medium from source reservoir
+        """
+        if part == "first":
+            if not edit_mode:
+                self.clear_edit_mode()
+            self.set_stage("")
+            volume = self.ask_volume_dialog(title="Remove & Add Volume", initial_value=100)
+            if volume:
+                self.callback_remove_and_add(func_str, part="second", volume=volume, **kwargs)
+
+        elif part == "second":
+            # Select plate and wells
+            if self.mode == "builder":
+                self.clear_grid(self.second_column_frame)
+            self.set_stage("choose plate and wells to work with")
+            kwargs['volume'] = kwargs.get('volume')
+            self.display_possible_labware(
+                labware_type=Plate,
+                next_callback=self.callback_remove_and_add,
+                func_str=func_str,
+                part="third",
+                **kwargs
+            )
+
+        elif part == "third" and labware_obj is not None:
+            # Select wells on plate
+            volume = kwargs.get('volume')
+            volume_constraints = self.compute_volume_constraints(
+                labware_obj, volume, self.multichannel, operation='removal'
+            )
+
+            window = WellWindow(
+                rows=labware_obj._rows,
+                columns=labware_obj._columns,
+                labware_id=labware_obj.labware_id,
+                max_selected=None,
+                multichannel_mode=self.multichannel,
+                master=self.get_master_window(),
+                title=f"Select wells on {labware_obj.labware_id}",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True),
+                volume_constraints=volume_constraints if self.mode == "direct" else {}
+            )
+            self.get_master_window().wait_variable(window.safe_var)
+
+            kwargs["plate_labware"] = labware_obj
+            if self.multichannel:
+                kwargs["plate_positions"] = [(c, r) for r, c in window.get_start_positions()]
+            else:
+                kwargs["plate_positions"] = [(c, r) for r, row in enumerate(window.well_state)
+                                             for c, v in enumerate(row) if v]
+            del window
+
+            if not kwargs["plate_positions"]:
+                return
+
+            if self.mode == "builder":
+                self.clear_grid(self.second_column_frame)
+
+            # Next: select remove reservoir
+            self.set_stage("choose reservoir to remove medium to")
+            self.display_possible_labware(
+                labware_type=ReservoirHolder,
+                next_callback=self.callback_remove_and_add,
+                func_str=func_str,
+                part="fourth",
+                **kwargs
+            )
+
+        elif part == "fourth" and labware_obj is not None:
+            #Select remove reservoir position
+            volume = kwargs.get('volume')
+            num_positions = len(kwargs['plate_positions'])
+            volume_constraints = self.compute_volume_constraints(
+                labware_obj, volume * num_positions, self.multichannel, operation='addition'
+            )
+
+            window = WellWindow(
+                rows=labware_obj.hooks_across_y,
+                columns=labware_obj.hooks_across_x,
+                labware_id=labware_obj.labware_id,
+                max_selected=1,
+                multichannel_mode=False if not labware_obj.each_tip_needs_separate_item() else self.multichannel,
+                master=self.get_master_window(),
+                title=f"REMOVE TO: Select reservoir {labware_obj.labware_id} (old medium destination)",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False),
+                volume_constraints=volume_constraints if self.mode == "direct" else {}
+            )
+            self.get_master_window().wait_variable(window.safe_var)
+
+            kwargs["remove_reservoir"] = labware_obj
+            selected = [(c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v]
+            kwargs["remove_position"] = selected[0] if selected else None
+            del window
+
+            if not kwargs["remove_position"]:
+                return
+
+            if self.mode == "builder":
+                self.clear_grid(self.second_column_frame)
+
+            # Next: select source reservoir
+            self.set_stage("choose reservoir to add fresh medium from")
+            self.display_possible_labware(
+                labware_type=ReservoirHolder,
+                next_callback=self.callback_remove_and_add,
+                func_str=func_str,
+                part="fifth",
+                **kwargs
+            )
+
+        elif part == "fifth" and labware_obj is not None:
+            # Select source reservoir position
+            volume = kwargs.get('volume')
+            num_positions = len(kwargs['plate_positions'])
+            volume_constraints = self.compute_volume_constraints(
+                labware_obj, volume * num_positions, self.multichannel, operation='removal'
+            )
+
+            window = WellWindow(
+                rows=labware_obj.hooks_across_y,
+                columns=labware_obj.hooks_across_x,
+                labware_id=labware_obj.labware_id,
+                max_selected=1,
+                multichannel_mode=False if not labware_obj.each_tip_needs_separate_item() else self.multichannel,
+                master=self.get_master_window(),
+                title=f"ADD FROM: Select reservoir {labware_obj.labware_id} (fresh medium source)",
+                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True),
+                volume_constraints=volume_constraints if self.mode == "direct" else {}
+            )
+            self.get_master_window().wait_variable(window.safe_var)
+
+            kwargs["source_reservoir"] = labware_obj
+            selected = [(c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v]
+            kwargs["source_position"] = selected[0] if selected else None
+            del window
+
+            if not kwargs["source_position"]:
+                return
+
+                # BUILD THE OPERATION - THIS WAS MISSING!
+            operation = OperationBuilder.build_remove_and_add(
+                plate_labware_id=kwargs["plate_labware"].labware_id,
+                plate_positions=kwargs["plate_positions"],
+                remove_reservoir_id=kwargs["remove_reservoir"].labware_id,
+                remove_position=kwargs["remove_position"],
+                source_reservoir_id=kwargs["source_reservoir"].labware_id,
+                source_position=kwargs["source_position"],
+                volume=kwargs['volume'],
+                channels=self.channels
+            )
+
+            if self.mode == "direct":
+                self.stage_operation(operation)
+            elif self.mode == "builder":
+                self.builder_config(operation)
+
+
     def callback_suck(
             self,
             func_str: str,
             part: str = "first",
             labware_obj: Labware = None,
+            edit_mode: bool = False,
             **kwargs
     ):
         """Handle Suck operation"""
@@ -2564,6 +3136,9 @@ class FunctionWindow:
 
         # --- PART 1: GET VOLUME ---
         if part == "first":
+            if not edit_mode:  # Only clear if not explicitly in edit mode
+                self.clear_edit_mode()
+
             self.set_stage("")
             volume = self.ask_volume_dialog(title="Suck Volume", initial_value=100)
             if volume:
@@ -2575,6 +3150,7 @@ class FunctionWindow:
                 self.clear_grid(self.second_column_frame)
 
             kwargs['volume'] = kwargs.get('volume')
+            self.set_stage("choose reservoir/plate to aspirate liquid from")
             self.display_possible_labware(
                 labware_type=(Plate, ReservoirHolder),
                 next_callback=self.callback_suck,
@@ -2598,12 +3174,11 @@ class FunctionWindow:
 
             # Validate volume in direct mode
             if self.mode == "direct":
-                print(self.pipettor.get_total_tip_volume(0))
                 if volume > (self.pipettor.tip_volume - self.pipettor.get_total_tip_volume(0)):
                     messagebox.showerror("Error", "Volume too high")
                     return
 
-            is_multichannel = (self.channels == 8)
+            is_multichannel = self.multichannel
             total_volume = volume * self.channels
 
             # Compute volume constraints
@@ -2628,7 +3203,7 @@ class FunctionWindow:
                     labware_obj=labware_obj,
                     source=True,
                 ),
-                volume_constraints=volume_constraints
+                volume_constraints= volume_constraints if self.mode == "direct" else {}
             )
             self.get_master_window().wait_window(window.get_root())
 
@@ -2640,7 +3215,7 @@ class FunctionWindow:
                 position = (start_positions[0][1], start_positions[0][0])
             else:
                 selected = [(c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v]
-                if not selected:
+                if not selected or not window.confirmed:
                     return
                 position = selected[0]
 
@@ -2661,6 +3236,7 @@ class FunctionWindow:
             func_str: str,
             part: str = "first",
             labware_obj: Labware = None,
+            edit_mode: bool = False,
             **kwargs
     ):
         """Handle Spit operation"""
@@ -2671,6 +3247,8 @@ class FunctionWindow:
 
         # --- PART 1: GET VOLUME ---
         if part == "first":
+            if not edit_mode:  # Only clear if not explicitly in edit mode
+                self.clear_edit_mode()
             self.set_stage("")
             volume = self.ask_volume_dialog(title="Spit Volume", initial_value=100)
             if volume:
@@ -2682,6 +3260,7 @@ class FunctionWindow:
                 self.clear_grid(self.second_column_frame)
 
             kwargs['volume'] = kwargs.get('volume')
+            self.set_stage("choose reservoir/plate to dispense liquid to")
             self.display_possible_labware(
                 labware_type=(Plate, ReservoirHolder),
                 next_callback=self.callback_spit,
@@ -2709,7 +3288,7 @@ class FunctionWindow:
                     messagebox.showerror("Error", "Not enough liquid in tip")
                     return
 
-            is_multichannel = (self.channels == 8)
+            is_multichannel = self.multichannel
             total_volume = volume * self.channels
 
             # Compute volume constraints
@@ -2734,7 +3313,7 @@ class FunctionWindow:
                     labware_obj=labware_obj,
                     source=False,
                 ),
-                volume_constraints=volume_constraints
+                volume_constraints= volume_constraints if self.mode == "direct" else {}
             )
             self.get_master_window().wait_window(window.get_root())
 
@@ -2746,7 +3325,7 @@ class FunctionWindow:
                 position = (start_positions[0][1], start_positions[0][0])
             else:
                 selected = [(c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v]
-                if not selected:
+                if not selected or not window.confirmed:
                     return
                 position = selected[0]
 
@@ -2763,8 +3342,12 @@ class FunctionWindow:
                 self.stage_operation(operation)
             elif self.mode == "builder":
                 self.builder_config(operation)
-    def callback_move_xy(self, func_str: str):
+    def callback_move_xy(self, func_str: str, edit_mode: bool = False):
         """Handle Move X and Y operation"""
+
+        if not edit_mode:  # Only clear if not explicitly in edit mode
+            self.clear_edit_mode()
+
         xy_result = self.ask_position_dialog([
             ('X', self.deck.range_x[0], self.deck.range_x[1], 0.0),
             ('Y', self.deck.range_y[0], self.deck.range_y[1], 0.0)
@@ -2780,8 +3363,13 @@ class FunctionWindow:
             elif self.mode == "builder":
                 self.builder_config(operation)
 
-    def callback_move_z(self, func_str: str):
+    def callback_move_z(self, func_str: str, edit_mode: bool = False):
         """Handle Move Z operation"""
+
+        if not edit_mode:
+            self.clear_edit_mode()
+
+
         z_pos = self.ask_position_dialog([
             ('Z', 0.0, self.deck.range_z, 0.0)
         ])
@@ -2794,8 +3382,11 @@ class FunctionWindow:
             elif self.mode == "builder":
                 self.builder_config(operation)
 
-    def callback_home(self, func_str: str):
+    def callback_home(self, func_str: str, edit_mode: bool = False):
         """Handle Home operation"""
+        if not edit_mode:
+            self.clear_edit_mode()
+
         operation = OperationBuilder.build_home()
 
         if self.mode == "direct":

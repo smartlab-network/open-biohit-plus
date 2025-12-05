@@ -22,4 +22,4 @@ from .pipettor_plus import Pipettor  # noqa: E402 cannot be imported earlier, de
 
 __version__ = metadata.version(__name__)
 
-__all__ = ["__version__", "Pipettor", "Protocol", "Labware", "Deck"]
+__all__ = ["__version__", "Pipettor"]

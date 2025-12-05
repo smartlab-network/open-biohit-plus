@@ -5,9 +5,9 @@ These helper functions convert UI inputs into Operation objects,
 separating the UI logic from operation creation logic.
 """
 
-from workflow import Operation, OperationType
-from labware import Labware
-
+from .operation import Operation
+from .operationtype import OperationType
+from ..labware_classes.labware import Pipettors_in_Multi
 
 class OperationBuilder:
     """Helper class to build Operation objects from UI inputs"""
@@ -101,7 +101,7 @@ class OperationBuilder:
             channels: int,
     ) -> Operation:
         """Build an ADD_MEDIUM operation"""
-        total_wells = len(dest_positions) * (8 if channels == 8 else 1)
+        total_wells = len(dest_positions) * (Pipettors_in_Multi if channels == Pipettors_in_Multi else 1)
         total_volume = volume * total_wells
 
         description = (
@@ -134,7 +134,7 @@ class OperationBuilder:
             channels: int,
     ) -> Operation:
         """Build a REMOVE_MEDIUM operation"""
-        total_wells = len(source_positions) * (8 if channels == 8 else 1)
+        total_wells = len(source_positions) * (Pipettors_in_Multi if channels == Pipettors_in_Multi else 1)
         total_volume = volume * total_wells
 
         description = (
@@ -167,7 +167,7 @@ class OperationBuilder:
             channels: int,
     ) -> Operation:
         """Build a TRANSFER_PLATE_TO_PLATE operation"""
-        total_wells = len(source_positions) * (8 if channels == 8 else 1)
+        total_wells = len(source_positions) * (Pipettors_in_Multi if channels == Pipettors_in_Multi else 1)
         total_volume = volume * total_wells
 
         description = (
@@ -248,5 +248,46 @@ class OperationBuilder:
             description=f"Move to Z={z}mm",
             parameters={
                 'z': z
+            }
+        )
+
+    @staticmethod
+    def build_measure_foc(wait_seconds: int, plate_name: str) -> Operation:
+        """Build a MEASURE_FOC operation"""
+        return Operation(
+            operation_type=OperationType.MEASURE_FOC,
+            description=f"FOC measurement: wait {wait_seconds}s, measure plate '{plate_name}'",
+            parameters={
+                'wait_seconds': wait_seconds,
+                'plate_name': plate_name
+            }
+        )
+
+    @staticmethod
+    def build_remove_and_add(
+            plate_labware_id: str,
+            plate_positions: list[tuple[int, int]],
+            remove_reservoir_id: str,
+            remove_position: tuple[int, int],
+            source_reservoir_id: str,
+            source_position: tuple[int, int],
+            volume: float,
+            channels: int
+    ) -> Operation:
+        """
+        Remove medium from plate positions to reservoir, then add fresh medium from source (BATCHED).
+        Handles positions in batches based on tip capacity to avoid pipettor timeout."""
+        return Operation(
+            operation_type=OperationType.REMOVE_AND_ADD,
+            description=f"Remove {volume}µL from {len(plate_positions)} positions, add fresh from source (batched)",
+            parameters={
+                'plate_labware_id': plate_labware_id,
+                'plate_positions': plate_positions,
+                'remove_reservoir_id': remove_reservoir_id,
+                'remove_position': remove_position,
+                'source_reservoir_id': source_reservoir_id,
+                'source_position': source_position,
+                'volume': volume,
+                'channels': channels
             }
         )

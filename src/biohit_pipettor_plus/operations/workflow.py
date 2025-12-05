@@ -10,84 +10,8 @@ This module provides a serializable, inspectable workflow system. It enables:
 
 import json
 import uuid
-from typing import Any, Optional, Callable
-from dataclasses import dataclass, field, asdict
-from enum import Enum
-import copy
-from labware import Plate, PipetteHolder, ReservoirHolder, TipDropzone
-
-
-class OperationType(Enum):
-    """Types of pipetting operations"""
-    PICK_TIPS = "pick_tips"
-    RETURN_TIPS = "return_tips"
-    REPLACE_TIPS = "replace_tips"
-    DISCARD_TIPS = "discard_tips"
-    ADD_MEDIUM = "add_medium"
-    REMOVE_MEDIUM = "remove_medium"
-    TRANSFER_PLATE_TO_PLATE = "transfer_plate_to_plate"
-    SUCK = "suck"
-    SPIT = "spit"
-    HOME = "home"
-    MOVE_XY = "move_xy"
-    MOVE_Z = "move_z"
-
-
-@dataclass
-class Operation:
-    """
-    Serializable operation object.
-
-    Attributes
-    ----------
-    operation_type : OperationType
-        Type of operation
-    operation_id : str
-        Unique identifier
-    parameters : dict
-        Operation parameters (all JSON-serializable)
-    description : str
-        Human-readable description
-    """
-    operation_type: OperationType
-    parameters: dict[str, Any]
-    description: str
-    operation_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-
-    def to_dict(self) -> dict:
-        """Convert to JSON-serializable dictionary"""
-        return {
-            'operation_type': self.operation_type.value,
-            'operation_id': self.operation_id,
-            'parameters': self.parameters,
-            'description': self.description
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> 'Operation':
-        """Reconstruct from dictionary"""
-        return cls(
-            operation_type=OperationType(data['operation_type']),
-            operation_id=data['operation_id'],
-            parameters=data['parameters'],
-            description=data['description']
-        )
-
-    def execute(self, pipettor, deck) -> None:
-        """
-        Execute this operation.
-
-        Parameters
-        ----------
-        pipettor : PipettorPlus
-            Pipettor instance to use
-        deck : Deck
-            Deck instance to use
-        """
-        # Import here to avoid circular dependency
-        from workflow_executor import WorkflowExecutor
-        executor = WorkflowExecutor(pipettor, deck)
-        executor.execute_single_operation(self)
+from dataclasses import dataclass, field
+from .operation import Operation
 
 
 @dataclass

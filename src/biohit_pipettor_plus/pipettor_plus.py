@@ -44,19 +44,21 @@ except ImportError:
         pass
 
 #from biohit_pipettor import Pipettor
-from typing import Literal, List, Optional
+from typing import Literal, List
 from math import ceil
 
-from deck import Deck
-from slot import Slot
-from labware import Labware, Plate, Well, ReservoirHolder, Reservoir, PipetteHolder, IndividualPipetteHolder, \
-    TipDropzone, Pipettors_in_Multi
-#from biohit_pipettor.errors import CommandFailed
-
-from geometry import (
+from .deck import Deck
+from .slot import Slot
+from .labware_classes import *
+from .labware_classes.labware import Pipettors_in_Multi
+from .geometry import (
     calculate_liquid_height,
     calculate_dynamic_remove_height,
 )
+
+import time
+import os
+import subprocess
 
 Change_Tips = 0
 MAX_BATCH_SIZE = 5
@@ -101,6 +103,8 @@ class PipettorPlus(Pipettor):
         self.has_tips = False
         self.tip_volume = tip_volume
         self.change_tips = Change_Tips  # control if tips are to be changed
+
+        self.foc_bat_script_path = None
 
     def push_state(self):
         """Save complete state snapshot for later restoration."""
@@ -667,7 +671,7 @@ class PipettorPlus(Pipettor):
 
         # Validate all positions (both need tip_count rows)
         self._validate_transfer(source, source_col_row, destination, dest_col_row,
-                               self.tip_count, self.tip_count)
+                                self.tip_count, self.tip_count)
 
         # Calculate volumes
         volume_per_transfer, max_vol = self._calculate_volumes(volume_per_well)
@@ -776,9 +780,13 @@ class PipettorPlus(Pipettor):
         # Check we have enough volume in tips
         total_available = self.get_total_tip_volume()
         if total_available < volume:
-            raise ValueError(
-                f"Insufficient volume in tips. Available: {total_available}µL, Requested: {volume}µL"
-            )
+            difference = volume - total_available
+            if difference <= 0.01:
+                volume = total_available
+            else:
+                raise ValueError(
+                    f"Insufficient volume in tips. Available: {total_available}µL, Requested: {volume}µL"
+                )
 
         # Validate based on whether destination needs separate items per tip
         if not destination.each_tip_needs_separate_item():
@@ -865,9 +873,13 @@ class PipettorPlus(Pipettor):
                 raise ValueError(f"Cannot remove from empty tip {idx}")
 
             if volume > current_volume:
-                raise ValueError(
-                    f"Underflow in tip {idx}! Cannot remove {volume}µL, only {current_volume}µL available"
-                )
+                difference = volume - current_volume
+                if difference <= 0.01:
+                    volume = current_volume
+                else:
+                    raise ValueError(
+                        f"Underflow in tip {idx}! Cannot remove {volume}µL, only {current_volume}µL available"
+                    )
 
             # Remove proportionally
             removal_ratio = volume / current_volume
@@ -1021,9 +1033,13 @@ class PipettorPlus(Pipettor):
         # Check total available volume
         total_available = sum(item.get_total_volume() for item in items if item)
         if total_available < volume:
-            raise ValueError(
-                f"Insufficient volume. Available: {total_available}µL, Requested: {volume}µL"
-            )
+            difference = volume - total_available
+            if difference <= 0.01:
+                volume = total_available
+            else:
+                raise ValueError(
+                    f"Insufficient volume. Available: {total_available}µL, Requested: {volume}µL"
+                )
 
         # Remove content from source and add to tips
         for tip_idx, item in enumerate(items):
@@ -1551,3 +1567,45 @@ class PipettorPlus(Pipettor):
                   f"spanning ({x_first:.1f},{y_first:.1f}) to ({x_last:.1f},{y_last:.1f})")
 
         return x_center, y_center
+
+    def measure_foc(self, seconds: int, platename: str = None, bat_script_path: str = None):
+        """
+        Wait for specified seconds, then run FOC measurement script.
+        """
+
+        # Use provided path or stored path
+        if bat_script_path is not None:
+            self.foc_bat_script_path = bat_script_path
+
+        # Use provided plate name or stored plate name
+        if platename is not None:
+            plate_to_use = platename
+        elif hasattr(self, 'foc_plate_name') and self.foc_plate_name:
+            plate_to_use = self.foc_plate_name
+        else:
+            raise ValueError("Plate name not provided and no plate name configured")
+
+        # Check if we have a script path
+        if not hasattr(self, 'foc_bat_script_path') or self.foc_bat_script_path is None:
+            raise ValueError("FOC bat script path not set. Please configure FOC first.")
+
+        # Verify file exists
+        if not os.path.exists(self.foc_bat_script_path):
+            raise FileNotFoundError(f"FOC bat script not found at: {self.foc_bat_script_path}")
+
+        if self._simulation_mode:
+            print(f"[SIMULATION] Would wait {seconds} seconds, then run FOC for plate '{plate_to_use}'")
+            return  # Exit early - don't run the actual script
+
+        # Wait for specified time
+        print(f"Waiting {seconds} seconds before FOC measurement...")
+        time.sleep(seconds)
+
+        # Run the bat script
+        self.home()
+        print(f"Running FOC measurement for plate: {plate_to_use}")
+        try:
+            subprocess.call([self.foc_bat_script_path, plate_to_use])
+            print(f"FOC measurement completed for {plate_to_use}")
+        except Exception as e:
+            print(f"[ERROR] Failed to run FOC measurement: {str(e)}")
