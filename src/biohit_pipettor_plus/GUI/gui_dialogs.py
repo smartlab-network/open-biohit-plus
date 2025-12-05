@@ -888,14 +888,14 @@ class ConfigureReservoirTemplateDialog(tk.Toplevel):
         self.result = final_template
         self.destroy()
 
-class EditWellContentDialog(tk.Toplevel):
-    """Simplified dialog for editing well content"""
+class EditContainerContentDialog(tk.Toplevel):
+    """Generic dialog for editing content in Wells or Reservoirs"""
 
-    def __init__(self, parent, well):
+    def __init__(self, parent, container):
         super().__init__(parent)
-        self.title(f"Edit Well Content")
+        self.title(f"Edit {container.__class__.__name__} Content")
         self.geometry("500x500")
-        self.well = well
+        self.container = container  # Can be Well or Reservoir
         self.result = False
 
         self.transient(parent)
@@ -908,8 +908,11 @@ class EditWellContentDialog(tk.Toplevel):
         main_frame.pack(fill=tk.BOTH, expand=True)
 
         # Title
-        title_label = ttk.Label(main_frame, text=f"Edit: {self.well.labware_id}",
-                                font=('Arial', 12, 'bold'))
+        title_label = ttk.Label(
+            main_frame,
+            text=f"Edit: {self.container.labware_id}",
+            font=('Arial', 12, 'bold')
+        )
         title_label.pack(pady=(0, 15))
 
         # Add content section
@@ -924,8 +927,9 @@ class EditWellContentDialog(tk.Toplevel):
         self.add_volume_var = tk.StringVar()
         ttk.Entry(add_frame, textvariable=self.add_volume_var, width=25).grid(row=1, column=1, pady=5, padx=(10, 0))
 
-        ttk.Button(add_frame, text="➕ Add", command=self.add_content).grid(row=2, column=0, columnspan=2, pady=(10, 0),
-                                                                           sticky='ew')
+        ttk.Button(add_frame, text="➕ Add", command=self.add_content).grid(
+            row=2, column=0, columnspan=2, pady=(10, 0), sticky='ew'
+        )
 
         # Remove content section
         remove_frame = ttk.Labelframe(main_frame, text="Remove Content", padding="15")
@@ -933,14 +937,17 @@ class EditWellContentDialog(tk.Toplevel):
 
         ttk.Label(remove_frame, text="Volume to Remove (µL):").grid(row=0, column=0, sticky='w', pady=5)
         self.remove_volume_var = tk.StringVar()
-        ttk.Entry(remove_frame, textvariable=self.remove_volume_var, width=25).grid(row=0, column=1, pady=5,
-                                                                                    padx=(10, 0))
+        ttk.Entry(remove_frame, textvariable=self.remove_volume_var, width=25).grid(
+            row=0, column=1, pady=5, padx=(10, 0)
+        )
 
-        ttk.Button(remove_frame, text="Remove (proportional)",
-                   command=self.remove_content).grid(row=1, column=0, columnspan=2, pady=(10, 5), sticky='ew')
+        ttk.Button(remove_frame, text="Remove (proportional)", command=self.remove_content).grid(
+            row=1, column=0, columnspan=2, pady=(10, 5), sticky='ew'
+        )
 
-        ttk.Button(remove_frame, text="Clear All Content",
-                   command=self.clear_all).grid(row=2, column=0, columnspan=2, pady=(0, 0), sticky='ew')
+        ttk.Button(remove_frame, text="Clear All Content", command=self.clear_all).grid(
+            row=2, column=0, columnspan=2, pady=(0, 0), sticky='ew'
+        )
 
         # Buttons
         btn_frame = ttk.Frame(main_frame)
@@ -950,7 +957,7 @@ class EditWellContentDialog(tk.Toplevel):
         ttk.Button(btn_frame, text="Cancel", command=self.destroy).pack(side=tk.RIGHT)
 
     def add_content(self):
-        """Add content to well"""
+        """Add content to container"""
         try:
             content_type = self.add_type_var.get().strip()
             volume = float(self.add_volume_var.get())
@@ -963,7 +970,7 @@ class EditWellContentDialog(tk.Toplevel):
                 messagebox.showerror("Error", "Volume must be positive")
                 return
 
-            self.well.add_content(content_type, volume)
+            self.container.add_content(content_type, volume)
 
             # Clear inputs
             self.add_type_var.set("")
@@ -973,7 +980,7 @@ class EditWellContentDialog(tk.Toplevel):
             messagebox.showerror("Error", str(e))
 
     def remove_content(self):
-        """Remove content from well proportionally"""
+        """Remove content from container proportionally"""
         try:
             volume = float(self.remove_volume_var.get())
 
@@ -981,7 +988,7 @@ class EditWellContentDialog(tk.Toplevel):
                 messagebox.showerror("Error", "Volume must be positive")
                 return
 
-            self.well.remove_content(volume)
+            self.container.remove_content(volume)
             self.remove_volume_var.set("")
 
         except ValueError as e:
@@ -989,116 +996,9 @@ class EditWellContentDialog(tk.Toplevel):
 
     def clear_all(self):
         """Clear all content"""
-        if messagebox.askyesno("Confirm", "Clear all content from this well?", default="yes"):
-            self.well.clear_content()
-    def on_done(self):
-        """Close dialog"""
-        self.result = True
-        self.destroy()
+        if messagebox.askyesno("Confirm", f"Clear all content from this {self.container.__class__.__name__.lower()}?", default="yes"):
+            self.container.clear_content()
 
-class EditReservoirContentDialog(tk.Toplevel):
-    """Simplified dialog for editing reservoir content"""
-
-    def __init__(self, parent, reservoir):
-        super().__init__(parent)
-        self.title(f"Edit Reservoir Content")
-        self.geometry("500x500")
-        self.reservoir = reservoir
-        self.result = False
-
-        self.transient(parent)
-        self.grab_set()
-
-        self.create_widgets()
-
-    def create_widgets(self):
-        main_frame = ttk.Frame(self, padding="15")
-        main_frame.pack(fill=tk.BOTH, expand=True)
-
-        # Title
-        title_label = ttk.Label(main_frame, text=f"Edit: {self.reservoir.labware_id}",
-                                font=('Arial', 12, 'bold'))
-        title_label.pack(pady=(0, 15))
-
-        # Add content section
-        add_frame = ttk.Labelframe(main_frame, text="Add Content", padding="15")
-        add_frame.pack(fill=tk.X, pady=(0, 10))
-
-        ttk.Label(add_frame, text="Content Type:").grid(row=0, column=0, sticky='w', pady=5)
-        self.add_type_var = tk.StringVar()
-        ttk.Entry(add_frame, textvariable=self.add_type_var, width=25).grid(row=0, column=1, pady=5, padx=(10, 0))
-
-        ttk.Label(add_frame, text="Volume (µL):").grid(row=1, column=0, sticky='w', pady=5)
-        self.add_volume_var = tk.StringVar()
-        ttk.Entry(add_frame, textvariable=self.add_volume_var, width=25).grid(row=1, column=1, pady=5, padx=(10, 0))
-
-        ttk.Button(add_frame, text="➕ Add", command=self.add_content).grid(row=2, column=0, columnspan=2, pady=(10, 0),
-                                                                           sticky='ew')
-
-        # Remove content section
-        remove_frame = ttk.Labelframe(main_frame, text="Remove Content", padding="15")
-        remove_frame.pack(fill=tk.X, pady=(0, 10))
-
-        ttk.Label(remove_frame, text="Volume to Remove (µL):").grid(row=0, column=0, sticky='w', pady=5)
-        self.remove_volume_var = tk.StringVar()
-        ttk.Entry(remove_frame, textvariable=self.remove_volume_var, width=25).grid(row=0, column=1, pady=5,
-                                                                                    padx=(10, 0))
-
-        ttk.Button(remove_frame, text="Remove (proportional)",
-                   command=self.remove_content).grid(row=1, column=0, columnspan=2, pady=(10, 5), sticky='ew')
-
-        ttk.Button(remove_frame, text="Clear All Content",
-                   command=self.clear_all).grid(row=2, column=0, columnspan=2, pady=(0, 0), sticky='ew')
-
-        # Buttons
-        btn_frame = ttk.Frame(main_frame)
-        btn_frame.pack(fill=tk.X, pady=(15, 0))
-
-        ttk.Button(btn_frame, text="Save", command=self.on_done).pack(side=tk.RIGHT, padx=5)
-        ttk.Button(btn_frame, text="Cancel", command=self.destroy).pack(side=tk.RIGHT)
-
-    def add_content(self):
-        """Add content to reservoir"""
-        try:
-            content_type = self.add_type_var.get().strip()
-            volume = float(self.add_volume_var.get())
-
-            if not content_type:
-                messagebox.showerror("Error", "Please enter content type")
-                return
-
-            if volume <= 0:
-                messagebox.showerror("Error", "Volume must be positive")
-                return
-
-            self.reservoir.add_content(content_type, volume)
-
-            # Clear inputs
-            self.add_type_var.set("")
-            self.add_volume_var.set("")
-
-        except ValueError as e:
-            messagebox.showerror("Error", str(e))
-
-    def remove_content(self):
-        """Remove content from reservoir proportionally"""
-        try:
-            volume = float(self.remove_volume_var.get())
-
-            if volume <= 0:
-                messagebox.showerror("Error", "Volume must be positive")
-                return
-
-            self.reservoir.remove_content(volume)
-            self.remove_volume_var.set("")
-
-        except ValueError as e:
-            messagebox.showerror("Error", str(e))
-
-    def clear_all(self):
-        """Clear all content"""
-        if messagebox.askyesno("Confirm", "Clear all content from this reservoir?", default="yes"):
-            self.reservoir.clear_content()
     def on_done(self):
         """Close dialog"""
         self.result = True
@@ -1733,7 +1633,7 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
             col, row = int(col_str), int(row_str)
             well = self.labware.get_well_at(col, row)
 
-            dialog = EditWellContentDialog(self, well)
+            dialog = EditContainerContentDialog(self, well)
             self.wait_window(dialog)
 
             if dialog.result:
@@ -1750,7 +1650,7 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
                     break
 
             if reservoir:
-                dialog = EditReservoirContentDialog(self, reservoir)
+                dialog = EditContainerContentDialog(self, reservoir)
                 self.wait_window(dialog)
 
                 if dialog.result:
