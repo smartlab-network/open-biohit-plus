@@ -4,6 +4,8 @@ from tkinter import messagebox, filedialog, simpledialog
 import ttkbootstrap as ttk
 import json
 import os
+import datetime
+import string
 
 from .collapsible_frame import CollapsibleFrame
 from ..deck_structure import *
@@ -684,6 +686,75 @@ class DeckGUI:
         )
         self.pipettor_status_label.pack(anchor='w')
 
+    def ask_plate_id(self, parent):
+        """
+        Opens a custom dialog to select Year, Month, Day, and Alphabet.
+        Returns a string in format YYYYMMDDX (e.g., 20231201A) or None if cancelled.
+        """
+        dialog = tk.Toplevel(parent)
+        dialog.title("Plate Configuration")
+        dialog.geometry("350x150")
+        dialog.transient(parent)  # Make it float on top of parent
+        dialog.grab_set()  # Modal (disable main window)
+
+        # Storage for the result
+        result = {"value": None}
+
+        # --- Data Setup ---
+        today = datetime.date.today()
+        current_year = today.year
+        years = [str(y) for y in range(current_year - 1, current_year + 5)]
+        months = [str(m).zfill(2) for m in range(1, 13)]
+        days = [str(d).zfill(2) for d in range(1, 32)]
+        alphabets = list(string.ascii_uppercase)  # ['A', 'B', 'C'...]
+
+        # --- GUI Layout ---
+        frame = ttk.Frame(dialog, padding=10)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        # Labels
+        ttk.Label(frame, text="Year").grid(row=0, column=0, padx=5)
+        ttk.Label(frame, text="Month").grid(row=0, column=1, padx=5)
+        ttk.Label(frame, text="Day").grid(row=0, column=2, padx=5)
+        ttk.Label(frame, text="Suffix").grid(row=0, column=3, padx=5)
+
+        # Comboboxes
+        cb_year = ttk.Combobox(frame, values=years, width=5, state="readonly")
+        cb_year.set(current_year)
+        cb_year.grid(row=1, column=0, padx=5)
+
+        cb_month = ttk.Combobox(frame, values=months, width=3, state="readonly")
+        cb_month.set(str(today.month).zfill(2))
+        cb_month.grid(row=1, column=1, padx=5)
+
+        cb_day = ttk.Combobox(frame, values=days, width=3, state="readonly")
+        cb_day.set(str(today.day).zfill(2))
+        cb_day.grid(row=1, column=2, padx=5)
+
+        cb_alpha = ttk.Combobox(frame, values=alphabets, width=3, state="readonly")
+        cb_alpha.set("A")  # Default to A
+        cb_alpha.grid(row=1, column=3, padx=5)
+
+        # --- Logic ---
+        def on_ok():
+            # format: YYYYMMDD + Letter
+            final_str = f"{cb_year.get()}{cb_month.get()}{cb_day.get()}{cb_alpha.get()}"
+            result["value"] = final_str
+            dialog.destroy()
+
+        def on_cancel():
+            dialog.destroy()
+
+        # Buttons
+        btn_frame = ttk.Frame(dialog, padding=(0, 20, 0, 0))
+        btn_frame.pack()
+        ttk.Button(btn_frame, text="OK", command=on_ok).pack(side=tk.LEFT, padx=10)
+        ttk.Button(btn_frame, text="Cancel", command=on_cancel).pack(side=tk.LEFT, padx=10)
+
+        # Wait for window to close
+        parent.wait_window(dialog)
+        return result["value"]
+
     def configure_foc_script(self):
         """Open file dialog to configure FOC measurement script path"""
 
@@ -696,23 +767,18 @@ class DeckGUI:
 
         if filename:
 
-            plate_name = simpledialog.askstring(
-                "FOC Configuration",
-                "Enter plate name for FOC measurements:",
-                initialvalue=""
-            )
+            plate_name = self.ask_plate_id(self.root)
 
-            if not plate_name or not plate_name.strip():
-                messagebox.showwarning("Warning", "Plate name is required for FOC configuration")
+            if not plate_name:
+                # This handles both "Cancel" and closing the window
+                messagebox.showwarning("Warning", "Plate configuration was cancelled.")
                 return
-
-            plate_name = plate_name.strip()
 
             self.foc_bat_script_path = filename
             self.foc_plate_name = plate_name
 
             self.foc_config_status_label.config(
-                text=f"✓ Configured: {os.path.basename(filename)}",
+                text=f"✓ Configured: {plate_name} ({os.path.basename(filename)})",
                 foreground='green'
             )
 
