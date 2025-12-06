@@ -1,0 +1,13 @@
+{
+  "tip_volume": 200,
+  "multichannel": true,
+  "initialize": true,
+  "tip_length": null,
+  "x_speed": 7,
+  "y_speed": 7,
+  "z_speed": 7,
+  "aspirate_speed": 1,
+  "dispense_speed": 1,
+  "foc_bat_script_path": "C:\\labhub\\Import\\FOC48.bat",
+  "foc_plate_name": "MyPlate"
+}

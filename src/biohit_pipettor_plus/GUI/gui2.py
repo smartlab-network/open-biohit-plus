@@ -52,8 +52,11 @@ class DeckGUI:
 
     def setup_ui(self):
         # Menu bar
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
+
 
         # File menu
         file_menu = tk.Menu(menubar, tearoff=0)
@@ -2047,6 +2050,20 @@ class DeckGUI:
     def run(self):
         """Start the GUI"""
         self.root.mainloop()
+
+    def on_closing(self):
+        """Handle window close event with save prompt"""
+        response = messagebox.askyesnocancel(
+            "Save Deck?",
+            "Do you want to save the current deck before closing?"
+        )
+
+        if response is True:  # Yes - save and close
+            self.save_deck()
+            self.root.destroy()
+        elif response is False:  # No - close without saving
+            self.root.destroy()
+        # None (Cancel) - do nothing, keep window open
 
 # Main entry point
 if __name__ == "__main__":
