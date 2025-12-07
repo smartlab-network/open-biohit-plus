@@ -485,7 +485,7 @@ class CreateLabwareDialog(tk.Toplevel):
         type_frame.pack(fill=tk.X, pady=5)
 
         self.labware_type = tk.StringVar(value="Plate")
-        types = ["Plate", "ReservoirHolder", "PipetteHolder", "TipDropzone"]
+        types = ["Plate", "ReservoirHolder", "PipetteHolder", "TipDropzone", "Stack"]
 
         for lw_type in types:
             ttk.Radiobutton(
@@ -643,8 +643,13 @@ class CreateLabwareDialog(tk.Toplevel):
             self.drop_height_var = tk.StringVar()
             ttk.Entry(self.specific_frame, textvariable=self.drop_height_var, width=20).grid(row=0, column=1, pady=2)
 
+        elif lw_type == "Stack":
+            pass
+
     def on_type_change(self):
         """Handle labware type change"""
+        if self.labware_type.get() == "Stack":
+            self.can_be_stacked_upon_var.set(True)
         self.create_specific_fields()
 
     def select_well(self):
@@ -767,6 +772,17 @@ class CreateLabwareDialog(tk.Toplevel):
                     offset=offset,
                     labware_id=labware_id,
                     drop_height_relative=drop_height,
+                    can_be_stacked_upon=can_be_stacked_upon
+                )
+
+            elif lw_type == "Stack":  # ← ADD THIS NEW SECTION
+                # Stack should always be stackable
+                self.result = Stack(
+                    size_x=size_x,
+                    size_y=size_y,
+                    size_z=size_z,
+                    offset=offset,
+                    labware_id=labware_id,
                     can_be_stacked_upon=can_be_stacked_upon
                 )
 

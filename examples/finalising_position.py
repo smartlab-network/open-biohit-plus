@@ -17,6 +17,15 @@ slot5 = Slot((0, 118.25), (135, 214.75), 141, "slot5")
 slot6 = Slot((128, 246.25), (135, 214.75), 141, "slot6")
 deck1.add_slots([slot1, slot2, slot3, slot4, slot5, slot6])
 
+example_stack = Stack( size_x=18.9,
+    size_y=7.5,
+    size_z=10,
+    offset=(-8.5, 0.5))
+
+ex=example_stack.to_dict()
+#print(ex)
+#print(ex._from_dict().to_dict())
+#deck1.add_labware(example_stack, slot_id ="slot6", min_z=0)
 # Create plate with wells
 example_well = Well(
     size_x=18.9,

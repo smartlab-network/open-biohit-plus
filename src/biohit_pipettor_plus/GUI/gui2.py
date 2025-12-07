@@ -817,6 +817,9 @@ class DeckGUI:
                 messagebox.showerror("Error", "Deck must be created before initializing pipettor")
                 return
 
+            if len(self.deck.slots) == 0 and len(self.deck.labware) == 0:
+                messagebox.showerror("Error", "Deck must have slots and labwares before initializing pipettor")
+                return
             # Helper function to get and validate speed parameters
             def get_speed_param(var, param_name, min_val, max_val, default=None):
                 """Helper to get and validate speed parameters"""

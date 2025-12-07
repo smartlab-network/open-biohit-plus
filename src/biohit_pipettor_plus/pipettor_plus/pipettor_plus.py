@@ -1,3 +1,8 @@
+class AbortException(Exception):
+    """Raised when user aborts an operation"""
+    pass
+
+import time
 try:
     from biohit_pipettor import Pipettor
     from biohit_pipettor.errors import CommandFailed
@@ -77,6 +82,8 @@ class PipettorPlus(Pipettor):
         self._deck = deck
         self._slots: dict[str, Slot] = deck.slots
         self._simulation_mode = False
+        self.abort_requested = False
+        self.pause_requested = False
 
         #creates a dict of all tips, each tips having its own dict where content and volume in tip can be stored.
         self.tip_length = tip_length if tip_length is not None else TIP_LENGTHS[tip_volume]
@@ -140,6 +147,26 @@ class PipettorPlus(Pipettor):
             print("  → Simulation mode ENABLED (hardware calls will be skipped)")
         else:
             print("  → Simulation mode DISABLED (hardware calls will execute)")
+
+    def _check_abort_and_pause(self):
+        """Check for abort or pause requests at safe checkpoints"""
+
+        # Check abort first (highest priority)
+        if self.abort_requested:
+            self.abort_requested = False  # Reset
+            self.home()
+            raise AbortException("Operation aborted by user")
+
+        # Check pause
+        while self.pause_requested:
+            time.sleep(0.1)  # Wait 100ms, check again
+
+            # Allow abort even while paused
+            if self.abort_requested:
+                self.pause_requested = False  # Unpause
+                self.abort_requested = False
+                self.home()
+                raise AbortException("Operation aborted by user")
 
     def pick_tips(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None,) -> None:
         """
@@ -224,6 +251,8 @@ class PipettorPlus(Pipettor):
 
             # All 8 holders are valid, attempt to pick tips
             try:
+                if not self._simulation_mode:
+                    self._check_abort_and_pause()
                 first_holder = holders_to_use[0]
                 if first_holder.position is None:
                     raise ValueError(f"Holder at grid location ({col}, {start_row}) has no position set")
@@ -291,6 +320,8 @@ class PipettorPlus(Pipettor):
                 continue
 
             try:
+                if not self._simulation_mode:
+                    self._check_abort_and_pause()
                 if holder.position is None:
                     print(f"Holder at grid location ({col}, {row}) has no position set, skipping")
                     continue
@@ -390,6 +421,8 @@ class PipettorPlus(Pipettor):
 
             # Attempt to return tips
             try:
+                if not self._simulation_mode:
+                    self._check_abort_and_pause()
                 first_holder = holders_to_use[0]
                 if first_holder.position is None:
                     print(f"Holder at grid location ({col}, {start_row}) has no position set, skipping")
@@ -461,6 +494,8 @@ class PipettorPlus(Pipettor):
                 continue
 
             try:
+                if not self._simulation_mode:
+                    self._check_abort_and_pause()
                 if holder.position is None:
                     print(f"Holder at grid location ({col}, {row}) has no position set, skipping")
                     continue
@@ -495,8 +530,12 @@ class PipettorPlus(Pipettor):
     def replace_tips(self, pipette_holder: PipetteHolder, pick_pipette_holder:PipetteHolder = None,
                      return_list_col_row: List[tuple[int, int]] = None,
                      pick_list_col_row: List[tuple[int, int]] = None ) -> None:
+
         if not pick_pipette_holder:
             pick_pipette_holder = pipette_holder
+
+        if not self._simulation_mode:
+            self._check_abort_and_pause()
 
         if self.multichannel:
             # get list of available holders
@@ -526,6 +565,10 @@ class PipettorPlus(Pipettor):
         tip_dropzone : labware
             TipDropzone labware
         """
+
+        if not self._simulation_mode:
+            self._check_abort_and_pause()
+
         if not self.has_tips:
             raise RuntimeError("No tips to discard")
 
@@ -875,20 +918,27 @@ class PipettorPlus(Pipettor):
                     del tip_content[content_type]
 
     def home(self):
+
         if not self._simulation_mode:
+            self._check_abort_and_pause()
             self.move_z(0)
             self.move_xy(0, 0)
 
     def move_xy(self, x: float, y: float):
         """Override parent to add simulation mode check"""
+        print("yes")
         if self._simulation_mode:
             return
+        self._check_abort_and_pause()
+        super().move_z(0)
         super().move_xy(x, y)
 
     def move_z(self, z: float):
         """Override parent to add simulation mode check"""
+        print("yes")
         if self._simulation_mode:
             return
+        self._check_abort_and_pause()
         super().move_z(z)
     # Helper Functions. Not necessarily available for GUI
     def _validate_transfer(self, source, source_positions, destination, destination_positions,
@@ -1010,6 +1060,8 @@ class PipettorPlus(Pipettor):
     def _aspirate_with_content_tracking(self, source: Labware, col: int, row: int, volume: float) -> None:
         """Aspirate with content tracking."""
 
+        if not self._simulation_mode:
+            self._check_abort_and_pause()
         # Check if each tip needs separate item
         if self.multichannel and source.each_tip_needs_separate_item():
             items = [self._get_content_item(source, col, row + i)
@@ -1070,6 +1122,8 @@ class PipettorPlus(Pipettor):
     def _dispense_with_content_tracking(self, destination: Labware, col: int, row: int, volume: float) -> None:
         """Dispense with content tracking."""
 
+        if not self._simulation_mode:
+            self._check_abort_and_pause()
         # Check if each tip needs separate destination item. get item/items
         if self.multichannel and destination.each_tip_needs_separate_item():
             items = [self._get_content_item(destination, col, row + i)
@@ -1149,6 +1203,8 @@ class PipettorPlus(Pipettor):
         volume : float
             Total volume to aspirate
         """
+
+
         if not items:
             raise ValueError("No items provided")
 
@@ -1181,6 +1237,7 @@ class PipettorPlus(Pipettor):
 
         pipettor_z = self._get_pipettor_z_coord(parent_labware, relative_z, child_item=item)
         if not self._simulation_mode:
+            self._check_abort_and_pause()
             self.move_xy(x, y)
             self.move_z(pipettor_z)
             self.aspirate(volume / self.tip_count)
@@ -1199,6 +1256,7 @@ class PipettorPlus(Pipettor):
         volume : float
             Total volume to dispense
         """
+
         if not items:
             raise ValueError("No items provided")
 
@@ -1219,6 +1277,7 @@ class PipettorPlus(Pipettor):
 
         pipettor_z = self._get_pipettor_z_coord(parent_labware, relative_z, child_item=item)
         if not self._simulation_mode:
+            self._check_abort_and_pause()
             self.move_xy(x, y)
             self.move_z(pipettor_z)
             self.dispense(volume / self.tip_count)

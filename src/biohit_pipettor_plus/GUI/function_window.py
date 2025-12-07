@@ -1,6 +1,7 @@
 import ttkbootstrap as ttk
 import tkinter as tk
 import uuid
+import threading
 from typing import Callable, Optional
 from tkinter import messagebox, filedialog
 
@@ -13,6 +14,7 @@ from ..operations.operation import Operation
 from ..operations.operationtype import OperationType
 from ..operations.operation_builder import OperationBuilder
 from ..operations.operation_logger import OperationLogger
+from .executioncontroloverlay import ExecutionControlOverlay
 
 import os
 import copy
@@ -771,7 +773,7 @@ class FunctionWindow:
         self.staged_op_text.config(state='disabled')
 
     def execute_staged_operation(self):
-        """Execute the staged operation using WorkflowExecutor"""
+        """Execute the staged operation with modal overlay and threading"""
         if self.staged_operation is None:
             return
 
@@ -783,34 +785,71 @@ class FunctionWindow:
             )
             return
 
-        try:
-            # Use operation.execute() from workflow.py
-            self.staged_operation.execute(self.pipettor, self.deck)
+        # Create modal overlay - blocks all GUI interaction
+        overlay = ExecutionControlOverlay(
+            self.get_master_window(),
+            self.pipettor
+        )
 
-            # Log success
-            self.operation_logger.log_success(
-                mode="direct",
-                operation=self.staged_operation
-            )
+        # Update progress text
+        overlay.update_progress(f"Executing: {self.staged_operation.operation_type.value}")
 
-            if self.on_operation_complete:
-                self.on_operation_complete()
+        def run_operation():
+            """Runs in background thread"""
+            try:
+                # Execute operation
+                self.staged_operation.execute(self.pipettor, self.deck)
 
-            self.clear_staged_operation()
-            self.container.winfo_toplevel().focus_force()
+                # Log success
+                self.operation_logger.log_success(
+                    mode="direct",
+                    operation=self.staged_operation
+                )
 
-        except Exception as e:
-            # Log failure
-            self.operation_logger.log_failure(
-                mode="direct",
-                operation=self.staged_operation,
-                error_message=str(e)
-            )
+                # Success callback in main thread
+                self.container.winfo_toplevel().after(
+                    0,
+                    lambda: self.on_execution_success(overlay)
+                )
 
-            messagebox.showerror(
-                "Error",
-                f"Operation failed:\n\n{str(e)}"
-            )
+            except Exception as e:
+                # Error callback in main thread
+                error_msg = str(e)
+                is_abort = "abort" in error_msg.lower()
+
+                self.operation_logger.log_failure(
+                    mode="direct",
+                    operation=self.staged_operation,
+                    error_message=error_msg
+                )
+
+                self.container.winfo_toplevel().after(
+                    0,
+                    lambda: self.on_execution_failed(overlay, error_msg, is_abort)
+                )
+
+        # Start in background thread
+        thread = threading.Thread(target=run_operation, daemon=True)
+        thread.start()
+
+    def on_execution_success(self, overlay):
+        """Called in main thread when operation succeeds"""
+        overlay.close()
+
+        if self.on_operation_complete:
+            self.on_operation_complete()
+
+        self.clear_staged_operation()
+        self.container.winfo_toplevel().focus_force()
+
+    def on_execution_failed(self, overlay, error_msg, is_abort):
+        """Called in main thread when operation fails"""
+        overlay.close()
+
+        if is_abort:
+            messagebox.showwarning("Aborted", f"Operation aborted:\n\n{error_msg}")
+        else:
+            messagebox.showerror("Error", f"Operation failed:\n\n{error_msg}")
 
     def clear_staged_operation(self):
         """Clear the staging area"""
@@ -879,7 +918,7 @@ class FunctionWindow:
                 messagebox.showerror("Error", f"FOC measurement failed:\n{str(e)}")
 
     def callback_execute_workflow(self):
-        """Create workflow, execute immediately, and close"""
+        """Execute workflow with modal overlay and threading"""
         if not self.workflow or not self.workflow.operations:
             messagebox.showwarning("Empty Workflow", "Please add operations")
             return
@@ -903,18 +942,34 @@ class FunctionWindow:
         self.window_build_func.destroy()
 
         # Execute workflow on parent's pipettor
-        if hasattr(self, 'parent_function_window') and self.parent_function_window:
-            parent = self.parent_function_window
+        if not hasattr(self, 'parent_function_window') or not self.parent_function_window:
+            return
 
+        parent = self.parent_function_window
+
+        # Create modal overlay on PARENT window
+        overlay = ExecutionControlOverlay(
+            parent.get_master_window(),
+            parent.pipettor
+        )
+
+        def run_workflow():
+            """Runs in background thread"""
             # Log workflow start
             parent.operation_logger.log_workflow_start(
                 workflow_name=name,
                 num_operations=len(self.workflow.operations)
             )
 
-            # Execute operations one by one with logging
             try:
                 for i, operation in enumerate(self.workflow.operations):
+                    # Update progress in main thread
+                    progress_msg = f"Operation {i + 1}/{len(self.workflow.operations)}: {operation.operation_type.value}"
+                    parent.container.winfo_toplevel().after(
+                        0,
+                        lambda msg=progress_msg: overlay.update_progress(msg)
+                    )
+
                     try:
                         operation.execute(parent.pipettor, parent.deck)
 
@@ -942,10 +997,13 @@ class FunctionWindow:
                             error_message=str(op_error)
                         )
 
-                        # Show error and exit
-                        messagebox.showerror(
-                            "Workflow Failed",
-                            f"Workflow failed at operation {i + 1}:\n\n{str(op_error)}"
+                        # Show error in main thread
+                        error_msg = str(op_error)
+                        is_abort = "abort" in error_msg.lower()
+
+                        parent.container.winfo_toplevel().after(
+                            0,
+                            lambda: self.on_workflow_failed(overlay, i, error_msg, is_abort, name)
                         )
                         return
 
@@ -956,16 +1014,55 @@ class FunctionWindow:
                     total_operations=len(self.workflow.operations)
                 )
 
-                messagebox.showinfo(
-                    "Success",
-                    f"Workflow '{name}' completed!\n{len(self.workflow.operations)} operations executed."
+                # Success callback in main thread
+                parent.container.winfo_toplevel().after(
+                    0,
+                    lambda: self.on_workflow_success(overlay, name, len(self.workflow.operations), parent)
                 )
 
-                if parent.on_operation_complete:
-                    parent.on_operation_complete()
-
             except Exception as e:
-                messagebox.showerror("Execution Error", f"Failed to execute workflow:\n\n{str(e)}")
+                # Unexpected error
+                parent.container.winfo_toplevel().after(
+                    0,
+                    lambda: self.on_workflow_error(overlay, str(e))
+                )
+
+        # Start in background thread
+        import threading
+        thread = threading.Thread(target=run_workflow, daemon=True)
+        thread.start()
+
+    def on_workflow_success(self, overlay, name, num_ops, parent):
+        """Called in main thread when workflow succeeds"""
+        overlay.close()
+
+        messagebox.showinfo(
+            "Success",
+            f"Workflow '{name}' completed!\n{num_ops} operations executed."
+        )
+
+        if parent.on_operation_complete:
+            parent.on_operation_complete()
+
+    def on_workflow_failed(self, overlay, failed_index, error_msg, is_abort, name):
+        """Called in main thread when workflow fails"""
+        overlay.close()
+
+        if is_abort:
+            messagebox.showwarning(
+                "Workflow Aborted",
+                f"Workflow '{name}' aborted at operation {failed_index + 1}:\n\n{error_msg}"
+            )
+        else:
+            messagebox.showerror(
+                "Workflow Failed",
+                f"Workflow '{name}' failed at operation {failed_index + 1}:\n\n{error_msg}"
+            )
+
+    def on_workflow_error(self, overlay, error_msg):
+        """Called in main thread on unexpected error"""
+        overlay.close()
+        messagebox.showerror("Execution Error", f"Failed to execute workflow:\n\n{error_msg}")
 
     # ========== WORKFLOW QUEUE (BUILDER MODE) ==========
 
@@ -1993,9 +2090,10 @@ class FunctionWindow:
 
             ttk.Label(
                 header,
-                text=f"{name} Position:",
-                font=('Arial', 11, 'bold')
-            ).pack(side=tk.LEFT)
+                text=f"Current: {init_v:.1f} mm",
+                font=('Arial', 9, 'italic'),
+                foreground='blue'
+            ).pack(side=tk.LEFT, padx=(10, 0))
 
             range_txt = f"({min_v} - {max_v} mm)"
             if name == 'Z': range_txt += " (0=Home)"
@@ -3333,9 +3431,13 @@ class FunctionWindow:
         if not edit_mode:  # Only clear if not explicitly in edit mode
             self.clear_edit_mode()
 
+        # Get current positions from pipettor
+        current_x = self.pipettor.x_position if hasattr(self.pipettor, 'x_position') else 0.0
+        current_y = self.pipettor.y_position if hasattr(self.pipettor, 'y_position') else 0.0
+
         xy_result = self.ask_position_dialog([
-            ('X', self.deck.range_x[0], self.deck.range_x[1], 0.0),
-            ('Y', self.deck.range_y[0], self.deck.range_y[1], 0.0)
+            ('X', self.deck.range_x[0], self.deck.range_x[1], current_x),
+            ('Y', self.deck.range_y[0], self.deck.range_y[1], current_y)
         ])
 
         if xy_result:
@@ -3354,9 +3456,11 @@ class FunctionWindow:
         if not edit_mode:
             self.clear_edit_mode()
 
+        # Get current Z position from pipettor
+        current_z = self.pipettor.z_position if hasattr(self.pipettor, 'z_position') else 0.0
 
         z_pos = self.ask_position_dialog([
-            ('Z', 0.0, self.deck.range_z, 0.0)
+            ('Z', 0.0, self.deck.range_z, current_z)
         ])
 
         if z_pos is not None:

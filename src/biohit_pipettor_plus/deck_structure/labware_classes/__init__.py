@@ -10,6 +10,7 @@ from .individualpipetteholder import IndividualPipetteHolder
 from .plate import Plate
 from .well import Well
 from .tipdropzone import TipDropzone
+from .stack import Stack
 
 __all__ = [
     "Labware",
@@ -20,4 +21,5 @@ __all__ = [
     "Plate",
     "Well",
     "TipDropzone",
+    "Stack",
 ]
