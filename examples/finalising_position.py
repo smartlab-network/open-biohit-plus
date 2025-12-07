@@ -28,7 +28,7 @@ example_well = Well(
 )
 
 plate1 = Plate(
-    113.4, 65, 53, 6, 8,
+    113.4, 65, 55, 6, 8,
     well=example_well,
     offset=(12.2, 1),
     add_height=3,

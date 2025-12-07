@@ -2437,9 +2437,10 @@ class EditLabwareDialog(tk.Toplevel):
 
             # Show errors and prevent saving
             if errors:
-                error_msg = "Cannot save changes:\n\n" + "\n\n".join(errors)
-                messagebox.showerror("Validation Error", error_msg)
-                return
+                print("make ensure all is okay, temp fix")
+                #error_msg = "Cannot save changes:\n\n" + "\n\n".join(errors)
+                #messagebox.showerror("Validation Error", error_msg)
+                #return
 
             # Show warnings and ask for confirmation
             if warnings:

@@ -307,9 +307,7 @@ def calculate_dynamic_remove_height(item: 'Labware', volume_to_remove: float) ->
     item.content = original_content
 
     # Aspirate from midpoint between current and final. Target_height is height from labware top
-    target_height = item.size_z - ((current_height + final_height) / 2)
+    target_height = ((current_height + final_height) / 2)
     print(f"target_height{target_height} = item.size_z {item.size_z} - ((current_height {current_height}   + {final_height}final_height) / 2)")
 
-    # remove involves going into the labware. so negative target_height.
-    target_height = -target_height
     return target_height
