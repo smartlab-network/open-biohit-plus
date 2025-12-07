@@ -6,7 +6,7 @@ build-backend = "poetry.core.masonry.api"
 name = "open-biohit-plus"
 version = "0.0.1"
 description = "Extention for open-biohit"
-authors = ["Thiago Meyer <>"]
+authors = ["Advait Lath <advaitlath1@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 packages = [{ include = "src/biohit_pipettor_plus" }]

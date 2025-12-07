@@ -7,7 +7,8 @@ def get_json_dir() -> Path:
     """
     Returns the directory path where the JSON file will be stored.
     """
-    return Path("../C:/ProgramData/biohit")
+    from pathlib import Path
+    return Path.home() / "Downloads" / "deck"
 
 
 def get_json_path() -> Path:

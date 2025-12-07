@@ -65,7 +65,7 @@ pipette_holder = PipetteHolder(
     add_height=-14,
     individual_holder=ExamplePipetteHolder
 )
-deck1.add_labware(pipette_holder, slot_id="slot3", min_z=0, x_spacing=9)
+deck1.add_labware(pipette_holder, slot_id="slot3", min_z=0, x_spacing=9, y_spacing=9)
 
 # Create tip dropzone
 tip_dropzone = TipDropzone(
@@ -74,24 +74,18 @@ tip_dropzone = TipDropzone(
     size_z=20,
     offset=(10, 5),
     labware_id="dropzone_1",
-    drop_height_relative=0
+    drop_height_relative=60
 )
 deck1.add_labware(tip_dropzone, slot_id="slot1", min_z=0)
-print(deck1.to_dict())
 
 # Save and verify
 print("📦 Saving deck...")
 write_json(deck1)
-print("✅ Deck saved!")
 
 # Load back to verify
 print("📂 Loading deck...")
 loaded_deck = read_json("deck")
-print("✅ Deck loaded successfully!")
-print(f"   - Slots: {len(loaded_deck.slots)}")
-print(f"   - Labware: {len(loaded_deck.labware)}")
-print(f"   - Deck ID: {loaded_deck.deck_id}")
-print(loaded_deck.to_dict())
+
 
 print("\nSaving deck to GUI-compatible file...")
 output_filename = "deck1_for_gui.json"
@@ -104,10 +98,3 @@ save_deck_for_gui(
     available_reservoirs=[example_reservoir],
     available_individual_holders=[ExamplePipetteHolder],
 )
-
-print(plate1.to_dict())
-print(reservoirHolder.to_dict())
-print(pipette_holder.to_dict())
-
-p = PipettorPlus(1000, multichannel=True, deck = deck1)
-print(p.push_state())

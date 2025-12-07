@@ -290,11 +290,6 @@ class FunctionWindow:
             self.staged_operation_validated = True
             self.update_staged_display()
 
-            messagebox.showinfo(
-                "Validation Successful",
-                f"Operation '{self.staged_operation.operation_type.value}' is valid and ready to execute."
-            )
-
         except Exception as e:
             # Restore state on error
             self.pipettor.pop_state(state_snapshot)
@@ -1937,13 +1932,7 @@ class FunctionWindow:
                     self.validate_execute_btn.config(text="Validate", bootstyle="warning")
                     return
 
-            # Success!
-            messagebox.showinfo(
-                "Validation Successful",
-                f"✓ Workflow is valid!\n\n"
-                f"{len(self.workflow.operations)} operations ready to execute.\n\n"
-                f"Click 'Execute' to run this workflow."
-            )
+
 
             self.workflow_validated = True
             self.validate_execute_btn.config(text="Execute", bootstyle="primary",

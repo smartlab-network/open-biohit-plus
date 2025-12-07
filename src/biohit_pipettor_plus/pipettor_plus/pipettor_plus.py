@@ -879,6 +879,17 @@ class PipettorPlus(Pipettor):
             self.move_z(0)
             self.move_xy(0, 0)
 
+    def move_xy(self, x: float, y: float):
+        """Override parent to add simulation mode check"""
+        if self._simulation_mode:
+            return
+        super().move_xy(x, y)
+
+    def move_z(self, z: float):
+        """Override parent to add simulation mode check"""
+        if self._simulation_mode:
+            return
+        super().move_z(z)
     # Helper Functions. Not necessarily available for GUI
     def _validate_transfer(self, source, source_positions, destination, destination_positions,
                            source_consecutive_rows: int, dest_consecutive_rows: int) -> None:
