@@ -337,9 +337,19 @@ class FunctionWindow:
         def on_mousewheel(event):
             canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
-        canvas.bind_all("<MouseWheel>", on_mousewheel)  # Windows/MacOS
-        canvas.bind_all("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))  # Linux scroll up
-        canvas.bind_all("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))  # Linux scroll down
+        def on_mousewheel_linux_up(event):
+            canvas.yview_scroll(-1, "units")
+
+        def on_mousewheel_linux_down(event):
+            canvas.yview_scroll(1, "units")
+
+        # Bind to canvas ONLY (automatically unbinds when canvas is destroyed)
+        canvas.bind("<MouseWheel>", on_mousewheel)  # Windows/MacOS
+        canvas.bind("<Button-4>", on_mousewheel_linux_up)  # Linux scroll up
+        canvas.bind("<Button-5>", on_mousewheel_linux_down)  # Linux scroll down
+
+        # Also bind when mouse enters the canvas area
+        content_frame.bind("<Enter>", lambda e: canvas.focus_set())
 
         # NOW use content_frame instead of self.window_build_func for grid layout
         # Grid configuration
@@ -817,11 +827,12 @@ class FunctionWindow:
                 error_msg = str(e)
                 is_abort = "abort" in error_msg.lower()
 
-                self.operation_logger.log_failure(
-                    mode="direct",
-                    operation=self.staged_operation,
-                    error_message=error_msg
-                )
+                if self.staged_operation is not None:
+                    self.operation_logger.log_failure(
+                        mode="direct",
+                        operation=self.staged_operation,
+                        error_message=error_msg
+                    )
 
                 self.container.winfo_toplevel().after(
                     0,

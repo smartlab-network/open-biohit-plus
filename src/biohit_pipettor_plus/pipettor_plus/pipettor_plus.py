@@ -1233,6 +1233,7 @@ class PipettorPlus(Pipettor):
             print(f"  → Fallback aspiration: 5 mm above bottom")
 
         pipettor_z = self._get_pipettor_z_coord(parent_labware, relative_z, child_item=item)
+        print(f"xy = {x}, {y}")
         if not self._simulation_mode:
             self._check_abort_and_pause()
             self.move_xy(x, y)
@@ -1281,9 +1282,10 @@ class PipettorPlus(Pipettor):
             print(f"  → Fixed dispensing: {relative_z:.1f}mm from bottom")
         else:
             relative_z = item.size_z
-            print(f"  → Fallback dispensing: 10 mm from bottom")
+            print(f"  → Fallback dispensing: item.size_z")
 
         pipettor_z = self._get_pipettor_z_coord(parent_labware, relative_z, child_item=item)
+        print(f"xy = {x}, {y}")
         if not self._simulation_mode:
             self._check_abort_and_pause()
             self.move_xy(x, y)
@@ -1524,11 +1526,11 @@ class PipettorPlus(Pipettor):
         reference_bottom = max_z - child_depth
         absolute_height = reference_bottom + relative_z
         print(f"reference_bottom({reference_bottom}) = max_z({max_z}) - child_depth ({child_depth})")
-        print(f"reference_bottom + relative_z({relative_z}) = absolute_height ({absolute_height})")
+        print(f"absolute_height ({absolute_height}) = reference_bottom ({reference_bottom})+ liquid_height({relative_z}) ")
 
         if absolute_height < reference_bottom:
-            absolute_height = reference_bottom + 1
             print(f"absolute_height({absolute_height}) cannot be less than reference_bottom({reference_bottom}). New Absolute height = {reference_bottom} + 1")
+            absolute_height = reference_bottom + 1
 
         deck_range_z = self._deck.range_z
 
