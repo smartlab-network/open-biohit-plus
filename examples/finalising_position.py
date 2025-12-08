@@ -41,27 +41,33 @@ plate1 = Plate(
     well=example_well,
     offset=(12.2, 1),
     add_height=3,
-    remove_height=0.5
+    remove_height=2
 )
 deck1.add_labware(plate1, slot_id="slot4", min_z=0, x_spacing=18, y_spacing=9)
 
 # Create reservoir holder
-example_reservoir = Reservoir(
+thirty_ml_res = Reservoir(
     size_x=16.5, size_y=79, size_z=45,
     capacity=30000,
     content={"water": 20000}
 )
+
+hundred_ml_res = Reservoir(
+    size_x=16.5, size_y=75, size_z=85, capacity=100000,content={"water": 100000}, shape="rectangular"
+)
+
 reservoirHolder = ReservoirHolder(
     size_x=115.5,
     size_y=79,
-    size_z=66,
+    size_z=90,
     offset=(4, 0),
     hooks_across_x=7,
     hooks_across_y=1,
     add_height=70,
     remove_height=20,
-    reservoir_template=example_reservoir
+    reservoir_template=hundred_ml_res,
 )
+
 deck1.add_labware(reservoirHolder, slot_id="slot5", min_z=0, x_spacing=17.25)
 
 # Create pipette holder
@@ -104,6 +110,6 @@ save_deck_for_gui(
     deck1,
     "deck1",
     available_wells=[example_well],
-    available_reservoirs=[example_reservoir],
+    available_reservoirs=[thirty_ml_res, hundred_ml_res],
     available_individual_holders=[ExamplePipetteHolder],
 )

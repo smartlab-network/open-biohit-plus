@@ -2,7 +2,6 @@ class AbortException(Exception):
     """Raised when user aborts an operation"""
     pass
 
-import time
 try:
     from biohit_pipettor import Pipettor
     from biohit_pipettor.errors import CommandFailed
@@ -1232,7 +1231,7 @@ class PipettorPlus(Pipettor):
             print(f"  → Fixed aspiration: {relative_z:.1f}mm from bottom")
 
         else:
-            relative_z = 5
+            relative_z = item.size_z * 0.75
             print(f"  → Fallback aspiration: 5 mm above bottom")
 
         pipettor_z = self._get_pipettor_z_coord(parent_labware, relative_z, child_item=item)
@@ -1268,11 +1267,22 @@ class PipettorPlus(Pipettor):
         parent_labware = self._find_parent_labware(item)
 
         # Determine RELATIVE height from labware BOTTOM
-        if hasattr(parent_labware, 'add_height'):
+        if hasattr(item, 'shape') and item.shape:
+            volume_per_tip = volume / self.tip_count
+            if parent_labware.each_tip_needs_separate_item():
+                relative_z = calculate_dynamic_remove_height(item, -volume_per_tip) + 5
+            else:
+                relative_z = calculate_dynamic_remove_height(item, -volume) + 5
+            liquid_height = calculate_liquid_height(item)
+
+            print(f"  → Dynamic dispensing: {relative_z:.1f}mm from bottom "
+                  f"(liquid: {liquid_height:.1f}mm, shape: {item.shape})")
+
+        elif hasattr(parent_labware, 'add_height'):
             relative_z = parent_labware.add_height
             print(f"  → Fixed dispensing: {relative_z:.1f}mm from bottom")
         else:
-            relative_z = 10
+            relative_z = item.size_z
             print(f"  → Fallback dispensing: 10 mm from bottom")
 
         pipettor_z = self._get_pipettor_z_coord(parent_labware, relative_z, child_item=item)
