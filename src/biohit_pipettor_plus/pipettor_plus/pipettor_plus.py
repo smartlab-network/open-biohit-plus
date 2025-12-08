@@ -925,7 +925,6 @@ class PipettorPlus(Pipettor):
 
     def move_xy(self, x: float, y: float):
         """Override parent to add simulation mode check"""
-        print("yes")
         if self._simulation_mode:
             return
         self._check_abort_and_pause()
@@ -934,7 +933,6 @@ class PipettorPlus(Pipettor):
 
     def move_z(self, z: float):
         """Override parent to add simulation mode check"""
-        print("yes")
         if self._simulation_mode:
             return
         self._check_abort_and_pause()
