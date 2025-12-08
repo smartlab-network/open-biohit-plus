@@ -541,7 +541,7 @@ class DeckGUI:
 
         ttk.Label(tip_vol_frame, text="Tip Volume:", font=('Arial', 13, 'bold')).pack(side=tk.LEFT, padx=(0, 10))
 
-        self.tip_volume_var = tk.IntVar(value=1000)
+        self.tip_volume_var = tk.IntVar(value=200)
         ttk.Radiobutton(tip_vol_frame, text="200 µL", variable=self.tip_volume_var, value=200).pack(side=tk.LEFT,
                                                                                                     padx=5)
         ttk.Radiobutton(tip_vol_frame, text="1000 µL", variable=self.tip_volume_var, value=1000).pack(side=tk.LEFT,
@@ -551,7 +551,7 @@ class DeckGUI:
         multichannel_frame = ttk.Frame(pipettor_section)
         multichannel_frame.pack(fill=tk.X, pady=5)
 
-        self.multichannel_var = tk.BooleanVar(value=True)
+        self.multichannel_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(
             multichannel_frame,
             text="Multichannel (consecutive tips)",
@@ -622,7 +622,7 @@ class DeckGUI:
 
         # Z Speed
         ttk.Label(params_grid, text="Z Speed:").grid(row=2, column=0, sticky='w', pady=3)
-        self.z_speed_var = tk.StringVar(value="7")
+        self.z_speed_var = tk.StringVar(value="5")
         ttk.Entry(params_grid, textvariable=self.z_speed_var, width=8).grid(row=2, column=1, sticky='ew', pady=3,
                                                                             padx=(5, 10))
 
