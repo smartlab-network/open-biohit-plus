@@ -165,7 +165,7 @@ class PipettorPlus(Pipettor):
                 self.home()
                 raise AbortException("Operation aborted by user")
 
-    def pick_tips(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None,) -> None:
+    def pick_tips(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None,) -> List[tuple[int, int]]:
         """
                 Pick tips from a PipetteHolder.
 
@@ -176,6 +176,11 @@ class PipettorPlus(Pipettor):
                 list_col_row : List[tuple[int, int]], optional
                     List of (column, row) grid indices to try.
                     If None, automatically finds occupied grid locations.
+
+                Returns
+                -------
+                List[tuple[int, int]]
+                    Actual (column, row) positions where tips were picked
 
                 Raises
                 ------
@@ -188,11 +193,11 @@ class PipettorPlus(Pipettor):
             raise ValueError("pipettor already has tips")
 
         if self.multichannel:
-            self.pick_multi_tips(pipette_holder, list_col_row)
+            return self.pick_multi_tips(pipette_holder, list_col_row)
         else:
-            self.pick_single_tip(pipette_holder, list_col_row)
+            return self.pick_single_tip(pipette_holder, list_col_row)
 
-    def pick_multi_tips(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None) -> None:
+    def pick_multi_tips(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None) ->  List[tuple[int, int]]:
         """
         Pick tips from a PipetteHolder using multichannel pipettor.
 
@@ -206,6 +211,11 @@ class PipettorPlus(Pipettor):
             List of (column, start_row) grid indices to try.
             start_row indicates where the first pipettor in multichannel would be positioned.
             If None, automatically finds all grid locations with 8 consecutive occupied tips.
+
+        Returns
+        -------
+        List[tuple[int, int]]
+            Actual (column, start_row) position where tips were picked
 
         Raises
         ------
@@ -271,7 +281,7 @@ class PipettorPlus(Pipettor):
                 self.has_tips = True
 
                 print(f"✓ Successfully picked 8 tips from column {col}, rows {start_row} to {start_row + 7}")
-                return  # Successfully picked
+                return [(col, start_row)]
 
             except CommandFailed as e:
                 print(f"✗ Failed to pick tips from column {col}, row {start_row}: {e}")
@@ -285,7 +295,7 @@ class PipettorPlus(Pipettor):
             f"Failed to pick tips from any of the specified locations {list_col_row}. "
         )
 
-    def pick_single_tip(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None) -> None:
+    def pick_single_tip(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None) ->  List[tuple[int, int]]:
         """Pick a single tip from a PipetteHolder using single-channel pipettor."""
         if self.multichannel:
             raise ValueError("pick_single_tip requires single-channel pipettor")
@@ -335,7 +345,7 @@ class PipettorPlus(Pipettor):
                 self.has_tips = True
 
                 print(f"✓ Successfully picked tip from column {col}, row {row}")
-                return
+                return [(col, row)]
 
             except CommandFailed as e:
                 print(f"✗ Failed to pick tip from column {col}, row {row}: {e}")
@@ -348,18 +358,18 @@ class PipettorPlus(Pipettor):
             f"Failed to pick tip from any of the specified locations {list_col_row}."
         )
 
-    def return_tips(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None) -> None:
+    def return_tips(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None) -> List[tuple[int, int]]:
         """ return tips to PipetteHolder. """
 
         if not self.has_tips:
             raise ValueError("pipettor have no tips to return")
 
         if self.multichannel:
-            self.return_multi_tips(pipette_holder, list_col_row)
+            return self.return_multi_tips(pipette_holder, list_col_row)
         else:
-            self.return_single_tip(pipette_holder, list_col_row)
+            return self.return_single_tip(pipette_holder, list_col_row)
 
-    def return_multi_tips(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None) -> None:
+    def return_multi_tips(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None) -> List[tuple[int, int]]:
         """
         Return tips to a PipetteHolder using multichannel pipettor.
 
@@ -441,7 +451,7 @@ class PipettorPlus(Pipettor):
                 self.initialize_tips()
 
                 print(f"✓ Successfully returned 8 tips to column {col}, rows {start_row} to {start_row + 7}")
-                return
+                return [(col, start_row)]
 
             except CommandFailed as e:
                 print(f"✗ Failed to return tips to column {col}, row {start_row}: {e}")
@@ -456,7 +466,7 @@ class PipettorPlus(Pipettor):
             f"Tips still attached to pipettor."
         )
 
-    def return_single_tip(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None) -> None:
+    def return_single_tip(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None) -> List[tuple[int, int]]:
         """Return a single tip to a PipetteHolder using single-channel pipettor."""
         if self.multichannel:
             raise ValueError("return_single_tip requires single-channel pipettor")
@@ -510,7 +520,7 @@ class PipettorPlus(Pipettor):
                 self.initialize_tips()
 
                 print(f"✓ Successfully returned tip to column {col}, row {row}")
-                return
+                return [(col, row)]
 
             except CommandFailed as e:
                 print(f"✗ Failed to return tip to column {col}, row {row}: {e}")
@@ -526,7 +536,7 @@ class PipettorPlus(Pipettor):
 
     def replace_tips(self, pipette_holder: PipetteHolder, pick_pipette_holder:PipetteHolder = None,
                      return_list_col_row: List[tuple[int, int]] = None,
-                     pick_list_col_row: List[tuple[int, int]] = None ) -> None:
+                     pick_list_col_row: List[tuple[int, int]] = None ) -> dict:
 
         if not pick_pipette_holder:
             pick_pipette_holder = pipette_holder
@@ -550,8 +560,13 @@ class PipettorPlus(Pipettor):
                 occupied_holders = pick_pipette_holder.get_occupied_holders()
                 pick_list_col_row = [(h.column, h.row) for h in occupied_holders]  # Convert to list of occupied_holders!
 
-        self.return_tips(pipette_holder, list_col_row=return_list_col_row)
-        self.pick_tips(pick_pipette_holder, list_col_row=pick_list_col_row)
+        actual_return_pos = self.return_tips(pipette_holder, list_col_row=return_list_col_row)
+        actual_pick_pos = self.pick_tips(pick_pipette_holder, list_col_row=pick_list_col_row)
+
+        return {
+            'return': actual_return_pos,
+            'pick': actual_pick_pos
+        }
 
     def discard_tips(self, tip_dropzone: Labware) -> None:
         """

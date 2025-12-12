@@ -38,9 +38,10 @@ class WellWindow:
     def __init__(self, rows: int, columns: int, labware_id: str, title: str = "",
                  master=None, wells_list: list[tuple[int, int]] = None,
                  max_selected: int = None, multichannel_mode: bool = False,
-                 volume_constraints: dict[tuple[int, int], dict] = None):
+                 volume_constraints: dict[tuple[int, int], dict] = None,
+                 allow_auto_select: bool = False):
 
-        self.confirmed = False
+
         # --- Window setup ---
         if master:
             # Create as a dialog
@@ -73,6 +74,9 @@ class WellWindow:
             )
             self.__root.geometry("1200x900")
 
+        self.confirmed = False
+        self.auto_selected = False
+        self.allow_auto_select = allow_auto_select
         self.is_well_window = True
 
         # --- Core attributes ---
@@ -122,9 +126,9 @@ class WellWindow:
         # Buttons
         self.button_save = ttk.Button(
             self.__root,
-            text="✓ Confirm Selection",
+            text="✓ Confirm Manual Selection",
             command=self.callback_save,
-            bootstyle="success"
+            bootstyle="success-outline"
         )
         self.button_save.grid(
             column=1,
@@ -134,6 +138,29 @@ class WellWindow:
             padx=10,
             pady=10
         )
+        if self.allow_auto_select:
+            self.button_auto = ttk.Button(
+                self.__root,
+                text="Auto-Select",
+                command=self.callback_auto_select,
+                bootstyle="primary"
+            )
+            self.button_auto.grid(
+                column=1,
+                row=self.rows + 3,  # One row below the Confirm button
+                sticky="nsew",
+                columnspan=self.columns,
+                padx=10,
+                pady=(0, 10)  # No top padding, 10px bottom padding
+            )
+            self.__root.bind('<Return>', lambda e: self.callback_auto_select())
+            self.button_auto.focus_set()
+
+        else:
+            # No auto-select: Enter confirms selection
+            self.__root.bind('<Return>', lambda e: self.callback_save())
+            self.button_save.focus_set()
+
 
         if not self.multichannel_mode:
             self.checkbutton_all = ttk.Checkbutton(
@@ -192,6 +219,8 @@ class WellWindow:
             self.__root.rowconfigure(i, weight=1)
         # Last row: Save button
         self.__root.rowconfigure(self.rows + 2, weight=0)
+        if self.allow_auto_select:
+            self.__root.rowconfigure(self.rows + 3, weight=0)
 
         for i in range(self.columns + 1):
             self.__root.columnconfigure(i, weight=1)
@@ -573,5 +602,12 @@ class WellWindow:
     def callback_save(self):
         """Save and close the window."""
         self.confirmed = True
+        self.safe_var.set(True)
+        self.__root.destroy()
+
+    def callback_auto_select(self):
+        """Auto-select: Let pipettor detect positions automatically."""
+        self.auto_selected = True
+        self.confirmed = True  # Also set confirmed to indicate not cancelled
         self.safe_var.set(True)
         self.__root.destroy()

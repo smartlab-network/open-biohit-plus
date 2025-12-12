@@ -2426,16 +2426,21 @@ class FunctionWindow:
                     labware_obj=labware_obj,
                     source=True,
                 ) if self.mode == "direct" else [(r, c) for r in range(labware_obj.holders_across_y)
-                                               for c in range(labware_obj.holders_across_x)]
+                                               for c in range(labware_obj.holders_across_x)],
+                allow_auto_select=True
             )
             self.get_master_window().wait_window(window.get_root())
 
-            start_positions = window.get_start_positions()
-            if not start_positions or not window.confirmed:
-                return
+            if window.auto_selected:  # ← NEW FLAG
+                list_col_row = None  # Pass None to let pipettor auto-detect
+            else:
 
-            # Convert from (row, col) to (col, row) format for pipettor
-            list_col_row = [(c, r) for r, c in start_positions]
+                start_positions = window.get_start_positions()
+                if not start_positions or not window.confirmed:
+                    return
+
+                # Convert from (row, col) to (col, row) format for pipettor
+                list_col_row = [(c, r) for r, c in start_positions]
 
             operation = OperationBuilder.build_pick_tips(
                 labware_id=labware_obj.labware_id,
@@ -2486,16 +2491,18 @@ class FunctionWindow:
                     labware_obj=labware_obj,
                     source=False,  # Empty positions
                 ) if self.mode == "direct" else [(r, c) for r in range(labware_obj.holders_across_y)
-                                               for c in range(labware_obj.holders_across_x)]
+                                               for c in range(labware_obj.holders_across_x)],
+                allow_auto_select=True
             )
             self.get_master_window().wait_window(window.get_root())
 
-            start_positions = window.get_start_positions()
-            if not start_positions or not window.confirmed:
-                return
-
-            # Convert from (row, col) to (col, row) format for pipettor
-            list_col_row = [(c, r) for r, c in start_positions]
+            if window.auto_selected:
+                list_col_row = None
+            else:
+                start_positions = window.get_start_positions()
+                if not start_positions or not window.confirmed:
+                    return
+                list_col_row = [(c, r) for r, c in start_positions]
 
             # Create details
             operation = OperationBuilder.build_return_tips(
@@ -2552,17 +2559,18 @@ class FunctionWindow:
                     labware_obj=labware_obj,
                     source=False,  # Empty positions
                 ) if self.mode == "direct" else [(r, c) for r in range(labware_obj.holders_across_y)
-                                               for c in range(labware_obj.holders_across_x)]
+                                               for c in range(labware_obj.holders_across_x)],
+                allow_auto_select=True
             )
             self.get_master_window().wait_window(window_return.get_root())
 
-            # Get start positions for return
-            start_positions_return = window_return.get_start_positions()
-            if not start_positions_return or not window_return.confirmed:
-                return
-
-            # Convert to (col, row) format and store
-            kwargs['return_positions'] = [(c, r) for r, c in start_positions_return]
+            if window_return.auto_selected:
+                kwargs['return_positions'] = None
+            else:
+                start_positions_return = window_return.get_start_positions()
+                if not start_positions_return or not window_return.confirmed:
+                    return
+                kwargs['return_positions'] = [(c, r) for r, c in start_positions_return]
 
             # Now ask for PICK labware
             if self.mode == "builder":
@@ -2593,17 +2601,18 @@ class FunctionWindow:
                     labware_obj=labware_obj,
                     source=True,
                 ) if self.mode == "direct" else [(r, c) for r in range(labware_obj.holders_across_y)
-                                               for c in range(labware_obj.holders_across_x)]
+                                               for c in range(labware_obj.holders_across_x)],
+                allow_auto_select=True
             )
             self.get_master_window().wait_window(window_pick.get_root())
 
-            # Get start positions for pick
-            start_positions_pick = window_pick.get_start_positions()
-            if not start_positions_pick or not window_pick.confirmed:
-                return
-
-            # Convert to (col, row) format
-            list_pick = [(c, r) for r, c in start_positions_pick]
+            if window_pick.auto_selected:
+                list_pick = None
+            else:
+                start_positions_pick = window_pick.get_start_positions()
+                if not start_positions_pick or not window_pick.confirmed:
+                    return
+                list_pick = [(c, r) for r, c in start_positions_pick]
 
             # Create operation with BOTH labware
             operation = OperationBuilder.build_replace_tips(
