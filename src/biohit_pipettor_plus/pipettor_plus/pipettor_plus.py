@@ -114,7 +114,6 @@ class PipettorPlus(Pipettor):
         return {
             'has_tips': self.has_tips,
             'tip_dict': {k: v.copy() for k, v in self.tip_dict.items()},
-            'simulation_mode': self._simulation_mode,
             'deck_state': snapshot
         }
 
@@ -122,7 +121,6 @@ class PipettorPlus(Pipettor):
         """Restore pipettor and deck state from snapshot."""
         self.has_tips = snapshot['has_tips']
         self.tip_dict = {k: v.copy() for k, v in snapshot['tip_dict'].items()}
-        self._simulation_mode = snapshot['simulation_mode']
 
         deck_state_data = snapshot['deck_state']
 

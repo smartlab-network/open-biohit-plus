@@ -940,6 +940,7 @@ class FunctionWindow:
             name = f"Workflow_{uuid.uuid4().hex[:8]}"
 
         self.workflow.name = name
+        self.pipettor.set_simulation_mode(False)
 
         # Add to parent's memory
         if hasattr(self, 'parent_function_window') and self.parent_function_window:
