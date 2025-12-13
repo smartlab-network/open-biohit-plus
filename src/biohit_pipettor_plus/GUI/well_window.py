@@ -124,40 +124,45 @@ class WellWindow:
             ).pack(side=tk.LEFT, padx=5)
 
         # Buttons
-        self.button_save = ttk.Button(
-            self.__root,
-            text="✓ Confirm Manual Selection",
-            command=self.callback_save,
-            bootstyle="success-outline"
-        )
-        self.button_save.grid(
-            column=1,
-            row=self.rows + 2,
-            sticky="nsew",
-            columnspan=self.columns,
-            padx=10,
-            pady=10
-        )
         if self.allow_auto_select:
-            self.button_auto = ttk.Button(
+            # Single smart button with dynamic text
+            self.button_confirm = ttk.Button(
                 self.__root,
-                text="Auto-Select",
-                command=self.callback_auto_select,
+                text="✓ Auto-Select",
+                command=self.callback_save,
                 bootstyle="primary"
             )
-            self.button_auto.grid(
+            self.button_confirm.grid(
                 column=1,
-                row=self.rows + 3,  # One row below the Confirm button
+                row=self.rows + 2,
                 sticky="nsew",
                 columnspan=self.columns,
                 padx=10,
-                pady=(0, 10)  # No top padding, 10px bottom padding
+                pady=10
             )
-            self.__root.bind('<Return>', lambda e: self.callback_auto_select())
-            self.button_auto.focus_set()
+
+            self.__root.bind('<Return>', lambda e: self.callback_save())
+            self.button_confirm.focus_set()
+
+            # Track selection state for button text updates
+            self.has_manual_selection = False
 
         else:
-            # No auto-select: Enter confirms selection
+            # No auto-select available: traditional confirm button
+            self.button_save = ttk.Button(
+                self.__root,
+                text="✓ Confirm Selection",
+                command=self.callback_save,
+                bootstyle="success-outline"
+            )
+            self.button_save.grid(
+                column=1,
+                row=self.rows + 2,
+                sticky="nsew",
+                columnspan=self.columns,
+                padx=10,
+                pady=10
+            )
             self.__root.bind('<Return>', lambda e: self.callback_save())
             self.button_save.focus_set()
 
@@ -219,11 +224,31 @@ class WellWindow:
             self.__root.rowconfigure(i, weight=1)
         # Last row: Save button
         self.__root.rowconfigure(self.rows + 2, weight=0)
-        if self.allow_auto_select:
-            self.__root.rowconfigure(self.rows + 3, weight=0)
 
         for i in range(self.columns + 1):
             self.__root.columnconfigure(i, weight=1)
+
+    def update_confirm_button_text(self):
+        """Update confirm button text based on current selection state"""
+        if not self.allow_auto_select or not hasattr(self, 'button_confirm'):
+            return
+
+        has_selection = any(any(row) for row in self.well_state)
+
+        # Only update if state actually changed (avoid unnecessary UI updates)
+        if has_selection != self.has_manual_selection:
+            self.has_manual_selection = has_selection
+
+            if has_selection:
+                self.button_confirm.config(
+                    text=" Select",
+                    bootstyle="success"
+                )
+            else:
+                self.button_confirm.config(
+                    text="Auto-Select",
+                    bootstyle="primary"
+                )
 
     def get_root(self):
         """Return the underlying Tk root window."""
@@ -397,6 +422,7 @@ class WellWindow:
         self.well_state[row][col] = True
         self.buttons[row][col].configure(bootstyle="success")
         self.selected_queue.append((row, col))
+        self.update_confirm_button_text()
 
     def deactivate_well(self, row: int, col: int):
         """
@@ -413,6 +439,7 @@ class WellWindow:
             self.selected_queue.remove((row, col))
         self.well_state[row][col] = False
         self.buttons[row][col].configure(bootstyle="light")
+        self.update_confirm_button_text()
 
     def show_multichannel_preview(self, row: int, col: int):
         """Highlight all consecutive wells that will be selected with preview colors."""
@@ -547,6 +574,10 @@ class WellWindow:
                     if r < self.rows and self.buttons[r][column] is not None:
                         self.buttons[r][column].configure(bootstyle="light")
 
+                # Update confirm button text (multichannel modifies state directly)
+                self.update_confirm_button_text()
+
+
         else:
             # Single-channel mode
             if self.well_state[row][column]:
@@ -600,14 +631,15 @@ class WellWindow:
         pass
 
     def callback_save(self):
-        """Save and close the window."""
-        self.confirmed = True
+        """Save and close - auto-select if no manual selection made"""
+        has_selection = any(any(row) for row in self.well_state)
+
+        if has_selection:
+            self.auto_selected = False
+        else:
+            self.auto_selected = True
+
         self.safe_var.set(True)
+        self.confirmed = True
         self.__root.destroy()
 
-    def callback_auto_select(self):
-        """Auto-select: Let pipettor detect positions automatically."""
-        self.auto_selected = True
-        self.confirmed = True  # Also set confirmed to indicate not cancelled
-        self.safe_var.set(True)
-        self.__root.destroy()
