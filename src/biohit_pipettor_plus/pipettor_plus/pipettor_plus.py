@@ -349,6 +349,7 @@ class PipettorPlus(Pipettor):
 
             except CommandFailed as e:
                 print(f"✗ Failed to pick tip from column {col}, row {row}: {e}")
+                holder.is_occupied = False
                 continue
             finally:
                 if not self._simulation_mode:

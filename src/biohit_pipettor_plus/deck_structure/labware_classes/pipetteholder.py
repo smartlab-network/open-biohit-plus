@@ -10,7 +10,7 @@ import copy
 @register_class
 class PipetteHolder(Labware):
     def __init__(self, size_x: float, size_y: float, size_z: float, holders_across_x: int, holders_across_y: int,
-                 individual_holder: IndividualPipetteHolder, add_height: float = -15, remove_height : float = 15, offset: tuple[float, float] = (0, 0),
+                 individual_holder: IndividualPipetteHolder, add_height: float = 0, remove_height : float = 0, offset: tuple[float, float] = (0, 0),
                  labware_id: str = None, position: tuple[float, float] = None, can_be_stacked_upon: bool = False,):
         """
         Initialize a PipetteHolder instance.

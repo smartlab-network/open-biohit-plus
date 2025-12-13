@@ -163,8 +163,7 @@ class WorkflowExecutor:
                 pipette_holder=labware,
                 list_col_row=params['positions']
             )
-            if params['positions'] is None and actual_positions:
-                operation.parameters['positions'] = actual_positions
+
 
         elif op_type == OperationType.RETURN_TIPS:
             labware = get_labware(params['labware_id'])
@@ -172,8 +171,7 @@ class WorkflowExecutor:
                 pipette_holder=labware,
                 list_col_row=params['positions']
             )
-            if params['positions'] is None and actual_positions:
-                operation.parameters['positions'] = actual_positions
+
 
         elif op_type == OperationType.REPLACE_TIPS:
             return_labware = get_labware(params['return_labware_id'])
@@ -185,10 +183,6 @@ class WorkflowExecutor:
                 return_list_col_row=params['return_positions'],
                 pick_list_col_row=params['pick_positions']
             )
-            if params['return_positions'] is None and actual_positions.get('return'):
-                operation.parameters['return_positions'] = actual_positions['return']
-            if params['pick_positions'] is None and actual_positions.get('pick'):
-                operation.parameters['pick_positions'] = actual_positions['pick']
 
         elif op_type == OperationType.DISCARD_TIPS:
             labware = get_labware(params['labware_id'])
