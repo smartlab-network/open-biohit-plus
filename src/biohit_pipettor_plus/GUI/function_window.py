@@ -287,6 +287,7 @@ class FunctionWindow:
 
             # Restore state
             self.pipettor.pop_state(state_snapshot)
+            self.pipettor.set_simulation_mode(False)
 
             # Mark as validated
             self.staged_operation_validated = True
@@ -295,7 +296,7 @@ class FunctionWindow:
         except Exception as e:
             # Restore state on error
             self.pipettor.pop_state(state_snapshot)
-
+            self.pipettor.set_simulation_mode(False)
             messagebox.showerror(
                 "Validation Failed",
                 f"Operation validation failed:\n\n{str(e)}"
