@@ -1772,6 +1772,10 @@ class FunctionWindow:
             top_labwares[slot_id] = top_lw
         return top_labwares
 
+    def refresh_labware_lists(self):
+        """Update labware lists from current deck state"""
+        self.dict_top_labware = self.get_top_labwares()
+
     def get_master_window(self):
         """Get the master window for dialogs"""
         if self.is_toplevel:

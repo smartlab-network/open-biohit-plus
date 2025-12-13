@@ -940,6 +940,20 @@ class DeckGUI:
         # Update pipettor status display
         self.update_pipettor_status()
 
+    def update_operations_tab(self):
+
+        """
+        Update operations tab without destroying it.
+        Only rebuild if absolutely necessary (pipettor changed).
+        """
+        if not hasattr(self, 'function_window') or self.function_window is None:
+            # First time or pipettor was just initialized
+            self.rebuild_operations_tab()
+            return
+
+        if hasattr(self.function_window, 'refresh_labware_lists'):
+            self.function_window.refresh_labware_lists()
+
     def rebuild_operations_tab(self):
         """
         Rebuild the operations tab content.
@@ -1213,8 +1227,7 @@ class DeckGUI:
                 )
                 self.unplaced_labware.remove(labware)
                 self.draw_deck()
-                if hasattr(self, 'rebuild_operations_tab'):
-                    self.rebuild_operations_tab()
+                self.update_operations_tab()
             except ValueError as e:
                 messagebox.showerror("Error", str(e))
 
@@ -1634,8 +1647,7 @@ class DeckGUI:
         self.unplaced_slots.remove(slot)
 
         self.draw_deck()
-        if hasattr(self, 'rebuild_operations_tab'):
-            self.rebuild_operations_tab()
+        self.update_operations_tab()
 
     def unplace_selected_slot(self, slot_id=None):
         """
@@ -1681,10 +1693,7 @@ class DeckGUI:
         self.clear_selection()
         self.update_labware_list()
         self.update_slots_list()
-
-        # D. Show success message
-        if hasattr(self, 'rebuild_operations_tab'):
-            self.rebuild_operations_tab()
+        self.update_operations_tab()
 
         if unplaced_labware_list:
             lw_list = ", ".join([lw.labware_id for lw in unplaced_labware_list])
@@ -1720,8 +1729,7 @@ class DeckGUI:
         self.canvas.delete(f'labware_{lw_id}')
         self.clear_selection()
         self.update_labware_list()
-        if hasattr(self, 'rebuild_operations_tab'):
-            self.rebuild_operations_tab()
+        self.update_operations_tab()
 
         return
 
