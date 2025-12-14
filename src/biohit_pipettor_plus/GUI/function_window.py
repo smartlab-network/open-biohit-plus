@@ -553,6 +553,21 @@ class FunctionWindow:
         liquid_frame = ttk.Labelframe(parent_frame, text="Liquid Handling", padding=10)
         liquid_frame.pack(fill=tk.X, pady=5, padx=5)
 
+        # Change tips checkbox
+        self.change_tips_var = tk.BooleanVar(value=False)
+        change_tips_frame = ttk.Frame(liquid_frame)
+        change_tips_frame.pack(fill=tk.X, pady=(0, 10), padx=5)
+
+        ttk.Checkbutton(
+            change_tips_frame,
+            text="Auto change tips between Wells",
+            variable=self.change_tips_var,
+            bootstyle="round-toggle"
+        ).pack(side=tk.LEFT)
+
+        # separator
+        ttk.Separator(liquid_frame, orient='horizontal').pack(fill=tk.X, pady=5)
+
         self.add_medium_btn = ttk.Button(  
             liquid_frame, text=" Add Medium",
             command=lambda: self.callback_add_medium(func_str="Add Medium"),
@@ -2785,7 +2800,8 @@ class FunctionWindow:
                 dest_labware_id=kwargs["dest_labware"].labware_id,
                 dest_positions=kwargs["dest_positions"],
                 volume=kwargs['volume'],
-                channels=self.channels
+                channels=self.channels,
+                change_tips = self.change_tips_var.get()
             )
 
             if self.mode == "direct":
@@ -2909,7 +2925,8 @@ class FunctionWindow:
                 dest_labware_id=kwargs["dest_labware"].labware_id,
                 dest_positions=kwargs["dest_positions"],
                 volume=kwargs['volume'],
-                channels=self.channels
+                channels=self.channels,
+                change_tips=self.change_tips_var.get()
             )
 
             # Mode-specific handling
@@ -3051,7 +3068,8 @@ class FunctionWindow:
                 dest_labware_id=kwargs["dest_labware"].labware_id,
                 dest_positions=kwargs["dest_positions"],
                 volume=kwargs['volume'],
-                channels=self.channels
+                channels=self.channels,
+                change_tips=self.change_tips_var.get()
             )
 
             # Mode-specific handling
@@ -3211,7 +3229,6 @@ class FunctionWindow:
             if not kwargs["source_position"]:
                 return
 
-                # BUILD THE OPERATION - THIS WAS MISSING!
             operation = OperationBuilder.build_remove_and_add(
                 plate_labware_id=kwargs["plate_labware"].labware_id,
                 plate_positions=kwargs["plate_positions"],
@@ -3220,7 +3237,8 @@ class FunctionWindow:
                 source_reservoir_id=kwargs["source_reservoir"].labware_id,
                 source_position=kwargs["source_position"],
                 volume=kwargs['volume'],
-                channels=self.channels
+                channels=self.channels,
+                change_tips = self.change_tips_var.get()
             )
 
             if self.mode == "direct":

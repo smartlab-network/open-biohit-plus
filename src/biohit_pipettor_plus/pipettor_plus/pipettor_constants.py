@@ -5,7 +5,6 @@
 Pipettors_in_Multi = 8
 Spacing_Between_Adjacent_Pipettor = 2
 MAX_BATCH_SIZE = 5
-Change_Tips = 0
 TIP_LENGTHS = {
         200: 38,  # 200µL increase height by 38mm after being attached
         1000: 90,  # 1000µL tips are 81mm after being attached

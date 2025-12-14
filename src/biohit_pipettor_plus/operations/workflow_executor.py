@@ -194,37 +194,55 @@ class WorkflowExecutor:
             source = get_labware(params['source_labware_id'])
             dest = get_labware(params['dest_labware_id'])
 
-            self.pipettor.add_medium(
-                source=source,
-                source_col_row=params['source_positions'],
-                destination=dest,
-                dest_col_row=params['dest_positions'],
-                volume_per_well=params['volume'],
-            )
+            change_tips = params.get('change_tips', False)
+            self.pipettor.change_tips = change_tips
+
+            try:
+                self.pipettor.add_medium(
+                    source=source,
+                    source_col_row=params['source_positions'],
+                    destination=dest,
+                    dest_col_row=params['dest_positions'],
+                    volume_per_well=params['volume'],
+                )
+            finally:
+                self.pipettor.change_tips = False
 
         elif op_type == OperationType.REMOVE_MEDIUM:
             source = get_labware(params['source_labware_id'])
             dest = get_labware(params['dest_labware_id'])
+            change_tips = params.get('change_tips', False)
+            self.pipettor.change_tips = change_tips
 
-            self.pipettor.remove_medium(
-                source=source,
-                destination=dest,
-                source_col_row=params['source_positions'],
-                destination_col_row=params['dest_positions'],
-                volume_per_well=params['volume'],
-            )
+            try:
+                self.pipettor.remove_medium(
+                    source=source,
+                    destination=dest,
+                    source_col_row=params['source_positions'],
+                    destination_col_row=params['dest_positions'],
+                    volume_per_well=params['volume'],
+                )
+            finally:
+                self.pipettor.change_tips = False
+
 
         elif op_type == OperationType.TRANSFER_PLATE_TO_PLATE:
             source = get_labware(params['source_labware_id'])
             dest = get_labware(params['dest_labware_id'])
+            change_tips = params.get('change_tips', False)
+            self.pipettor.change_tips = change_tips
 
-            self.pipettor.transfer_plate_to_plate(
-                source=source,
-                destination=dest,
-                source_col_row=params['source_positions'],
-                dest_col_row=params['dest_positions'],
-                volume_per_well=params['volume'],
-            )
+            try:
+                self.pipettor.transfer_plate_to_plate(
+                    source=source,
+                    destination=dest,
+                    source_col_row=params['source_positions'],
+                    dest_col_row=params['dest_positions'],
+                    volume_per_well=params['volume'],
+                )
+            finally:
+                self.pipettor.change_tips = False
+
 
         elif op_type == OperationType.REMOVE_AND_ADD:
             # Get labware
@@ -238,33 +256,41 @@ class WorkflowExecutor:
             remove_position = params['remove_position']
             source_position = params['source_position']
 
-            # Calculate how many positions we can handle per trip
-            tip_capacity = self.pipettor.tip_volume
-            positions_per_trip = int(tip_capacity / volume)
-            if positions_per_trip < 1:
-                positions_per_trip = 1  # At minimum, handle one position per trip
+            # Handle change_tips flag
+            change_tips = params.get('change_tips', False)
+            self.pipettor.change_tips = change_tips
 
-            # Batch the positions
-            for i in range(0, len(plate_positions), positions_per_trip):
-                batch = plate_positions[i:i + positions_per_trip]
+            try:
 
-                # Step 1: Remove from plate to remove reservoir
-                self.pipettor.remove_medium(
-                    source=plate,
-                    destination=remove_reservoir,
-                    source_col_row=batch,
-                    destination_col_row=remove_position,
-                    volume_per_well=volume,
-                )
+                # Calculate how many positions we can handle per trip
+                tip_capacity = self.pipettor.tip_volume
+                positions_per_trip = int(tip_capacity / volume)
+                if positions_per_trip < 1:
+                    positions_per_trip = 1  # At minimum, handle one position per trip
 
-                # Step 2: Add fresh medium from source reservoir to plate
-                self.pipettor.add_medium(
-                    source=source_reservoir,
-                    source_col_row=source_position,
-                    destination=plate,
-                    dest_col_row=batch,
-                    volume_per_well=volume,
-                )
+                # Batch the positions
+                for i in range(0, len(plate_positions), positions_per_trip):
+                    batch = plate_positions[i:i + positions_per_trip]
+
+                    # Step 1: Remove from plate to remove reservoir
+                    self.pipettor.remove_medium(
+                        source=plate,
+                        destination=remove_reservoir,
+                        source_col_row=batch,
+                        destination_col_row=remove_position,
+                        volume_per_well=volume,
+                    )
+
+                    # Step 2: Add fresh medium from source reservoir to plate
+                    self.pipettor.add_medium(
+                        source=source_reservoir,
+                        source_col_row=source_position,
+                        destination=plate,
+                        dest_col_row=batch,
+                        volume_per_well=volume,
+                    )
+            finally:
+                self.pipettor.change_tips = False
 
         elif op_type == OperationType.SUCK:
             labware = get_labware(params['labware_id'])

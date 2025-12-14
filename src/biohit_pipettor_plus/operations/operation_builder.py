@@ -99,6 +99,7 @@ class OperationBuilder:
             dest_positions: list[tuple[int, int]],
             volume: float,
             channels: int,
+            change_tips: bool = False
     ) -> Operation:
         """Build an ADD_MEDIUM operation"""
         total_wells = len(dest_positions) * (Pipettors_in_Multi if channels == Pipettors_in_Multi else 1)
@@ -115,7 +116,8 @@ class OperationBuilder:
             'dest_labware_id': dest_labware_id,
             'dest_positions': dest_positions,
             'volume': volume,
-            'channels': channels
+            'channels': channels,
+            'change_tips': change_tips
         }
 
         return Operation(
@@ -132,6 +134,7 @@ class OperationBuilder:
             dest_positions: list,
             volume: float,
             channels: int,
+            change_tips: bool = False,
     ) -> Operation:
         """Build a REMOVE_MEDIUM operation"""
         total_wells = len(source_positions) * (Pipettors_in_Multi if channels == Pipettors_in_Multi else 1)
@@ -148,7 +151,8 @@ class OperationBuilder:
             'dest_labware_id': dest_labware_id,
             'dest_positions': dest_positions,
             'volume': volume,
-            'channels': channels
+            'channels': channels,
+            'change_tips': change_tips
         }
 
         return Operation(
@@ -165,6 +169,7 @@ class OperationBuilder:
             dest_positions: list[tuple[int, int]],
             volume: float,
             channels: int,
+            change_tips: bool = False
     ) -> Operation:
         """Build a TRANSFER_PLATE_TO_PLATE operation"""
         total_wells = len(source_positions) * (Pipettors_in_Multi if channels == Pipettors_in_Multi else 1)
@@ -181,7 +186,8 @@ class OperationBuilder:
             'dest_labware_id': dest_labware_id,
             'dest_positions': dest_positions,
             'volume': volume,
-            'channels': channels
+            'channels': channels,
+            'change_tips': change_tips
         }
 
 
@@ -272,7 +278,8 @@ class OperationBuilder:
             source_reservoir_id: str,
             source_position: tuple[int, int],
             volume: float,
-            channels: int
+            channels: int,
+            change_tips: bool = False,
     ) -> Operation:
         """
         Remove medium from plate positions to reservoir, then add fresh medium from source (BATCHED).
@@ -288,6 +295,7 @@ class OperationBuilder:
                 'source_reservoir_id': source_reservoir_id,
                 'source_position': source_position,
                 'volume': volume,
-                'channels': channels
+                'channels': channels,
+                'change_tips': change_tips
             }
         )

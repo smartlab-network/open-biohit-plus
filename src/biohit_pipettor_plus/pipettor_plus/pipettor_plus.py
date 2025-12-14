@@ -49,7 +49,7 @@ except ImportError:
 
 #from biohit_pipettor import Pipettor
 from ..deck_structure import *
-from .pipettor_constants import Pipettors_in_Multi, MAX_BATCH_SIZE, Change_Tips, TIP_LENGTHS, Z_MAX
+from .pipettor_constants import Pipettors_in_Multi, MAX_BATCH_SIZE, TIP_LENGTHS, Z_MAX
 from .geometry import (calculate_liquid_height, calculate_dynamic_remove_height)
 
 import time
@@ -89,9 +89,10 @@ class PipettorPlus(Pipettor):
         self.tip_count = Pipettors_in_Multi if self.multichannel else 1
         self.tip_dict = {i: {} for i in range(0, self.tip_count)}
         self.has_tips = False
+        self.change_tips = False
         self.tip_volume = tip_volume
-        self.change_tips = Change_Tips  # control if tips are to be changed
 
+        self.batch_size = MAX_BATCH_SIZE
         self.foc_bat_script_path = None
 
     def push_state(self):
@@ -238,8 +239,6 @@ class PipettorPlus(Pipettor):
         if not list_col_row:
             raise ValueError(f"No col_row specified. list_col_row given : {list_col_row}")
 
-        print(f"pick_multi_tips: start, trying grid locations {list_col_row}")
-
         for col, start_row in list_col_row:
             #checks the status of Individual pipette holders at  col_row
             status = pipette_holder.check_col_start_row_multi(col, start_row)
@@ -312,8 +311,6 @@ class PipettorPlus(Pipettor):
 
         if not list_col_row:
             raise ValueError(f"No col_row specified. list_col_row given: {list_col_row}")
-
-        print(f"pick_single_tip: start, trying grid locations {list_col_row}")
 
         for col, row in list_col_row:
             holder = pipette_holder.get_holder_at(col, row)
@@ -409,8 +406,6 @@ class PipettorPlus(Pipettor):
         if not list_col_row:
             raise ValueError(f"No col_row specified. list_col_row given: {list_col_row}")
 
-        print(f"return_multi_tips: start, trying grid locations {list_col_row}")
-
         for col, start_row in list_col_row:
             # Check the status of positions
             status = pipette_holder.check_col_start_row_multi(col, start_row)
@@ -464,7 +459,6 @@ class PipettorPlus(Pipettor):
         # If we got here, all attempts failed
         raise RuntimeError(
             f"Failed to return tips to any of the specified locations {list_col_row}. "
-            f"Tips still attached to pipettor."
         )
 
     def return_single_tip(self, pipette_holder: PipetteHolder, list_col_row: List[tuple[int, int]] = None) -> List[tuple[int, int]]:
@@ -487,8 +481,6 @@ class PipettorPlus(Pipettor):
 
         if not list_col_row:
             raise ValueError(f"No col_row specified. list_col_row given: {list_col_row}")
-
-        print(f"return_single_tip: start, trying grid locations {list_col_row}")
 
         for col, row in list_col_row:
             holder = pipette_holder.get_holder_at(col, row)
@@ -532,7 +524,6 @@ class PipettorPlus(Pipettor):
 
         raise RuntimeError(
             f"Failed to return tip to any of the specified locations {list_col_row}. "
-            f"Tip still attached to pipettor."
         )
 
     def replace_tips(self, pipette_holder: PipetteHolder, pick_pipette_holder:PipetteHolder = None,
@@ -627,13 +618,20 @@ class PipettorPlus(Pipettor):
         # Calculate volumes
         volume_per_destination, max_vol = self._calculate_volumes(volume_per_well)
 
+        original_batch_size = self.batch_size
+        if self.change_tips:
+            self.batch_size = 1
+
         # Choose strategy
-        if volume_per_destination > max_vol:
-            self._multi_trip_transfer(dest_col_row, volume_per_destination, max_vol,
-                                      source, source_col_row, destination, None, is_one_to_many=True)
-        else:
-            self._batch_transfer(dest_col_row, volume_per_destination, max_vol,
-                                 source, source_col_row, destination, None, is_one_to_many=True)
+        try:
+            if volume_per_destination > max_vol:
+                self._multi_trip_transfer(dest_col_row, volume_per_destination, max_vol,
+                                          source, source_col_row, destination, None, is_one_to_many=True)
+            else:
+                self._batch_transfer(dest_col_row, volume_per_destination, max_vol,
+                                     source, source_col_row, destination, None, is_one_to_many=True)
+        finally:
+            self.batch_size = original_batch_size
 
     def remove_medium(self, source: Plate, source_col_row: List[tuple[int, int]],
                       volume_per_well: float, destination: ReservoirHolder,
@@ -663,12 +661,20 @@ class PipettorPlus(Pipettor):
         volume_per_source, max_vol = self._calculate_volumes(volume_per_well)
 
         # Choose strategy
-        if volume_per_source > max_vol:
-            self._multi_trip_transfer(source_col_row, volume_per_source, max_vol,
-                                      source, None, destination, destination_col_row, is_one_to_many=False)
-        else:
-            self._batch_transfer(source_col_row, volume_per_source, max_vol,
-                                 source, None, destination, destination_col_row, is_one_to_many=False)
+        original_batch_size = self.batch_size
+        if self.change_tips:
+            self.batch_size = 1
+
+        try:
+            if volume_per_source > max_vol:
+                self._multi_trip_transfer(source_col_row, volume_per_source, max_vol,
+                                          source, None, destination, destination_col_row, is_one_to_many=False)
+            else:
+                self._batch_transfer(source_col_row, volume_per_source, max_vol,
+                                     source, None, destination, destination_col_row, is_one_to_many=False)
+
+        finally:
+            self.batch_size = original_batch_size
 
     def transfer_plate_to_plate(self, source: Plate, source_col_row: List[tuple[int, int]],
                                 destination: Plate, dest_col_row: List[tuple[int, int]],
@@ -951,11 +957,14 @@ class PipettorPlus(Pipettor):
             return
         self._check_abort_and_pause()
         super().move_z(z)
+
+
     # Helper Functions. Not necessarily available for GUI
     def _validate_transfer(self, source, source_positions, destination, destination_positions,
                            source_consecutive_rows: int, dest_consecutive_rows: int) -> None:
         """Helper: Validate source and destination positions."""
-        self.check_tips()
+        if not self.has_tips and not self.change_tips:
+            raise ValueError("No tips loaded. Pick tips first.")
 
         # Validate source positions
         if not isinstance(source_positions, list):
@@ -986,6 +995,9 @@ class PipettorPlus(Pipettor):
 
         for pos in positions:
             col, row = pos
+
+            # ✅ ADD: Check tips before each position
+            self.check_tips()
 
             num_trips = ceil(volume_per_position / max_vol_per_aspirate)
             print(f"Position ({col}, {row}): {num_trips} trips needed")
@@ -1025,7 +1037,7 @@ class PipettorPlus(Pipettor):
 
         # Calculate optimal batch size
         max_positions_by_volume = max_vol_per_aspirate // volume_per_position
-        batch_size = min(MAX_BATCH_SIZE, max_positions_by_volume)
+        batch_size = min(self.batch_size, max_positions_by_volume)
 
         if batch_size < 1:
             batch_size = 1
@@ -1042,6 +1054,8 @@ class PipettorPlus(Pipettor):
             batch_end = min(idx + batch_size, len(positions))
             batch = positions[idx:batch_end]
             total_batch_volume = len(batch) * volume_per_position
+
+            self.check_tips() #change tip between batches if change_tip is True
 
             print(f"Batch {batch_num}/{num_batches}:")
             print(f"  Positions: {batch}")
