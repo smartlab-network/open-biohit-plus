@@ -195,6 +195,7 @@ class WorkflowExecutor:
             dest = get_labware(params['dest_labware_id'])
 
             change_tips = params.get('change_tips', False)
+            mix_volume = params.get('mix_volume', 0)
             self.pipettor.change_tips = change_tips
 
             try:
@@ -204,6 +205,7 @@ class WorkflowExecutor:
                     destination=dest,
                     dest_col_row=params['dest_positions'],
                     volume_per_well=params['volume'],
+                    mix_volume=mix_volume
                 )
             finally:
                 self.pipettor.change_tips = False
@@ -229,6 +231,8 @@ class WorkflowExecutor:
         elif op_type == OperationType.TRANSFER_PLATE_TO_PLATE:
             source = get_labware(params['source_labware_id'])
             dest = get_labware(params['dest_labware_id'])
+
+            mix_volume = params.get('mix_volume', 0)
             change_tips = params.get('change_tips', False)
             self.pipettor.change_tips = change_tips
 
@@ -239,6 +243,7 @@ class WorkflowExecutor:
                     source_col_row=params['source_positions'],
                     dest_col_row=params['dest_positions'],
                     volume_per_well=params['volume'],
+                    mix_volume=mix_volume
                 )
             finally:
                 self.pipettor.change_tips = False
@@ -251,7 +256,7 @@ class WorkflowExecutor:
             source_reservoir = get_labware(params['source_reservoir_id'])
 
             volume = params['volume']
-            channels = params['channels']
+            mix_volume = params.get('mix_volume', 0)
             plate_positions = params['plate_positions']
             remove_position = params['remove_position']
             source_position = params['source_position']
@@ -288,6 +293,7 @@ class WorkflowExecutor:
                         destination=plate,
                         dest_col_row=batch,
                         volume_per_well=volume,
+                        mix_volume=mix_volume
                     )
             finally:
                 self.pipettor.change_tips = False

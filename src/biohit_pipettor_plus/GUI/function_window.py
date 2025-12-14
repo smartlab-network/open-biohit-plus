@@ -568,6 +568,43 @@ class FunctionWindow:
         # separator
         ttk.Separator(liquid_frame, orient='horizontal').pack(fill=tk.X, pady=5)
 
+        # Mixing controls
+        self.enable_mixing_var = tk.BooleanVar(value=False)
+        mixing_frame = ttk.Frame(liquid_frame)
+        mixing_frame.pack(fill=tk.X, pady=(0, 10), padx=5)
+
+        ttk.Checkbutton(
+            mixing_frame,
+            text="Enable mixing after dispense",
+            variable=self.enable_mixing_var,
+            bootstyle="round-toggle",
+            command=self._toggle_mixing_controls
+        ).pack(side=tk.LEFT)
+
+        ttk.Label(
+            mixing_frame,
+            text="Volume:",
+            font=('Arial', 9)
+        ).pack(side=tk.LEFT, padx=(10, 5))
+
+        self.mix_volume_var = tk.StringVar(value="100")
+        self.mix_volume_entry = ttk.Entry(
+            mixing_frame,
+            textvariable=self.mix_volume_var,
+            width=8,
+            state='disabled'  # Disabled initially
+        )
+        self.mix_volume_entry.pack(side=tk.LEFT)
+
+        ttk.Label(
+            mixing_frame,
+            text="µL",
+            font=('Arial', 9)
+        ).pack(side=tk.LEFT, padx=(2, 5))
+
+        ttk.Separator(liquid_frame, orient='horizontal').pack(fill=tk.X, pady=5)
+
+        #operation buttons
         self.add_medium_btn = ttk.Button(  
             liquid_frame, text=" Add Medium",
             command=lambda: self.callback_add_medium(func_str="Add Medium"),
@@ -645,6 +682,33 @@ class FunctionWindow:
             bootstyle="secondary"
         )
         self.move_z_btn.pack(fill=tk.X, pady=2, padx=5)
+
+    def _toggle_mixing_controls(self):
+        """Enable/disable mixing volume entry based on checkbox state"""
+        if self.enable_mixing_var.get():
+            self.mix_volume_entry.config(state='normal')
+        else:
+            self.mix_volume_entry.config(state='disabled')
+
+    def _get_mix_volume(self) -> float:
+        """
+        Get mix volume from controls.
+
+        Returns  float
+            Mix volume in µL, or 0 if mixing is disabled or invalid
+        """
+        if not self.enable_mixing_var.get():
+            return 0
+
+        try:
+            mix_vol = float(self.mix_volume_var.get())
+            if mix_vol < 0:
+                print("⚠️ Mix volume cannot be negative, using 0")
+                return 0
+            return mix_vol
+        except ValueError:
+            print("⚠️ Invalid mix volume, using 0")
+            return 0
 
     def reorder_operation(self, current_index: int):
         """
@@ -2801,7 +2865,8 @@ class FunctionWindow:
                 dest_positions=kwargs["dest_positions"],
                 volume=kwargs['volume'],
                 channels=self.channels,
-                change_tips = self.change_tips_var.get()
+                change_tips = self.change_tips_var.get(),
+                mix_volume = self._get_mix_volume(),
             )
 
             if self.mode == "direct":
@@ -2926,7 +2991,7 @@ class FunctionWindow:
                 dest_positions=kwargs["dest_positions"],
                 volume=kwargs['volume'],
                 channels=self.channels,
-                change_tips=self.change_tips_var.get()
+                change_tips=self.change_tips_var.get(),
             )
 
             # Mode-specific handling
@@ -3069,7 +3134,8 @@ class FunctionWindow:
                 dest_positions=kwargs["dest_positions"],
                 volume=kwargs['volume'],
                 channels=self.channels,
-                change_tips=self.change_tips_var.get()
+                change_tips=self.change_tips_var.get(),
+                mix_volume = self._get_mix_volume(),
             )
 
             # Mode-specific handling
@@ -3238,7 +3304,8 @@ class FunctionWindow:
                 source_position=kwargs["source_position"],
                 volume=kwargs['volume'],
                 channels=self.channels,
-                change_tips = self.change_tips_var.get()
+                change_tips = self.change_tips_var.get(),
+                mix_volume = self._get_mix_volume(),
             )
 
             if self.mode == "direct":

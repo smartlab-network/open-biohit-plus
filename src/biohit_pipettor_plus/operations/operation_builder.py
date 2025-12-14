@@ -99,7 +99,8 @@ class OperationBuilder:
             dest_positions: list[tuple[int, int]],
             volume: float,
             channels: int,
-            change_tips: bool = False
+            change_tips: bool = False,
+            mix_volume: float = 0,
     ) -> Operation:
         """Build an ADD_MEDIUM operation"""
         total_wells = len(dest_positions) * (Pipettors_in_Multi if channels == Pipettors_in_Multi else 1)
@@ -117,7 +118,8 @@ class OperationBuilder:
             'dest_positions': dest_positions,
             'volume': volume,
             'channels': channels,
-            'change_tips': change_tips
+            'change_tips': change_tips,
+            'mix_volume': mix_volume
         }
 
         return Operation(
@@ -169,7 +171,8 @@ class OperationBuilder:
             dest_positions: list[tuple[int, int]],
             volume: float,
             channels: int,
-            change_tips: bool = False
+            change_tips: bool = False,
+            mix_volume: float = 0
     ) -> Operation:
         """Build a TRANSFER_PLATE_TO_PLATE operation"""
         total_wells = len(source_positions) * (Pipettors_in_Multi if channels == Pipettors_in_Multi else 1)
@@ -187,7 +190,8 @@ class OperationBuilder:
             'dest_positions': dest_positions,
             'volume': volume,
             'channels': channels,
-            'change_tips': change_tips
+            'change_tips': change_tips,
+            'mix_volume': mix_volume
         }
 
 
@@ -280,6 +284,7 @@ class OperationBuilder:
             volume: float,
             channels: int,
             change_tips: bool = False,
+            mix_volume: float = 0
     ) -> Operation:
         """
         Remove medium from plate positions to reservoir, then add fresh medium from source (BATCHED).
@@ -296,6 +301,7 @@ class OperationBuilder:
                 'source_position': source_position,
                 'volume': volume,
                 'channels': channels,
-                'change_tips': change_tips
+                'change_tips': change_tips,
+                'mix_volume': mix_volume,
             }
         )

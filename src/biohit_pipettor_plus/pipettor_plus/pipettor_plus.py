@@ -593,7 +593,7 @@ class PipettorPlus(Pipettor):
 
     def add_medium(self, source: ReservoirHolder, source_col_row: tuple[int, int],
                    volume_per_well: float, destination: Plate,
-                   dest_col_row: List[tuple[int, int]]) -> None:
+                   dest_col_row: List[tuple[int, int]], mix_volume: float = 0) -> None:
         """
         Transfer medium from a reservoir to destination plate column(s).
         Works for both single-channel and multichannel pipettors.
@@ -611,6 +611,9 @@ class PipettorPlus(Pipettor):
         dest_col_row : List[tuple[int, int]]
             List of (Column, Row) positions in destination plate.
             Row is start row for multichannel pipettor.
+        mix_volume : float, optional
+            Volume (µL) to use for mixing after dispensing.
+            0 = no mixing (default)
         """
         # Validate (source needs 1 row, destinations need tip_count rows)
         self._validate_transfer(source, [source_col_row], destination, dest_col_row, 1, self.tip_count)
@@ -619,17 +622,17 @@ class PipettorPlus(Pipettor):
         volume_per_destination, max_vol = self._calculate_volumes(volume_per_well)
 
         original_batch_size = self.batch_size
-        if self.change_tips:
+        if self.change_tips or mix_volume > 0:
             self.batch_size = 1
 
         # Choose strategy
         try:
             if volume_per_destination > max_vol:
                 self._multi_trip_transfer(dest_col_row, volume_per_destination, max_vol,
-                                          source, source_col_row, destination, None, is_one_to_many=True)
+                                          source, source_col_row, destination, None, is_one_to_many=True, mix_volume=mix_volume)
             else:
                 self._batch_transfer(dest_col_row, volume_per_destination, max_vol,
-                                     source, source_col_row, destination, None, is_one_to_many=True)
+                                     source, source_col_row, destination, None, is_one_to_many=True, mix_volume=mix_volume)
         finally:
             self.batch_size = original_batch_size
 
@@ -678,7 +681,7 @@ class PipettorPlus(Pipettor):
 
     def transfer_plate_to_plate(self, source: Plate, source_col_row: List[tuple[int, int]],
                                 destination: Plate, dest_col_row: List[tuple[int, int]],
-                                volume_per_well: float) -> None:
+                                volume_per_well: float, mix_volume: float = 0) -> None:
         """
         Transfer liquid from source plate to destination plate (one-to-one mapping).
         Works for both single-channel and multichannel pipettors.
@@ -735,6 +738,7 @@ class PipettorPlus(Pipettor):
 
             print(f"Transfer {idx}/{len(source_col_row)}: ({src_col},{src_row}) → ({dst_col},{dst_row})")
 
+            self.check_tips()
             # Check if multi-trip needed
             if volume_per_transfer > max_vol:
                 # Multi-trip for this pair
@@ -749,11 +753,18 @@ class PipettorPlus(Pipettor):
                     self.suck(source, src_pos, trip_volume)
                     self.spit(destination, dst_pos, trip_volume)
                     print(f"    Trip {trip_num + 1}/{num_trips}: {trip_volume}µL")
+
             else:
                 # Single transfer
                 self.suck(source, src_pos, volume_per_transfer)
                 self.spit(destination, dst_pos, volume_per_transfer)
                 print(f"  ✓ {volume_per_transfer}µL transferred")
+
+            if mix_volume > 0:
+                actual_mix_vol = min(mix_volume, self.tip_volume)
+                print(f"    → Mixing with {actual_mix_vol}µL")
+                self.suck(destination, dst_pos, actual_mix_vol)
+                self.spit(destination, dst_pos, actual_mix_vol)
 
             print()
 
@@ -981,7 +992,7 @@ class PipettorPlus(Pipettor):
     def _multi_trip_transfer(self, positions: List[tuple[int, int]],
                              volume_per_position: int, max_vol_per_aspirate: int,
                              source, source_pos, destination, dest_positions,
-                             is_one_to_many: bool) -> None:
+                             is_one_to_many: bool, mix_volume:float = 0) -> None:
         """
         Helper: Handle multi-trip transfers when volume exceeds capacity.
 
@@ -996,7 +1007,6 @@ class PipettorPlus(Pipettor):
         for pos in positions:
             col, row = pos
 
-            # ✅ ADD: Check tips before each position
             self.check_tips()
 
             num_trips = ceil(volume_per_position / max_vol_per_aspirate)
@@ -1013,6 +1023,14 @@ class PipettorPlus(Pipettor):
                     # add_medium: same source, different destinations
                     self.suck(source, source_pos, trip_volume)
                     self.spit(destination, pos, trip_volume)
+
+                    # Mix after LAST trip only
+                    if mix_volume > 0 and trip_num == num_trips - 1:
+                        actual_mix_vol = min(mix_volume, self.tip_volume)
+                        print(f"    → Mixing with {actual_mix_vol}µL")
+                        self.suck(destination, pos, actual_mix_vol)
+                        self.spit(destination, pos, actual_mix_vol)
+
                 else:
                     # remove_medium: different sources, same destination
                     self.suck(source, pos, trip_volume)
@@ -1023,7 +1041,7 @@ class PipettorPlus(Pipettor):
     def _batch_transfer(self, positions: List[tuple[int, int]],
                         volume_per_position: int, max_vol_per_aspirate: int,
                         source, source_pos, destination, dest_pos,
-                        is_one_to_many: bool) -> None:
+                        is_one_to_many: bool, mix_volume: float = 0) -> None:
         """
         Helper: Handle batch transfers for multiple positions.
 
@@ -1067,6 +1085,12 @@ class PipettorPlus(Pipettor):
                 for pos in batch:
                     self.spit(destination, pos, volume_per_position)
                     print(f"  ✓ Dispensed to {pos}: {volume_per_position}µL")
+
+                    if mix_volume > 0:
+                        actual_mix_vol = min(mix_volume, self.tip_volume)
+                        print(f"    → Mixing with {actual_mix_vol}µL")
+                        self.suck(destination, pos, actual_mix_vol)
+                        self.spit(destination, pos, actual_mix_vol)
             else:
                 # remove_medium: aspirate multiple times, dispense once
                 for pos in batch:
