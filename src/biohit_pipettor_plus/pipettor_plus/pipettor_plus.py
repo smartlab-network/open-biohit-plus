@@ -273,7 +273,7 @@ class PipettorPlus(Pipettor):
 
                 if not self._simulation_mode:
                     self.move_xy(x, y)
-                    self.pick_tip(pipettor_z)
+                    self.pick_tip(50)
 
                 # Mark all 8 tips in this column as removed
                 pipette_holder.remove_consecutive_pipettes_multi([col], start_row)
@@ -336,7 +336,7 @@ class PipettorPlus(Pipettor):
                 pipettor_z = self._get_pipettor_z_coord(pipette_holder, relative_z, child_item=holder)
                 if not self._simulation_mode:
                     self.move_xy(x, y)
-                    self.pick_tip(pipettor_z)
+                    self.pick_tip(50)
 
                 holder.is_occupied = False
                 self.has_tips = True
@@ -400,7 +400,7 @@ class PipettorPlus(Pipettor):
             if not available_col_row:
                 raise ValueError(
                     f"No available multichannel grid locations found in pipette holder {pipette_holder.labware_id}")
-            list_col_row = available_col_row
+            list_col_row = sorted(available_col_row, key=lambda x: (x[0], x[1]), reverse=True)
             print(f"Auto-detected {len(list_col_row)} available multichannel grid locations: {list_col_row}")
 
         if not list_col_row:
@@ -476,7 +476,8 @@ class PipettorPlus(Pipettor):
                 raise ValueError(
                     f"No available positions found in pipette holder {pipette_holder.labware_id}")
 
-            list_col_row = [(h.column, h.row) for h in available_holders]
+            list_col_row = sorted([(h.column, h.row) for h in available_holders],
+                                  key=lambda x: (x[0], x[1]), reverse=True)
             print(f"Auto-detected {len(list_col_row)} available tip positions")
 
         if not list_col_row:
@@ -539,7 +540,8 @@ class PipettorPlus(Pipettor):
         if self.multichannel:
             # get list of available holders
             if not return_list_col_row:
-                return_list_col_row = pipette_holder.get_available_holder_multi()
+                available_col_row = pipette_holder.get_available_holder_multi()
+                return_list_col_row = sorted(available_col_row, key=lambda x: (x[0], x[1]), reverse=True)
             # get list of occupied holders
             if not pick_list_col_row:
                 pick_list_col_row = pick_pipette_holder.get_occupied_holder_multi()
@@ -547,8 +549,11 @@ class PipettorPlus(Pipettor):
         else:
             if not return_list_col_row:
                 available_holders = pipette_holder.get_available_holders()
-                return_list_col_row = [(h.column, h.row) for h in available_holders]  # Convert to list of available_holders !
-            if not pick_list_col_row:
+                # Sort high to low for returning
+                return_list_col_row = sorted([(h.column, h.row) for h in available_holders],
+                                             key=lambda x: (x[0], x[1]), reverse=True)
+
+        if not pick_list_col_row:
                 occupied_holders = pick_pipette_holder.get_occupied_holders()
                 pick_list_col_row = [(h.column, h.row) for h in occupied_holders]  # Convert to list of occupied_holders!
 
@@ -761,7 +766,7 @@ class PipettorPlus(Pipettor):
                 print(f"  ✓ {volume_per_transfer}µL transferred")
 
             if mix_volume > 0:
-                actual_mix_vol = min(mix_volume, self.tip_volume)
+                actual_mix_vol = min(mix_volume, self.tip_volume - 10)
                 print(f"    → Mixing with {actual_mix_vol}µL")
                 self.suck(destination, dst_pos, actual_mix_vol)
                 self.spit(destination, dst_pos, actual_mix_vol)
@@ -1026,7 +1031,7 @@ class PipettorPlus(Pipettor):
 
                     # Mix after LAST trip only
                     if mix_volume > 0 and trip_num == num_trips - 1:
-                        actual_mix_vol = min(mix_volume, self.tip_volume)
+                        actual_mix_vol = min(mix_volume, self.tip_volume - 10)
                         print(f"    → Mixing with {actual_mix_vol}µL")
                         self.suck(destination, pos, actual_mix_vol)
                         self.spit(destination, pos, actual_mix_vol)
@@ -1087,7 +1092,7 @@ class PipettorPlus(Pipettor):
                     print(f"  ✓ Dispensed to {pos}: {volume_per_position}µL")
 
                     if mix_volume > 0:
-                        actual_mix_vol = min(mix_volume, self.tip_volume)
+                        actual_mix_vol = min(mix_volume, self.tip_volume - 10)
                         print(f"    → Mixing with {actual_mix_vol}µL")
                         self.suck(destination, pos, actual_mix_vol)
                         self.spit(destination, pos, actual_mix_vol)
@@ -1409,7 +1414,8 @@ class PipettorPlus(Pipettor):
     def _calculate_volumes(self, volume_per_well: float) -> tuple[int, int]:
         """Helper: Calculate volume per position and max volume per aspirate."""
         volume_per_position = int(volume_per_well * self.tip_count)
-        max_vol_per_aspirate = int(self.tip_volume * self.tip_count)
+        max_vol_per_aspirate = int((self.tip_volume - 10) * self.tip_count) # to prevent piston overdrive
+
 
         if volume_per_position <= 0:
             raise ValueError("volume_per_well must be > 0")

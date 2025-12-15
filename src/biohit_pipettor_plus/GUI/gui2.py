@@ -50,7 +50,7 @@ class DeckGUI:
 
         self.setup_ui()
         # Delay initial draw until window is fully rendered
-        self.root.after(100, lambda: self.draw_deck(auto_scale=True))
+        self.root.after(500, lambda: self.draw_deck(auto_scale=True))
 
     def setup_ui(self):
         # Menu bar
@@ -562,7 +562,7 @@ class DeckGUI:
         init_frame = ttk.Frame(pipettor_section)
         init_frame.pack(fill=tk.X, pady=5)
 
-        self.initialize_hw_var = tk.BooleanVar(value=True)
+        self.initialize_hw_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(
             init_frame,
             text="initialize",
@@ -817,9 +817,6 @@ class DeckGUI:
                 messagebox.showerror("Error", "Deck must be created before initializing pipettor")
                 return
 
-            if len(self.deck.slots) == 0 and len(self.deck.labware) == 0:
-                messagebox.showerror("Error", "Deck must have slots and labwares before initializing pipettor")
-                return
             # Helper function to get and validate speed parameters
             def get_speed_param(var, param_name, min_val, max_val, default=None):
                 """Helper to get and validate speed parameters"""
