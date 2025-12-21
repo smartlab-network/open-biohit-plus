@@ -982,31 +982,18 @@ class FunctionWindow:
         if wait_time is None:
             return  # User cancelled
 
-        # Convert to int
         wait_time = int(wait_time)
+        plate_name = self.pipettor.foc_plate_name
+
+        operation = OperationBuilder.build_measure_foc(
+            wait_seconds=wait_time,
+            plate_name=plate_name
+        )
 
         if self.mode == "builder":
-            plate_name = self.pipettor.foc_plate_name
-
-            operation = OperationBuilder.build_measure_foc(
-                wait_seconds=wait_time,
-                plate_name=plate_name
-            )
-
             self.builder_config(operation)
-
         else:  # direct mode
-            try:
-                self.pipettor.measure_foc(
-                    seconds=wait_time,
-                    platename=self.pipettor.foc_plate_name
-                )
-
-                if self.on_operation_complete:
-                    self.on_operation_complete()
-
-            except Exception as e:
-                messagebox.showerror("Error", f"FOC measurement failed:\n{str(e)}")
+            self.stage_operation(operation)
 
     def callback_execute_workflow(self):
         """Execute workflow with modal overlay and threading"""
