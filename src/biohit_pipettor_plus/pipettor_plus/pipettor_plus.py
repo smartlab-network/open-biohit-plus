@@ -21,11 +21,6 @@ except ImportError:
         def move_xy(self, x, y):
             print(f"Mock: move_xy({x}, {y})")
 
-        def move_x(self, x):
-            print(f"Mock: move_x({x})")
-
-        def move_y(self, y):
-                print(f"Mock: move_y({y})")
         def move_z(self, z):
             print(f"Mock: move_z({z})")
 
@@ -149,6 +144,10 @@ class PipettorPlus(Pipettor):
     def _check_abort_and_pause(self):
         """Check for abort or pause requests at safe checkpoints"""
 
+        #no need to check if in simulation mode
+        if self._simulation_mode:
+            return
+
         # Check abort first (highest priority)
         if self.abort_requested:
             self.abort_requested = False  # Reset
@@ -257,8 +256,7 @@ class PipettorPlus(Pipettor):
 
             # All 8 holders are valid, attempt to pick tips
             try:
-                if not self._simulation_mode:
-                    self._check_abort_and_pause()
+                self._check_abort_and_pause()
                 first_holder = holders_to_use[0]
                 if first_holder.position is None:
                     raise ValueError(f"Holder at grid location ({col}, {start_row}) has no position set")
@@ -271,9 +269,8 @@ class PipettorPlus(Pipettor):
                 relative_z = getattr(pipette_holder, 'remove_height', pipette_holder.size_z)
                 pipettor_z = self._get_pipettor_z_coord(pipette_holder, relative_z, child_item=first_holder)
 
-                if not self._simulation_mode:
-                    self.move_xy(x, y)
-                    self.pick_tip(50)
+                self.move_xy(x, y)
+                self.pick_tip(50)
 
                 # Mark all 8 tips in this column as removed
                 pipette_holder.remove_consecutive_pipettes_multi([col], start_row)
@@ -286,8 +283,7 @@ class PipettorPlus(Pipettor):
                 print(f"✗ Failed to pick tips from column {col}, row {start_row}: {e}")
                 continue
             finally:
-                if not self._simulation_mode:
-                    self.move_z(0)
+                self.move_z(0)
 
         # If we got here, all attempts failed
         raise RuntimeError(
@@ -324,8 +320,7 @@ class PipettorPlus(Pipettor):
                 continue
 
             try:
-                if not self._simulation_mode:
-                    self._check_abort_and_pause()
+                self._check_abort_and_pause()
                 if holder.position is None:
                     print(f"Holder at grid location ({col}, {row}) has no position set, skipping")
                     continue
@@ -334,9 +329,9 @@ class PipettorPlus(Pipettor):
 
                 relative_z = getattr(pipette_holder, 'remove_height', pipette_holder.size_z)
                 pipettor_z = self._get_pipettor_z_coord(pipette_holder, relative_z, child_item=holder)
-                if not self._simulation_mode:
-                    self.move_xy(x, y)
-                    self.pick_tip(50)
+
+                self.move_xy(x, y)
+                self.pick_tip(50)
 
                 holder.is_occupied = False
                 self.has_tips = True
@@ -349,8 +344,7 @@ class PipettorPlus(Pipettor):
                 holder.is_occupied = False
                 continue
             finally:
-                if not self._simulation_mode:
-                    self.move_z(0)
+                self.move_z(0)
 
         raise RuntimeError(
             f"Failed to pick tip from any of the specified locations {list_col_row}."
@@ -424,8 +418,7 @@ class PipettorPlus(Pipettor):
 
             # Attempt to return tips
             try:
-                if not self._simulation_mode:
-                    self._check_abort_and_pause()
+                self._check_abort_and_pause()
                 first_holder = holders_to_use[0]
                 if first_holder.position is None:
                     print(f"Holder at grid location ({col}, {start_row}) has no position set, skipping")
@@ -438,10 +431,9 @@ class PipettorPlus(Pipettor):
                 relative_z = getattr(pipette_holder, 'add_height', pipette_holder.size_z)
                 pipettor_z = self._get_pipettor_z_coord(pipette_holder, relative_z, child_item=first_holder)
 
-                if not self._simulation_mode:
-                    self.move_xy(x, y)
-                    self.move_z(pipettor_z)
-                    self.eject_tip()
+                self.move_xy(x, y)
+                self.move_z(pipettor_z)
+                self.eject_tip()
                 # Mark all 8 positions in this column as occupied
                 pipette_holder.place_consecutive_pipettes_multi([col], start_row)
                 self.initialize_tips()
@@ -453,8 +445,7 @@ class PipettorPlus(Pipettor):
                 print(f"✗ Failed to return tips to column {col}, row {start_row}: {e}")
                 continue
             finally:
-                if not self._simulation_mode:
-                    self.move_z(0)
+                self.move_z(0)
 
         # If we got here, all attempts failed
         raise RuntimeError(
@@ -495,8 +486,7 @@ class PipettorPlus(Pipettor):
                 continue
 
             try:
-                if not self._simulation_mode:
-                    self._check_abort_and_pause()
+                self._check_abort_and_pause()
                 if holder.position is None:
                     print(f"Holder at grid location ({col}, {row}) has no position set, skipping")
                     continue
@@ -505,10 +495,9 @@ class PipettorPlus(Pipettor):
                 relative_z = getattr(pipette_holder, 'add_height', pipette_holder.size_z)
                 pipettor_z = self._get_pipettor_z_coord(pipette_holder, relative_z, child_item=holder)
 
-                if not self._simulation_mode:
-                    self.move_xy(x, y)
-                    self.move_z(pipettor_z)  # return_height
-                    self.eject_tip()
+                self.move_xy(x, y)
+                self.move_z(pipettor_z)  # return_height
+                self.eject_tip()
 
                 holder.is_occupied = True
                 self.initialize_tips()
@@ -520,8 +509,7 @@ class PipettorPlus(Pipettor):
                 print(f"✗ Failed to return tip to column {col}, row {row}: {e}")
                 continue
             finally:
-                if not self._simulation_mode:
-                    self.move_z(0)
+                self.move_z(0)
 
         raise RuntimeError(
             f"Failed to return tip to any of the specified locations {list_col_row}. "
@@ -534,8 +522,7 @@ class PipettorPlus(Pipettor):
         if not pick_pipette_holder:
             pick_pipette_holder = pipette_holder
 
-        if not self._simulation_mode:
-            self._check_abort_and_pause()
+        self._check_abort_and_pause()
 
         if self.multichannel:
             # get list of available holders
@@ -575,8 +562,7 @@ class PipettorPlus(Pipettor):
             TipDropzone labware
         """
 
-        if not self._simulation_mode:
-            self._check_abort_and_pause()
+        self._check_abort_and_pause()
 
         if not self.has_tips:
             raise RuntimeError("No tips to discard")
@@ -588,11 +574,10 @@ class PipettorPlus(Pipettor):
         relative_z = tip_dropzone.drop_height_relative
         pipettor_z = self._get_pipettor_z_coord(tip_dropzone, relative_z, child_item=None)
 
-        if not self._simulation_mode:
-            self.move_xy(x, y)
-            self.move_z(pipettor_z)
-            self.eject_tip()
-            self.move_z(0)
+        self.move_xy(x, y)
+        self.move_z(pipettor_z)
+        self.eject_tip()
+        self.move_z(0)
 
         self.initialize_tips()
 
@@ -953,11 +938,8 @@ class PipettorPlus(Pipettor):
                     del tip_content[content_type]
 
     def home(self):
-
-        if not self._simulation_mode:
-            self._check_abort_and_pause()
-            self.move_z(0)
-            self.move_xy(0, 0)
+        self.move_z(0)
+        self.move_xy(0, 0)
 
     def move_xy(self, x: float, y: float):
         """Override parent to add simulation mode check"""
@@ -973,6 +955,76 @@ class PipettorPlus(Pipettor):
             return
         self._check_abort_and_pause()
         super().move_z(z)
+
+    def pick_tip(self, z):
+        """Override parent to add simulation mode check"""
+        if self._simulation_mode:
+            return
+        self._check_abort_and_pause()
+        super().pick_tip(z)
+
+    def eject_tip(self):
+        """Override parent to add simulation mode check"""
+        if self._simulation_mode:
+            return
+        self._check_abort_and_pause()
+        super().eject_tip()
+
+    def aspirate(self, volume):
+        """Override parent to add simulation mode check"""
+        if self._simulation_mode:
+            return
+        self._check_abort_and_pause()
+        super().aspirate(volume)
+
+    def dispense(self, volume):
+        """Override parent to add simulation mode check"""
+        if self._simulation_mode:
+            return
+        self._check_abort_and_pause()
+        super().dispense(volume)
+
+    def measure_foc(self, seconds: int, platename: str = None, bat_script_path: str = None):
+        """
+        Wait for specified seconds, then run FOC measurement script.
+        """
+
+        # Use provided path or stored path
+        if bat_script_path is not None:
+            self.foc_bat_script_path = bat_script_path
+
+        # Use provided plate name or stored plate name
+        if platename is not None:
+            plate_to_use = platename
+        elif hasattr(self, 'foc_plate_name') and self.foc_plate_name:
+            plate_to_use = self.foc_plate_name
+        else:
+            raise ValueError("Plate name not provided and no plate name configured")
+
+        # Check if we have a script path
+        if not hasattr(self, 'foc_bat_script_path') or self.foc_bat_script_path is None:
+            raise ValueError("FOC bat script path not set. Please configure FOC first.")
+
+        # Verify file exists
+        if not os.path.exists(self.foc_bat_script_path):
+            raise FileNotFoundError(f"FOC bat script not found at: {self.foc_bat_script_path}")
+
+        if self._simulation_mode:
+            print(f"[SIMULATION] Would wait {seconds} seconds, then run FOC for plate '{plate_to_use}'")
+            return  # Exit early - don't run the actual script
+
+        # Wait for specified time
+        print(f"Waiting {seconds} seconds before FOC measurement...")
+        self.home()
+        time.sleep(seconds)
+
+        # Run the bat script
+        try:
+            self._check_abort_and_pause()
+            subprocess.call([self.foc_bat_script_path, plate_to_use])
+            print(f"FOC measurement completed for {plate_to_use}")
+        except Exception as e:
+            print(f"[ERROR] Failed to run FOC measurement: {str(e)}")
 
 
     # Helper Functions. Not necessarily available for GUI
@@ -1114,8 +1166,7 @@ class PipettorPlus(Pipettor):
     def _aspirate_with_content_tracking(self, source: Labware, col: int, row: int, volume: float) -> None:
         """Aspirate with content tracking."""
 
-        if not self._simulation_mode:
-            self._check_abort_and_pause()
+        self._check_abort_and_pause()
         # Check if each tip needs separate item
         if self.multichannel and source.each_tip_needs_separate_item():
             items = [self._get_content_item(source, col, row + i)
@@ -1176,8 +1227,7 @@ class PipettorPlus(Pipettor):
     def _dispense_with_content_tracking(self, destination: Labware, col: int, row: int, volume: float) -> None:
         """Dispense with content tracking."""
 
-        if not self._simulation_mode:
-            self._check_abort_and_pause()
+        self._check_abort_and_pause()
         # Check if each tip needs separate destination item. get item/items
         if self.multichannel and destination.each_tip_needs_separate_item():
             items = [self._get_content_item(destination, col, row + i)
@@ -1291,12 +1341,10 @@ class PipettorPlus(Pipettor):
 
         pipettor_z = self._get_pipettor_z_coord(parent_labware, relative_z, child_item=item)
         print(f"x, y, z = {x}, {y}, {pipettor_z}")
-        if not self._simulation_mode:
-            self._check_abort_and_pause()
-            self.move_xy(x, y)
-            self.move_z(pipettor_z)
-            self.aspirate(volume / self.tip_count)
-            self.move_z(0)
+        self.move_xy(x, y)
+        self.move_z(pipettor_z)
+        self.aspirate(volume / self.tip_count)
+        self.move_z(0)
 
     def _move_to_and_dispense(self, items: List[Labware], volume: float) -> None:
         """
@@ -1343,12 +1391,11 @@ class PipettorPlus(Pipettor):
 
         pipettor_z = self._get_pipettor_z_coord(parent_labware, relative_z, child_item=item)
         print(f"x, y, z = {x}, {y}, {pipettor_z}")
-        if not self._simulation_mode:
-            self._check_abort_and_pause()
-            self.move_xy(x, y)
-            self.move_z(pipettor_z)
-            self.dispense(volume / self.tip_count)
-            self.move_z(0)
+
+        self.move_xy(x, y)
+        self.move_z(pipettor_z)
+        self.dispense(volume / self.tip_count)
+        self.move_z(0)
 
     def _supports_content_management(self, labware: Labware, col: int, row: int) -> bool:
         """Check if labware supports content tracking at this position."""
@@ -1691,44 +1738,4 @@ class PipettorPlus(Pipettor):
 
         return x_center, y_center
 
-    def measure_foc(self, seconds: int, platename: str = None, bat_script_path: str = None):
-        """
-        Wait for specified seconds, then run FOC measurement script.
-        """
 
-        # Use provided path or stored path
-        if bat_script_path is not None:
-            self.foc_bat_script_path = bat_script_path
-
-        # Use provided plate name or stored plate name
-        if platename is not None:
-            plate_to_use = platename
-        elif hasattr(self, 'foc_plate_name') and self.foc_plate_name:
-            plate_to_use = self.foc_plate_name
-        else:
-            raise ValueError("Plate name not provided and no plate name configured")
-
-        # Check if we have a script path
-        if not hasattr(self, 'foc_bat_script_path') or self.foc_bat_script_path is None:
-            raise ValueError("FOC bat script path not set. Please configure FOC first.")
-
-        # Verify file exists
-        if not os.path.exists(self.foc_bat_script_path):
-            raise FileNotFoundError(f"FOC bat script not found at: {self.foc_bat_script_path}")
-
-        if self._simulation_mode:
-            print(f"[SIMULATION] Would wait {seconds} seconds, then run FOC for plate '{plate_to_use}'")
-            return  # Exit early - don't run the actual script
-
-        # Wait for specified time
-        print(f"Waiting {seconds} seconds before FOC measurement...")
-        time.sleep(seconds)
-
-        # Run the bat script
-        self.home()
-        print(f"Running FOC measurement for plate: {plate_to_use}")
-        try:
-            subprocess.call([self.foc_bat_script_path, plate_to_use])
-            print(f"FOC measurement completed for {plate_to_use}")
-        except Exception as e:
-            print(f"[ERROR] Failed to run FOC measurement: {str(e)}")
