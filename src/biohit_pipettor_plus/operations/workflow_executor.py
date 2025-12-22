@@ -158,7 +158,7 @@ class WorkflowExecutor:
 
         # Execute based on operation type
         if op_type == OperationType.PICK_TIPS:
-            labware = get_labware(params['labware_id'])
+            labware = get_labware(params['labware']['id'])
             actual_positions = self.pipettor.pick_tips(
                 pipette_holder=labware,
                 list_col_row=params['positions']
@@ -166,7 +166,7 @@ class WorkflowExecutor:
 
 
         elif op_type == OperationType.RETURN_TIPS:
-            labware = get_labware(params['labware_id'])
+            labware = get_labware(params['labware']['id'])
             actual_positions = self.pipettor.return_tips(
                 pipette_holder=labware,
                 list_col_row=params['positions']
@@ -174,8 +174,8 @@ class WorkflowExecutor:
 
 
         elif op_type == OperationType.REPLACE_TIPS:
-            return_labware = get_labware(params['return_labware_id'])
-            pick_labware = get_labware(params['pick_labware_id'])
+            return_labware = get_labware(params['return_labware']['id'])
+            pick_labware = get_labware(params['pick_labware']['id'])
 
             actual_positions = self.pipettor.replace_tips(
                 pipette_holder=return_labware,
@@ -185,14 +185,14 @@ class WorkflowExecutor:
             )
 
         elif op_type == OperationType.DISCARD_TIPS:
-            labware = get_labware(params['labware_id'])
+            labware = get_labware(params['labware']['id'])
             self.pipettor.discard_tips(
                 tip_dropzone=labware,
             )
 
         elif op_type == OperationType.ADD_MEDIUM:
-            source = get_labware(params['source_labware_id'])
-            dest = get_labware(params['dest_labware_id'])
+            source = get_labware(params['source_labware']['id'])
+            dest = get_labware(params['dest_labware']['id'])
 
             change_tips = params.get('change_tips', False)
             mix_volume = params.get('mix_volume', 0)
@@ -211,8 +211,8 @@ class WorkflowExecutor:
                 self.pipettor.change_tips = False
 
         elif op_type == OperationType.REMOVE_MEDIUM:
-            source = get_labware(params['source_labware_id'])
-            dest = get_labware(params['dest_labware_id'])
+            source = get_labware(params['source_labware']['id'])
+            dest = get_labware(params['dest_labware']['id'])
             change_tips = params.get('change_tips', False)
             self.pipettor.change_tips = change_tips
 
@@ -229,8 +229,8 @@ class WorkflowExecutor:
 
 
         elif op_type == OperationType.TRANSFER_PLATE_TO_PLATE:
-            source = get_labware(params['source_labware_id'])
-            dest = get_labware(params['dest_labware_id'])
+            source = get_labware(params['source_labware']['id'])
+            dest = get_labware(params['dest_labware']['id'])
 
             mix_volume = params.get('mix_volume', 0)
             change_tips = params.get('change_tips', False)
@@ -251,9 +251,9 @@ class WorkflowExecutor:
 
         elif op_type == OperationType.REMOVE_AND_ADD:
             # Get labware
-            plate = get_labware(params['plate_labware_id'])
-            remove_reservoir = get_labware(params['remove_reservoir_id'])
-            source_reservoir = get_labware(params['source_reservoir_id'])
+            plate = get_labware(params['plate_labware']['id'])
+            remove_reservoir = get_labware(params['remove_reservoir']['id'])
+            source_reservoir = get_labware(params['source_reservoir']['id'])
 
             volume = params['volume']
             mix_volume = params.get('mix_volume', 0)
@@ -299,7 +299,7 @@ class WorkflowExecutor:
                 self.pipettor.change_tips = False
 
         elif op_type == OperationType.SUCK:
-            labware = get_labware(params['labware_id'])
+            labware = get_labware(params['labware']['id'])
             self.pipettor.suck(
                 source=labware,
                 source_col_row=params['position'],
@@ -307,7 +307,7 @@ class WorkflowExecutor:
             )
 
         elif op_type == OperationType.SPIT:
-            labware = get_labware(params['labware_id'])
+            labware = get_labware(params['labware']['id'])
             self.pipettor.spit(
                 destination=labware,
                 dest_col_row=params['position'],

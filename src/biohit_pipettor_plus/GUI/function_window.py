@@ -21,7 +21,7 @@ import copy
 
 class FunctionWindow:
     """
-    Dual-mode pipetting operations interface.
+    Dual-mode operations interface.
 
     Modes
     -----
@@ -67,6 +67,7 @@ class FunctionWindow:
             self.workflow = Workflow(name="New Workflow")
             self.parent_function_window = None
             self.workflow_validated = False
+            self.workflow_modified = False
             self.edit_mode = False
             self.edit_index = None
             self.selected_operations = set()  # Set of indices
@@ -107,7 +108,7 @@ class FunctionWindow:
             else:
                 self.window_build_func = ttk.Window(themename="darkly")
 
-            self.window_build_func.geometry("1300x750")
+            self.window_build_func.geometry("1300x800")
             self.window_build_func.title("Workflow Builder")
             self.window_build_func.attributes('-topmost', False)
 
@@ -135,7 +136,7 @@ class FunctionWindow:
 
         canvas_window = canvas.create_window((0, 0), window=self.control_frame, anchor='nw')
 
-        def configure_scroll(event=None):
+        def configure_scroll(_=None):
             canvas.configure(scrollregion=canvas.bbox("all"))
             canvas_width = canvas.winfo_width()
             if canvas_width > 1:
@@ -147,7 +148,7 @@ class FunctionWindow:
         # Title
         ttk.Label(
             self.control_frame,
-            text="Pipetting Operations",
+            text="Operations",
             font=('Arial', 14, 'bold')
         ).pack(pady=5)
 
@@ -325,7 +326,7 @@ class FunctionWindow:
         canvas_window = canvas.create_window((0, 0), window=content_frame, anchor='nw')
 
         # Configure scroll region
-        def configure_scroll(event=None):
+        def configure_scroll(_=None):
             canvas.configure(scrollregion=canvas.bbox("all"))
             canvas_width = canvas.winfo_width()
             if canvas_width > 1:
@@ -474,6 +475,7 @@ class FunctionWindow:
         self.frame_name.columnconfigure(2, weight=1)
         self.frame_name.columnconfigure(3, weight=1)
         self.frame_name.columnconfigure(4, weight=1)
+        self.frame_name.columnconfigure(5, weight=1)
 
         ttk.Label(self.frame_name, text="Workflow Name:", font=('Arial', 11)).grid(
             row=0, column=0, sticky='w', padx=(0, 10)
@@ -496,20 +498,29 @@ class FunctionWindow:
             bootstyle="danger"
         ).grid(row=1, column=2, sticky="ew", padx=2)
 
+        ttk.Button(
+            self.frame_name,
+            text="Remap",
+            command=self.callback_remap_labware,
+            bootstyle="info"
+        ).grid(row=1, column=3, sticky="ew", padx=2)
+
+
         self.validate_execute_btn = ttk.Button(
             self.frame_name,
             text="Validate",
             command=self.callback_validate_workflow,
             bootstyle="warning"
         )
-        self.validate_execute_btn.grid(row=1, column=3, sticky="ew", padx=2)
+        self.validate_execute_btn.grid(row=1, column=4, sticky="ew", padx=2)
 
         ttk.Button(
             self.frame_name,
             text="Close",
             command=self.callback_close_builder,
             bootstyle="secondary"
-        ).grid(row=1, column=4, sticky="ew", padx=2)
+        ).grid(row=1, column=5, sticky="ew", padx=2)
+
     def set_stage(self, text: str):
         """Update stage indicator"""
         if self.mode == "builder" and hasattr(self, 'stage_label'):
@@ -521,28 +532,28 @@ class FunctionWindow:
         tip_frame = ttk.Labelframe(parent_frame, text="Tip Management", padding=10)
         tip_frame.pack(fill=tk.X, pady=5, padx=5)
 
-        self.pick_tips_btn = ttk.Button(  
+        self.pick_tips_btn = ttk.Button(
             tip_frame, text=" Pick Tips",
             command=lambda: self.callback_pick_tips(func_str="Pick Tips"),
             bootstyle="primary"
         )
         self.pick_tips_btn.pack(fill=tk.X, pady=2)
 
-        self.return_tips_btn = ttk.Button(  
+        self.return_tips_btn = ttk.Button(
             tip_frame, text=" Return Tips",
             command=lambda: self.callback_return_tips(func_str="Return Tips"),
             bootstyle="primary"
         )
         self.return_tips_btn.pack(fill=tk.X, pady=2)
 
-        self.replace_tips_btn = ttk.Button(  
+        self.replace_tips_btn = ttk.Button(
             tip_frame, text=" Replace Tips",
             command=lambda: self.callback_replace_tips(func_str="Replace Tips"),
             bootstyle="primary"
         )
         self.replace_tips_btn.pack(fill=tk.X, pady=2)
 
-        self.discard_tips_btn = ttk.Button(  
+        self.discard_tips_btn = ttk.Button(
             tip_frame, text=" Discard Tips",
             command=lambda: self.callback_discard_tips(func_str="Discard Tips"),
             bootstyle="primary"
@@ -605,21 +616,21 @@ class FunctionWindow:
         ttk.Separator(liquid_frame, orient='horizontal').pack(fill=tk.X, pady=5)
 
         #operation buttons
-        self.add_medium_btn = ttk.Button(  
+        self.add_medium_btn = ttk.Button(
             liquid_frame, text=" Add Medium",
             command=lambda: self.callback_add_medium(func_str="Add Medium"),
             bootstyle="success"
         )
         self.add_medium_btn.pack(fill=tk.X, pady=2)
 
-        self.remove_medium_btn = ttk.Button(  
+        self.remove_medium_btn = ttk.Button(
             liquid_frame, text=" Remove Medium",
             command=lambda: self.callback_remove_medium(func_str="Remove Medium"),
             bootstyle="success"
         )
         self.remove_medium_btn.pack(fill=tk.X, pady=2)
 
-        self.transfer_plate_btn = ttk.Button(  
+        self.transfer_plate_btn = ttk.Button(
             liquid_frame, text=" Transfer Plate to Plate",
             command=lambda: self.callback_transfer_plate_to_plate(func_str="Transfer Plate to Plate"),
             bootstyle="success"
@@ -664,21 +675,21 @@ class FunctionWindow:
         # Put buttons inside the content_frame
         self.home_btn = ttk.Button(
             self.system_collapsible.content_frame, text=" Home",
-            command=lambda: self.callback_home(func_str="Home"),
+            command=lambda: self.callback_home(),
             bootstyle="secondary"
         )
         self.home_btn.pack(fill=tk.X, pady=2, padx=5)
 
         self.move_xy_btn = ttk.Button(
             self.system_collapsible.content_frame, text=" Move X, Y",
-            command=lambda: self.callback_move_xy(func_str="Move X, Y"),
+            command=lambda: self.callback_move_xy(),
             bootstyle="secondary"
         )
         self.move_xy_btn.pack(fill=tk.X, pady=2, padx=5)
 
         self.move_z_btn = ttk.Button(
             self.system_collapsible.content_frame, text=" Move Z",
-            command=lambda: self.callback_move_z(func_str="Move Z"),
+            command=lambda: self.callback_move_z(),
             bootstyle="secondary"
         )
         self.move_z_btn.pack(fill=tk.X, pady=2, padx=5)
@@ -750,6 +761,7 @@ class FunctionWindow:
 
         # Mark as unvalidated
         self.workflow_validated = False
+        self.workflow_modified = True
         self.validate_execute_btn.config(
             text="Validate",
             bootstyle="warning",
@@ -802,17 +814,143 @@ class FunctionWindow:
         elif op_type == OperationType.SPIT:
             self.callback_spit(func_str="Spit", edit_mode=True)
         elif op_type == OperationType.MOVE_XY:
-            self.callback_move_xy(func_str="Move X, Y", edit_mode=True)
+            self.callback_move_xy(edit_mode=True)
         elif op_type == OperationType.MOVE_Z:
-            self.callback_move_z(func_str="Move Z", edit_mode=True)
+            self.callback_move_z(edit_mode=True)
         elif op_type == OperationType.HOME:
-            self.callback_home(func_str="Home", edit_mode=True)
+            self.callback_home(edit_mode=True)
         elif op_type == OperationType.MEASURE_FOC:
             self.callback_measure_foc(func_str="Measure FOC", edit_mode=True)
         elif op_type == OperationType.REMOVE_AND_ADD:
             self.callback_remove_and_add(func_str="Remove and Add", edit_mode=True)
 
+    def show_labware_mapping_dialog(self, workflow, missing_labware_ids):
+        """
+        Show dialog to map missing labware to current deck labware.
 
+        Returns
+        -------
+        dict or None
+            Mapping {old_id: new_id} or None if cancelled
+        """
+        dialog = tk.Toplevel(self.get_master_window())
+        dialog.title("Map Labware to Current Deck")
+        dialog.geometry("600x500")
+        dialog.transient(self.get_master_window())
+        dialog.grab_set()
+
+        # Center dialog
+        dialog.update_idletasks()
+        x = (dialog.winfo_screenwidth() // 2) - (600 // 2)
+        y = (dialog.winfo_screenheight() // 2) - (500 // 2)
+        dialog.geometry(f"600x500+{x}+{y}")
+
+        result = {'mapping': {}, 'cancelled': False}
+
+        # Main frame with scrolling
+        main_frame = ttk.Frame(dialog, padding=10)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Info label
+        ttk.Label(
+            main_frame,
+            text="Some labware from this workflow is not on the current deck.\nMap missing labware to available labware:",
+            font=('Arial', 10),
+            justify=tk.LEFT
+        ).pack(pady=(0, 10))
+
+        # Scrollable frame for mappings
+        canvas = tk.Canvas(main_frame)
+        scrollbar = ttk.Scrollbar(main_frame, orient=tk.VERTICAL, command=canvas.yview)
+        mapping_frame = ttk.Frame(canvas)
+
+        canvas.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        canvas_window = canvas.create_window((0, 0), window=mapping_frame, anchor='nw')
+
+        def configure_scroll(_=None):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            canvas_width = canvas.winfo_width()
+            if canvas_width > 1:
+                canvas.itemconfig(canvas_window, width=canvas_width)
+
+        mapping_frame.bind('<Configure>', configure_scroll)
+        canvas.bind('<Configure>', configure_scroll)
+
+        # For each missing labware, create mapping row
+        dropdown_vars = {}  # {old_labware_id: StringVar}
+
+        for missing_id in sorted(missing_labware_ids):
+            # Find labware type from workflow (check first operation using this ID)
+            labware_type = None
+            example_ops = []
+
+            for i, op in enumerate(workflow.operations):
+                uses_this_labware = False
+                for param_key, param_val in op.parameters.items():
+                    # Check if parameter is dict with 'id' key (new format)
+                    if isinstance(param_val, dict) and 'id' in param_val:
+                        if param_val['id'] == missing_id:
+                            uses_this_labware = True
+                            if len(example_ops) < 3:
+                                example_ops.append(f"#{i + 1}: {op.operation_type.value}")
+                            # Store the type if we haven't found it yet
+                            if labware_type is None and 'type' in param_val:
+                                labware_type = param_val['type']
+
+            # Create frame for this labware
+            labware_frame = ttk.Labelframe(
+                mapping_frame,
+                text=f"Missing: {missing_id}" + (f" ({labware_type})" if labware_type else ""),
+                padding=10
+            )
+            labware_frame.pack(fill=tk.X, pady=5, padx=5)
+
+        # Buttons
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill=tk.X, pady=(10, 0))
+        button_frame.columnconfigure(0, weight=1)
+        button_frame.columnconfigure(1, weight=1)
+
+        def on_apply():
+            # Build mapping from dropdowns
+            for old_id, (var, id_map) in dropdown_vars.items():
+                selection = var.get()
+                if selection != "[Leave unmapped]":
+                    # Extract labware_id from display string
+                    for labware_id, display in id_map.items():
+                        if display == selection:
+                            result['mapping'][old_id] = labware_id
+                            break
+
+            dialog.destroy()
+
+        def on_cancel():
+            result['cancelled'] = True
+            dialog.destroy()
+
+        ttk.Button(
+            button_frame,
+            text="Apply Mapping",
+            command=on_apply,
+            bootstyle="success"
+        ).grid(row=0, column=0, sticky='ew', padx=(0, 5))
+
+        ttk.Button(
+            button_frame,
+            text="Cancel",
+            command=on_cancel,
+            bootstyle="secondary"
+        ).grid(row=0, column=1, sticky='ew', padx=(5, 0))
+
+        dialog.wait_window()
+
+        if result['cancelled']:
+            return None
+
+        return result['mapping']
 
     # ========== STAGING OPERATIONS (DIRECT MODE) ==========
     def stage_operation(self, operation: Operation):
@@ -954,15 +1092,13 @@ class FunctionWindow:
 
     def callback_close_builder(self):
         """Close builder with confirmation if operations exist"""
-        if self.workflow and self.workflow.operations:
-            if not messagebox.askyesno(
-                    "Unsaved Workflow",
-                    "You have unsaved operations. Close anyway?",
-                    default="no"
-            ):
+        if self.workflow_modified:
+            msg = f"You have unsaved changes to '{self.workflow.name}'.\n"
+            msg += "Close anyway?"
+
+            if not messagebox.askyesno("Unsaved Changes", msg, default="no"):
                 return
 
-        # Clean up and close
         if self.mode == "builder":
             self.pipettor.pop_state(self._state_snapshot)
         self.window_build_func.destroy()
@@ -1179,7 +1315,7 @@ class FunctionWindow:
         if not self.workflow or not self.workflow.operations:
             ttk.Label(
                 self.third_column_frame,
-                text="No operations in queue\n\nClick operation buttons to add",
+                text="No operations in queue\nClick operation buttons to add",
                 font=("Helvetica", 12),
                 foreground="gray"
             ).pack(pady=20)
@@ -1248,6 +1384,7 @@ class FunctionWindow:
             )
             remove_btn.grid(row=0, column=5, sticky="e", padx=2)
         self.update_copy_paste_buttons()
+
     # --- Helper Methods ---
     def clear_edit_mode(self):
         """Clear edit mode when starting a fresh operation"""
@@ -1334,40 +1471,6 @@ class FunctionWindow:
                 justify=tk.LEFT
             ).pack(anchor="w")
 
-    def execute_foc_measurement(self):
-        """Execute FOC measurement with parameters from input fields"""
-        try:
-            # Get and validate inputs
-            wait_time = int(self.foc_wait_time_var.get())
-            plate_name = self.pipettor.foc_plate_name
-
-            if not plate_name:
-                messagebox.showerror("Error", "Please enter a plate name")
-                return
-
-            if self.mode == "builder":
-                # Create operation and add to workflow
-                operation = OperationBuilder.build_measure_foc(
-                    wait_seconds=wait_time,
-                    plate_name=plate_name
-                )
-                self.builder_config(operation)
-
-            else:
-                # Execute
-                self.pipettor.measure_foc(
-                    seconds=wait_time,
-                    platename=plate_name,
-                )
-
-                if self.on_operation_complete:
-                    self.on_operation_complete()
-
-        except ValueError:
-            messagebox.showerror("Error", "Wait time must be a valid number")
-        except Exception as e:
-            messagebox.showerror("Error", f"FOC failed:\n{str(e)}")
-
     def copy_selected_operations(self):
         """Copy selected operations to clipboard"""
         if not self.selected_operations:
@@ -1438,6 +1541,7 @@ class FunctionWindow:
 
         # Mark as unvalidated
         self.workflow_validated = False
+        self.workflow_modified = True
         self.validate_execute_btn.config(
             text="Validate",
             bootstyle="warning",
@@ -1449,6 +1553,7 @@ class FunctionWindow:
 
         # Reset to "End" for next paste
         self.paste_position_var.set("End")
+
     def ask_position_in_second_frame(self, total_ops: int, default_position: int, operation_name: str) -> int:
         """
         Display position selector in second frame.
@@ -1560,6 +1665,7 @@ class FunctionWindow:
 
             # Mark as unvalidated
             self.workflow_validated = False
+            self.workflow_modified = True
             self.validate_execute_btn.config(text="Validate", bootstyle="warning",
                                              command=self.callback_validate_workflow)
 
@@ -1601,9 +1707,9 @@ class FunctionWindow:
         if messagebox.askyesno("Confirm", "Clear all operations from queue?", default="yes"):
             # Clear workflow operations
             self.workflow.operations.clear()
+            self.workflow_modified = True
 
             # Reset pipettor to clean state
-
             self.pipettor.pop_state(self._state_snapshot)
             self._state_snapshot = self.pipettor.push_state()
             self.pipettor.set_simulation_mode(True)
@@ -1720,6 +1826,30 @@ class FunctionWindow:
             messagebox.showerror("Error", f"Workflow '{workflow_name}' not found in memory")
             return
 
+        labware_info = {}
+        for op in workflow.operations:
+            for param_value in op.parameters.values():
+                if isinstance(param_value, dict) and 'id' in param_value and 'type' in param_value:
+                    labware_info[param_value['id']] = param_value['type']
+
+        current_ids = {lw.labware_id for lw in self.dict_top_labware.values()}
+        missing_ids = set(labware_info.keys()) - current_ids
+        present_ids = set(labware_info.keys()) & current_ids
+
+        if missing_ids:
+            mapping = self.show_unified_mapping_dialog(labware_info, missing_ids, present_ids)
+            if mapping is None:
+                return  # User cancelled
+
+            mapped_workflow = copy.deepcopy(workflow)
+            for op in mapped_workflow.operations:
+                for param_value in op.parameters.values():
+                    if isinstance(param_value, dict) and 'id' in param_value:
+                        if param_value['id'] in mapping:
+                            param_value['id'] = mapping[param_value['id']]
+        else:
+            mapped_workflow = copy.deepcopy(workflow)
+
         # Open workflow builder with this workflow loaded
         builder = FunctionWindow(
             deck=self.deck,
@@ -1731,12 +1861,13 @@ class FunctionWindow:
         # Give builder a reference to this direct mode window
         builder.parent_function_window = self
 
-        # Load the workflow into the builder WITHOUT executing operations
-        builder.workflow = workflow
+        # Load the mapped_workflow into the builder without executing operations
+        builder.workflow = mapped_workflow
         builder.entry_name.delete(0, tk.END)
         builder.entry_name.insert(0, workflow.name)
 
         # Just display the operations - don't replay them
+        builder.workflow_modified = False
         builder.display_workflow_queue()
 
         # Mark as unvalidated since it needs fresh validation
@@ -1824,6 +1955,157 @@ class FunctionWindow:
         messagebox.showinfo("Deleted", f"Workflow '{workflow_name}' removed from memory.")
 
     # ========== HELPER METHODS ==========
+    def callback_remap_labware(self):
+        """Manual remap button - remap all labware in current workflow"""
+        if not self.workflow or not self.workflow.operations:
+            messagebox.showwarning("Empty Workflow", "No operations to remap")
+            return
+
+        # Get all labware IDs used in workflow
+        labware_info = {}  # {labware_id: labware_type}
+        for op in self.workflow.operations:
+            for param_value in op.parameters.values():
+                if isinstance(param_value, dict) and 'id' in param_value and 'type' in param_value:
+                    labware_info[param_value['id']] = param_value['type']
+
+        if not labware_info:
+            messagebox.showinfo("No Labware", "No labware found in workflow")
+            return
+
+        # Split into missing and present
+        current_ids = {lw.labware_id for lw in self.dict_top_labware.values()}
+        missing_ids = set(labware_info.keys()) - current_ids
+        present_ids = set(labware_info.keys()) & current_ids
+
+        # Show unified mapping dialog
+        mapping = self.show_unified_mapping_dialog(labware_info, missing_ids, present_ids)
+
+        if not mapping:
+            return
+
+        # Apply mapping
+        for op in self.workflow.operations:
+            for param_value in op.parameters.values():
+                if isinstance(param_value, dict) and 'id' in param_value:
+                    if param_value['id'] in mapping:
+                        param_value['id'] = mapping[param_value['id']]
+
+        self.workflow_modified = True
+        self.workflow_validated = False
+        self.validate_execute_btn.config(text="Validate", bootstyle="warning", command=self.callback_validate_workflow)
+        self.display_workflow_queue()
+
+        messagebox.showinfo("Remapped", f"Applied {len(mapping)} remapping(s)")
+
+    def show_unified_mapping_dialog(self, labware_info, missing_ids, present_ids):
+        """Show dialog with two sections: missing labware (required) and present labware (optional)"""
+        dialog = tk.Toplevel(self.get_master_window())
+        dialog.title("Remap Labware")
+        dialog.geometry("700x600")
+        dialog.transient(self.get_master_window())
+        dialog.grab_set()
+
+        result = {'mapping': {}, 'cancelled': False}
+
+        main_frame = ttk.Frame(dialog, padding=10)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Scrollable canvas
+        canvas = tk.Canvas(main_frame)
+        scrollbar = ttk.Scrollbar(main_frame, orient=tk.VERTICAL, command=canvas.yview)
+        content_frame = ttk.Frame(canvas)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        canvas_window = canvas.create_window((0, 0), window=content_frame, anchor='nw')
+
+        def configure_scroll(_=None):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            canvas_width = canvas.winfo_width()
+            if canvas_width > 1:
+                canvas.itemconfig(canvas_window, width=canvas_width)
+
+        content_frame.bind('<Configure>', configure_scroll)
+        canvas.bind('<Configure>', configure_scroll)
+
+        dropdown_vars = {}
+
+        # Section 1: Missing labware (REQUIRED)
+        if missing_ids:
+            ttk.Label(content_frame, text="⚠️ Missing Labware (Required)",
+                      font=('Arial', 12, 'bold'), foreground='red').pack(pady=(0, 10), anchor='w')
+
+            for lw_id in sorted(missing_ids):
+                lw_type = labware_info[lw_id]
+                frame = ttk.Labelframe(content_frame, text=f"{lw_id} ({lw_type})", padding=10)
+                frame.pack(fill=tk.X, pady=5)
+
+                # Get compatible labware (same type)
+                compatible = [(lw.labware_id, f"{lw.labware_id} ({lw.__class__.__name__})")
+                              for lw in self.dict_top_labware.values()
+                              if lw.__class__.__name__ == lw_type and lw.labware_id != lw_id]
+
+                options = ["[Optional - Select labware]"] + [display for _, display in compatible]
+                var = tk.StringVar(value=options[0])
+                dropdown_vars[lw_id] = (var, dict(compatible), False)
+
+                ttk.Combobox(frame, textvariable=var, values=options, state='readonly', width=50).pack(fill=tk.X)
+
+        # Section 2: Present labware (OPTIONAL)
+        if present_ids:
+            ttk.Separator(content_frame, orient='horizontal').pack(fill=tk.X, pady=20)
+            ttk.Label(content_frame, text="✓ Current Labware (Optional Remap)",
+                      font=('Arial', 12, 'bold'), foreground='green').pack(pady=(0, 10), anchor='w')
+
+            for lw_id in sorted(present_ids):
+                lw_type = labware_info[lw_id]
+                frame = ttk.Labelframe(content_frame, text=f"{lw_id} ({lw_type})", padding=10)
+                frame.pack(fill=tk.X, pady=5)
+
+                # Get compatible labware (same type)
+                compatible = [(lw.labware_id, f"{lw.labware_id} ({lw.__class__.__name__})")
+                              for lw in self.dict_top_labware.values()
+                              if lw.__class__.__name__ == lw_type and lw.labware_id != lw_id]
+
+                options = ["[Keep current]"] + [display for _, display in compatible]
+                var = tk.StringVar(value=options[0])
+                dropdown_vars[lw_id] = (var, dict(compatible), False)  # False = optional
+
+                ttk.Combobox(frame, textvariable=var, values=options, state='readonly', width=50).pack(fill=tk.X)
+
+        # Buttons
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill=tk.X, pady=(10, 0))
+
+        def on_apply():
+            # Check required fields
+            for lw_id, (var, id_map, required) in dropdown_vars.items():
+                selection = var.get()
+                if required and "[Required" in selection:
+                    messagebox.showerror("Missing Mapping", f"Must map: {lw_id}", parent=dialog)
+                    return
+
+                # Build mapping
+                if "[" not in selection:  # Not a placeholder
+                    for labware_id, display in id_map.items():
+                        if display == selection:
+                            result['mapping'][lw_id] = labware_id
+                            break
+
+            dialog.destroy()
+
+        def on_cancel():
+            result['cancelled'] = True
+            dialog.destroy()
+
+        ttk.Button(button_frame, text="Apply", command=on_apply, bootstyle="success").pack(side=tk.LEFT, fill=tk.X,
+                                                                                           expand=True, padx=(0, 5))
+        ttk.Button(button_frame, text="Cancel", command=on_cancel, bootstyle="secondary").pack(side=tk.LEFT, fill=tk.X,
+                                                                                               expand=True, padx=(5, 0))
+
+        dialog.wait_window()
+
+        return None if result['cancelled'] else result['mapping']
 
     def get_top_labwares(self) -> dict[str, Labware]:
         """Get the topmost labware from each slot"""
@@ -1914,7 +2196,7 @@ class FunctionWindow:
             canvas_window = canvas.create_window((0, 0), window=frame, anchor='nw')
 
             # Configure scrolling
-            def configure_scroll(event=None):
+            def configure_scroll(_=None):
                 canvas.configure(scrollregion=canvas.bbox("all"))
                 canvas_width = canvas.winfo_width()
                 if canvas_width > 1:
@@ -2070,6 +2352,7 @@ class FunctionWindow:
 
         # Mark as unvalidated
         self.workflow_validated = False
+        self.workflow_modified = True
         self.validate_execute_btn.config(text="Validate", bootstyle="warning", command=self.callback_validate_workflow)
 
         # Refresh display
@@ -2210,7 +2493,7 @@ class FunctionWindow:
         # --- 3. Logic ---
         final_values = []  # Container to capture result
 
-        def on_ok(event=None):
+        def on_ok(_=None):
             temp_results = []
             try:
                 for item in input_data:
@@ -2236,7 +2519,7 @@ class FunctionWindow:
             except ValueError:
                 messagebox.showerror("Invalid Input", "Please enter valid numeric values", parent=dialog)
 
-        def on_cancel(event=None):
+        def on_cancel(_=None):
             dialog.destroy()
 
         # Buttons
@@ -2472,7 +2755,7 @@ class FunctionWindow:
                 self.clear_edit_mode()
 
             self.set_stage("choose labware to pick tip from")
-            
+
             if self.mode == "builder":
                 self.clear_grid(self.second_column_frame)
             self.display_possible_labware(
@@ -2515,6 +2798,7 @@ class FunctionWindow:
 
             operation = OperationBuilder.build_pick_tips(
                 labware_id=labware_obj.labware_id,
+                labware_type=labware_obj.__class__.__name__,
                 positions=list_col_row,
                 channels=self.channels
             )
@@ -2578,6 +2862,7 @@ class FunctionWindow:
             # Create details
             operation = OperationBuilder.build_return_tips(
                 labware_id=labware_obj.labware_id,
+                labware_type=labware_obj.__class__.__name__,
                 positions=list_col_row,
                 channels=self.channels
             )
@@ -2688,8 +2973,10 @@ class FunctionWindow:
             # Create operation with BOTH labware
             operation = OperationBuilder.build_replace_tips(
                 return_labware_id=kwargs['return_labware'].labware_id,
+                return_labware_type=kwargs['return_labware'].__class__.__name__,
                 return_positions=kwargs['return_positions'],
                 pick_labware_id=kwargs['pick_labware'].labware_id,  # Different labware!
+                pick_labware_type=kwargs['pick_labware'].__class__.__name__,
                 pick_positions=list_pick,
                 channels=self.channels
             )
@@ -2728,6 +3015,7 @@ class FunctionWindow:
         elif part == "second" and labware_obj is not None:
             operation = OperationBuilder.build_discard_tips(
                 labware_id=labware_obj.labware_id,
+                labware_type=labware_obj.__class__.__name__,
             )
 
             # Mode-specific handling
@@ -2847,8 +3135,10 @@ class FunctionWindow:
 
             operation = OperationBuilder.build_add_medium(
                 source_labware_id=kwargs["source_labware"].labware_id,
+                source_labware_type=kwargs["source_labware"].__class__.__name__,
                 source_positions=kwargs["source_positions"],
                 dest_labware_id=kwargs["dest_labware"].labware_id,
+                dest_labware_type=kwargs["dest_labware"].__class__.__name__,
                 dest_positions=kwargs["dest_positions"],
                 volume=kwargs['volume'],
                 channels=self.channels,
@@ -2973,8 +3263,10 @@ class FunctionWindow:
             # Create Operation object (unified for both modes)
             operation = OperationBuilder.build_remove_medium(
                 source_labware_id=kwargs["source_labware"].labware_id,
+                source_labware_type=kwargs["source_labware"].__class__.__name__,
                 source_positions=kwargs["source_positions"],
                 dest_labware_id=kwargs["dest_labware"].labware_id,
+                dest_labware_type= kwargs["dest_labware"].__class__.__name__,
                 dest_positions=kwargs["dest_positions"],
                 volume=kwargs['volume'],
                 channels=self.channels,
@@ -3116,8 +3408,10 @@ class FunctionWindow:
             # Create Operation object (unified for both modes)
             operation = OperationBuilder.build_transfer_plate_to_plate(
                 source_labware_id=kwargs["source_labware"].labware_id,
+                source_labware_type= kwargs["source_labware"].__class__.__name__,
                 source_positions=kwargs["source_positions"],
                 dest_labware_id=kwargs["dest_labware"].labware_id,
+                dest_labware_type= kwargs["dest_labware"].__class__.__name__,
                 dest_positions=kwargs["dest_positions"],
                 volume=kwargs['volume'],
                 channels=self.channels,
@@ -3285,9 +3579,11 @@ class FunctionWindow:
             operation = OperationBuilder.build_remove_and_add(
                 plate_labware_id=kwargs["plate_labware"].labware_id,
                 plate_positions=kwargs["plate_positions"],
+                plate_labware_type=kwargs["plate_labware"].__class__.__name__,
                 remove_reservoir_id=kwargs["remove_reservoir"].labware_id,
                 remove_position=kwargs["remove_position"],
                 source_reservoir_id=kwargs["source_reservoir"].labware_id,
+                source_reservoir_type=kwargs["source_reservoir"].__class__.__name__,
                 source_position=kwargs["source_position"],
                 volume=kwargs['volume'],
                 channels=self.channels,
@@ -3402,6 +3698,7 @@ class FunctionWindow:
 
             operation = OperationBuilder.build_suck(
                 labware_id=labware_obj.labware_id,
+                labware_type=labware_obj.__class__.__name__,
                 position=position,
                 volume=total_volume,
                 channels=self.channels
@@ -3513,6 +3810,7 @@ class FunctionWindow:
             # Create Operation (instead of lambda)
             operation = OperationBuilder.build_spit(
                 labware_id=labware_obj.labware_id,
+                labware_type=labware_obj.__class__.__name__,
                 position=position,
                 volume=total_volume,
                 channels=self.channels
@@ -3523,7 +3821,7 @@ class FunctionWindow:
                 self.stage_operation(operation)
             elif self.mode == "builder":
                 self.builder_config(operation)
-    def callback_move_xy(self, func_str: str, edit_mode: bool = False):
+    def callback_move_xy(self, edit_mode: bool = False):
         """Handle Move X and Y operation"""
 
         if not edit_mode:  # Only clear if not explicitly in edit mode
@@ -3548,7 +3846,7 @@ class FunctionWindow:
             elif self.mode == "builder":
                 self.builder_config(operation)
 
-    def callback_move_z(self, func_str: str, edit_mode: bool = False):
+    def callback_move_z(self, edit_mode: bool = False):
         """Handle Move Z operation"""
 
         if not edit_mode:
@@ -3569,7 +3867,7 @@ class FunctionWindow:
             elif self.mode == "builder":
                 self.builder_config(operation)
 
-    def callback_home(self, func_str: str, edit_mode: bool = False):
+    def callback_home(self,  edit_mode: bool = False):
         """Handle Home operation"""
         if not edit_mode:
             self.clear_edit_mode()
