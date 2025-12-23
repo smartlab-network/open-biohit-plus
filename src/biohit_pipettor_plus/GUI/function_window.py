@@ -650,24 +650,6 @@ class FunctionWindow:
         # Initial population of FOC section
         self.update_foc_section()
 
-        self.low_level_collapsible = CollapsibleFrame(parent_frame, text="Low-Level")
-        self.low_level_collapsible.pack(fill=tk.X, pady=5, padx=5)
-
-        # Put buttons inside the content_frame
-        self.suck_btn = ttk.Button(
-            self.low_level_collapsible.content_frame, text=" Suck",
-            command=lambda: self.callback_suck(func_str="Suck"),
-            bootstyle="info"
-        )
-        self.suck_btn.pack(fill=tk.X, pady=2, padx=5)
-
-        self.spit_btn = ttk.Button(
-            self.low_level_collapsible.content_frame, text=" Spit",
-            command=lambda: self.callback_spit(func_str="Spit"),
-            bootstyle="info"
-        )
-        self.spit_btn.pack(fill=tk.X, pady=2, padx=5)
-
         # === SYSTEM OPERATIONS - COLLAPSIBLE ===
         self.system_collapsible = CollapsibleFrame(parent_frame, text="System")
         self.system_collapsible.pack(fill=tk.X, pady=5, padx=5)
@@ -693,6 +675,28 @@ class FunctionWindow:
             bootstyle="secondary"
         )
         self.move_z_btn.pack(fill=tk.X, pady=2, padx=5)
+
+        if self.mode == "direct":
+            self.force_eject_btn = ttk.Button(
+                self.system_collapsible.content_frame, text="⚠ Force Eject Tips",
+                command=self.callback_force_eject,
+                bootstyle="secondary"
+            )
+            self.force_eject_btn.pack(fill=tk.X, pady=2)
+
+            self.force_aspirate_btn = ttk.Button(
+                self.system_collapsible.content_frame, text="⚠ Force Aspirate",
+                command=self.callback_force_aspirate,
+                bootstyle="secondary"
+            )
+            self.force_aspirate_btn.pack(fill=tk.X, pady=2)
+
+            self.force_dispense_btn = ttk.Button(
+                self.system_collapsible.content_frame, text="⚠ Force Dispense",
+                command=self.callback_force_dispense,
+                bootstyle="secondary"
+            )
+            self.force_dispense_btn.pack(fill=tk.X, pady=2)
 
     def _toggle_mixing_controls(self):
         """Enable/disable mixing volume entry based on checkbox state"""
@@ -809,10 +813,6 @@ class FunctionWindow:
             self.callback_remove_medium(func_str="Remove Medium", edit_mode=True)
         elif op_type == OperationType.TRANSFER_PLATE_TO_PLATE:
             self.callback_transfer_plate_to_plate(func_str="Transfer Plate to Plate", edit_mode=True)
-        elif op_type == OperationType.SUCK:
-            self.callback_suck(func_str="Suck", edit_mode=True)
-        elif op_type == OperationType.SPIT:
-            self.callback_spit(func_str="Spit", edit_mode=True)
         elif op_type == OperationType.MOVE_XY:
             self.callback_move_xy(edit_mode=True)
         elif op_type == OperationType.MOVE_Z:
@@ -2557,7 +2557,7 @@ class FunctionWindow:
         # If single axis, return float. If multiple, return tuple.
         return final_values[0] if len(final_values) == 1 else tuple(final_values)
 
-    def ask_volume_dialog(self, title="Enter Volume", initial_value=0, label_text="Volume per well (ul):"):
+    def ask_volume_dialog(self, title="Enter Volume", initial_value=0, label_text="Volume per well (ul):")-> float | None:
         """
         Create a simple, focused dialog for numeric input.
 
@@ -3596,231 +3596,6 @@ class FunctionWindow:
             elif self.mode == "builder":
                 self.builder_config(operation)
 
-
-    def callback_suck(
-            self,
-            func_str: str,
-            part: str = "first",
-            labware_obj: Labware = None,
-            edit_mode: bool = False,
-            **kwargs
-    ):
-        """Handle Suck operation"""
-        # Check for tips in direct mode only (builder mode uses virtual state)
-        if part == "first" and self.mode == "direct" and not self.pipettor.has_tips:
-            messagebox.showerror("Error", "Pick tips first")
-            return
-
-        # --- PART 1: GET VOLUME ---
-        if part == "first":
-            if not edit_mode:  # Only clear if not explicitly in edit mode
-                self.clear_edit_mode()
-
-            self.set_stage("")
-            volume = self.ask_volume_dialog(title="Suck Volume", initial_value=100)
-            if volume:
-                self.callback_suck(func_str, part="second", volume=volume, **kwargs)
-
-        # --- PART 2: SELECT LABWARE ---
-        elif part == "second":
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
-
-            kwargs['volume'] = kwargs.get('volume')
-            self.set_stage("choose reservoir/plate to aspirate liquid from")
-            self.display_possible_labware(
-                labware_type=(Plate, ReservoirHolder),
-                next_callback=self.callback_suck,
-                func_str=func_str,
-                part="third",
-                **kwargs
-            )
-
-        # --- PART 3: HANDLE LABWARE SELECTION & CREATE OPERATION ---
-        elif part == "third" and labware_obj is not None:
-            # Determine dimensions
-            if isinstance(labware_obj, ReservoirHolder):
-                rows, columns = labware_obj.hooks_across_y, labware_obj.hooks_across_x
-            elif isinstance(labware_obj, Plate):
-                rows, columns = labware_obj._rows, labware_obj._columns
-            else:
-                messagebox.showerror("Error", "Invalid labware type for suck operation")
-                return
-
-            volume = kwargs.get('volume')
-
-            # Validate volume in direct mode
-            if self.mode == "direct":
-                if volume > (self.pipettor.tip_volume - self.pipettor.get_total_tip_volume(0)):
-                    messagebox.showerror("Error", "Volume too high")
-                    return
-
-            is_multichannel = self.multichannel
-            total_volume = volume * self.channels
-
-            # Compute volume constraints
-            if isinstance(labware_obj, ReservoirHolder):
-                volume_constraints = self.compute_volume_constraints(
-                    labware_obj, total_volume, is_multichannel=False, operation='removal'
-                )
-            else:
-                volume_constraints = self.compute_volume_constraints(
-                    labware_obj, volume, is_multichannel, operation='removal'
-                )
-
-            window = WellWindow(
-                rows=rows,
-                columns=columns,
-                labware_id=labware_obj.labware_id,
-                max_selected=1,
-                master=self.get_master_window(),
-                multichannel_mode=False if isinstance(labware_obj, ReservoirHolder) else is_multichannel,
-                title=f"Select position to suck from: {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(
-                    labware_obj=labware_obj,
-                    source=True,
-                ),
-                volume_constraints= volume_constraints if self.mode == "direct" else {}
-            )
-            self.get_master_window().wait_window(window.get_root())
-
-            # Get the single position
-            if isinstance(labware_obj, Plate) and is_multichannel:
-                start_positions = window.get_start_positions()
-                if not start_positions or not window.confirmed:
-                    return
-                position = (start_positions[0][1], start_positions[0][0])
-            else:
-                selected = [(c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v]
-                if not selected or not window.confirmed:
-                    return
-                position = selected[0]
-
-            operation = OperationBuilder.build_suck(
-                labware_id=labware_obj.labware_id,
-                labware_type=labware_obj.__class__.__name__,
-                position=position,
-                volume=total_volume,
-                channels=self.channels
-            )
-
-            if self.mode == "direct":
-                self.stage_operation(operation)
-            elif self.mode == "builder":
-                self.builder_config(operation)
-
-    def callback_spit(
-            self,
-            func_str: str,
-            part: str = "first",
-            labware_obj: Labware = None,
-            edit_mode: bool = False,
-            **kwargs
-    ):
-        """Handle Spit operation"""
-        # Check for tips in direct mode only
-        if part == "first" and self.mode == "direct" and not self.pipettor.has_tips:
-            messagebox.showerror("Error", "Pick tips first")
-            return
-
-        # --- PART 1: GET VOLUME ---
-        if part == "first":
-            if not edit_mode:  # Only clear if not explicitly in edit mode
-                self.clear_edit_mode()
-            self.set_stage("")
-            volume = self.ask_volume_dialog(title="Spit Volume", initial_value=100)
-            if volume:
-                self.callback_spit(func_str, part="second", volume=volume, **kwargs)
-
-        # --- PART 2: SELECT LABWARE ---
-        elif part == "second":
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
-
-            kwargs['volume'] = kwargs.get('volume')
-            self.set_stage("choose reservoir/plate to dispense liquid to")
-            self.display_possible_labware(
-                labware_type=(Plate, ReservoirHolder),
-                next_callback=self.callback_spit,
-                func_str=func_str,
-                part="third",
-                **kwargs
-            )
-
-        # --- PART 3: HANDLE LABWARE SELECTION & CREATE OPERATION ---
-        elif part == "third" and labware_obj is not None:
-            # Determine dimensions
-            if isinstance(labware_obj, ReservoirHolder):
-                rows, columns = labware_obj.hooks_across_y, labware_obj.hooks_across_x
-            elif isinstance(labware_obj, Plate):
-                rows, columns = labware_obj._rows, labware_obj._columns
-            else:
-                messagebox.showerror("Error", "Invalid labware type for spit operation")
-                return
-
-            volume = kwargs.get('volume')
-
-            # Validate volume in direct mode
-            if self.mode == "direct":
-                if volume > (self.pipettor.get_total_tip_volume() / self.channels):
-                    messagebox.showerror("Error", "Not enough liquid in tip")
-                    return
-
-            is_multichannel = self.multichannel
-            total_volume = volume * self.channels
-
-            # Compute volume constraints
-            if isinstance(labware_obj, ReservoirHolder):
-                volume_constraints = self.compute_volume_constraints(
-                    labware_obj, total_volume, is_multichannel=False, operation='addition'
-                )
-            else:
-                volume_constraints = self.compute_volume_constraints(
-                    labware_obj, volume, is_multichannel, operation='addition'
-                )
-
-            window = WellWindow(
-                rows=rows,
-                columns=columns,
-                labware_id=labware_obj.labware_id,
-                max_selected=1,
-                master=self.get_master_window(),
-                multichannel_mode=False if isinstance(labware_obj, ReservoirHolder) else is_multichannel,
-                title=f"Select position to spit into: {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(
-                    labware_obj=labware_obj,
-                    source=False,
-                ),
-                volume_constraints= volume_constraints if self.mode == "direct" else {}
-            )
-            self.get_master_window().wait_window(window.get_root())
-
-            # Get the single position
-            if isinstance(labware_obj, Plate) and is_multichannel:
-                start_positions = window.get_start_positions()
-                if not start_positions or not window.confirmed:
-                    return
-                position = (start_positions[0][1], start_positions[0][0])
-            else:
-                selected = [(c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v]
-                if not selected or not window.confirmed:
-                    return
-                position = selected[0]
-
-            # Create Operation (instead of lambda)
-            operation = OperationBuilder.build_spit(
-                labware_id=labware_obj.labware_id,
-                labware_type=labware_obj.__class__.__name__,
-                position=position,
-                volume=total_volume,
-                channels=self.channels
-            )
-
-            # Mode-specific handling
-            if self.mode == "direct":
-                self.stage_operation(operation)
-            elif self.mode == "builder":
-                self.builder_config(operation)
     def callback_move_xy(self, edit_mode: bool = False):
         """Handle Move X and Y operation"""
 
@@ -3878,3 +3653,18 @@ class FunctionWindow:
             self.stage_operation(operation)
         elif self.mode == "builder":
             self.builder_config(operation)
+
+    def callback_force_eject(self):
+        self.pipettor.eject_tip()
+        self.pipettor.has_tips = False
+
+    def callback_force_aspirate(self):
+        volume = self.ask_volume_dialog(title="Aspirate Volume", initial_value=0)
+        if volume:
+            self.pipettor.aspirate(volume)
+
+    def callback_force_dispense(self):
+        volume = self.ask_volume_dialog(title="Dispense Volume", initial_value=0)
+        if volume:
+            self.pipettor.dispense(volume)
+

@@ -9,8 +9,6 @@ class OperationType(Enum):
     ADD_MEDIUM = "add_medium"
     REMOVE_MEDIUM = "remove_medium"
     TRANSFER_PLATE_TO_PLATE = "transfer_plate_to_plate"
-    SUCK = "suck"
-    SPIT = "spit"
     HOME = "home"
     MOVE_XY = "move_xy"
     MOVE_Z = "move_z"

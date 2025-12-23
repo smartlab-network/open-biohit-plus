@@ -408,7 +408,6 @@ class DeckGUI:
                 self.labware_listbox.insert(tk.END, lw.labware_id)
 
     def create_low_level_para_tab(self):
-
         """Create the Create tab"""
         create_tab = ttk.Frame(self.right_panel_notebook)
         self.right_panel_notebook.add(create_tab, text="Low level parameters")
@@ -468,16 +467,20 @@ class DeckGUI:
         ttk.Button(create_btn_frame, text="Clear Selection", command=self.clear_selection).pack(fill=tk.X)
 
         # === CREATE SECTIONS ===
-        # Low-Level Labware section
-        low_level_section = ttk.Labelframe(create_control_frame, text="Low-Level Labware", padding=15)
-        low_level_section.pack(fill=tk.X, pady=10, padx=5)
+        # Low-Level Labware section - COLLAPSIBLE
+        self.low_level_collapsible = CollapsibleFrame(create_control_frame, text="Low-Level Labware")
+        self.low_level_collapsible.pack(fill=tk.X, pady=5, padx=5)
+
+        # Content inside collapsible frame
+        low_level_content = self.low_level_collapsible.content_frame
+
+        # Create inner frame with padding
+        low_level_inner = ttk.Frame(low_level_content, padding="10")
+        low_level_inner.pack(fill=tk.BOTH, expand=True)
 
         # LLL type selector (radio buttons)
-        lll_type_frame = ttk.Frame(low_level_section)
+        lll_type_frame = ttk.Frame(low_level_inner)
         lll_type_frame.pack(fill=tk.X, pady=(0, 5))
-
-        separator = ttk.Separator(low_level_section, orient='horizontal')
-        separator.pack(fill=tk.X, pady=5)
 
         self.lll_type = tk.StringVar(value="Well")
         types = ["Well", "Reservoir", "IndividualPipetteHolder"]
@@ -491,17 +494,24 @@ class DeckGUI:
                 command=self.update_lll_list
             ).pack(fill=tk.X, anchor=tk.W, pady=2, padx=5)
 
+        separator = ttk.Separator(low_level_inner, orient='horizontal')
+        separator.pack(fill=tk.X, pady=5)
+
         # Listbox for LLL
-        self.lll_listbox = tk.Listbox(low_level_section, height=6)
+        self.lll_listbox = tk.Listbox(low_level_inner, height=6)
         self.lll_listbox.pack(fill=tk.X)
         self.lll_listbox.bind('<<ListboxSelect>>', self.on_lll_select)
 
         # Buttons frame for LLL actions
-        lll_btn_frame = ttk.Frame(low_level_section)
+        lll_btn_frame = ttk.Frame(low_level_inner)
         lll_btn_frame.pack(fill=tk.X, pady=(5, 0))
 
-        ttk.Button(lll_btn_frame, text="Create Low-Level Lw", command=self.create_low_level_labware).pack( expand=True, fill=tk.X, padx=5, pady=5)
-        ttk.Button(lll_btn_frame, text="Delete Selected", command=self.delete_selected_lll).pack( expand=True, fill=tk.X, padx=5, pady=5)
+        ttk.Button(lll_btn_frame, text="Create Low-Level Lw", command=self.create_low_level_labware).pack(expand=True,
+                                                                                                          fill=tk.X,
+                                                                                                          padx=5,
+                                                                                                          pady=5)
+        ttk.Button(lll_btn_frame, text="Delete Selected", command=self.delete_selected_lll).pack(expand=True, fill=tk.X,
+                                                                                                 padx=5, pady=5)
 
         # FOC Configuration Section
         foc_section = ttk.Labelframe(create_control_frame, text="FOC Measurement Configuration", padding=15)
@@ -532,6 +542,18 @@ class DeckGUI:
             command=self.configure_foc_script
         ).pack(fill=tk.X, pady=5)
 
+        # --- DATA CONFIGURATION FOR RUNTIME PARAMETERS ---
+        self.runtime_param_definitions = [
+            ("X Speed (1-8):", "x_speed", "7"),
+            ("Y Speed (1-8):", "y_speed", "7"),
+            ("Z Speed (1-8):", "z_speed", "5"),
+            ("Aspirate (1-6):", "aspirate_speed", "1"),
+            ("Dispense (1-6):", "dispense_speed", "1"),
+        ]
+        self.runtime_vars = {}
+        self.runtime_widgets = []
+
+        # --- PIPETTOR CONFIGURATION SECTION ---
         pipettor_section = ttk.Labelframe(create_control_frame, text="Pipettor Configuration", padding=15)
         pipettor_section.pack(fill=tk.X, pady=10, padx=5)
 
@@ -539,7 +561,7 @@ class DeckGUI:
         tip_vol_frame = ttk.Frame(pipettor_section)
         tip_vol_frame.pack(fill=tk.X, pady=5)
 
-        ttk.Label(tip_vol_frame, text="Tip Volume:", font=('Arial', 13, 'bold')).pack(side=tk.LEFT, padx=(0, 10))
+        ttk.Label(tip_vol_frame, text="Tip Volume:", font=('Arial', 11)).pack(side=tk.LEFT, padx=(0, 10))
 
         self.tip_volume_var = tk.IntVar(value=200)
         ttk.Radiobutton(tip_vol_frame, text="200 µL", variable=self.tip_volume_var, value=200).pack(side=tk.LEFT,
@@ -547,128 +569,36 @@ class DeckGUI:
         ttk.Radiobutton(tip_vol_frame, text="1000 µL", variable=self.tip_volume_var, value=1000).pack(side=tk.LEFT,
                                                                                                       padx=5)
 
-        # Multichannel Checkbox
-        multichannel_frame = ttk.Frame(pipettor_section)
-        multichannel_frame.pack(fill=tk.X, pady=5)
+        # Tip Length (set once during connection)
+        tip_length_frame = ttk.Frame(pipettor_section)
+        tip_length_frame.pack(fill=tk.X, pady=5)
 
+        ttk.Label(tip_length_frame, text="Tip Length (mm):", font=('Arial', 10)).pack(side=tk.LEFT, padx=(0, 10))
+        self.tip_length_var = tk.StringVar(value="")
+        ttk.Entry(tip_length_frame, textvariable=self.tip_length_var, width=10).pack(side=tk.LEFT, padx=5)
+        ttk.Label(tip_length_frame, text="(Optional)", font=('Arial', 9, 'italic'),
+                  foreground='gray').pack(side=tk.LEFT, padx=5)
+
+        # Multichannel Checkbox
         self.multichannel_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(
-            multichannel_frame,
+            pipettor_section,
             text="Multichannel (consecutive tips)",
             variable=self.multichannel_var
-        ).pack(side=tk.LEFT)
+        ).pack(anchor='w', pady=2)
 
         # Initialize Hardware Checkbox
-        init_frame = ttk.Frame(pipettor_section)
-        init_frame.pack(fill=tk.X, pady=5)
-
         self.initialize_hw_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(
-            init_frame,
-            text="initialize",
+            pipettor_section,
+            text="Initialize hardware on connect",
             variable=self.initialize_hw_var
-        ).pack(side=tk.LEFT)
+        ).pack(anchor='w', pady=2)
 
         # Separator
-        separator = ttk.Separator(pipettor_section, orient='horizontal')
-        separator.pack(fill=tk.X, pady=10)
+        ttk.Separator(pipettor_section, orient='horizontal').pack(fill=tk.X, pady=10)
 
-        # Optional Parameters - Collapsible
-        self.pipettor_params_collapsible = CollapsibleFrame(pipettor_section, text="Optional Parameters")
-        self.pipettor_params_collapsible.pack(fill=tk.X, pady=5, padx=5)
-
-        # Parameters content inside collapsible frame
-        params_content = self.pipettor_params_collapsible.content_frame
-
-        # Create a frame with padding for better layout
-        params_inner = ttk.Frame(params_content, padding="10")
-        params_inner.pack(fill=tk.BOTH, expand=True)
-
-        # Info text
-        info_label = ttk.Label(
-            params_inner,
-            text="Leave fields empty to use defaults",
-            font=('Arial', 9, 'italic'),
-            foreground='gray'
-        )
-        info_label.pack(anchor='w', pady=(0, 10))
-
-        # Parameters grid
-        params_grid = ttk.Frame(params_inner)
-        params_grid.pack(fill=tk.X)
-
-        # Configure column weights so entries don't overflow
-        params_grid.columnconfigure(1, weight=1)
-        params_grid.columnconfigure(3, weight=1)
-
-        # Movement Speeds Section
-        ttk.Label(
-            params_grid,
-            text="Movement Speeds (1-8, default: 7):",
-            font=('Arial', 10, 'bold')
-        ).grid(row=0, column=0, columnspan=4, sticky='w', pady=(0, 5))
-
-        # X Speed
-        ttk.Label(params_grid, text="X Speed:").grid(row=1, column=0, sticky='w', pady=3)
-        self.x_speed_var = tk.StringVar(value="7")
-        ttk.Entry(params_grid, textvariable=self.x_speed_var, width=8).grid(row=1, column=1, sticky='ew', pady=3,
-                                                                            padx=(5, 10))
-
-        # Y Speed
-        ttk.Label(params_grid, text="Y Speed:").grid(row=1, column=2, sticky='w', pady=3, padx=(10, 0))
-        self.y_speed_var = tk.StringVar(value="7")
-        ttk.Entry(params_grid, textvariable=self.y_speed_var, width=8).grid(row=1, column=3, sticky='ew', pady=3,
-                                                                            padx=(5, 0))
-
-        # Z Speed
-        ttk.Label(params_grid, text="Z Speed:").grid(row=2, column=0, sticky='w', pady=3)
-        self.z_speed_var = tk.StringVar(value="5")
-        ttk.Entry(params_grid, textvariable=self.z_speed_var, width=8).grid(row=2, column=1, sticky='ew', pady=3,
-                                                                            padx=(5, 10))
-
-        # Separator
-        ttk.Separator(params_grid, orient='horizontal').grid(row=3, column=0, columnspan=4, sticky='ew', pady=10)
-
-        # Piston Speeds Section
-        ttk.Label(
-            params_grid,
-            text="Piston Speeds (1-6, default: 1):",
-            font=('Arial', 10, 'bold')
-        ).grid(row=4, column=0, columnspan=4, sticky='w', pady=(0, 5))
-
-        # Aspirate Speed
-        ttk.Label(params_grid, text="Aspirate:").grid(row=5, column=0, sticky='w', pady=3)
-        self.aspirate_speed_var = tk.StringVar(value="1")
-        ttk.Entry(params_grid, textvariable=self.aspirate_speed_var, width=8).grid(row=5, column=1, sticky='ew', pady=3,
-                                                                                   padx=(5, 10))
-
-        # Dispense Speed
-        ttk.Label(params_grid, text="Dispense:").grid(row=5, column=2, sticky='w', pady=3, padx=(10, 0))
-        self.dispense_speed_var = tk.StringVar(value="1")
-        ttk.Entry(params_grid, textvariable=self.dispense_speed_var, width=8).grid(row=5, column=3, sticky='ew', pady=3,
-                                                                                   padx=(5, 0))
-
-        # Separator
-        ttk.Separator(params_grid, orient='horizontal').grid(row=6, column=0, columnspan=4, sticky='ew', pady=10)
-
-        # Tip Length Section
-        ttk.Label(
-            params_grid,
-            text="Tip Length (mm, Leave blank if unsure):",
-            font=('Arial', 10, 'bold')
-        ).grid(row=7, column=0, columnspan=4, sticky='w', pady=(0, 5))
-
-        # Tip Length
-        ttk.Label(params_grid, text="Length:").grid(row=8, column=0, sticky='w', pady=3)
-        self.tip_length_var = tk.StringVar(value="")
-        ttk.Entry(params_grid, textvariable=self.tip_length_var, width=8).grid(row=8, column=1, sticky='ew', pady=3,
-                                                                               padx=(5, 10))
-
-        # Separator
-        separator2 = ttk.Separator(pipettor_section, orient='horizontal')
-        separator2.pack(fill=tk.X, pady=10)
-
-        # Initialize Button
+        # Connect Button
         ttk.Button(
             pipettor_section,
             text="Connect to Pipettor",
@@ -685,6 +615,55 @@ class DeckGUI:
             foreground='gray'
         )
         self.pipettor_status_label.pack(anchor='w')
+
+        # --- RUNTIME PARAMETERS SECTION ---
+        runtime_section = ttk.Labelframe(create_control_frame, text="Runtime Parameters", padding=15)
+        runtime_section.pack(fill=tk.X, pady=10, padx=5)
+
+        self.runtime_info_label = ttk.Label(
+            runtime_section,
+            text="Connect to pipettor to enable parameter control",
+            font=('Arial', 9, 'italic'),
+            foreground='gray'
+        )
+        self.runtime_info_label.pack(anchor='w', pady=(0, 10))
+
+        # Parameters grid
+        params_grid = ttk.Frame(runtime_section)
+        params_grid.pack(fill=tk.X)
+
+        # Configure column weights
+        params_grid.columnconfigure(0, weight=0)  # Left label column
+        params_grid.columnconfigure(1, weight=1)  # Left entry column
+        params_grid.columnconfigure(2, weight=0)  # Right label column
+        params_grid.columnconfigure(3, weight=1)  # Right entry column
+
+        # Automated Grid Builder - 2 columns layout
+        for i, (label_text, key, default) in enumerate(self.runtime_param_definitions):
+            row, col_set = divmod(i, 2)  # Calculates row and if it's left (0) or right (1) set
+            col = col_set * 2
+
+            ttk.Label(params_grid, text=label_text).grid(row=row, column=col, sticky='w', pady=3,
+                                                         padx=(0 if col == 0 else 10, 0))
+
+            var = tk.StringVar(value=default)
+            ent = ttk.Entry(params_grid, textvariable=var, width=8, state='disabled')
+            ent.grid(row=row, column=col + 1, sticky='ew', pady=3, padx=(5, 10))
+
+            self.runtime_vars[key] = var
+            self.runtime_widgets.append(ent)
+
+        # Separator
+        ttk.Separator(runtime_section, orient='horizontal').pack(fill=tk.X, pady=10)
+
+        # Set Parameters Button
+        self.set_params_button = ttk.Button(
+            runtime_section,
+            text="Set Parameters",
+            command=self.set_runtime_parameters,
+            state='disabled'
+        )
+        self.set_params_button.pack(fill=tk.X, pady=5)
 
     def ask_plate_id(self, parent):
         """
@@ -805,44 +784,21 @@ class DeckGUI:
                 self.pipettor_status_label.config(text=status_text, foreground='gray')
 
     def initialize_pipettor(self):
-        """Initialize the pipettor with selected parameters"""
+        """Initialize the pipettor with basic parameters"""
         try:
             # Get basic parameters
             tip_volume = self.tip_volume_var.get()
             multichannel = self.multichannel_var.get()
             initialize = self.initialize_hw_var.get()
 
+            # Get tip length (set once during connection)
+            tip_length_str = self.tip_length_var.get().strip()
+            tip_length = float(tip_length_str) if tip_length_str else None
+
             # Validate deck exists
             if not hasattr(self, 'deck') or self.deck is None:
                 messagebox.showerror("Error", "Deck must be created before initializing pipettor")
                 return
-
-            # Helper function to get and validate speed parameters
-            def get_speed_param(var, param_name, min_val, max_val, default=None):
-                """Helper to get and validate speed parameters"""
-                value_str = var.get().strip()
-                if not value_str:
-                    return default
-                try:
-                    value = int(value_str)
-                    if value < min_val or value > max_val:
-                        raise ValueError(f"{param_name} must be between {min_val} and {max_val}")
-                    return value
-                except ValueError as e:
-                    raise ValueError(f"Invalid {param_name}: {str(e)}")
-
-            # Get movement speeds (1-9)
-            x_speed = get_speed_param(self.x_speed_var, "X Speed", 1, 8)
-            y_speed = get_speed_param(self.y_speed_var, "Y Speed", 1, 8)
-            z_speed = get_speed_param(self.z_speed_var, "Z Speed", 1, 8)
-
-            # Get piston speeds (1-6)
-            aspirate_speed = get_speed_param(self.aspirate_speed_var, "Aspirate Speed", 1, 6)
-            dispense_speed = get_speed_param(self.dispense_speed_var, "Dispense Speed", 1, 6)
-
-            # Get tip length
-            tip_length_str = self.tip_length_var.get().strip()
-            tip_length = float(tip_length_str) if tip_length_str else None
 
             # Create pipettor
             self.pipettor = PipettorPlus(
@@ -852,18 +808,6 @@ class DeckGUI:
                 deck=self.deck,
                 tip_length=tip_length
             )
-
-            # Set speeds if specified
-            if x_speed is not None:
-                self.pipettor.x_speed = x_speed
-            if y_speed is not None:
-                self.pipettor.y_speed = y_speed
-            if z_speed is not None:
-                self.pipettor.z_speed = z_speed
-            if aspirate_speed is not None:
-                self.pipettor.aspirate_speed = aspirate_speed
-            if dispense_speed is not None:
-                self.pipettor.dispense_speed = dispense_speed
 
             if hasattr(self, 'foc_bat_script_path'):
                 self.pipettor.foc_bat_script_path = self.foc_bat_script_path
@@ -880,20 +824,15 @@ class DeckGUI:
             tip_length_info = f", tip length: {tip_length}mm" if tip_length else ""
             hw_status = "initialized" if initialize else "not initialized"
 
-            speed_info = []
-            if x_speed or y_speed or z_speed:
-                speed_info.append(f"Movement: X={x_speed or 7}, Y={y_speed or 7}, Z={z_speed or 7}")
-            if aspirate_speed or dispense_speed:
-                speed_info.append(f"Piston: Asp={aspirate_speed or 1}, Disp={dispense_speed or 1}")
-
             status_text = f"✓ {mode}, {tip_info}{tip_length_info}\nHardware: {hw_status}"
-            if speed_info:
-                status_text += "\n" + ", ".join(speed_info)
 
             self.pipettor_status_label.config(
                 text=status_text,
                 foreground='green'
             )
+
+            # Enable runtime parameters section
+            self.enable_runtime_parameters()
 
             if hasattr(self, 'rebuild_operations_tab'):
                 self.rebuild_operations_tab()
@@ -906,6 +845,72 @@ class DeckGUI:
                 text=f"✗ Initialization failed: {str(e)}",
                 foreground='red'
             )
+
+    def enable_runtime_parameters(self):
+        """Enable the runtime parameters section after pipettor connection"""
+        self.runtime_info_label.config(text="Parameters active - modify and click 'Set Parameters' to apply",
+                                       foreground='black')
+
+        for widget in self.runtime_widgets:
+            widget.config(state='normal')
+        self.set_params_button.config(state='normal')
+
+    def disable_runtime_parameters(self):
+        """Disable the runtime parameters section when pipettor is not connected"""
+        self.runtime_info_label.config(text="Connect to pipettor to enable parameter control", foreground='gray')
+
+        for widget in self.runtime_widgets:
+            widget.config(state='disabled')
+        self.set_params_button.config(state='disabled')
+
+    def set_runtime_parameters(self):
+        """Set runtime parameters on the connected pipettor"""
+        try:
+            # Check if pipettor exists
+            if not hasattr(self, 'pipettor') or self.pipettor is None:
+                messagebox.showerror("Error", "Pipettor is not connected")
+                return
+
+            # Validation rules for each parameter type
+            validation_rules = {
+                'x_speed': (1, 8, "X Speed"),
+                'y_speed': (1, 8, "Y Speed"),
+                'z_speed': (1, 8, "Z Speed"),
+                'aspirate_speed': (1, 6, "Aspirate Speed"),
+                'dispense_speed': (1, 6, "Dispense Speed"),
+            }
+
+            updated_params = []
+
+            # Process each runtime parameter
+            for key, var in self.runtime_vars.items():
+                value_str = var.get().strip()
+
+                if not value_str:
+                    continue  # Skip empty values
+
+                # Validate based on parameter type
+                if key in validation_rules:
+                    min_val, max_val, display_name = validation_rules[key]
+                    try:
+                        value = int(value_str)
+                        if value < min_val or value > max_val:
+                            raise ValueError(f"{display_name} must be between {min_val} and {max_val}")
+
+                        # Set the value on pipettor
+                        setattr(self.pipettor, key, value)
+                        updated_params.append(f"{display_name}: {value}")
+
+                    except ValueError as e:
+                        raise ValueError(f"Invalid {display_name}: {str(e)}")
+
+            if not updated_params:
+                messagebox.showinfo("Info", "No parameters were changed (all fields empty)")
+
+        except ValueError as e:
+            messagebox.showerror("Invalid Input", str(e))
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to set parameters:\n{str(e)}")
 
     def get_pipettor_status_text(self) -> str:
         """Get a readable status string for the pipettor"""
@@ -2147,28 +2152,3 @@ if __name__ == "__main__":
     # Run GUI
     gui = DeckGUI(deck)
     gui.run()
-"""
-if __name__ == "__main__":
-
-    # Load deck from Downloads
-    deck_file = os.path.expanduser("~/Downloads/deck1.json")
-
-    with open(deck_file, "r") as f:
-        data = json.load(f)
-
-    deck = Serializable.from_dict(data['deck'])
-
-    # Initialize pipettor as multichannel with 1000µL capacity
-    pipettor = PipettorPlus(
-        tip_volume=1000, multichannel=True, deck=deck,
-    )
-
-    # Run GUI
-    gui = DeckGUI(deck)
-    gui.pipettor = pipettor
-
-    if hasattr(gui, 'rebuild_operations_tab'):
-        gui.rebuild_operations_tab()
-
-    gui.run()
-"""

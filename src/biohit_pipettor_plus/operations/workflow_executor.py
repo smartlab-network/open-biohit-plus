@@ -298,21 +298,6 @@ class WorkflowExecutor:
             finally:
                 self.pipettor.change_tips = False
 
-        elif op_type == OperationType.SUCK:
-            labware = get_labware(params['labware']['id'])
-            self.pipettor.suck(
-                source=labware,
-                source_col_row=params['position'],
-                volume=params['volume']
-            )
-
-        elif op_type == OperationType.SPIT:
-            labware = get_labware(params['labware']['id'])
-            self.pipettor.spit(
-                destination=labware,
-                dest_col_row=params['position'],
-                volume=params['volume']
-            )
         elif op_type == OperationType.HOME:
             self.pipettor.home()
 

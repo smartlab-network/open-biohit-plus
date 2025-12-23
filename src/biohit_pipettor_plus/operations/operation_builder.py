@@ -197,34 +197,6 @@ class OperationBuilder:
         )
 
     @staticmethod
-    def build_suck(labware_id: str,labware_type: str, position: tuple[int, int], volume: float, channels: int) -> Operation:
-        """Build suck operation"""
-        return Operation(
-            operation_type=OperationType.SUCK,
-            description=f"Suck {volume}µL from {labware_id}",
-            parameters={
-                 'labware': {'id': labware_id, 'type': labware_type},
-                'position': position,
-                'volume': volume,
-                'channels': channels
-            }
-        )
-
-    @staticmethod
-    def build_spit(labware_id: str, labware_type: str, position: tuple[int, int], volume: float, channels: int) -> Operation:
-        """Build spit operation"""
-        return Operation(
-            operation_type=OperationType.SPIT,
-            description=f"Spit {volume}µL to {labware_id}",
-            parameters={
-                'labware': {'id': labware_id, 'type': labware_type},
-                'position': position,
-                'volume': volume,
-                'channels': channels
-            }
-        )
-
-    @staticmethod
     def build_home() -> Operation:
         """Build home operation"""
         return Operation(
