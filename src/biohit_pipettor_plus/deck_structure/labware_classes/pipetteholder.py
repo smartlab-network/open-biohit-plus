@@ -184,6 +184,12 @@ class PipetteHolder(Labware):
 
         individual_holder.remove_pipette()
 
+    def get_all_children(self) -> list[IndividualPipetteHolder]:
+        return list(self.__individual_holders.values())
+
+    def get_child_at(self, column: int, row: int) -> Optional[IndividualPipetteHolder]:
+        return self.__individual_holders.get((column, row))
+
     def place_consecutive_pipettes_multi(self, columns: list[int], row: int = 0) -> None:
         """
         Place pipettes in consecutive positions within specified columns for multichannel pipettor.

@@ -156,6 +156,13 @@ class Slot(Serializable):
         # If all checks pass, the function returns silently (None).
         return
 
+    def get_highest_z(self) -> float:
+        """Returns the maximum Z coordinate currently occupied in this slot."""
+        if not self.labware_stack:
+            return 0.0
+
+        # Extract the max_z (index 1 of the tuple) from all items in the stack
+        return max(zr[1] for _, zr in self.labware_stack.values())
 
     def to_dict(self) -> dict:
         """

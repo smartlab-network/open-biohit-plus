@@ -133,6 +133,14 @@ class ReservoirHolder(Labware):
         """Return list of available (empty) hook IDs."""
         return [hook_id for hook_id, res in self.__hook_to_reservoir.items() if res is None]
 
+    def get_all_children(self) -> list[Reservoir]:
+        return self.get_reservoirs()
+
+    def get_child_at(self, col: int, row: int) -> Optional[Reservoir]:
+        # Convert grid (col, row) to hook_id (1-indexed)
+        hook_id = self.position_to_hook_id(col, row)
+        return self.__hook_to_reservoir.get(hook_id)
+
     def get_occupied_hooks(self) -> list[int]:
         """Return list of occupied hook IDs."""
         return [hook_id for hook_id, res in self.__hook_to_reservoir.items() if res is not None]
@@ -251,6 +259,8 @@ class ReservoirHolder(Labware):
         rows = [pos[1] for pos in positions]
         reservoir.column = min(cols)  # Leftmost column
         reservoir.row = min(rows)  # Topmost row
+        reservoir.width_hooks = width_hooks
+        reservoir.height_hooks = height_hooks
 
         reservoir.labware_id = f"{self.labware_id}_{reservoir.column}:{reservoir.row}"
 

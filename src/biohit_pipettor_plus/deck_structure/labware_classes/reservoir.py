@@ -192,14 +192,10 @@ class Reservoir(Labware):
         dict
             Dictionary with detailed content information
         """
-        total_volume = self.get_total_volume()
         return {
-            "content_dict": self.content.copy(),
-            "total_volume": total_volume,
-            "available_capacity": self.get_available_volume(),
-            "is_empty": total_volume <= 0,
-            "is_full": total_volume >= self.capacity,
-            "content_summary": self.get_content_summary()
+            "content_summary": self.get_content_summary(),
+            "available_volume": self.get_available_volume(),
+            "total_capacity": self.capacity
         }
 
     def get_content_summary(self) -> str:
@@ -301,3 +297,14 @@ class Reservoir(Labware):
             position=position,
             shape=data.get("shape", None),
         )
+
+    @property
+    def grid_width(self) -> int:
+        """How many grid columns this reservoir occupies."""
+        # We use getattr to safely check if width_hooks was set during placement
+        return getattr(self, 'width_hooks', 1)
+
+    @property
+    def grid_height(self) -> int:
+        """How many grid rows this reservoir occupies."""
+        return getattr(self, 'height_hooks', 1)

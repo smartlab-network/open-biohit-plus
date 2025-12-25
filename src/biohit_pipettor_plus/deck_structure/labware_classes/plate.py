@@ -101,6 +101,12 @@ class Plate(Labware):
         """Get all wells in the plate."""
         return self.__wells
 
+    def get_all_children(self) -> list[Well]:
+        return list(self.__wells.values())
+
+    def get_child_at(self, column: int, row: int) -> Optional[Well]:
+        return self.__wells.get((column, row))
+
     def get_well_at(self, column: int, row: int) -> Optional[Well]:
         """
                 Get the well at a specific position.

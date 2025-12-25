@@ -215,14 +215,10 @@ class Well(Labware):
         dict
             Dictionary with detailed content information
         """
-        total_volume = self.get_total_volume()
         return {
-            "content_dict": self.content.copy(),
-            "total_volume": total_volume,
-            "available_capacity": self.get_available_volume(),
-            "is_empty": total_volume <= 0,
-            "is_full": total_volume >= self.capacity,
-            "content_summary": self.get_content_summary()
+            "content_summary": self.get_content_summary(),
+            "available_volume": self.get_available_volume(),
+            "total_capacity": self.capacity,
         }
 
     def get_content_summary(self) -> str:

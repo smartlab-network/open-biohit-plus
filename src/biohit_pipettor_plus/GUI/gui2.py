@@ -1,3 +1,4 @@
+#triple click to remove
 
 import tkinter as tk
 from tkinter import messagebox, filedialog, simpledialog
@@ -11,7 +12,7 @@ from .collapsible_frame import CollapsibleFrame
 from ..deck_structure import *
 from .function_window import FunctionWindow
 from ..pipettor_plus.pipettor_plus import PipettorPlus
-from .gui_dialogs import EditSlotDialog, EditLabwareDialog, AddLabwareToSlotDialog, CreateLabwareDialog, CreateSlotDialog,CreateLowLevelLabwareDialog, ViewChildrenLabwareDialog
+from .gui_dialogs import EditLabwareDialog, AddLabwareToSlotDialog, LabwareDialog, SlotDialog,CreateLowLevelLabwareDialog, ViewChildrenLabwareDialog
 
 
 class DeckGUI:
@@ -324,7 +325,7 @@ class DeckGUI:
                                 f"{labware.__class__.__name__} doesn't have child items to view")
             return
 
-        dialog = ViewChildrenLabwareDialog(self.root, labware)
+        dialog = ViewChildrenLabwareDialog(self.root, labware, pipettor=getattr(self, 'pipettor', None))
         self.root.wait_window(dialog)
 
         # Refresh main display after editing
@@ -1110,7 +1111,7 @@ class DeckGUI:
 
     def create_labware(self):
         """Open dialog to create new labware"""
-        dialog = CreateLabwareDialog(self.root, self.available_wells, self.available_reservoirs,
+        dialog = LabwareDialog(self.root, self.available_wells, self.available_reservoirs,
                                      self.available_individual_holders)
         self.root.wait_window(dialog)
 
@@ -1182,7 +1183,7 @@ class DeckGUI:
 
     def create_slot(self):
         """Open dialog to create a new slot"""
-        dialog = CreateSlotDialog(self.root)
+        dialog = SlotDialog(self.root)
         self.root.wait_window(dialog)
 
         if dialog.result:
@@ -1742,18 +1743,18 @@ class DeckGUI:
             messagebox.showwarning("No Selection", "Please select a slot to edit")
             return
 
-        # Get the slot object being edited
+        #Identify the slot object
         slot_index = selection[0]
         slot = self.unplaced_slots[slot_index]
 
-        dialog = EditSlotDialog(self.root, slot)
+        dialog = SlotDialog(self.root, slot=slot)
         self.root.wait_window(dialog)
 
+        # 3. Handle the result
         if dialog.result:
-            # 1. Update the listbox content to reflect changes (e.g., ID change)
-            # 2. Re-select the edited slot
+            # Refresh the UI list
             self.update_slots_list()
-            self.select_newly_created_slot(slot)
+            self.root.after_idle(lambda: self.select_newly_created_slot(slot))
 
     def delete_selected_unplaced_slot(self):
         """Delete selected unplaced slot"""
@@ -2143,7 +2144,7 @@ class DeckGUI:
         elif response is False:  # No - close without saving
             self.root.destroy()
         # None (Cancel) - do nothing, keep window open
-
+"""
 # Main entry point
 if __name__ == "__main__":
     # Create a sample deck for testing
@@ -2151,4 +2152,29 @@ if __name__ == "__main__":
 
     # Run GUI
     gui = DeckGUI(deck)
+    gui.run()
+"""
+
+if __name__ == "__main__":
+
+    # Load deck from Downloads
+    deck_file = os.path.expanduser("~/Downloads/deck1.json")
+
+    with open(deck_file, "r") as f:
+        data = json.load(f)
+
+    deck = Serializable.from_dict(data['deck'])
+
+    # Initialize pipettor as multichannel with 1000µL capacity
+    pipettor = PipettorPlus(
+        tip_volume=1000, multichannel=True, deck=deck,
+    )
+
+    # Run GUI
+    gui = DeckGUI(deck)
+    gui.pipettor = pipettor
+
+    if hasattr(gui, 'rebuild_operations_tab'):
+        gui.rebuild_operations_tab()
+
     gui.run()

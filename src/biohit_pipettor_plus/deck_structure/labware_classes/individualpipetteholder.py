@@ -87,6 +87,17 @@ class IndividualPipetteHolder(Labware):
 
         self.is_occupied = False
 
+    def get_content_info(self) -> dict:
+        """
+        Standardized content info for Pipette Holders.
+        Matches the return signature of Plate/Reservoir wells.
+        """
+        return {
+            "is_occupied": self.is_occupied,
+            "status_text": "✓ Tip Present" if self.is_occupied else "✗ Empty",
+        }
+
+
     def is_available(self) -> bool:
         """
         Check if this holder position is available for placing a pipette.
