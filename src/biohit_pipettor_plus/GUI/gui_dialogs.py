@@ -1110,7 +1110,6 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
                 self.update_edit_panel()
                 break
 
-    #todo use create_panel
     def update_edit_panel(self):
         """Rebuilds editor panel with separate Add and Remove sections."""
         for widget in self.controls_container.winfo_children():
