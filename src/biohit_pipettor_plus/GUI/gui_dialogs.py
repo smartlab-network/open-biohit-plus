@@ -296,6 +296,8 @@ class EditLabwareDialog(ScrollableDialog):
                         variable=self.can_be_stacked_upon_var).grid(row=5, column=0, columnspan=2, pady=10, sticky='w')
 
         # --- Specialized Heights ---
+        self.add_height_var = self.remove_height_var = self.drop_height_var = None
+
         if any(hasattr(self.labware, attr) for attr in ['add_height', 'remove_height', 'drop_height']):
             h_frame = ttk.Labelframe(tab, text="Process Heights", padding=10)
             h_frame.pack(fill=tk.X, pady=5)
@@ -306,8 +308,8 @@ class EditLabwareDialog(ScrollableDialog):
                 self.add_height_var = add_row(h_frame, "Add Liquid Height:", 0, self.labware.add_height)
             if hasattr(self.labware, 'remove_height'):
                 self.remove_height_var = add_row(h_frame, "Remove Liquid Height:", 1, self.labware.remove_height)
-            if hasattr(self.labware, 'drop_height'):
-                self.drop_height_var = add_row(h_frame, "Tip Drop Height:", 2, self.labware.drop_height)
+            if hasattr(self.labware, 'drop_height_relative'):
+                self.drop_height_var = add_row(h_frame, "Tip Drop Height:", 2, self.labware.drop_height_relative)
 
     def create_reservoir_management_tab(self):
         """Management tab using unified draw_labware_grid function"""
@@ -342,22 +344,24 @@ class EditLabwareDialog(ScrollableDialog):
 
     def on_grid_click(self, event):
         """Selection logic compatible with draw_labware_grid tags"""
-        item = self.hook_canvas.find_closest(event.x, event.y)
-        tags = self.hook_canvas.gettags(item)
+        items = self.hook_canvas.find_overlapping(event.x, event.y, event.x, event.y)
 
-        for tag in tags:
-            if "_" in tag and tag != "child":
-                c, r = map(int, tag.split("_"))
-                res = self.labware.get_child_at(c, r)
-                if res:
-                    self.selected_reservoir = res
-                    self.info_label.config(text=f"Selected: {res.labware_id} (Hooks: {res.hook_ids})",
-                                           foreground="blue")
-                else:
-                    self.selected_reservoir = None
-                    self.info_label.config(text="No reservoir selected", foreground="gray")
-                self.refresh_grid()
-                break
+        for item in items:
+            tags = self.hook_canvas.gettags(item)
+            if 'clickable_child' in tags:  # Look for the clickable rectangle
+                for tag in tags:
+                    if "_" in tag and tag != "clickable_child":
+                        c, r = map(int, tag.split("_"))
+                        res = self.labware.get_child_at(c, r)
+                        if res:
+                            self.selected_reservoir = res
+                            self.info_label.config(text=f"Selected: {res.labware_id} (Hooks: {res.hook_ids})",
+                                                   foreground="blue")
+                        else:
+                            self.selected_reservoir = None
+                            self.info_label.config(text="No reservoir selected", foreground="gray")
+                        self.refresh_grid()
+                        return  # Exit after first valid selection
 
     def add_reservoir_dialog(self):
         """Reuse existing dialog logic"""
@@ -616,9 +620,9 @@ class CreateLowLevelLabwareDialog(ScrollableDialog):
                 row_idx = start_r + 2 + i
                 t_v, v_v = tk.StringVar(), tk.StringVar()
 
-                ttk.Entry(spec_frame, textvariable=t_v, placeholder="Liquid Type").grid(
+                ttk.Entry(spec_frame, textvariable=t_v).grid(
                     row=row_idx, column=0, pady=2, padx=5, sticky='ew')
-                ttk.Entry(spec_frame, textvariable=v_v, placeholder="0.0").grid(
+                ttk.Entry(spec_frame, textvariable=v_v).grid(
                     row=row_idx, column=1, pady=2, padx=5, sticky='ew')
 
                 self.content_rows.append((t_v, v_v))
@@ -802,10 +806,7 @@ class AddLabwareToSlotDialog(ScrollableDialog):
         if slot_id in self.deck.slots:
             target_slot = self.deck.slots[slot_id]
             highest_z = target_slot.get_highest_z()
-
-            # Format to remove trailing zeros if it's a whole number (e.g., 10.0 -> 10)
-            formatted_z = int(highest_z) if highest_z.is_integer() else highest_z
-            self.form_vars['min_z'].set(str(formatted_z))
+            self.form_vars['min_z'].set(str(highest_z))
 
     def on_add(self):
         """Processes form data using the base class get_inputs helper."""
@@ -1100,15 +1101,18 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
 
     def on_canvas_click(self, event):
         """Identifies click and updates the right-hand panel."""
-        item = self.canvas.find_closest(event.x, event.y)
-        tags = self.canvas.gettags(item)
-        for tag in tags:
-            if "_" in tag and tag != "child":
-                col, row = map(int, tag.split("_"))
-                self.selected_child = self.labware.get_child_at(col, row)
-                self.refresh_view()
-                self.update_edit_panel()
-                break
+        items = self.canvas.find_overlapping(event.x, event.y, event.x, event.y)
+
+        for item in items:
+            tags = self.canvas.gettags(item)
+            if 'clickable_child' in tags:
+                for tag in tags:
+                    if "_" in tag and tag != "clickable_child":
+                        col, row = map(int, tag.split("_"))
+                        self.selected_child = self.labware.get_child_at(col, row)
+                        self.refresh_view()
+                        self.update_edit_panel()
+                        return
 
     def update_edit_panel(self):
         """Rebuilds editor panel with separate Add and Remove sections."""

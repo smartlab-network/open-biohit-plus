@@ -337,7 +337,7 @@ def draw_labware_grid(canvas, labware, selected_child=None, pad=40, min_cell=40,
             x1, y1, x2, y2, fill=color,
             outline='red' if is_sel else 'black',  # Bright Magenta for selection
             width=3 if is_sel else 1,
-            tags=('child', f"{child.column}_{child.row}")
+            tags=('clickable_child', f"{child.column}_{child.row}")
         )
 
         if label:

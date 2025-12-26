@@ -2557,7 +2557,9 @@ class FunctionWindow:
         # If single axis, return float. If multiple, return tuple.
         return final_values[0] if len(final_values) == 1 else tuple(final_values)
 
-    def ask_volume_dialog(self, title="Enter Volume", initial_value=0, label_text="Volume per well (ul):")-> float | None:
+    def ask_volume_dialog(self, title="Enter Volume", initial_value=0, label_text="Volume per well (ul):")-> Optional[float]:
+
+
         """
         Create a simple, focused dialog for numeric input.
 
