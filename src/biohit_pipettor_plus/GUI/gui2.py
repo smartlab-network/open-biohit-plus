@@ -1,5 +1,3 @@
-#triple click to remove
-
 import tkinter as tk
 from tkinter import messagebox, filedialog, simpledialog
 import ttkbootstrap as ttk
@@ -8,12 +6,12 @@ import os
 import datetime
 import string
 
-from .collapsible_frame import CollapsibleFrame
 from ..deck_structure import *
 from .function_window import FunctionWindow
 from ..pipettor_plus.pipettor_plus import PipettorPlus
 from .gui_dialogs import EditLabwareDialog, AddLabwareToSlotDialog, LabwareDialog, SlotDialog,CreateLowLevelLabwareDialog, ViewChildrenLabwareDialog
-
+from .ui_helper import (create_form,create_button_bar,create_scrolled_listbox,CollapsibleFrame, create_managed_list_section,
+                        update_detailed_info_text,draw_labware_grid,ScrollableTab, create_info_panel)
 
 class DeckGUI:
     def __init__(self, deck=None):
@@ -49,17 +47,209 @@ class DeckGUI:
         self.labware_view_mode = tk.StringVar(value="unplaced")  # "placed" or "unplaced"
         self.foc_bat_script_path = None
 
+        # (Label, Key, Type, Default, Options, Validation)
+        self.runtime_param_definitions = [
+            ("X Speed (1-8):", "x_speed", "entry", "7", None, "numeric"),
+            ("Y Speed (1-8):", "y_speed", "entry", "7", None, "numeric"),
+            ("Z Speed (1-8):", "z_speed", "entry", "5", None, "numeric"),
+            ("Aspirate (1-6):", "aspirate_speed", "entry", "1", None, "numeric"),
+            ("Dispense (1-6):", "dispense_speed", "entry", "1", None, "numeric"),
+        ]
+
+        self.lll_mapping = {
+            "Well": self.available_wells,
+            "Reservoir": self.available_reservoirs,
+            "IndividualPipetteHolder": self.available_individual_holders,
+            # map the actual Classes for dialog results
+            Well: self.available_wells,
+            Reservoir: self.available_reservoirs,
+            IndividualPipetteHolder: self.available_individual_holders
+        }
+
+        # Initialize a dictionary to hold the StringVars for these parameters
+        self.runtime_vars = {}
+
+
         self.setup_ui()
         # Delay initial draw until window is fully rendered
         self.root.after(500, lambda: self.draw_deck(auto_scale=True))
 
     def setup_ui(self):
-        # Menu bar
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+        self._create_menubar()
 
+        main_frame = ttk.Frame(self.root)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # --- Left Panel: Canvas ---
+        self._create_canvas_area(main_frame)
+
+        # --- Right Panel: Notebook ---
+        right_panel = ttk.Frame(main_frame, width=400)
+        right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, padx=5, pady=5)
+        right_panel.pack_propagate(False)
+
+        self.right_panel_notebook = ttk.Notebook(right_panel)
+        self.right_panel_notebook.pack(fill=tk.BOTH, expand=True)
+
+        # ===== TAB 1: DECK EDITOR =====
+        deck_tab = ttk.Frame(self.right_panel_notebook)
+        self.right_panel_notebook.add(deck_tab, text="Deck Editor")
+
+        scroll_view = ScrollableTab(deck_tab)
+        root = scroll_view.content_frame
+
+        # 1. Deck Info (Collapsible)
+        self.deck_info_collapsible = CollapsibleFrame(root, text="Deck Info")
+        self.deck_info_collapsible.pack(fill=tk.X, pady=5, padx=5)
+        self.deck_info_label = ttk.Label(self.deck_info_collapsible.content_frame, text="", padding=10)
+        self.deck_info_label.pack(fill=tk.X)
+
+        # 2. Selection Info (Standardized)
+        self.info_panel, self.info_text = create_info_panel(
+            root,
+            title="Selection Info",
+            clear_cmd=self.clear_selection
+        )
+
+        # 3. Slots Section (Modularized)
+        create_managed_list_section(
+            instance=self,
+            parent=root,
+            title="Slots",
+            var=self.slot_view_mode,
+            list_attr="slots_listbox",
+            btn_frame_attr="slots_button_frame",
+            select_cmd=lambda e: self.on_item_select('slot'),
+            update_cmd=lambda: self.update_item_list('slot')
+        )
+
+        # 4. Labware Section (Modularized)
+        create_managed_list_section(
+            instance=self,
+            parent=root,
+            title="Labware",
+            var=self.labware_view_mode,
+            list_attr="labware_listbox",
+            btn_frame_attr="labware_button_frame",
+            select_cmd=lambda e: self.on_item_select('labware'),
+            update_cmd=lambda: self.update_item_list('labware')
+        )
+
+        self.slots_listbox.bind('<Double-Button-1>', lambda e: self.on_item_double_click(e, 'slot'))
+        self.labware_listbox.bind('<Double-Button-1>', lambda e: self.on_item_double_click(e, 'labware'))
+
+        # Initialize Other Tabs
+        self.create_low_level_para_tab()
+        self.create_operations_tab()
+
+    def create_low_level_para_tab(self):
+        """Create the Low Level Parameters tab using helper components."""
+        tab_container = ttk.Frame(self.right_panel_notebook)
+        self.right_panel_notebook.add(tab_container, text="Low level parameters")
+
+        # 1. Initialize the ScrollableTab (Replaces ~40 lines of manual canvas code)
+        scroll_view = ScrollableTab(tab_container)
+        root = scroll_view.content_frame
+
+        # 2. Selection Info Section (Using a standardized layout)
+        self.info_panel, self.create_info_text = create_info_panel(
+            root,
+            title="Selection Info",
+            clear_cmd=self.clear_selection,
+            collapsed=False
+        )
+        # 3. Low-Level Labware Section
+        self.low_level_collapsible = CollapsibleFrame(root, text="Low-Level Labware", collapsed=False)
+        self.low_level_collapsible.pack(fill=tk.X, pady=5, padx=5)
+
+        lll_inner = ttk.Frame(self.low_level_collapsible.content_frame, padding=10)
+        lll_inner.pack(fill=tk.X)
+
+        # Radio Selection using a loop
+        self.lll_type = tk.StringVar(value="")
+        for lll_t in ["Well", "Reservoir", "IndividualPipetteHolder"]:
+            ttk.Radiobutton(lll_inner, text=lll_t, variable=self.lll_type,
+                            value=lll_t, command= lambda : self.update_item_list('lll')).pack(anchor=tk.W, pady=2)
+
+        self.lll_listbox, lll_container = create_scrolled_listbox(lll_inner, [], label_text="", height=6)
+        self.lll_listbox.bind('<<ListboxSelect>>', lambda e: self.on_item_select('lll'))
+
+        self.lll_button_frame = ttk.Frame(lll_inner)
+        self.lll_button_frame.pack(fill=tk.X, pady=5)
+        self.update_item_buttons('lll')
+
+        # 4. FOC Configuration
+        foc_section = ttk.Labelframe(root, text="FOC Configuration", padding=15)
+        foc_section.pack(fill=tk.X, pady=5, padx=5)
+
+        self.foc_config_status_label = ttk.Label(foc_section, text="Status: Not configured", foreground='gray')
+        self.foc_config_status_label.pack(anchor='w', pady=5)
+
+        ttk.Button(foc_section, text="Open FOC Script Location", command=self.configure_foc_script).pack(fill=tk.X)
+
+        # 5. Pipettor Configuration
+        pip_section = ttk.Labelframe(root, text="Pipettor Configuration", padding=15)
+        pip_section.pack(fill=tk.X, pady=5, padx=5)
+
+        # Tip Volume Frame
+        vol_frame = ttk.Frame(pip_section)
+        vol_frame.pack(fill=tk.X)
+        ttk.Label(vol_frame, text="Tip Volume:").pack(side=tk.LEFT)
+        self.tip_volume_var = tk.IntVar(value=200)
+        for v in [200, 1000]:
+            ttk.Radiobutton(vol_frame, text=f"{v} µL", variable=self.tip_volume_var, value=v).pack(side=tk.LEFT, padx=5)
+
+        length_frame = ttk.Frame(pip_section)
+        length_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(length_frame, text="Tip Length (mm) [Optional]:").pack(side=tk.LEFT)
+        self.tip_length_var = tk.StringVar()
+        ttk.Entry(length_frame, textvariable=self.tip_length_var, width=10).pack(side=tk.LEFT, padx=5)
+
+        # Checkboxes
+        self.multichannel_var = tk.BooleanVar(value=False)
+        self.initialize_hw_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(pip_section, text="Multichannel", variable=self.multichannel_var).pack(anchor='w', pady=5)
+        ttk.Checkbutton(pip_section, text="Initialize on connect", variable=self.initialize_hw_var).pack(anchor='w',
+                                                                                                         pady=5)
+
+        self.pipettor_status_label = ttk.Label(pip_section, text="", foreground="gray")
+        self.pipettor_status_label.pack(pady=5)
+        ttk.Button(pip_section, text="Connect to Pipettor", command=self.initialize_pipettor).pack(fill=tk.X)
+
+        # 6. Runtime Parameters
+        self.runtime_collapsible = CollapsibleFrame(root, text="Runtime Parameters")
+        self.runtime_collapsible.pack(fill=tk.X, pady=5, padx=5)
+
+        # Get the internal container for our widgets
+        runtime_inner = self.runtime_collapsible.content_frame
+
+        self.runtime_vars, self.runtime_widgets = create_form(
+            runtime_inner,
+            self.runtime_param_definitions,
+            field_width=10,
+            return_widgets=True
+        )
+
+        self.set_params_button = ttk.Button(
+            runtime_inner,
+            text="Set Parameters",
+            command=self.set_runtime_parameters,
+            state='disabled'
+        )
+
+        self.set_params_button.grid(
+            row=len(self.runtime_param_definitions),
+            column=0,
+            columnspan=2,
+            sticky='ew',
+            pady=10
+        )
+
+    def _create_menubar(self):
+        # Menu bar
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
-
 
         # File menu
         file_menu = tk.Menu(menubar, tearoff=0)
@@ -71,236 +261,380 @@ class DeckGUI:
         file_menu.add_command(label="Exit", command=self.root.quit)
 
         # View menu
+
         view_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="View", menu=view_menu)
         view_menu.add_command(label="Refresh", command=lambda: self.draw_deck(auto_scale=True))
-        view_menu.add_command(label="Zoom In", command=self.zoom_in)
-        view_menu.add_command(label="Zoom Out", command=self.zoom_out)
+        view_menu.add_command(label="Zoom In", command=lambda: (setattr(self, 'scale', self.scale * 1.2)
+                                                                    , self.draw_deck()))
+        view_menu.add_command(label="Zoom Out", command=lambda: (setattr(self, 'scale', self.scale * 0.8),
+                                                                 self.draw_deck()))
 
-        # Main layout
-        main_frame = ttk.Frame(self.root)
-        main_frame.pack(fill=tk.BOTH, expand=True)
-
-        # Left panel - Canvas
-        canvas_frame = ttk.Frame(main_frame)
+    def _create_canvas_area(self, parent):
+        """Creates the left-side canvas with scrollbars."""
+        canvas_frame = ttk.Frame(parent)
         canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # Canvas with scrollbars
+        # 1. Create the Canvas
         self.canvas = tk.Canvas(
             canvas_frame,
             bg='white',
             scrollregion=(0, 0, 2000, 2000)
         )
 
+        # 2. Add Scrollbars
         h_scroll = ttk.Scrollbar(canvas_frame, orient=tk.HORIZONTAL, command=self.canvas.xview)
         v_scroll = ttk.Scrollbar(canvas_frame, orient=tk.VERTICAL, command=self.canvas.yview)
 
+        # 3. Connect Canvas to Scrollbars
         self.canvas.configure(xscrollcommand=h_scroll.set, yscrollcommand=v_scroll.set)
 
+        # 4. Layout using Grid (better for scrollbar alignment)
         self.canvas.grid(row=0, column=0, sticky='nsew')
         h_scroll.grid(row=1, column=0, sticky='ew')
         v_scroll.grid(row=0, column=1, sticky='ns')
 
+        # Ensure the canvas expands to fill the frame
         canvas_frame.grid_rowconfigure(0, weight=1)
         canvas_frame.grid_columnconfigure(0, weight=1)
 
-        # Right panel - Tabbed interface
-        right_panel_container = ttk.Frame(main_frame, width=400)
-        right_panel_container.pack(side=tk.RIGHT, fill=tk.BOTH, padx=5, pady=5)
-        right_panel_container.pack_propagate(False)
-
-        # Create notebook (tabs) for right panel
-        self.right_panel_notebook = ttk.Notebook(right_panel_container)
-        self.right_panel_notebook.pack(fill=tk.BOTH, expand=True)
-
-        # ===== TAB 1: DECK EDITOR =====
-        deck_editor_tab = ttk.Frame(self.right_panel_notebook)
-        self.right_panel_notebook.add(deck_editor_tab, text="Deck Editor")
-
-        # Create canvas and scrollbar for deck editor tab
-        deck_canvas = tk.Canvas(deck_editor_tab, bg='#f0f0f0', highlightthickness=0)
-        deck_scrollbar = ttk.Scrollbar(deck_editor_tab, orient=tk.VERTICAL, command=deck_canvas.yview)
-
-        # Create a frame inside the canvas to hold all the controls
-        control_frame = ttk.Frame(deck_canvas)
-
-        # Configure canvas scrolling
-        deck_canvas.configure(yscrollcommand=deck_scrollbar.set)
-
-        # Pack scrollbar and canvas
-        deck_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        deck_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        # Create window in canvas to hold the frame
-        deck_canvas_window = deck_canvas.create_window((0, 0), window=control_frame, anchor='nw')
-
-        # Configure scrolling region when frame size changes
-        def configure_deck_scroll_region(event=None):
-            deck_canvas.configure(scrollregion=deck_canvas.bbox("all"))
-            # Make sure the frame fills the canvas width
-            canvas_width = deck_canvas.winfo_width()
-            if canvas_width > 1:  # Only update if canvas has been drawn
-                deck_canvas.itemconfig(deck_canvas_window, width=canvas_width)
-
-        control_frame.bind('<Configure>', configure_deck_scroll_region)
-        deck_canvas.bind('<Configure>', configure_deck_scroll_region)
-
-        # Enable mousewheel scrolling
-        def on_deck_mousewheel(event):
-            deck_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-
-        def bind_deck_mousewheel(event):
-            deck_canvas.bind_all("<MouseWheel>", on_deck_mousewheel)
-
-        def unbind_deck_mousewheel(event):
-            deck_canvas.unbind_all("<MouseWheel>")
-
-        deck_canvas.bind('<Enter>', bind_deck_mousewheel)
-        deck_canvas.bind('<Leave>', unbind_deck_mousewheel)
-
-        # Deck info
-        self.deck_info_collapsible = CollapsibleFrame(control_frame, text="Deck Info")
-        self.deck_info_collapsible.pack(fill=tk.X, pady=5, padx=5)
-
-        # Content inside collapsible frame
-        self.deck_info_label = ttk.Label(
-            self.deck_info_collapsible.content_frame,
-            text="",
-            justify=tk.LEFT,
-            padding=10
-        )
-        self.deck_info_label.pack(fill=tk.X, anchor='w')
-        # Info panel
-        self.info_frame = ttk.Labelframe(control_frame, text="Selection Info", padding=10)
-        self.info_frame.pack(fill=tk.BOTH, pady=5, padx=5)
-
-        self.info_text = tk.Text(self.info_frame, height=10, wrap=tk.WORD)
-        self.info_text.pack(fill=tk.BOTH, expand=True)
-
-        # Control buttons
-        btn_frame = ttk.Frame(control_frame)
-        btn_frame.pack(fill=tk.X, pady=5, padx=5)
-
-        ttk.Button(btn_frame, text="Refresh", command=lambda: self.draw_deck(auto_scale=True)).pack(fill=tk.X, pady=2)
-        ttk.Button(btn_frame, text="Clear Selection", command=self.clear_selection).pack(fill=tk.X, pady=2)
-
-        # ===== SLOTS SECTION WITH TOGGLE =====
-        slots_main_frame = ttk.Labelframe(control_frame, text="Slots", padding=10)
-        slots_main_frame.pack(fill=tk.X, pady=5, padx=5)
-
-        # View mode selector
-        view_selector_frame = ttk.Frame(slots_main_frame)
-        view_selector_frame.pack(fill=tk.X, pady=(0, 5))
-
-        ttk.Radiobutton(
-            view_selector_frame,
-            text="Placed",
-            variable=self.slot_view_mode,
-            value="placed",
-            command=self.update_slots_list
-        ).pack(side=tk.LEFT, padx=5)
-
-        ttk.Radiobutton(
-            view_selector_frame,
-            text="Unplaced",
-            variable=self.slot_view_mode,
-            value="unplaced",
-            command=self.update_slots_list
-        ).pack(side=tk.LEFT, padx=5)
-
-        # Single listbox for both placed and unplaced
-        self.slots_listbox = tk.Listbox(slots_main_frame, height=6)
-        self.slots_listbox.pack(fill=tk.X)
-        self.slots_listbox.bind('<<ListboxSelect>>', self.on_slot_select)
-        self.slots_listbox.bind('<Double-Button-1>', self.on_slot_double_click)
-
-        # Buttons frame that changes based on view mode
-        self.slots_button_frame = ttk.Frame(slots_main_frame)
-        self.slots_button_frame.pack(fill=tk.X, pady=(5, 0))
-
-        # We'll update this dynamically
-        self.update_slots_buttons()
-
-        # ===== LABWARE SECTION WITH TOGGLE =====
-        labware_main_frame = ttk.Labelframe(control_frame, text="Labware", padding=10)
-        labware_main_frame.pack(fill=tk.X, pady=5, padx=5)
-
-        # View mode selector
-        labware_view_selector_frame = ttk.Frame(labware_main_frame)
-        labware_view_selector_frame.pack(fill=tk.X, pady=(0, 5))
-
-        ttk.Radiobutton(
-            labware_view_selector_frame,
-            text="Placed",
-            variable=self.labware_view_mode,
-            value="placed",
-            command=self.update_labware_list
-        ).pack(side=tk.LEFT, padx=5)
-
-        ttk.Radiobutton(
-            labware_view_selector_frame,
-            text="Unplaced",
-            variable=self.labware_view_mode,
-            value="unplaced",
-            command=self.update_labware_list
-        ).pack(side=tk.LEFT, padx=5)
-
-        # Single listbox for both placed and unplaced
-        self.labware_listbox = tk.Listbox(labware_main_frame, height=6)
-        self.labware_listbox.pack(fill=tk.X)
-        self.labware_listbox.bind('<<ListboxSelect>>', self.on_labware_select)
-        self.labware_listbox.bind('<Double-Button-1>', self.on_labware_double_click)
-
-        # Buttons frame that changes based on view mode
-        self.labware_button_frame = ttk.Frame(labware_main_frame)
-        self.labware_button_frame.pack(fill=tk.X, pady=(5, 0))
-
-        # update this dynamically
-        self.update_labware_buttons()
-
-        # Canvas bindings
-        self.canvas.bind("<Button-1>", self.on_canvas_fallback_click)
+        # 5. Canvas bindings
         self.canvas.bind("<Triple-Button-1>", self.on_canvas_triple_click)
 
-        # Create the Create tab in the right panel
-        self.create_low_level_para_tab()
-        self.create_operations_tab()
-
-    def update_slots_buttons(self):
-        """Update buttons based on current slot view mode"""
-        # Clear existing buttons
-        for widget in self.slots_button_frame.winfo_children():
-            widget.destroy()
-
-        if self.slot_view_mode.get() == "placed":
-            # Show "Unplace Slot" button for placed slots
-            ttk.Button(
-                self.slots_button_frame,
-                text="Unplace Slot",
-                command=self.unplace_selected_slot
-            ).pack(fill=tk.X, pady=2)
+    def get_context(self, category):
+        """Returns the correct variables and lists for 'slot' or 'labware'."""
+        if category == 'slot':
+            return {
+                'view_mode': self.slot_view_mode.get(),
+                'listbox': self.slots_listbox,
+                'btn_frame': self.slots_button_frame,
+                'unplaced_list': self.unplaced_slots,
+                'deck_dict': self.deck.slots,
+                'id_attr': 'slot_id',
+                'prefix': 'slot_',
+                'modules': ['slot']
+            }
+        elif category == 'lll':
+            return {
+                'view_mode': 'unplaced',  # LLL is always unplaced
+                'listbox': self.lll_listbox,
+                'btn_frame': self.lll_button_frame,
+                'unplaced_list': self.get_target_lll_list(),  # Dynamic based on radio
+                'deck_dict': {},  # LLL never placed on deck
+                'id_attr': 'labware_id',
+                'prefix': 'lll_',
+                'modules': ['basic', 'physical', 'content']  # Info display modules for LLL
+            }
         else:
-            # Show "Place Slot", "Edit", and "Delete" buttons for unplaced slots
-            ttk.Button(
-                self.slots_button_frame,
-                text="Place on Deck",
-                command=self.place_selected_unplaced_slot
-            ).pack(fill=tk.X, pady=2)
-            ttk.Button(
-                self.slots_button_frame,
-                text="Edit",
-                command=self.edit_selected_unplaced_slot
-            ).pack(fill=tk.X, pady=2)
-            ttk.Button(
-                self.slots_button_frame,
-                text="Create Slot",
-                command=self.create_slot
-            ).pack(fill=tk.X, pady=2)
-            ttk.Button(
-                self.slots_button_frame,
-                text="Delete",
-                command=self.delete_selected_unplaced_slot
-            ).pack(fill=tk.X, pady=2)
+            return {
+                'view_mode': self.labware_view_mode.get(),
+                'listbox': self.labware_listbox,
+                'btn_frame': self.labware_button_frame,
+                'unplaced_list': self.unplaced_labware,
+                'deck_dict': self.deck.labware,
+                'id_attr': 'labware_id',
+                'prefix': 'labware_',
+                'modules': ['basic','physical', 'content', 'parent']
+            }
+
+    def unplace_item(self, category, item_id=None):
+        ctx = self.get_context(category)
+
+        # 1. Get ID from listbox if not provided by canvas
+        if item_id is None:
+            selection = ctx['listbox'].curselection()
+            if not selection: return
+            item_id = ctx['listbox'].get(selection[0]).split(' (')[0]
+
+        # 2. Safety Check: Is it actually on the deck?
+        if item_id not in ctx['deck_dict']:
+            return
+
+        # 3. Use the Deck's own logic to remove it
+        try:
+            if category == 'slot':
+                # Slots are special because they might contain labware
+                obj, released_children = self.deck.remove_slot(item_id, unplace_labware=True)
+                self.unplaced_slots.append(obj)
+                self.unplaced_labware.extend(released_children)
+            else:
+                obj = self.deck.remove_labware(item_id)
+                self.unplaced_labware.append(obj)
+
+            # 4. Global UI Refresh (Much more efficient than manual canvas deletes)
+            self.draw_deck()
+            self.update_item_list('slot')
+            self.update_item_list('labware')
+
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def update_item_list(self, category):
+        """Unified method to update listboxes and buttons for slots or labware or lll."""
+        ctx = self.get_context(category)
+
+        # For LLL, refresh the dynamic list
+        if category == 'lll':
+            ctx['unplaced_list'] = self.get_target_lll_list()
+
+        lb = ctx['listbox']
+
+        # 1. Clear the listbox
+        lb.delete(0, tk.END)
+
+        # 2. Update the dynamic buttons
+        self.update_item_buttons(category)
+
+        # 3. Populate based on mode
+        if ctx['view_mode'] == "placed":
+            # Sort and insert keys from self.deck.slots or self.deck.labware
+            for item_id in sorted(ctx['deck_dict'].keys()):
+                lb.insert(tk.END, item_id)
+        else:
+            # Insert IDs from self.unplaced_slots or self.unplaced_labware
+            id_attr = ctx['id_attr']
+            for item in ctx['unplaced_list']:
+                lb.insert(tk.END, getattr(item, id_attr))
+
+        if lb.size() > 0:  # If listbox has any items
+            lb.selection_set(0)  # Visually highlight the first item (index 0)
+            self.root.after_idle(lambda: self.select_item(category))
+        else:
+            # Clear info panel if no items
+            update_detailed_info_text(self.create_info_text, obj=None)
+            update_detailed_info_text(self.info_text, obj=None)
+
+    def delete_item(self, category):
+        """Unified delete for unplaced Slots or Labware or lll."""
+        ctx = self.get_context(category)
+
+        if category == 'lll':
+            ctx['unplaced_list'] = self.get_target_lll_list()
+
+        selection = ctx['listbox'].curselection()
+
+        if not selection:
+            messagebox.showwarning("No Selection", f"Please select a {category} to delete")
+            return
+
+        if not ctx['unplaced_list']:
+            return
+
+        obj = ctx['unplaced_list'][selection[0]]
+        obj_id = getattr(obj, ctx['id_attr'])
+
+        if messagebox.askyesno("Confirm", f"Delete {category} '{obj_id}'?"):
+            ctx['unplaced_list'].remove(obj)
+            self.update_item_list(category)
+
+        # Clear info panel
+        update_detailed_info_text(self.create_info_text, obj=None)
+        update_detailed_info_text(self.info_text, obj=None)
+
+    def select_item(self, category, item_id=None, event=None):
+        """Unified selection handler for canvas clicks AND listbox selections."""
+        ctx = self.get_context(category)
+
+        # Refresh LLL list if needed
+        if category == 'lll':
+            ctx['unplaced_list'] = self.get_target_lll_list()
+
+        # === CANVAS CLICK PATH (item_id provided) ===
+        if item_id is not None:
+
+            # Switch to placed view ONLY if needed (prevents loop!)
+            self.clear_selection()
+            needs_mode_switch = False
+            if category == 'slot' and self.slot_view_mode.get() != "placed":
+                self.slot_view_mode.set("placed")
+                needs_mode_switch = True
+            elif category == 'labware' and self.labware_view_mode.get() != "placed":
+                self.labware_view_mode.set("placed")
+                needs_mode_switch = True
+
+            # Only update list if we switched modes
+            if needs_mode_switch:
+                self.update_item_list(category)
+                # Re-fetch context after update
+                ctx = self.get_context(category)
+
+            # Get object and highlight
+            obj = ctx['deck_dict'].get(item_id)
+            if not obj:
+                return
+
+            # Highlight on canvas
+            self.selected_item = (category, item_id)
+            color = 'darkblue' if category == 'slot' else 'darkred'
+            tag = f"{ctx['prefix']}{item_id}"
+
+            for item in self.canvas.find_withtag(tag):
+                itype = self.canvas.type(item)
+                if itype in ('rectangle', 'oval', 'polygon', 'line'):
+                    self.canvas.itemconfig(item, width=4, outline=color)
+                elif itype == 'text':
+                    self.canvas.itemconfig(item, fill=color, font=('Arial', 10, 'bold'))
+
+            # Sync listbox
+            lb = ctx['listbox']
+            lb.selection_clear(0, tk.END)
+            for i in range(lb.size()):
+                if lb.get(i).split(' (')[0] == item_id:
+                    lb.selection_set(i)
+                    lb.activate(i)
+                    lb.see(i)
+                    break
+
+        # === LISTBOX SELECTION PATH (no item_id) ===
+        else:
+            selection = ctx['listbox'].curselection()
+
+            if not selection:
+                update_detailed_info_text(self.create_info_text, obj=None)
+                update_detailed_info_text(self.info_text, obj=None)
+                return
+
+            # Get item based on view mode
+            if ctx['view_mode'] == "placed":
+                # Recursively call ourselves with the item_id
+                item_id = ctx['listbox'].get(selection[0]).split(' (')[0]
+                self.select_item(category, item_id=item_id)
+                return
+            else:
+                # Unplaced item - just show info
+                if not ctx['unplaced_list']:  # ← Add safety check
+                    update_detailed_info_text(self.create_info_text, obj=None)
+                    update_detailed_info_text(self.info_text, obj=None)
+                    return
+                obj = ctx['unplaced_list'][selection[0]]
+
+        # === COMMON: Update Info Panel ===
+        modules = ctx.get('modules', ['basic', 'physical', 'content'])
+        update_detailed_info_text(self.create_info_text, obj=obj, modules=modules)
+        update_detailed_info_text(self.info_text, obj=obj, modules=modules)
+
+    def place_selected_item(self, category):
+        """Unified method to place unplaced Slots or Labware onto the deck."""
+        ctx = self.get_context(category)
+        selection = ctx['listbox'].curselection()
+
+        if not selection:
+            messagebox.showwarning("No Selection", f"Please select a {category} to place")
+            return
+
+        # 1. Get the object from the correct unplaced list
+        obj = ctx['unplaced_list'][selection[0]]
+        obj_id = getattr(obj, ctx['id_attr'])
+
+        # 2. Category-Specific Placement Logic
+        try:
+            if category == 'slot':
+                # Check if slot ID already exists
+                if obj_id in self.deck.slots:
+                    raise ValueError(f"Slot '{obj_id}' already exists on deck")
+
+                self.deck.add_slots([obj])
+                self.unplaced_slots.remove(obj)
+            else:
+                self.place_labware(obj)
+
+            # 3. Global Refresh
+            self.draw_deck()
+            self.update_item_list(category)
+            if hasattr(self, 'update_operations_tab'):
+                self.update_operations_tab()
+
+        except Exception as e:
+            messagebox.showerror("Placement Error", str(e))
+
+    def update_item_buttons(self, category):
+        """Unified method to refresh ALL buttons for Slots or Labware based on view mode."""
+        ctx = self.get_context(category)
+        mode = ctx['view_mode']
+
+        # 1. Define configurations including ALL original buttons
+        if category == 'slot':
+            if mode == "placed":
+                configs = [
+                    {"text": "Unplace Slot", "command": lambda: self.unplace_item('slot'), "style": "Action.TButton"}
+                ]
+            else:
+                configs = [
+                    {"text": "Place on Deck", "command": lambda: self.place_selected_item('slot')},
+                    {"text": "Edit", "command": lambda: self.edit_selected_item('slot')},
+                    {"text": "Create Slot", "command": self.create_slot},
+                    {"text": "Delete", "command": lambda: self.delete_item('slot'), "style": "Danger.TButton"}
+                ]
+        elif category == 'lll':  # ← ADD THIS CASE
+            configs = [
+                {"text": "Create Low-Level Lw", "command": self.create_low_level_labware},
+                {"text": "Delete", "command": lambda: self.delete_item('lll'), "style": "Danger.TButton"}
+            ]
+
+        else:  # labware
+            if mode == "placed":
+                configs = [
+                    {"text": "Unplace Lw", "command": lambda: self.unplace_item('labware')},
+                    {"text": "Edit Children Lw", "command": self.view_children_labware}
+                ]
+            else:
+                configs = [
+                    {"text": "Place on Slot on Deck", "command": lambda: self.place_selected_item('labware')},
+                    {"text": "Edit", "command": lambda: self.edit_selected_item('labware')},
+                    {"text": "View Children Labware", "command": self.view_children_labware},
+                    {"text": "Create", "command": self.create_labware},
+                    {"text": "Delete", "command": lambda: self.delete_item('labware'), "style": "Danger.TButton"}
+                ]
+
+        # 2. Refresh the UI
+        # Clear the specific frame created by create_managed_list_section
+        for child in ctx['btn_frame'].winfo_children():
+            child.destroy()
+
+        # 3. Create the buttons using your flexible helper
+        _, buttons_dict = create_button_bar(
+            parent=ctx['btn_frame'],
+            button_configs=configs,
+            orientation="vertical",
+            fill=True,
+            btns_per_row=2
+        )
+
+    def edit_selected_item(self, category):
+        """Unified method to edit unplaced Slots or Labware."""
+        ctx = self.get_context(category)
+        selection = ctx['listbox'].curselection()
+
+        if not selection:
+            messagebox.showwarning("No Selection", f"Please select a {category} to edit")
+            return
+
+        # 1. Identify the object
+        index = selection[0]
+        obj = ctx['unplaced_list'][index]
+
+        # 2. Determine which Dialog to open
+        if category == 'slot':
+            dialog = SlotDialog(self.root, slot=obj)
+        else:
+            # Labware editing often needs the available reservoirs list for mapping
+            dialog = EditLabwareDialog(self.root, obj, self.available_reservoirs)
+
+        self.root.wait_window(dialog)
+
+        # 3. Handle the result
+        if dialog.result:
+            # Refresh the  list and reselect item
+            self.update_item_list(category)
+            self.root.after_idle(lambda: self.select_item(category, getattr(obj, ctx['id_attr'])))
+
+    def on_item_select(self, category, event=None):
+        """Unified selection handler for slot, labware, and LLL listboxes"""
+        self.select_item(category, event=event)
+
+    def get_target_lll_list(self):
+        """Helper to return the list based on the current radio selection."""
+        return self.lll_mapping.get(self.lll_type.get(), [])
 
     def view_children_labware(self):
         """Open viewer for child labware items (works for both placed and unplaced)"""
@@ -320,351 +654,81 @@ class DeckGUI:
             return
 
         # Only works for composite labware
-        if not isinstance(labware, (Plate, ReservoirHolder, PipetteHolder)):
+        if not hasattr(labware, "_rows") and not hasattr(labware, "_cols"):
             messagebox.showinfo("Not Applicable",
                                 f"{labware.__class__.__name__} doesn't have child items to view")
             return
 
         dialog = ViewChildrenLabwareDialog(self.root, labware, pipettor=getattr(self, 'pipettor', None))
         self.root.wait_window(dialog)
+        self.draw_deck()
 
-        # Refresh main display after editing
-        if self.labware_view_mode.get() == "placed":
-            self.draw_deck()
+    def create_low_level_labware(self):
+        """Open dialog to create low-level labware components and update UI."""
 
-    def update_labware_buttons(self):
-        """Update buttons based on current labware view mode"""
-        # Clear existing buttons
-        for widget in self.labware_button_frame.winfo_children():
-            widget.destroy()
+        # Get the currently selected type from radio buttons
+        selected_type = self.lll_type.get()
+        dialog = CreateLowLevelLabwareDialog(self.root, initial_type=selected_type)
+        self.root.wait_window(dialog)
 
-        if self.labware_view_mode.get() == "placed":
-            # Show "Unplace Labware" button for placed labware
-            ttk.Button(
-                self.labware_button_frame,
-                text="Unplace Labware",
-                command=self.unplace_selected_labware
-            ).pack(fill=tk.X, pady=2)
-            ttk.Button(
-                self.labware_button_frame,
-                text=" View and Edit Children Labware",
-                command=self.view_children_labware
-            ).pack(fill=tk.X, pady=2)
+        if dialog.result:
+            target_list = self.lll_mapping.get(type(dialog.result))
+            if target_list is not None:
+                target_list.append(dialog.result)
+                self.update_item_list('lll')
 
-        else:
-            # Show "Place on Slot", "Edit", and "Delete" buttons for unplaced labware
-            ttk.Button(
-                self.labware_button_frame,
-                text="Place on Slot on Deck",
-                command=self.place_selected_unplaced
-            ).pack(fill=tk.X, pady=2)
-            ttk.Button(
-                self.labware_button_frame,
-                text="Edit",
-                command=self.edit_selected_unplaced_labware
-            ).pack(fill=tk.X, pady=2)
-            ttk.Button(
-                self.labware_button_frame,
-                text=" View Children Labware",
-                command=self.view_children_labware
-            ).pack(fill=tk.X, pady=2)
+    def create_slot(self):
+        """Open dialog to create a new slot"""
+        dialog = SlotDialog(self.root)
+        self.root.wait_window(dialog)
 
-            ttk.Button(
-                self.labware_button_frame,
-                text="Create",
-                command=self.create_labware,
-            ).pack(fill=tk.X, pady=2)
-            ttk.Button(
-                self.labware_button_frame,
-                text="Delete",
-                command=self.delete_selected_unplaced_labware
-            ).pack(fill=tk.X, pady=2)
+        if dialog.result:
+            new_slot = dialog.result
+            self.unplaced_slots.append(new_slot)
 
-    def update_slots_list(self):
-        """Update the slots listbox based on current view mode"""
-        self.slots_listbox.delete(0, tk.END)
-        self.update_slots_buttons()
+            if self.slot_view_mode.get() == "unplaced":
+                self.update_item_list('slot')
 
-        if self.slot_view_mode.get() == "placed":
-            # Show placed slots
-            for slot_id in sorted(self.deck.slots.keys()):
-                self.slots_listbox.insert(tk.END, slot_id)
-        else:
-            # Show unplaced slots
-            for slot in self.unplaced_slots:
-                self.slots_listbox.insert(tk.END, slot.slot_id)
+    def create_labware(self):
+        """Open dialog to create new labware"""
+        dialog = LabwareDialog(self.root, self.available_wells, self.available_reservoirs,
+                                     self.available_individual_holders)
+        self.root.wait_window(dialog)
 
-    def update_labware_list(self):
-        """Update the labware listbox based on current view mode"""
-        self.labware_listbox.delete(0, tk.END)
-        self.update_labware_buttons()
+        if dialog.result:
+            new_labware = dialog.result
+            # Store newly created component if needed
+            if isinstance(dialog.result, Plate) and dialog.selected_well:
+                if dialog.selected_well not in self.available_wells:
+                    self.available_wells.append(dialog.selected_well)
+                elif isinstance(dialog.result, PipetteHolder) and dialog.selected_holder:  # ← Fix here
+                    if dialog.selected_holder not in self.available_individual_holders:  # ← And here
+                        self.available_individual_holders.append(dialog.selected_holder)  # ← And here
 
-        if self.labware_view_mode.get() == "placed":
-            # Show placed labware
-            for lw_id in sorted(self.deck.labware.keys()):
-                self.labware_listbox.insert(tk.END, lw_id)
-        else:
-            # Show unplaced labware
-            for lw in self.unplaced_labware:
-                self.labware_listbox.insert(tk.END, lw.labware_id)
 
-    def create_low_level_para_tab(self):
-        """Create the Create tab"""
-        create_tab = ttk.Frame(self.right_panel_notebook)
-        self.right_panel_notebook.add(create_tab, text="Low level parameters")
+            self.unplaced_labware.append(dialog.result)
+            self.labware_view_mode.set("unplaced")
+            self.update_item_list('labware')
 
-        # Create canvas and scrollbar for create tab
-        create_canvas = tk.Canvas(create_tab, bg='#f0f0f0', highlightthickness=0)
-        create_scrollbar = ttk.Scrollbar(create_tab, orient=tk.VERTICAL, command=create_canvas.yview)
+    def place_labware(self, labware):
+        """Place unplaced labware on deck"""
+        dialog = AddLabwareToSlotDialog(self.root, self.deck, labware)
+        self.root.wait_window(dialog)
 
-        # Create a frame inside the canvas to hold all the controls
-        create_control_frame = ttk.Frame(create_canvas)
-
-        # Configure canvas scrolling
-        create_canvas.configure(yscrollcommand=create_scrollbar.set)
-
-        # Pack scrollbar and canvas
-        create_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        create_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        # Create window in canvas to hold the frame
-        create_canvas_window = create_canvas.create_window((0, 0), window=create_control_frame, anchor='nw')
-
-        # Configure scrolling region when frame size changes
-        def configure_create_scroll_region(event=None):
-            create_canvas.configure(scrollregion=create_canvas.bbox("all"))
-            canvas_width = create_canvas.winfo_width()
-            if canvas_width > 1:
-                create_canvas.itemconfig(create_canvas_window, width=canvas_width)
-
-        create_control_frame.bind('<Configure>', configure_create_scroll_region)
-        create_canvas.bind('<Configure>', configure_create_scroll_region)
-
-        # Enable mousewheel scrolling
-        def on_create_mousewheel(event):
-            create_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-
-        def bind_create_mousewheel(event):
-            create_canvas.bind_all("<MouseWheel>", on_create_mousewheel)
-
-        def unbind_create_mousewheel(event):
-            create_canvas.unbind_all("<MouseWheel>")
-
-        create_canvas.bind('<Enter>', bind_create_mousewheel)
-        create_canvas.bind('<Leave>', unbind_create_mousewheel)
-
-        # === SELECTION INFO PANEL ===
-        self.create_info_frame = CollapsibleFrame(create_control_frame, text="Selection Info")
-        self.create_info_frame.pack(fill=tk.BOTH, pady=5, padx=5)
-
-        # Text box inside content_frame
-        self.create_info_text = tk.Text(self.create_info_frame.content_frame, height=10, wrap=tk.WORD)
-        self.create_info_text.pack(fill=tk.BOTH, expand=True, padx=10, pady=(10, 5))
-
-        # Button also inside content_frame
-        create_btn_frame = ttk.Frame(self.create_info_frame.content_frame)
-        create_btn_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
-
-        ttk.Button(create_btn_frame, text="Clear Selection", command=self.clear_selection).pack(fill=tk.X)
-
-        # === CREATE SECTIONS ===
-        # Low-Level Labware section - COLLAPSIBLE
-        self.low_level_collapsible = CollapsibleFrame(create_control_frame, text="Low-Level Labware")
-        self.low_level_collapsible.pack(fill=tk.X, pady=5, padx=5)
-
-        # Content inside collapsible frame
-        low_level_content = self.low_level_collapsible.content_frame
-
-        # Create inner frame with padding
-        low_level_inner = ttk.Frame(low_level_content, padding="10")
-        low_level_inner.pack(fill=tk.BOTH, expand=True)
-
-        # LLL type selector (radio buttons)
-        lll_type_frame = ttk.Frame(low_level_inner)
-        lll_type_frame.pack(fill=tk.X, pady=(0, 5))
-
-        self.lll_type = tk.StringVar(value="Well")
-        types = ["Well", "Reservoir", "IndividualPipetteHolder"]
-
-        for lll_type in types:
-            ttk.Radiobutton(
-                lll_type_frame,
-                text=lll_type,
-                variable=self.lll_type,
-                value=lll_type,
-                command=self.update_lll_list
-            ).pack(fill=tk.X, anchor=tk.W, pady=2, padx=5)
-
-        separator = ttk.Separator(low_level_inner, orient='horizontal')
-        separator.pack(fill=tk.X, pady=5)
-
-        # Listbox for LLL
-        self.lll_listbox = tk.Listbox(low_level_inner, height=6)
-        self.lll_listbox.pack(fill=tk.X)
-        self.lll_listbox.bind('<<ListboxSelect>>', self.on_lll_select)
-
-        # Buttons frame for LLL actions
-        lll_btn_frame = ttk.Frame(low_level_inner)
-        lll_btn_frame.pack(fill=tk.X, pady=(5, 0))
-
-        ttk.Button(lll_btn_frame, text="Create Low-Level Lw", command=self.create_low_level_labware).pack(expand=True,
-                                                                                                          fill=tk.X,
-                                                                                                          padx=5,
-                                                                                                          pady=5)
-        ttk.Button(lll_btn_frame, text="Delete Selected", command=self.delete_selected_lll).pack(expand=True, fill=tk.X,
-                                                                                                 padx=5, pady=5)
-
-        # FOC Configuration Section
-        foc_section = ttk.Labelframe(create_control_frame, text="FOC Measurement Configuration", padding=15)
-        foc_section.pack(fill=tk.X, pady=10, padx=5)
-
-        ttk.Label(
-            foc_section,
-            text="Configure the path to the FOC measurement batch script:",
-            font=('Arial', 10),
-            wraplength=350
-        ).pack(anchor='w', pady=(0, 10))
-
-        # Status Display
-        self.foc_config_status_frame = ttk.Labelframe(foc_section, text="FOC Status", padding=10)
-        self.foc_config_status_frame.pack(fill=tk.X, pady=5)
-
-        self.foc_config_status_label = ttk.Label(
-            self.foc_config_status_frame,
-            text="Not configured",
-            foreground='gray'
-        )
-        self.foc_config_status_label.pack(anchor='w')
-
-        # Configure Button
-        ttk.Button(
-            foc_section,
-            text="Open FOC Script Location",
-            command=self.configure_foc_script
-        ).pack(fill=tk.X, pady=5)
-
-        # --- DATA CONFIGURATION FOR RUNTIME PARAMETERS ---
-        self.runtime_param_definitions = [
-            ("X Speed (1-8):", "x_speed", "7"),
-            ("Y Speed (1-8):", "y_speed", "7"),
-            ("Z Speed (1-8):", "z_speed", "5"),
-            ("Aspirate (1-6):", "aspirate_speed", "1"),
-            ("Dispense (1-6):", "dispense_speed", "1"),
-        ]
-        self.runtime_vars = {}
-        self.runtime_widgets = []
-
-        # --- PIPETTOR CONFIGURATION SECTION ---
-        pipettor_section = ttk.Labelframe(create_control_frame, text="Pipettor Configuration", padding=15)
-        pipettor_section.pack(fill=tk.X, pady=10, padx=5)
-
-        # Tip Volume Selection
-        tip_vol_frame = ttk.Frame(pipettor_section)
-        tip_vol_frame.pack(fill=tk.X, pady=5)
-
-        ttk.Label(tip_vol_frame, text="Tip Volume:", font=('Arial', 11)).pack(side=tk.LEFT, padx=(0, 10))
-
-        self.tip_volume_var = tk.IntVar(value=200)
-        ttk.Radiobutton(tip_vol_frame, text="200 µL", variable=self.tip_volume_var, value=200).pack(side=tk.LEFT,
-                                                                                                    padx=5)
-        ttk.Radiobutton(tip_vol_frame, text="1000 µL", variable=self.tip_volume_var, value=1000).pack(side=tk.LEFT,
-                                                                                                      padx=5)
-
-        # Tip Length (set once during connection)
-        tip_length_frame = ttk.Frame(pipettor_section)
-        tip_length_frame.pack(fill=tk.X, pady=5)
-
-        ttk.Label(tip_length_frame, text="Tip Length (mm):", font=('Arial', 10)).pack(side=tk.LEFT, padx=(0, 10))
-        self.tip_length_var = tk.StringVar(value="")
-        ttk.Entry(tip_length_frame, textvariable=self.tip_length_var, width=10).pack(side=tk.LEFT, padx=5)
-        ttk.Label(tip_length_frame, text="(Optional)", font=('Arial', 9, 'italic'),
-                  foreground='gray').pack(side=tk.LEFT, padx=5)
-
-        # Multichannel Checkbox
-        self.multichannel_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(
-            pipettor_section,
-            text="Multichannel (consecutive tips)",
-            variable=self.multichannel_var
-        ).pack(anchor='w', pady=2)
-
-        # Initialize Hardware Checkbox
-        self.initialize_hw_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(
-            pipettor_section,
-            text="Initialize hardware on connect",
-            variable=self.initialize_hw_var
-        ).pack(anchor='w', pady=2)
-
-        # Separator
-        ttk.Separator(pipettor_section, orient='horizontal').pack(fill=tk.X, pady=10)
-
-        # Connect Button
-        ttk.Button(
-            pipettor_section,
-            text="Connect to Pipettor",
-            command=self.initialize_pipettor
-        ).pack(fill=tk.X, pady=5)
-
-        # Status Display
-        self.pipettor_status_frame = ttk.Labelframe(pipettor_section, text="Pipettor Status", padding=10)
-        self.pipettor_status_frame.pack(fill=tk.X, pady=5)
-
-        self.pipettor_status_label = ttk.Label(
-            self.pipettor_status_frame,
-            text="Not initialized",
-            foreground='gray'
-        )
-        self.pipettor_status_label.pack(anchor='w')
-
-        # --- RUNTIME PARAMETERS SECTION ---
-        runtime_section = ttk.Labelframe(create_control_frame, text="Runtime Parameters", padding=15)
-        runtime_section.pack(fill=tk.X, pady=10, padx=5)
-
-        self.runtime_info_label = ttk.Label(
-            runtime_section,
-            text="Connect to pipettor to enable parameter control",
-            font=('Arial', 9, 'italic'),
-            foreground='gray'
-        )
-        self.runtime_info_label.pack(anchor='w', pady=(0, 10))
-
-        # Parameters grid
-        params_grid = ttk.Frame(runtime_section)
-        params_grid.pack(fill=tk.X)
-
-        # Configure column weights
-        params_grid.columnconfigure(0, weight=0)  # Left label column
-        params_grid.columnconfigure(1, weight=1)  # Left entry column
-        params_grid.columnconfigure(2, weight=0)  # Right label column
-        params_grid.columnconfigure(3, weight=1)  # Right entry column
-
-        # Automated Grid Builder - 2 columns layout
-        for i, (label_text, key, default) in enumerate(self.runtime_param_definitions):
-            row, col_set = divmod(i, 2)  # Calculates row and if it's left (0) or right (1) set
-            col = col_set * 2
-
-            ttk.Label(params_grid, text=label_text).grid(row=row, column=col, sticky='w', pady=3,
-                                                         padx=(0 if col == 0 else 10, 0))
-
-            var = tk.StringVar(value=default)
-            ent = ttk.Entry(params_grid, textvariable=var, width=8, state='disabled')
-            ent.grid(row=row, column=col + 1, sticky='ew', pady=3, padx=(5, 10))
-
-            self.runtime_vars[key] = var
-            self.runtime_widgets.append(ent)
-
-        # Separator
-        ttk.Separator(runtime_section, orient='horizontal').pack(fill=tk.X, pady=10)
-
-        # Set Parameters Button
-        self.set_params_button = ttk.Button(
-            runtime_section,
-            text="Set Parameters",
-            command=self.set_runtime_parameters,
-            state='disabled'
-        )
-        self.set_params_button.pack(fill=tk.X, pady=5)
+        if dialog.result:
+            try:
+                self.deck.add_labware(
+                    labware,
+                    dialog.result['slot_id'],
+                    dialog.result['min_z'],
+                    dialog.result['x_spacing'],
+                    dialog.result['y_spacing']
+                )
+                self.unplaced_labware.remove(labware)
+                self.draw_deck()
+                self.update_operations_tab()
+            except ValueError as e:
+                messagebox.showerror("Error", str(e))
 
     def ask_plate_id(self, parent):
         """
@@ -673,7 +737,7 @@ class DeckGUI:
         """
         dialog = tk.Toplevel(parent)
         dialog.title("Plate Configuration")
-        dialog.geometry("350x150")
+        dialog.geometry("350x200")
         dialog.transient(parent)  # Make it float on top of parent
         dialog.grab_set()  # Modal (disable main window)
 
@@ -750,8 +814,6 @@ class DeckGUI:
             plate_name = self.ask_plate_id(self.root)
 
             if not plate_name:
-                # This handles both "Cancel" and closing the window
-                messagebox.showwarning("Warning", "Plate configuration was cancelled.")
                 return
 
             self.foc_bat_script_path = filename
@@ -766,23 +828,9 @@ class DeckGUI:
                 self.pipettor.foc_bat_script_path = filename
                 self.pipettor.foc_plate_name = plate_name
 
-            #udpate buttons in function window
+            #update buttons in function window
             if hasattr(self, 'function_window') and self.function_window:
                 self.function_window.update_foc_section()
-
-    def update_pipettor_status(self):
-        """Update the pipettor status display"""
-        if hasattr(self, 'pipettor_status_label'):
-            status_text = self.get_pipettor_status_text()
-
-            if hasattr(self, 'pipettor') and self.pipettor is not None:
-                if self.pipettor.has_tips:
-                    tip_content = self.pipettor.get_tip_status()
-                    status_text += f"\nContent: {tip_content['content_summary']}"
-
-                self.pipettor_status_label.config(text=status_text, foreground='green')
-            else:
-                self.pipettor_status_label.config(text=status_text, foreground='gray')
 
     def initialize_pipettor(self):
         """Initialize the pipettor with basic parameters"""
@@ -822,7 +870,7 @@ class DeckGUI:
             # Build status message
             mode = "Multichannel (consecutive tips)" if multichannel else "Single channel"
             tip_info = f"{tip_volume}µL tips"
-            tip_length_info = f", tip length: {tip_length}mm" if tip_length else ""
+            tip_length_info = f",\n tip length: {tip_length}mm" if tip_length else ""
             hw_status = "initialized" if initialize else "not initialized"
 
             status_text = f"✓ {mode}, {tip_info}{tip_length_info}\nHardware: {hw_status}"
@@ -833,7 +881,7 @@ class DeckGUI:
             )
 
             # Enable runtime parameters section
-            self.enable_runtime_parameters()
+            self.toggle_runtime_ui()
 
             if hasattr(self, 'rebuild_operations_tab'):
                 self.rebuild_operations_tab()
@@ -847,22 +895,35 @@ class DeckGUI:
                 foreground='red'
             )
 
-    def enable_runtime_parameters(self):
-        """Enable the runtime parameters section after pipettor connection"""
-        self.runtime_info_label.config(text="Parameters active - modify and click 'Set Parameters' to apply",
-                                       foreground='black')
+    def get_pipettor_status_text(self) -> str:
+        """Get a readable status string for the pipettor"""
+        if not hasattr(self, 'pipettor') or self.pipettor is None:
+            return "Not initialized"
 
-        for widget in self.runtime_widgets:
-            widget.config(state='normal')
-        self.set_params_button.config(state='normal')
+        mode = "Multichannel" if self.pipettor.multichannel else "Single channel"
+        tips = "Has tips" if self.pipettor.has_tips else "No tips"
+        tip_volume = self.pipettor.tip_volume
 
-    def disable_runtime_parameters(self):
-        """Disable the runtime parameters section when pipettor is not connected"""
-        self.runtime_info_label.config(text="Connect to pipettor to enable parameter control", foreground='gray')
+        return f"{mode} ({tip_volume}µL) - {tips}"
 
-        for widget in self.runtime_widgets:
-            widget.config(state='disabled')
-        self.set_params_button.config(state='disabled')
+    def toggle_runtime_ui(self, enabled=True):
+        """
+        Toggle the runtime parameters section based on pipettor connection state.
+        """
+        # 1. Determine state and styling
+        state = 'normal' if enabled else 'disabled'
+
+        # handle expansion
+        if enabled != self.runtime_collapsible.is_expanded:
+            self.runtime_collapsible.toggle()
+
+        # 3. Update all Entry/Combo widgets
+        # .values() because self.runtime_widgets is a dict: {key: widget}
+        for widget in self.runtime_widgets.values():
+            widget.config(state=state)
+
+        # 2. Update the Action Button
+        self.set_params_button.config(state=state)
 
     def set_runtime_parameters(self):
         """Set runtime parameters on the connected pipettor"""
@@ -913,17 +974,6 @@ class DeckGUI:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to set parameters:\n{str(e)}")
 
-    def get_pipettor_status_text(self) -> str:
-        """Get a readable status string for the pipettor"""
-        if not hasattr(self, 'pipettor') or self.pipettor is None:
-            return "Not initialized"
-
-        mode = "Multichannel" if self.pipettor.multichannel else "Single channel"
-        tips = "Has tips" if self.pipettor.has_tips else "No tips"
-        tip_volume = self.pipettor.tip_volume
-
-        return f"{mode} ({tip_volume}µL) - {tips}"
-
     def create_operations_tab(self):
         """Create the Operations tab - always create the frame"""
         operations_tab = ttk.Frame(self.right_panel_notebook)
@@ -941,7 +991,17 @@ class DeckGUI:
     def on_operation_complete(self):
         """Called when an operation completes in Operations tab"""
         # Update pipettor status display
-        self.update_pipettor_status()
+        if hasattr(self, 'pipettor_status_label'):
+            status_text = self.get_pipettor_status_text()
+
+            if hasattr(self, 'pipettor') and self.pipettor is not None:
+                if self.pipettor.has_tips:
+                    tip_content = self.pipettor.get_tip_status()
+                    status_text += f"\nContent: {tip_content['content_summary']}"
+
+                self.pipettor_status_label.config(text=status_text, foreground='green')
+            else:
+                self.pipettor_status_label.config(text=status_text, foreground='gray')
 
     def update_operations_tab(self):
 
@@ -992,173 +1052,6 @@ class DeckGUI:
             on_operation_complete=self.on_operation_complete
         )
 
-    def delete_selected_lll(self):
-        """Delete the selected low-level labware"""
-        selection = self.lll_listbox.curselection()
-        if not selection:
-            messagebox.showwarning("No Selection", "Please select a low-level labware to delete")
-            return
-
-        index = selection[0]
-        lll_type = self.lll_type.get()
-        if lll_type == "Well":
-            component = self.available_wells[index]
-            if messagebox.askyesno("Confirm Delete",
-                                   f"Are you sure you want to delete Well '{component.labware_id or 'Unnamed'}'?"):
-                del self.available_wells[index]
-
-        elif lll_type == "Reservoir":
-            component = self.available_reservoirs[index]
-            if messagebox.askyesno("Confirm Delete",
-                                   f"Are you sure you want to delete Reservoir '{component.labware_id or 'Unnamed'}'?"):
-                del self.available_reservoirs[index]
-
-        elif lll_type == "IndividualPipetteHolder":
-            component = self.available_individual_holders[index]
-            if messagebox.askyesno("Confirm Delete",
-                                   f"Are you sure you want to delete IndividualPipetteHolder '{component.labware_id or 'Unnamed'}'?"):
-                del self.available_individual_holders[index]
-        else:
-            return
-
-        self.update_lll_list()
-        self.create_info_text.delete(1.0, tk.END)
-
-    def update_lll_list(self):
-        """Update the LLL listbox based on selected type"""
-        self.lll_listbox.delete(0, tk.END)
-        lll_type = self.lll_type.get()
-
-        if lll_type == "Well":
-            for well in self.available_wells:
-                self.lll_listbox.insert(tk.END, well.labware_id or f"Well {len(self.available_wells)}")
-        elif lll_type == "Reservoir":
-            for res in self.available_reservoirs:
-                self.lll_listbox.insert(tk.END, res.labware_id or f"Reservoir {len(self.available_reservoirs)}")
-        elif lll_type == "IndividualPipetteHolder":
-            for holder in self.available_individual_holders:
-                self.lll_listbox.insert(tk.END, holder.labware_id or f"Holder {len(self.available_individual_holders)}")
-
-            # Auto-select first item if list is not empty
-            if self.lll_listbox.size() > 0:
-                self.lll_listbox.selection_set(0)
-                self.lll_listbox.activate(0)
-                self.lll_listbox.see(0)
-                # Trigger the selection event to update info panel
-                self.on_lll_select()
-
-    def on_lll_select(self, event=None):
-        """Handle LLL listbox selection"""
-        selection = self.lll_listbox.curselection()
-        if selection:
-            index = selection[0]
-            lll_type = self.lll_type.get()
-            if lll_type == "Well":
-                component = self.available_wells[index]
-            elif lll_type == "Reservoir":
-                component = self.available_reservoirs[index]
-            elif lll_type == "IndividualPipetteHolder":
-                component = self.available_individual_holders[index]
-            else:
-                return
-
-            info = f"{lll_type}: {component.labware_id or 'Unnamed'}\n\n"
-            info += f"Size X: {component.size_x} mm\n"
-            info += f"Size Y: {component.size_y} mm\n"
-            info += f"Size Z: {component.size_z} mm\n"
-            info += f"Offset: {component.offset}\n"
-
-            if hasattr(component, 'capacity'):
-                info += f"Capacity: {component.capacity} µL\n"
-            if hasattr(component, 'shape'):
-                info += f"Shape: {component.shape or 'None'}\n"
-            if hasattr(component, 'content'):
-                info += f"Content: {component.content or 'None'}\n"
-            if hasattr(component, 'is_occupied'):
-                info += f"Occupied: {component.is_occupied}\n"
-
-            self.create_info_text.delete(1.0, tk.END)
-            self.create_info_text.insert(1.0, info)
-
-    def update_selection_info(self, text):
-        """Update info text in both Deck Editor and Create Labware tabs"""
-        self.info_text.delete(1.0, tk.END)
-        self.info_text.insert(1.0, text)
-
-    def create_low_level_labware(self):
-        """Open dialog to create low-level labware components and update UI."""
-
-        # Get the currently selected type from radio buttons
-        selected_type = self.lll_type.get()
-
-        # Pass it to the dialog as initial_type
-        dialog = CreateLowLevelLabwareDialog(self.root, initial_type=selected_type)
-        self.root.wait_window(dialog)
-
-        if dialog.result:
-            component = dialog.result
-            # 2. Add to appropriate list and show success message
-            if isinstance(component, Well):
-                self.available_wells.append(component)
-            elif isinstance(component, Reservoir):
-                self.available_reservoirs.append(component)
-            elif isinstance(component, IndividualPipetteHolder):
-                self.available_individual_holders.append(component)
-
-            # 3. Update the listbox in the main 'Create Labware' tab
-            # This function will clear and repopulate self.lll_listbox
-            self.update_lll_list()
-
-    def create_labware(self):
-        """Open dialog to create new labware"""
-        dialog = LabwareDialog(self.root, self.available_wells, self.available_reservoirs,
-                                     self.available_individual_holders)
-        self.root.wait_window(dialog)
-
-        if dialog.result:
-            new_labware = dialog.result
-            #print(new_labware.to_dict())
-            # Store newly created component if needed
-            if isinstance(dialog.result, Plate) and dialog.selected_well:
-                if dialog.selected_well not in self.available_wells:
-                    self.available_wells.append(dialog.selected_well)
-            elif isinstance(dialog.result, PipetteHolder) and dialog.selected_individual_holder:
-                if dialog.selected_individual_holder not in self.available_individual_holders:
-                    self.available_individual_holders.append(dialog.selected_individual_holder)
-
-            self.unplaced_labware.append(dialog.result)
-            self.labware_view_mode.set("unplaced")
-            self.update_labware_list()
-            self.select_newly_created_labware(new_labware)
-
-    def select_newly_created_labware(self, labware_component):
-        """Selects the newly created Labware in the main Labware listbox."""
-
-        # 1. Build the text as it appears in self.labware_listbox (labware_id)
-        # 2. Iterate through the listbox items to find a match
-        # 3. Clear previous selection and select the new item
-        # 4. Trigger the selection handler to update the info panel
-        display_text = labware_component.labware_id
-
-        list_items = self.labware_listbox.get(0, tk.END)
-        for i, item in enumerate(list_items):
-            if item == display_text:
-                self.labware_listbox.selection_clear(0, tk.END)
-                self.labware_listbox.selection_set(i)
-                self.labware_listbox.see(i)  # Scroll to the item
-                self.on_labware_select()
-                break
-
-    def update_deck_info(self):
-        """Update deck info display"""
-        info = f"ID: {self.deck.deck_id}\n"
-        info += f"Range X: {self.deck.range_x}\n"
-        info += f"Range Y: {self.deck.range_y}\n"
-        info += f"Range Z: {self.deck.range_z}\n"
-        info += f"Slots: {len(self.deck.slots)}\n"
-        info += f"Labware: {len(self.deck.labware)}"
-        self.deck_info_label.config(text=info)
-
     def new_deck(self):
         """Create a new deck"""
         deck_id = simpledialog.askstring("New Deck", "Enter Deck ID:", initialvalue="new_deck")
@@ -1180,59 +1073,6 @@ class DeckGUI:
             self.draw_deck()
             if hasattr(self, 'rebuild_operations_tab'):
                 self.rebuild_operations_tab()
-
-    def create_slot(self):
-        """Open dialog to create a new slot"""
-        dialog = SlotDialog(self.root)
-        self.root.wait_window(dialog)
-
-        if dialog.result:
-            new_slot = dialog.result
-            self.unplaced_slots.append(new_slot)
-
-            if self.slot_view_mode.get() == "unplaced":
-                self.update_slots_list()
-                self.select_newly_created_slot(new_slot)
-
-    def select_newly_created_slot(self, slot_component):
-        """Selects the newly created Slot in the main Slots listbox."""
-
-        # 1. Build the text exactly as it appears in self.slots_listbox
-        display_text = slot_component.slot_id
-
-        # 2. Iterate through the listbox items to find a match
-        list_items = self.slots_listbox.get(0, tk.END)
-        for i, item in enumerate(list_items):
-            if item == display_text:
-                # 3. Clear previous selection and select the new item
-                self.slots_listbox.selection_clear(0, tk.END)
-                self.slots_listbox.selection_set(i)
-                self.slots_listbox.see(i)  # Scroll to the item
-
-                # 4. Trigger the selection handler to update the info panel
-                # Assuming you have an on_slot_select method defined:
-                self.on_slot_select()
-                break
-
-    def place_labware(self, labware):
-        """Place unplaced labware on deck"""
-        dialog = AddLabwareToSlotDialog(self.root, self.deck, labware)
-        self.root.wait_window(dialog)
-
-        if dialog.result:
-            try:
-                self.deck.add_labware(
-                    labware,
-                    dialog.result['slot_id'],
-                    dialog.result['min_z'],
-                    dialog.result['x_spacing'],
-                    dialog.result['y_spacing']
-                )
-                self.unplaced_labware.remove(labware)
-                self.draw_deck()
-                self.update_operations_tab()
-            except ValueError as e:
-                messagebox.showerror("Error", str(e))
 
     def calculate_scale(self):
         """Auto-calculate scale to maximize deck in canvas
@@ -1270,18 +1110,6 @@ class DeckGUI:
 
         return (canvas_x, canvas_y)
 
-    def canvas_to_mm(self, cx, cy):
-        """Convert canvas pixels to mm coordinates
-        Coordinate system: (0,0) at top-right
-        """
-        canvas_width = self.canvas.winfo_width() or 300
-
-        # Reverse the X-axis flip
-        mm_x = (canvas_width - cx - self.offset_x) / self.scale
-        mm_y = (cy - self.offset_y) / self.scale
-
-        return (mm_x, mm_y)
-
     def draw_deck(self, auto_scale = False):
         """Draw the entire deck"""
         self.canvas.delete("all")
@@ -1308,8 +1136,8 @@ class DeckGUI:
                 self.draw_labware(lw_id, lw)
 
         # Update lists and info
-        self.update_slots_list()
-        self.update_labware_list()
+        self.update_item_list('slot')
+        self.update_item_list('labware')
         self.update_deck_info()
 
     def draw_corner_labels(self):
@@ -1340,7 +1168,7 @@ class DeckGUI:
             )
 
             # Calculate text position with offset
-            offset = 10
+            offset = 15
             anchor_offsets = {
                 'se': (offset, -offset),  # move below-right corner (outside)
                 'sw': (-offset, -offset),  # move below-left corner
@@ -1380,7 +1208,7 @@ class DeckGUI:
         top_center_canvas = self.mm_to_canvas(*top_center_mm)
         self.canvas.create_text(
             top_center_canvas[0], top_center_canvas[1] - 20,
-            text="X-axis (right to left)",
+            text="X-axis",
             font=('Arial', 14, 'italic'),
             fill='green',
             tags='axis_label'
@@ -1445,7 +1273,7 @@ class DeckGUI:
 
         # Make clickable
         self.canvas.tag_bind(f'slot_{slot_id}', '<Button-1>',
-                             lambda e, sid=slot_id: self.select_slot(sid))
+                             lambda e, sid=slot_id: self.select_item('slot', slot_id))
 
     def draw_labware(self, lw_id, lw):
         """Draw labware"""
@@ -1477,32 +1305,8 @@ class DeckGUI:
 
         # Make clickable
         self.canvas.tag_bind(f'labware_{lw_id}', '<Button-1>',
-                             lambda e, lid=lw_id: self.select_labware(lid))
+                             lambda e, lid=lw_id: self.select_item('labware', lid))
     # Event handlers
-    def on_canvas_fallback_click(self, event):
-        """Used for clearing selection or starting drag on placed labware."""
-        item = self.canvas.find_closest(event.x, event.y)[0]
-        tags = self.canvas.gettags(item)
-
-        # Check if the clicked item has *any* bound ID tag (slot or labware)
-        is_identified_item = any(t.startswith('slot_') or t.startswith('labware_') for t in tags)
-
-        if is_identified_item:
-            # If the item has an ID tag, it means the binding in draw_X was already run.
-            # We only need to check if it's placed labware to enable dragging.
-
-            # Since you have the labware ID in the tag 'labware_ID', you can extract it:
-            labware_tag = next((t for t in tags if t.startswith('labware_')), None)
-
-            if labware_tag:
-                lw_id = labware_tag.split('_', 1)[1]
-                if lw_id in self.deck.labware:  # Ensure it is a placed item
-                    self.dragging = lw_id
-                    self.drag_data["x"] = event.x
-                    self.drag_data["y"] = event.y
-        else:
-            # If no ID tag is present (clicked on grid, boundary, or background)
-            self.clear_selection()
 
     def on_canvas_triple_click(self, event):
         """Show context menu on canvas (FIXED)"""
@@ -1513,7 +1317,7 @@ class DeckGUI:
         lw_id = None
         slot_id = None
 
-        # 2. Extract ID based on known prefixes (Robust Logic)
+        # 2. Extract ID based on known prefixes
         for t in tags:
             if t.startswith('labware_'):
                 # Extract the ID after the first underscore
@@ -1522,488 +1326,39 @@ class DeckGUI:
                 # Extract the ID after the first underscore
                 slot_id = t.split('_', 1)[1]
 
-        menu = tk.Menu(self.root, tearoff=0)
 
-        # 3. Populate Menu based on found ID
         if lw_id:
-            menu.add_command(label=f"Info",
-                             command=lambda: self.select_labware(lw_id))
-            menu.add_separator()
-            menu.add_command(label=f"Unplace {lw_id}",
-                             command=lambda: self.unplace_selected_labware(lw_id))
+            self.unplace_item('labware', lw_id)
 
         elif slot_id:
-            menu.add_command(label=f"Info",
-                             command=lambda: self.select_slot(slot_id))
-            menu.add_separator()
-            menu.add_command(label=f"Unplace Slot {slot_id}",
-                             command=lambda: self.unplace_selected_slot(slot_id))
-
-        # 4. Display Menu only if commands were added
-        if menu.index(tk.END) is not None:
-            menu.post(event.x_root, event.y_root)
-
-    def on_slot_select(self, event = None):
-        """Handle slot listbox selection"""
-        selection = self.slots_listbox.curselection()
-        if selection:
-            slot_id_or_index = selection[0]
-            if self.slot_view_mode.get() == "placed":
-                # Get slot_id from placed slots
-                slot_id = self.slots_listbox.get(slot_id_or_index)
-                self.select_slot(slot_id)
+            slot = self.deck.slots.get(slot_id)
+            if slot and slot.labware_stack:
+                confirmed = messagebox.askyesno(
+                    "Confirm Unplace Slot",
+                    f"Unplacing this slot will also unplace all contained labware. Continue?"
+                )
+                if confirmed:
+                    self.unplace_item('slot', slot_id)
             else:
-                # Get slot from unplaced slots list
-                if slot_id_or_index < len(self.unplaced_slots):
-                    slot = self.unplaced_slots[slot_id_or_index]
-                    self.show_unplaced_slot_info(slot)
-
-    def on_slot_double_click(self, event):
-        """Handle double click on slot"""
-        if self.slot_view_mode.get() == "unplaced":
-            self.place_selected_unplaced_slot()
-
-    def on_labware_select(self, event = None):
-        """Handle labware listbox selection"""
-        selection = self.labware_listbox.curselection()
-        if selection:
-            lw_id_or_index = selection[0]
-            if self.labware_view_mode.get() == "placed":
-                # Get lw_id from placed labware
-                lw_id = self.labware_listbox.get(lw_id_or_index)
-                self.select_labware(lw_id)
-            else:
-                # Get labware from unplaced labware list
-                if lw_id_or_index < len(self.unplaced_labware):
-                    lw = self.unplaced_labware[lw_id_or_index]
-                    self.show_unplaced_labware_info(lw)
-
-    def on_labware_double_click(self, event):
-        """Handle double click on labware"""
-        if self.labware_view_mode.get() == "unplaced":
-            self.place_selected_unplaced()
-
-    def show_unplaced_slot_info(self, slot):
-        """Show info for an unplaced slot"""
-        info = f"Slot: {slot.slot_id}\n\n"
-        info += f"Range X: {slot.range_x}\n"
-        info += f"Range Y: {slot.range_y}\n"
-        info += f"Range Z: {slot.range_z}\n\n"
-        info += "Status: Unplaced"
-
-        self.update_selection_info(info)
-
-    def show_unplaced_labware_info(self, lw):
-        """Show info for unplaced labware"""
-        info = f"Labware: {lw.labware_id}\n\n"
-        info += f"Type: {lw.__class__.__name__}\n"
-        info += f"Size X: {lw.size_x} mm\n"
-        info += f"Size Y: {lw.size_y} mm\n"
-        info += f"Size Z: {lw.size_z} mm\n"
-        info += f"Offset: {lw.offset}\n\n"
-        info += "Status: Unplaced"
-
-        # Add type-specific info
-        if isinstance(lw, Plate):
-            info += f"\nRows: {lw._rows}\n"
-            info += f"Columns: {lw._columns}\n"
-
-        elif isinstance(lw, ReservoirHolder):
-            info += f"\nHooks X: {lw.hooks_across_x}\n"
-            info += f"Hooks Y: {lw.hooks_across_y}\n"
-        elif isinstance(lw, PipetteHolder):
-            info += f"\nHolders X: {lw.holders_across_x}\n"
-            info += f"Holders Y: {lw.holders_across_y}\n"
-
-        if hasattr(lw, 'add_height'):
-            info += f"Add Height: {lw.add_height} mm\n"
-        if hasattr(lw, 'remove_height'):
-            info += f"Remove Height: {lw.remove_height} mm\n"
-
-        if hasattr(lw, 'drop_height'):
-            info += f"\nDrop Height: {lw.drop_height} mm\n"
-        self.update_selection_info(info)
-
-    # Slot management methods
-    def place_selected_unplaced_slot(self):
-        """Place selected unplaced slot on deck"""
-        selection = self.slots_listbox.curselection()
-        if not selection:
-            messagebox.showwarning("No Selection", "Please select a slot to place")
-            return
-
-        slot = self.unplaced_slots[selection[0]]
-
-        # Check if slot ID already exists
-        if slot.slot_id in self.deck.slots:
-            messagebox.showerror("Error", f"Slot '{slot.slot_id}' already exists on deck")
-            return
-
-        # Check if slot fits within deck boundaries
-        errors = self.validate_slot_placement(slot)
-        if errors:
-            messagebox.showerror("Placement Error", "\n".join(errors))
-            return
-
-        # Add slot to deck
-        self.deck.add_slots([slot])
-        self.unplaced_slots.remove(slot)
-
-        self.draw_deck()
-        self.update_operations_tab()
-
-    def unplace_selected_slot(self, slot_id=None):
-        """
-        Removes a placed slot from the deck and makes it an unplaced slot.
-        Can be called by button (no ID) or by canvas menu (with ID).
-        """
-        # Check PLACED listbox selection first
-        if slot_id is None:
-            selection = self.slots_listbox.curselection()
-            if not selection:
-                messagebox.showwarning("Selection Error", "Please select a PLACED slot.")
-                return
-
-            item_text = self.slots_listbox.get(selection[0])
-            slot_id = item_text.split(' (')[0]
-
-        if slot_id not in self.deck.slots:
-            messagebox.showwarning("Error", f"Slot {slot_id} not found on deck.")
-            return
-
-        #Ask for confirmation before removing
-        if not messagebox.askyesno("Confirm Unplace Slot", f"Are you sure you want to unplace slot '{slot_id}'? "
-                                                           f"Any labware inside will also be unplaced."):
-            return
-        # call deck function to remove the slot and all contained labware
-        try:
-            slot, unplaced_labware_list = self.deck.remove_slot(slot_id, unplace_labware=True)
-
-        except ValueError as e:
-            messagebox.showerror("Removal Error", str(e))
-            return
-
-        #Handle the unplaced labware returned from the deck
-        for labware in unplaced_labware_list:
-            self.unplaced_labware.append(labware)
-            self.canvas.delete(f'labware_{labware.labware_id}')
-
-        # B. Handle the unplaced slot
-        self.unplaced_slots.append(slot)
-        self.canvas.delete(f'slot_{slot_id}')
-
-        # C. Update the GUI views
-        self.clear_selection()
-        self.update_labware_list()
-        self.update_slots_list()
-        self.update_operations_tab()
-
-        if unplaced_labware_list:
-            lw_list = ", ".join([lw.labware_id for lw in unplaced_labware_list])
-        return
-
-    def unplace_selected_labware(self, lw_id=None):
-        """Removes a placed labware from the deck and makes it an unplaced labware."""
-
-        if lw_id is None:
-            selection = self.labware_listbox.curselection()
-            if not selection:
-                messagebox.showwarning("Selection Error", "Please select a PLACED labware.")
-                return
-
-            # Get item text (e.g., "Plate1 (Placed) - Plate")
-            # CRITICAL: This line assumes the listbox content is correct.
-            item_text = self.labware_listbox.get(selection[0])
-            lw_id = item_text.split(' (')[0]  # Extracts "Plate1"
-
-        if lw_id not in self.deck.labware:
-            messagebox.showwarning("Selection Error", "Please select a PLACED labware.")
-            return
-
-        try:
-            labware = self.deck.remove_labware(lw_id)
-
-        except ValueError as e:
-            messagebox.showerror("Removal Error", str(e))
-            return  # Exit if removal fails
-
-        # 3. Final GUI Updates
-        self.unplaced_labware.append(labware)
-        self.canvas.delete(f'labware_{lw_id}')
-        self.clear_selection()
-        self.update_labware_list()
-        self.update_operations_tab()
-
-        return
-
-    def edit_selected_unplaced_slot(self):
-        """Edit selected unplaced slot and re-select it automatically."""
-        selection = self.slots_listbox.curselection()
-        if not selection:
-            messagebox.showwarning("No Selection", "Please select a slot to edit")
-            return
-
-        #Identify the slot object
-        slot_index = selection[0]
-        slot = self.unplaced_slots[slot_index]
-
-        dialog = SlotDialog(self.root, slot=slot)
-        self.root.wait_window(dialog)
-
-        # 3. Handle the result
-        if dialog.result:
-            # Refresh the UI list
-            self.update_slots_list()
-            self.root.after_idle(lambda: self.select_newly_created_slot(slot))
-
-    def delete_selected_unplaced_slot(self):
-        """Delete selected unplaced slot"""
-        selection = self.slots_listbox.curselection()
-        if not selection:
-            messagebox.showwarning("No Selection", "Please select a slot to delete")
-            return
-
-        slot = self.unplaced_slots[selection[0]]
-
-        if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete slot '{slot.slot_id}'?"):
-            self.unplaced_slots.remove(slot)
-            self.update_slots_list()
-
-    # Labware management methods
-    def place_selected_unplaced(self):
-        """Place selected unplaced labware"""
-        selection = self.labware_listbox.curselection()
-        if not selection:
-            messagebox.showwarning("No Selection", "Please select labware to place")
-            return
-
-        labware = self.unplaced_labware[selection[0]]
-        self.place_labware(labware)
-
-    def edit_selected_unplaced_labware(self):
-        """Edit selected unplaced labware"""
-        selection = self.labware_listbox.curselection()
-        if not selection:
-            messagebox.showwarning("No Selection", "Please select labware to edit")
-            return
-
-        labware = self.unplaced_labware[selection[0]]
-
-        dialog = EditLabwareDialog(self.root, labware, self.available_reservoirs)
-        self.root.wait_window(dialog)
-
-        if dialog.result:
-            self.update_labware_list()
-            self.show_unplaced_labware_info(labware)
-
-    def delete_selected_unplaced_labware(self):
-        """Delete selected unplaced labware"""
-        selection = self.labware_listbox.curselection()
-        if not selection:
-            messagebox.showwarning("No Selection", "Please select labware to delete")
-            return
-
-        labware = self.unplaced_labware[selection[0]]
-
-        if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete labware '{labware.labware_id}'?"):
-            self.unplaced_labware.remove(labware)
-            self.update_labware_list()
-
-    def validate_slot_placement(self, slot):
-        """Validate that a slot can be placed on the deck"""
-        errors = []
-
-        # Check if slot fits within deck boundaries
-        if slot.range_x[0] < self.deck.range_x[0] or slot.range_x[1] > self.deck.range_x[1]:
-            errors.append(f"⚠ Slot X range ({slot.range_x}) exceeds deck X range ({self.deck.range_x})")
-
-        if slot.range_y[0] < self.deck.range_y[0] or slot.range_y[1] > self.deck.range_y[1]:
-            errors.append(f"⚠ Slot Y range ({slot.range_y}) exceeds deck Y range ({self.deck.range_y})")
-
-        if slot.range_z > self.deck.range_z:
-            errors.append(f"⚠ Slot Z range ({slot.range_z}) exceeds deck Z range ({self.deck.range_z})")
-
-        # Check for overlap with existing slots
-        for existing_slot_id, existing_slot in self.deck.slots.items():
-            if self.slots_overlap(slot, existing_slot):
-                errors.append(f"⚠ Slot overlaps with existing slot '{existing_slot_id}'")
-
-        return errors
-
-    def slots_overlap(self, slot1, slot2):
-        """Check if two slots overlap"""
-        x_overlap = not (slot1.range_x[1] <= slot2.range_x[0] or slot1.range_x[0] >= slot2.range_x[1])
-        y_overlap = not (slot1.range_y[1] <= slot2.range_y[0] or slot1.range_y[0] >= slot2.range_y[1])
-        return x_overlap and y_overlap
-
-    def validate_labware_placement(self, labware, slot_id, min_z):
-        """Validate labware placement in a slot"""
-        errors = []
-
-        slot = self.deck.slots.get(slot_id)
-        if not slot:
-            errors.append(f"⚠ Slot '{slot_id}' does not exist")
-            return errors
-
-        # Check if labware exists in deck
-        lw_id = labware.labware_id
-        if lw_id not in self.deck.labware:
-            return errors
-
-        # Get labware data from slot
-        lw_data = slot.labware_stack.get(lw_id)
-        if lw_data:
-            # Check Z height
-            new_max_z = min_z + labware.size_z
-            if new_max_z > slot.range_z:
-                errors.append(f"⚠ Labware exceeds slot '{slot_id}' Z height\n"
-                              f"   Slot Z: {slot.range_z} mm\n"
-                              f"   Labware needs: {new_max_z} mm (min_z={min_z} + size_z={labware.size_z})")
-
-            # Update the z_range in the slot
-            if not errors:
-                lw_data[1] = (min_z, new_max_z)
-
-        return errors
-
-    def select_slot(self, slot_id):
-        """Highlight and show info for a slot"""
-
-        # switch panel
-        self.right_panel_notebook.select(0)
-        self.clear_selection()
-        self.labware_listbox.selection_clear(0, tk.END)
-
-        if slot_id in self.deck.slots:
-            self.slot_view_mode.set("placed")
-            self.update_slots_list()
-
-        tag = f'slot_{slot_id}'
-        self.selected_item = ('slot', slot_id)
-
-        items = self.canvas.find_withtag(tag)
-        listbox = self.slots_listbox  # Correctly assigns the single listbox
-        listbox.selection_clear(0, tk.END)
-
-        # --- SELECTION LOOP ---
-        for item in items:
-            item_type = self.canvas.type(item)
-
-            # 1. Configuration for SHAPE items (The slot border/area)
-            if item_type in ('rectangle', 'oval', 'polygon'):
-                self.canvas.itemconfig(item, width=4, outline='darkblue')
-
-            # 2. Configuration for TEXT items (The slot label)
-            elif item_type == 'text':
-                # Use 'fill' to change text color, not 'outline'
-                self.canvas.itemconfig(item, fill='darkblue', font=('Arial', 10, 'bold'))
-
-            # Optional: handle line items if your drawing logic uses them for slots
-            elif item_type == 'line':
-                self.canvas.itemconfig(item, width=4, fill='darkblue')
-
-
-        slot = self.deck.slots.get(slot_id)
-        if slot is None: return
-        info = f"Slot: {slot_id}\n\n"
-        info += f"Range X: {slot.range_x}\n"
-        info += f"Range Y: {slot.range_y}\n"
-        info += f"Range Z: {slot.range_z}\n\n"
-        info += f"Labware in slot:\n"
-        for lw_id in slot.labware_stack.keys():
-            info += f"  - {lw_id}\n"
-
-        self.update_selection_info(info)
-
-        listbox = self.slots_listbox
-        listbox.selection_clear(0, tk.END)
-
-         # 2. Find the index of the item (which is just the ID in your current update_slots_list)
-        search_text = slot_id  # In placed mode, the list item is just 'A1'
-        for i in range(listbox.size()):
-            if listbox.get(i) == search_text:
-                listbox.selection_set(i)
-                listbox.activate(i)
-                listbox.see(i)
-                break
-
-    def select_labware(self, lw_id):
-        """Highlight and show info for placed labware."""
-
-        self.right_panel_notebook.select(0)
-        self.clear_selection()
-        self.slots_listbox.selection_clear(0, tk.END)
-        self.selected_item = ('labware', lw_id)
-
-        if lw_id in self.deck.labware:
-            self.labware_view_mode.set("placed")
-            self.update_labware_list()
-        items = self.canvas.find_withtag(f'labware_{lw_id}')
-
-        lw = self.deck.labware.get(lw_id)  # Use .get() for safety
-        if lw is None: return
-
-        # Iterate through all canvas items tagged with this labware ID
-        for item in items:
-            item_type = self.canvas.type(item)
-
-            # 1. Configuration for SHAPE items (Rectangle, Oval, etc.)
-            if item_type in ('rectangle', 'oval', 'polygon', 'line'):
-                # Use 'outline' and 'width' to highlight the border
-                self.canvas.itemconfig(item, width=4, outline='darkred')
-
-            # 2. Configuration for TEXT items (The label)
-            elif item_type == 'text':
-                # Use 'fill' to change the text color
-                self.canvas.itemconfig(item, fill='darkred', font=('Arial', 10, 'bold'))
-
-        # Retrieve the labware object for detailed display
-        slot_id = self.deck.get_slot_for_labware(lw_id)
-
-        # Generate the detailed information string
-        info = f"Labware: {lw_id}\n\n"
-        info += f"Type: {lw.__class__.__name__}\n"
-        info += f"Size X: {lw.size_x} mm\n"
-        info += f"Size Y: {lw.size_y} mm\n"
-        info += f"Size Z: {lw.size_z} mm\n"
-        info += f"Offset: {lw.offset}\n"
-        info += f"Position: {lw.position}\n"
-        info += f"Slot: {slot_id if slot_id else 'None'}\n\n"
-
-        # Add type-specific info
-        if isinstance(lw, Plate):
-            info += f"Rows: {lw._rows}\n"
-            info += f"Columns: {lw._columns}\n"
-        elif isinstance(lw, ReservoirHolder):
-            info += f"Hooks X: {lw.hooks_across_x}\n"
-            info += f"Hooks Y: {lw.hooks_across_y}\n"
-        elif isinstance(lw, PipetteHolder):
-            info += f"Holders X: {lw.holders_across_x}\n"
-            info += f"Holders Y: {lw.holders_across_y}\n"
-
-        if hasattr(lw, 'add_height'):
-            info += f"Add Height: {lw.add_height} mm\n"
-        if hasattr(lw, 'remove_height'):
-            info += f"Remove Height: {lw.remove_height} mm\n"
-
-        if hasattr(lw, 'drop_height'):
-            info += f"\nDrop Height: {lw.drop_height} mm\n"
-
-        self.update_selection_info(info)
-
-        listbox = self.labware_listbox
-
-        # 1. Clear any old selections in the PLACED listbox
-        listbox.selection_clear(0, tk.END)
-
-        # 2. Find the index of the item
-        search_text = lw_id  # In placed mode, the list item is just 'Plate1'
-        for i in range(listbox.size()):
-            if listbox.get(i) == search_text:
-                listbox.selection_set(i)
-                listbox.activate(i)
-                listbox.see(i)
-                break
+                self.unplace_item('slot', slot_id)
+
+    def on_item_double_click(self, event, category):
+        """Unified double-click handler for Slots and Labware."""
+        ctx = self.get_context(category)
+
+        # Only trigger placement if we are currently in 'unplaced' view mode
+        if ctx['view_mode'] == "unplaced":
+            self.place_selected_item(category)
+
+    def update_deck_info(self):
+        """Update deck info display"""
+        info = f"ID: {self.deck.deck_id}\n"
+        info += f"Range X: {self.deck.range_x}\n"
+        info += f"Range Y: {self.deck.range_y}\n"
+        info += f"Range Z: {self.deck.range_z}\n"
+        info += f"Slots: {len(self.deck.slots)}\n"
+        info += f"Labware: {len(self.deck.labware)}"
+        self.deck_info_label.config(text=info)
 
     def clear_selection(self):
         """
@@ -2014,47 +1369,39 @@ class DeckGUI:
         # --- 1. Canvas Selection (Handles Placed Items) ---
         if self.selected_item:
             item_type, item_id = self.selected_item
-            # The tag system here needs to be robust, but we'll use your existing pattern
             tag = f'{item_type}_{item_id}'
 
             # Find all canvas items associated with the previously selected tag and reset style
             for item in self.canvas.find_withtag(tag):
-                item_type = self.canvas.type(item)
+                canvas_item_type = self.canvas.type(item)  # ← Renamed to avoid shadowing
 
                 # Reset SHAPE items (Rectangle, Oval, Polygon)
-                if item_type in ('rectangle', 'oval', 'polygon'):
+                if canvas_item_type in ('rectangle', 'oval', 'polygon'):
                     self.canvas.itemconfig(item, width=2, outline='blue')
 
                 # Reset TEXT items (The label)
-                elif item_type == 'text':
+                elif canvas_item_type == 'text':
                     self.canvas.itemconfig(item, fill='black', font=('Arial', 10, 'normal'))
 
                 # Optional: handle line items if present
-                elif item_type == 'line':
+                elif canvas_item_type == 'line':
                     self.canvas.itemconfig(item, width=2, fill='blue')
 
             # Clear the internal canvas selection tracking state
             self.selected_item = None
 
-        # --- 2. Listbox Selections (Handles Unplaced Items) ---
-        # This ensures that if an unplaced item was selected, it is unselected now.
-        #self.slots_listbox.selection_clear(0, tk.END)
-        #self.labware_listbox.selection_clear(0, tk.END)
+        # --- 2. Clear ALL listboxes ---
+        self.slots_listbox.selection_clear(0, tk.END)
+        self.labware_listbox.selection_clear(0, tk.END)
+        if hasattr(self, 'lll_listbox'):
+            self.lll_listbox.selection_clear(0, tk.END)
 
-        # --- 3. Clear Information Panel (MUST ALWAYS HAPPEN) ---
-        # This call is now outside the 'if self.selected_item:' block,
-        # guaranteeing the info panel is cleared regardless of selection origin
-        self.update_selection_info("")
-
-    def zoom_in(self):
-        """Zoom in"""
-        self.scale *= 1.2
-        self.draw_deck()
-
-    def zoom_out(self):
-        """Zoom out"""
-        self.scale *= 0.8
-        self.draw_deck()
+        # --- 3. Clear BOTH info panels ---
+        # Main deck editor info panel
+        for widget in [self.info_text, self.create_info_text]:
+            widget.config(state='normal')
+            widget.delete(1.0, tk.END)
+            widget.config(state='disabled')
 
     def save_deck(self):
         """Save deck to JSON file"""
@@ -2106,22 +1453,23 @@ class DeckGUI:
                         self.unplaced_slots.append(Serializable.from_dict(slot_data))
 
                 # Load low-level components if present
-                self.available_wells = []
+                self.available_wells.clear()
                 if 'available_wells' in data:
                     for well_data in data['available_wells']:
                         self.available_wells.append(Serializable.from_dict(well_data))
 
-                self.available_reservoirs = []
+                self.available_reservoirs.clear()
                 if 'available_reservoirs' in data:
                     for res_data in data['available_reservoirs']:
                         self.available_reservoirs.append(Serializable.from_dict(res_data))
 
-                self.available_individual_holders = []
+                self.available_individual_holders.clear()
                 if 'available_individual_holders' in data:
                     for holder_data in data['available_individual_holders']:
                         self.available_individual_holders.append(Serializable.from_dict(holder_data))
 
                 self.draw_deck()
+
                 if hasattr(self, 'rebuild_operations_tab'):
                     self.rebuild_operations_tab()
             except Exception as e:

@@ -1,4 +1,3 @@
-#todo combine code to repeat duplication.  speed reduction & easier to maintain
 
 import tkinter as tk
 from tkinter import messagebox
@@ -126,21 +125,25 @@ class LabwareDialog(ScrollableDialog):
         self.wait_window(dialog)
         if dialog.result:
             self.selected_well = dialog.result
-            self.well_label.config(text=f"Well: {self.selected_well.labware_id}", foreground="green")
+            if hasattr(self, 'well_label'):
+                self.well_label.config(text=f"Well: {self.selected_well.labware_id}", foreground="green")
 
     def select_holder(self):
         dialog = SelectOrCreateComponentDialog(self, "IndividualPipetteHolder", self.repo["Holder"])
         self.wait_window(dialog)
         if dialog.result:
             self.selected_holder = dialog.result
-            self.individualholder_label.config(text=f"Holder: {self.selected_holder.labware_id}", foreground="green")
+            if hasattr(self, 'individualholder_label') and self.individualholder_label.winfo_exists():
+                self.individualholder_label.config(text=f"Holder: {self.selected_holder.labware_id}",
+                                                   foreground="green")
 
     def launch_mapping_dialog(self):
         dialog = ConfigureReservoirTemplateDialog(self, self.repo["Reservoir"])
         self.wait_window(dialog)
         if dialog.result:
             self.res_template = dialog.result
-            self.mapping_label.config(text="Mapping Configured", foreground="green")
+            if hasattr(self, 'mapping_label') and self.mapping_label.winfo_exists():
+                self.mapping_label.config(text="Mapping Configured", foreground="green")
 
     def on_create(self):
         try:
@@ -227,7 +230,7 @@ class EditLabwareDialog(ScrollableDialog):
     def __init__(self, parent, labware, available_reservoirs=None):
         # Initialize ScrollableDialog (sets up self.scroll_frame)
         title = f"Edit Labware: {labware.labware_id}"
-        super().__init__(parent, title=title, size="550x700")
+        super().__init__(parent, title=title, size="900x700")
 
         # Store references
         self.original_labware = labware
@@ -266,7 +269,7 @@ class EditLabwareDialog(ScrollableDialog):
 
         # If we're on the Manage Reservoirs tab, draw the grid
         if tab_text == "Manage Reservoirs":
-            self.after(100, self.refresh_grid)
+            self.after(100,  self.refresh_grid)
 
     def create_basic_properties_tab(self):
         """Basic properties tab with organized sections"""
@@ -320,7 +323,7 @@ class EditLabwareDialog(ScrollableDialog):
         canvas_frame = ttk.Labelframe(tab, text="Visual Hook Layout", padding=10)
         canvas_frame.pack(fill=tk.BOTH, expand=True)
 
-        self.hook_canvas = tk.Canvas(canvas_frame, bg='white', height=250)
+        self.hook_canvas = tk.Canvas(canvas_frame, bg='white', height=300, width = 700)
         self.hook_canvas.pack(fill=tk.BOTH, expand=True)
         self.hook_canvas.bind('<Button-1>', self.on_grid_click)
 
@@ -537,7 +540,7 @@ class CreateLowLevelLabwareDialog(ScrollableDialog):
     Dialog for creating Well, Reservoir, or PipetteHolder components.
     """
 
-    def __init__(self, parent, initial_type=None, fixed_type=False):
+    def __init__(self, parent, initial_type=None, fixed_type=False, existing_item=None):
         super().__init__(parent, "Create Low-Level Labware", "550x750")
 
         self.initial_type = initial_type
@@ -546,7 +549,7 @@ class CreateLowLevelLabwareDialog(ScrollableDialog):
         self.basic_inputs = {}
         self.spec_inputs = {}
         self.content_rows = []
-
+        self.existing_item = existing_item
         self.create_widgets()
 
     def create_widgets(self):
@@ -854,7 +857,7 @@ class PlaceReservoirDialog(ScrollableDialog):
 
         # Populate initial list
         self.update_listbox_data()
-        configs = [{"text": "➕ Create New Reservoir", "command": self.create_new_reservoir}]
+        configs = [{"text": " Create New Reservoir", "command": self.create_new_reservoir}]
         create_button_bar(res_frame, configs, orientation="vertical", fill=True)
 
         # 2. Preview Section
@@ -961,79 +964,112 @@ class PlaceReservoirDialog(ScrollableDialog):
             messagebox.showerror("Invalid Input", str(e))
 
 class ConfigureReservoirTemplateDialog(ScrollableDialog):
-    """
-        Dialog to select a single Reservoir template and specify its placement
-        parameters (auto-size, specific hooks, or N x M block size).
-        """
+    """Single dialog for selecting AND configuring a Reservoir template."""
 
     def __init__(self, parent, available_reservoirs):
-        super().__init__(parent, title="Configure Reservoir Template", size="500x550")
-
+        super().__init__(parent, title="Configure Reservoir Template", size="500x650")
         self.available_reservoirs = available_reservoirs
         self.selected_reservoir_template = None
         self.create_widgets()
 
     def create_widgets(self):
-        # --- 1. Reservoir Selection ---
-        template_frame = ttk.Labelframe(self.scroll_frame, text="Base Reservoir Selection", padding="10")
-        template_frame.pack(fill=tk.X, pady=10)
+        # --- 1. Embedded Reservoir Selection ---
+        template_frame = ttk.Labelframe(self.scroll_frame, text="Select Base Reservoir", padding="10")
+        template_frame.pack(fill=tk.BOTH, expand=True, pady=10)
 
-        self.template_label = ttk.Label(template_frame, text="No Reservoir Selected", foreground='red')
-        self.template_label.pack(side=tk.LEFT, padx=5)
+        # Display list of available reservoirs
+        display_list = [
+            f"{r.labware_id or 'Unnamed'}: {r.size_x}x{r.size_y}mm"
+            for r in self.available_reservoirs
+        ]
 
-        ttk.Button(template_frame, text="Select/Create", command=self.select_reservoir).pack(side=tk.RIGHT)
+        self.reservoir_listbox, _ = create_scrolled_listbox(
+            template_frame,
+            display_list,
+            label_text="Available Reservoirs",
+            height=6
+        )
 
-        # --- 2. Placement Geometry ---
-        placement_frame = ttk.Labelframe(self.scroll_frame, text="Placement Overrides", padding="10")
+        # Bind selection event
+        self.reservoir_listbox.bind('<<ListboxSelect>>', self.on_reservoir_selected)
+
+        ttk.Button(
+            template_frame,
+            text="Select Reservoir",
+            command=lambda: self.on_reservoir_selected(None),
+        ).pack(fill=tk.X, padx=10, pady=5)
+
+        # "Create New" button below listbox
+        ttk.Button(
+            self.scroll_frame,
+            text="Create New Reservoir",
+            command=self.create_new_reservoir
+        ).pack(fill=tk.X, padx=10, pady=(0, 10))
+
+        # --- 2. Configuration Section ---
+        placement_frame = ttk.Labelframe(self.scroll_frame, text="Placement Configuration", padding="10")
         placement_frame.pack(fill=tk.X, pady=10)
 
-        # Use create_form for consistent styling
         self.form_vars = create_form(placement_frame, [
             ("Explicit Hook IDs:", "hooks", "entry", "", None, "text")
         ])
 
-        # Informational Label
         info_text = ("Leave Hook IDs empty to populate entire holder.\n"
                      "Use commas for multiple hooks (e.g. 1, 2, 5).")
-        ttk.Label(placement_frame, text=info_text, font=('Arial', 9, 'italic')).grid(row=1, column=0, columnspan=2,
-                                                                                     pady=10)
+        ttk.Label(placement_frame, text=info_text, font=('Arial', 9, 'italic')).grid(
+            row=1, column=0, columnspan=2, pady=10
+        )
 
-        # 3. Use the base class button bar
+        # --- 3. Buttons ---
         self.add_button_bar(create_cmd=self.on_ok, create_text="Save Configuration")
 
-    def select_reservoir(self):
-        dialog = SelectOrCreateComponentDialog(self, "Reservoir", self.available_reservoirs)
+    def on_reservoir_selected(self, event=None):
+        """Handle reservoir selection from listbox"""
+        selection = self.reservoir_listbox.curselection()
+        if selection:
+            self.selected_reservoir_template = self.available_reservoirs[selection[0]]
+
+    def create_new_reservoir(self):
+        """Open creation dialog and add to list"""
+        dialog = CreateLowLevelLabwareDialog(self, initial_type="Reservoir", fixed_type=True)
         self.wait_window(dialog)
 
         if dialog.result:
+            # Add to available list
+            self.available_reservoirs.append(dialog.result)
+
+            # Refresh listbox
+            display_list = [
+                f"{r.labware_id or 'Unnamed'}: {r.size_x}x{r.size_y}mm"
+                for r in self.available_reservoirs
+            ]
+            self.reservoir_listbox.delete(0, tk.END)
+            for item in display_list:
+                self.reservoir_listbox.insert(tk.END, item)
+
+            # Auto-select the newly created one
+            last_index = len(self.available_reservoirs) - 1
+            self.reservoir_listbox.selection_set(last_index)
+            self.reservoir_listbox.see(last_index)
             self.selected_reservoir_template = dialog.result
-            self.template_label.config(text=f"Selected: {self.selected_reservoir_template.labware_id}",
-                                       foreground='blue')
 
     def on_ok(self):
         if not self.selected_reservoir_template:
-            messagebox.showerror("Selection Required", "Please select a Reservoir template first.")
+            messagebox.showerror("Selection Required", "Please select a Reservoir first.")
             return
 
         try:
-            # Use get_inputs to handle the trimming of the string
-            # Hook IDs is optional, so we add it to optional_keys
             clean_data = self.get_inputs(self.form_vars, optional_keys=["hooks"])
-
-            # Deep copy to avoid modifying the original library object
             final_template = copy.deepcopy(self.selected_reservoir_template)
 
-            # Parse Hook IDs if provided
             hook_str = clean_data["hooks"]
             if hook_str:
-                # Efficient list comprehension with error handling
                 try:
                     hook_ids = [int(x.strip()) for x in hook_str.split(',') if x.strip()]
                     final_template.hook_ids = hook_ids
                 except ValueError:
-                    raise ValueError("Hook IDs must be a list of integers separated by commas.")
+                    raise ValueError("Hook IDs must be integers separated by commas.")
 
-                # Clean up mutually exclusive attributes
                 for attr in ['num_hooks_x', 'num_hooks_y']:
                     if hasattr(final_template, attr):
                         delattr(final_template, attr)
@@ -1047,10 +1083,7 @@ class ConfigureReservoirTemplateDialog(ScrollableDialog):
             messagebox.showerror("Input Error", str(e))
 
 class ViewChildrenLabwareDialog(tk.Toplevel):
-    """
-    Fixed-layout manager for Labware children.
-    Keeps the Grid View visible at all times while editing.
-    """
+    """Fixed-layout manager for Labware children with copy/paste functionality."""
 
     def __init__(self, parent, labware, pipettor=None):
         super().__init__(parent)
@@ -1062,21 +1095,24 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
         self.pipettor = pipettor
         self.vars = {}
 
+        # Copy/paste state
+        self.copy_mode = False
+        self.copy_source = None
+        self.paste_targets = set()
+
         # Modal setup
         self.transient(parent)
         self.grab_set()
 
         self.setup_ui()
-        # Delay drawing slightly to ensure canvas dimensions are registered
         self.after(500, self.refresh_view)
 
     def setup_ui(self):
         """Creates a side-by-side layout: Grid (Left) and Editor (Right)."""
-        # Main container
         main_frame = ttk.Frame(self, padding="10")
         main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # LEFT SIDE: The Grid (Fixed)
+        # LEFT: Grid View
         self.left_panel = ttk.Labelframe(main_frame, text="Grid View", padding="5")
         self.left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
 
@@ -1084,38 +1120,131 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self.canvas.bind('<Button-1>', self.on_canvas_click)
 
-        # RIGHT SIDE: The Editor (Static width)
+        # RIGHT: Editor Panel
         self.right_panel = ttk.Labelframe(main_frame, text="Item Editor", padding="15", width=350)
         self.right_panel.pack(side=tk.RIGHT, fill=tk.Y, padx=(5, 0))
-        self.right_panel.pack_propagate(False)  # Maintain width
+        self.right_panel.pack_propagate(False)
 
-        # Container for dynamic controls
         self.controls_container = ttk.Frame(self.right_panel)
         self.controls_container.pack(fill=tk.BOTH, expand=True)
 
         self.update_edit_panel()
 
     def refresh_view(self):
-        """Redraws the grid based on labware children protocol."""
-        draw_labware_grid(self.canvas, self.labware, self.selected_child)
+        """Redraws the grid, highlighting copy source and paste targets."""
+
+        draw_labware_grid(
+            self.canvas,
+            self.labware,
+            self.selected_child,
+            check_box=self.copy_mode,
+            copy_source=self.copy_source if self.copy_mode else None,
+            paste_targets=self.paste_targets if self.copy_mode else set()
+        )
 
     def on_canvas_click(self, event):
-        """Identifies click and updates the right-hand panel."""
+        # Find items under the mouse click
         items = self.canvas.find_overlapping(event.x, event.y, event.x, event.y)
 
         for item in items:
             tags = self.canvas.gettags(item)
+
+            # --- 1. Header/Batch Selection Logic ---
+            if 'header' in tags:
+                if 'master_header' in tags:
+                    self._select_batch("master", None)
+                else:
+                    # Find the tag that looks like 'col_header_1' or 'row_header_2'
+                    header_tag = next((t for t in tags if '_header_' in t), None)
+                    if header_tag:
+                        parts = header_tag.split('_header_')  # ['col', '1']
+                        self._select_batch(parts[0], int(parts[1]))
+                return  # Exit after handling header
+
+            # --- 2. Individual Child Logic ---
             if 'clickable_child' in tags:
-                for tag in tags:
-                    if "_" in tag and tag != "clickable_child":
-                        col, row = map(int, tag.split("_"))
-                        self.selected_child = self.labware.get_child_at(col, row)
-                        self.refresh_view()
-                        self.update_edit_panel()
-                        return
+                # Look for the coordinate tag (e.g., "0_5")
+                coord_tag = next((t for t in tags if "_" in t and t != "clickable_child"), None)
+                if not coord_tag:
+                    continue
+
+                col, row = map(int, coord_tag.split("_"))
+                child = self.labware.get_child_at(col, row)
+                if not child:
+                    continue
+
+                if self.copy_mode:
+                    # Toggle logic: If in paste_targets, remove it; else, add it.
+                    if child in self.paste_targets:
+                        self.paste_targets.remove(child)
+                    else:
+                        self.paste_targets.add(child)
+                    self.refresh_view()
+                else:
+                    # Normal mode: Single selection
+                    self.selected_child = child
+                    self.refresh_view()
+                    self.update_edit_panel()
+                return
+
+    def start_copy_mode(self):
+        """Enter copy mode with current selection as source."""
+        if not self.selected_child:
+            messagebox.showwarning("No Source", "Please select a source well first.")
+            return
+
+        self.copy_mode = True
+        self.copy_source = self.selected_child
+        self.paste_targets.clear()
+        self.refresh_view()
+        self.update_edit_panel()
+
+    def execute_paste(self):
+        """Paste content from copy_source to all paste_targets."""
+        if not self.paste_targets:
+            messagebox.showwarning("No Targets", "Please select target wells to paste to.")
+            return
+
+        source = self.copy_source
+        success_count = 0
+
+        try:
+            for target in self.paste_targets:
+                if target == source:
+                    continue
+
+                # Handle liquid content
+                if hasattr(source, 'content') and hasattr(target, 'add_content'):
+                    target.clear_content()
+                    for content_type, volume in source.content.items():
+                        target.add_content(content_type, volume)
+                    success_count += 1
+
+                # Handle pipette tips
+                elif hasattr(source, 'is_occupied') and hasattr(target, 'is_occupied'):
+                    if source.is_occupied:
+                        if not target.is_occupied:
+                            target.place_pipette()
+                    else:
+                        if target.is_occupied:
+                            target.remove_pipette()
+                    success_count += 1
+
+            self.cancel_copy_mode()
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to paste: {str(e)}")
+
+    def cancel_copy_mode(self):
+        """Exit copy mode and return to normal."""
+        self.copy_mode = False
+        self.copy_source = None
+        self.paste_targets.clear()
+        self.refresh_view()
+        self.update_edit_panel()
 
     def update_edit_panel(self):
-        """Rebuilds editor panel with separate Add and Remove sections."""
+        """Rebuilds editor panel based on current mode (normal/copy)."""
         for widget in self.controls_container.winfo_children():
             widget.destroy()
 
@@ -1123,92 +1252,169 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
         info_text = tk.Text(self.controls_container, height=12, width=30,
                             bg="#F8F9FA", relief="flat", padx=10, pady=10)
         info_text.pack(fill=tk.X, pady=(0, 15))
-        update_detailed_info_text(info_text, self.selected_child, modules=['basic', 'content'])
 
+        # Show copy source info in copy mode, otherwise selected child
+        display_obj = self.copy_source if self.copy_mode else self.selected_child
+        update_detailed_info_text(info_text, display_obj, modules=['basic', 'content'])
+
+        # COPY MODE UI
+        if self.copy_mode:
+            mode_label = ttk.Label(
+                self.controls_container,
+                text=" COPY MODE: Select targets on grid",
+                font=('Arial', 10, 'bold'),
+                foreground='blue'
+            )
+            mode_label.pack(fill=tk.X, pady=(0, 10))
+
+            btn_frame = ttk.Frame(self.controls_container)
+            btn_frame.pack(fill=tk.X, pady=5)
+
+            ttk.Button(
+                btn_frame,
+                text="Paste to Selected",
+                command=self.execute_paste
+            ).pack(fill=tk.X, pady=2)
+
+            ttk.Button(
+                btn_frame,
+                text="Cancel",
+                command=self.cancel_copy_mode
+            ).pack(fill=tk.X, pady=2)
+
+            ttk.Button(
+                self.controls_container,
+                text="Close",
+                command=self.destroy
+            ).pack(side=tk.BOTTOM, pady=10)
+            return
+
+        # NORMAL MODE UI
         if not self.selected_child:
             return
 
         child = self.selected_child
 
-        #visit button
-        visit_frame = ttk.Labelframe(self.controls_container, text="Navigation", padding="10")
-        visit_frame.pack(fill=tk.X, pady=5)
-
+        # Visit button
         def do_visit():
             try:
                 x, y = child.position
                 self.pipettor.move_xy(x, y)
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to visit position: {str(e)}")
+                messagebox.showerror("Error", f"Failed to visit: {str(e)}")
 
-        visit_btn = ttk.Button(visit_frame, text="Visit Position", command=do_visit)
+        visit_btn = ttk.Button(self.controls_container, text="Visit Position", command=do_visit)
         visit_btn.pack(fill=tk.X, pady=5)
-
-        # Enable only if pipettor is connected
         if not self.pipettor:
             visit_btn.config(state='disabled')
 
-        # DYNAMIC ACTION PANEL
+        # Content editing (Wells/Reservoirs)
         if hasattr(child, 'add_content'):
-            # --- ADD SECTION ---
-            add_frame = ttk.Labelframe(self.controls_container, text="Add Liquid", padding="10")
-            add_frame.pack(fill=tk.X, pady=5)
+            self._create_content_editor(child)
 
-            add_fields = [
-                ("Type:", "type", "entry", "Water", None, "text"),
-                ("Vol (µL):", "add_vol", "entry", "50", None, "numeric")
-            ]
-
-            self.add_vars = create_form(add_frame, add_fields, field_width = 10)
-
-            def do_add():
-                try:
-                    t = self.add_vars['type'].get()
-                    v = float(self.add_vars['add_vol'].get())
-                    child.add_content(t, v)
-                    self.refresh_view();
-                except ValueError as e:
-                    messagebox.showerror("Error", str(e))
-
-            ttk.Button(add_frame, text="Add", command=do_add).grid(row=2, column=0, columnspan=2, sticky='we',
-                                                                           pady=5)
-
-            # --- REMOVE SECTION ---
-            rem_frame = ttk.Labelframe(self.controls_container, text="Remove Liquid", padding="10")
-            rem_frame.pack(fill=tk.X, pady=5)
-
-            rem_fields = [("Vol (µL):", "rem_vol", "entry", "20", None, "numeric")]
-            self.rem_vars = create_form(rem_frame, rem_fields, field_width = 10)
-
-            def do_remove():
-                try:
-                    v = float(self.rem_vars['rem_vol'].get())
-                    child.remove_content(v)
-                    self.refresh_view();
-                except ValueError as e:
-                    messagebox.showerror("Error", str(e))
-
-            ttk.Button(rem_frame, text="Remove", command=do_remove).grid(row=1, column=0, columnspan=2,
-                                                                                  sticky='we', pady=5)
-
-            # --- QUICK CLEAR ---
-            ttk.Button(self.controls_container, text="Empty",
-                       command=lambda: [child.clear_content(), self.refresh_view()]
-                       ).pack(fill=tk.X, pady=5)
-
+        # Tip editing (PipetteHolders)
         elif hasattr(child, 'is_occupied'):
-            action_frame = ttk.Labelframe(self.controls_container, text="Quick Actions", padding="10")
-            action_frame.pack(fill=tk.X, pady=5)
+            self._create_tip_editor(child)
 
-            btn_text = "Remove Tip" if child.is_occupied else "Place Tip"
+        # Copy button
+        ttk.Button(
+            self.controls_container,
+            text="Copy Content",
+            command=self.start_copy_mode
+        ).pack(fill=tk.X, pady=5)
 
-            def toggle():
-                if child.is_occupied: child.remove_pipette()
-                else: child.place_pipette()
+        # Close button
+        ttk.Button(
+            self.controls_container,
+            text="Close",
+            command=self.destroy
+        ).pack(side=tk.BOTTOM, pady=10)
+
+    def _create_content_editor(self, child):
+        """Create add/remove liquid controls."""
+        # ADD SECTION
+        add_frame = ttk.Labelframe(self.controls_container, text="Add Liquid", padding="10")
+        add_frame.pack(fill=tk.X, pady=5)
+
+        add_fields = [
+            ("Type:", "type", "entry", "Water", None, "text"),
+            ("Vol (µL):", "add_vol", "entry", "50", None, "numeric")
+        ]
+        self.add_vars = create_form(add_frame, add_fields, field_width=10)
+
+        def do_add():
+            try:
+                t = self.add_vars['type'].get()
+                v = float(self.add_vars['add_vol'].get())
+                child.add_content(t, v)
                 self.refresh_view()
-                self.update_edit_panel()
+            except ValueError as e:
+                messagebox.showerror("Error", str(e))
 
-            ttk.Button(action_frame, text=btn_text, command=toggle).pack(fill=tk.X, pady=10)
+        ttk.Button(add_frame, text="Add", command=do_add).grid(
+            row=2, column=0, columnspan=2, sticky='we', pady=5
+        )
 
-        # Footer
-        ttk.Button(self.controls_container, text="Close", command=self.destroy).pack(side=tk.BOTTOM, pady=10)
+        # REMOVE SECTION
+        rem_frame = ttk.Labelframe(self.controls_container, text="Remove Liquid", padding="10")
+        rem_frame.pack(fill=tk.X, pady=5)
+
+        rem_fields = [("Vol (µL):", "rem_vol", "entry", "20", None, "numeric")]
+        self.rem_vars = create_form(rem_frame, rem_fields, field_width=10)
+
+        def do_remove():
+            try:
+                v = float(self.rem_vars['rem_vol'].get())
+                child.remove_content(v)
+                self.refresh_view()
+            except ValueError as e:
+                messagebox.showerror("Error", str(e))
+
+        ttk.Button(rem_frame, text="Remove", command=do_remove).grid(
+            row=1, column=0, sticky='we', pady=5, padx=2
+        )
+        ttk.Button(rem_frame, text="Empty", command=lambda: [child.clear_content(), self.refresh_view()]).grid(
+            row=1, column=1, sticky='we', pady=5, padx=2
+        )
+
+    def _create_tip_editor(self, child):
+        """Create place/remove tip controls."""
+        action_frame = ttk.Labelframe(self.controls_container, text="Quick Actions", padding="10")
+        action_frame.pack(fill=tk.X, pady=5)
+
+        btn_text = "Remove Tip" if child.is_occupied else "Place Tip"
+
+        def toggle():
+            if child.is_occupied:
+                child.remove_pipette()
+            else:
+                child.place_pipette()
+            self.refresh_view()
+            self.update_edit_panel()
+
+        ttk.Button(action_frame, text=btn_text, command=toggle).pack(fill=tk.X, pady=10)
+
+    def _select_batch(self, type_, index):
+        """Handles logic for Master, Row, and Column selection."""
+        all_children = self.labware.get_all_children()
+
+        if type_ == "master":
+            batch = all_children
+        elif type_ == "col":
+            batch = [c for c in all_children if c.column == index]
+        elif type_ == "row":
+            batch = [c for c in all_children if c.row == index]
+        else:
+            return
+
+        # If already full, clear it. Otherwise, fill it.
+        is_fully_selected = all(item in self.paste_targets for item in batch)
+
+        if is_fully_selected:
+            for item in batch:
+                self.paste_targets.discard(item)
+        else:
+            for item in batch:
+                self.paste_targets.add(item)
+
+        self.refresh_view()
