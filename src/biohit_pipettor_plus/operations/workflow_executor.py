@@ -201,7 +201,7 @@ class WorkflowExecutor:
             try:
                 self.pipettor.add_medium(
                     source=source,
-                    source_col_row=params['source_positions'],
+                    source_col_row=params['source_positions'][0],
                     destination=dest,
                     dest_col_row=params['dest_positions'],
                     volume_per_well=params['volume'],
@@ -221,7 +221,7 @@ class WorkflowExecutor:
                     source=source,
                     destination=dest,
                     source_col_row=params['source_positions'],
-                    destination_col_row=params['dest_positions'],
+                    destination_col_row=params['dest_positions'][0],
                     volume_per_well=params['volume'],
                 )
             finally:
@@ -258,8 +258,8 @@ class WorkflowExecutor:
             volume = params['volume']
             mix_volume = params.get('mix_volume', 0)
             plate_positions = params['plate_positions']
-            remove_position = params['remove_position']
-            source_position = params['source_position']
+            remove_positions = params['remove_positions']
+            source_positions = params['source_positions']
 
             # Handle change_tips flag
             change_tips = params.get('change_tips', False)
@@ -282,14 +282,14 @@ class WorkflowExecutor:
                         source=plate,
                         destination=remove_reservoir,
                         source_col_row=batch,
-                        destination_col_row=remove_position,
+                        destination_col_row=remove_positions[0],
                         volume_per_well=volume,
                     )
 
                     # Step 2: Add fresh medium from source reservoir to plate
                     self.pipettor.add_medium(
                         source=source_reservoir,
-                        source_col_row=source_position,
+                        source_col_row=source_positions[0],
                         destination=plate,
                         dest_col_row=batch,
                         volume_per_well=volume,

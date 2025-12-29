@@ -6,15 +6,16 @@ from typing import Callable, Optional
 from tkinter import messagebox, filedialog
 
 from .well_window import WellWindow
-from .collapsible_frame import CollapsibleFrame
+from .ui_helper import *
 from ..pipettor_plus.pipettor_plus import PipettorPlus
 from ..deck_structure import *
 from ..operations.workflow import Workflow
 from ..operations.operation import Operation
-from ..operations.operationtype import OperationType
 from ..operations.operation_builder import OperationBuilder
 from ..operations.operation_logger import OperationLogger
 from .executioncontroloverlay import ExecutionControlOverlay
+from .operationconfig import OPERATION_CONFIGS
+from .operationsession import OperationSession
 
 import os
 import copy
@@ -60,6 +61,7 @@ class FunctionWindow:
         self.on_operation_complete = on_operation_complete
         self.channels = self.pipettor.tip_count
         self.multichannel = self.pipettor.multichannel
+        self.current_session: Optional[OperationSession] = None
 
         if mode == "builder":
             self._state_snapshot = self.pipettor.push_state()
@@ -80,8 +82,6 @@ class FunctionWindow:
 
             self.operation_logger = OperationLogger()
 
-
-
         #for direct mode
         self.custom_funcs_dict: dict[str, list[Callable]] = {}
         self.current_func_list: list[Callable] = []
@@ -95,6 +95,11 @@ class FunctionWindow:
 
         # Get available labware
         self.dict_top_labware = self.get_top_labwares()
+
+        # wrapper for all operations
+        for op_key in OPERATION_CONFIGS.keys():
+            setattr(self, f'callback_{op_key}',
+                    lambda e=False, k=op_key: self._start_operation(k, e))
 
         # Create UI based on mode
         if mode == "direct":
@@ -120,153 +125,59 @@ class FunctionWindow:
             self.is_toplevel = True
             self.create_builder_mode_ui()
 
+
     # ========== UI CREATION ==========
 
     def create_direct_mode_ui(self):
         """Create embedded UI for direct execution with staging area"""
-        # Create scrollable container
-        canvas = tk.Canvas(self.container, bg='#f0f0f0', highlightthickness=0)
-        scrollbar = ttk.Scrollbar(self.container, orient=tk.VERTICAL, command=canvas.yview)
 
-        self.control_frame = ttk.Frame(canvas)
-        canvas.configure(yscrollcommand=scrollbar.set)
-
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        canvas_window = canvas.create_window((0, 0), window=self.control_frame, anchor='nw')
-
-        def configure_scroll(_=None):
-            canvas.configure(scrollregion=canvas.bbox("all"))
-            canvas_width = canvas.winfo_width()
-            if canvas_width > 1:
-                canvas.itemconfig(canvas_window, width=canvas_width)
-
-        self.control_frame.bind('<Configure>', configure_scroll)
-        canvas.bind('<Configure>', configure_scroll)
+        scrollable = ScrollableTab(self.container)
+        self.control_frame = scrollable.content_frame
 
         # Title
-        ttk.Label(
-            self.control_frame,
-            text="Operations",
-            font=('Arial', 14, 'bold')
-        ).pack(pady=5)
+        ttk.Label( self.control_frame, text="Operations",
+            font=('Arial', 14, 'bold')).pack(pady=5)
 
         # === CUSTOM WORKFLOWS SECTION ===
-        workflows_frame = ttk.Labelframe(
-            self.control_frame,
-            text="Custom Workflows",
-            padding=10
-        )
+        workflows_frame = ttk.Labelframe(self.control_frame, text="Custom Workflows", padding=10)
         workflows_frame.pack(fill=tk.X, padx=10, pady=5)
 
-        # Workflow listbox with scrollbar
-        listbox_frame = ttk.Frame(workflows_frame)
-        listbox_frame.pack(fill=tk.BOTH, expand=True, pady=5)
-
-        scrollbar = ttk.Scrollbar(listbox_frame, orient=tk.VERTICAL)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-        self.workflows_listbox = tk.Listbox(
-            listbox_frame,
-            font=('Arial', 10),
-            height=5,
-            yscrollcommand=scrollbar.set
+        # Workflow listbox
+        self.workflows_listbox, _ = create_scrolled_listbox(
+            workflows_frame, items=[],
+            label_text="", height=5
         )
-        self.workflows_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.config(command=self.workflows_listbox.yview)
 
-        # Workflow action buttons
-        workflow_buttons_frame = ttk.Frame(workflows_frame)
-        workflow_buttons_frame.pack(fill=tk.X, pady=5)
+        # Workflow buttons
+        button_configs = [
+            {"text": "Create", "command": self.open_workflow_builder},
+            {"text": "Open", "command": self.open_selected_workflow},
+            {"text": "Delete", "command": self.delete_selected_workflow},
+            {"text": "Save to File", "command": self.save_selected_workflow_to_file},
+            {"text": "Load from File", "command": self.load_workflow_from_file},
+        ]
+        create_button_bar(workflows_frame, button_configs, fill=True, btns_per_row=3)
 
-        ttk.Button(
-            workflow_buttons_frame,
-            text=" Create",
-            command=self.open_workflow_builder,
-            bootstyle="success"
-        ).pack(side=tk.LEFT, padx=2, fill=tk.X, expand=True)
-
-        ttk.Button(
-            workflow_buttons_frame,
-            text=" Open",
-            command=self.open_selected_workflow,
-            bootstyle="primary"
-        ).pack(side=tk.LEFT, padx=2, fill=tk.X, expand=True)
-
-        ttk.Button(
-            workflow_buttons_frame,
-            text=" Delete",
-            command=self.delete_selected_workflow,
-            bootstyle="danger"
-        ).pack(side=tk.LEFT, padx=2, fill=tk.X, expand=True)
-
-        from_file_frame = ttk.Frame(workflows_frame)
-        from_file_frame.pack(fill=tk.X, pady=(5, 0))  # Padding at the bottom
-
-        ttk.Button(
-            from_file_frame,
-            text=" Save to File",
-            command=self.save_selected_workflow_to_file,
-            bootstyle="primary"
-        ).pack(side=tk.LEFT, padx=2, fill=tk.X, expand=True)
-
-
-        ttk.Button(
-            from_file_frame,
-            text=" Load from File",
-            command=self.load_workflow_from_file,
-            bootstyle="primary"
-        ).pack(side=tk.LEFT, padx=2, fill=tk.X, expand=True)
-
-        # Initialize with empty workflow dict
-        self.workflows_in_memory = {}  # Stores workflows created in this session
+        # Initialize workflows
+        self.workflows_in_memory = {}
         self.refresh_workflows_list()
 
         # === STAGING AREA ===
-        staging_frame = ttk.Labelframe(
-            self.control_frame,
-            text="Staged Operation - Review Before Execution",
-            padding=10
-        )
-        staging_frame.pack(fill=tk.X, padx=10, pady=10)
+        staging_frame, self.staged_op_text = create_info_panel(
+            parent=self.control_frame,  title="Validate & Execute ",
+            height=8, clear_cmd=None, collapsed=False)
 
-        # Details display
-        self.staged_op_text = tk.Text(
-            staging_frame,
-            height=8,
-            wrap=tk.WORD,
-            state='disabled',
-            font=('Courier', 10)
-        )
-        self.staged_op_text.pack(fill=tk.BOTH, expand=True, pady=5)
+        # Custom staging buttons
+        button_configs = [
+        {"text": "Validate", "command": self.validate_staged_operation, "state": "disabled"},
+        {"text": "Clear", "command": self.clear_staged_operation, "state": "disabled"}
+        ]
 
-        # Action buttons
-        action_frame = ttk.Frame(staging_frame)
-        action_frame.pack(fill=tk.X, pady=5)
+        action_frame, buttons = create_button_bar(staging_frame.content_frame,
+            button_configs, fill=True,  btns_per_row=2)
 
-        # Configure columns with specific weights
-        action_frame.columnconfigure(0, weight=1)
-        action_frame.columnconfigure(1, weight=1)
-        action_frame.columnconfigure(2, weight=0, minsize=80)
-
-        self.execute_button = ttk.Button(
-            action_frame,
-            text="Validate",
-            command=self.validate_staged_operation,
-            state='disabled',
-            bootstyle="warning"
-        )
-        self.execute_button.grid(row=0, column=0, sticky='ew', padx=5)
-
-        self.clear_button = ttk.Button(
-            action_frame,
-            text="Clear",
-            command=self.clear_staged_operation,
-            state='disabled',
-            bootstyle="secondary"
-        )
-        self.clear_button.grid(row=0, column=1, sticky='ew', padx=5)
+        self.execute_button = buttons["Validate"]
+        self.clear_button = buttons["Clear"]
 
         # Operation buttons
         self.place_operation_buttons(self.control_frame)
@@ -306,65 +217,18 @@ class FunctionWindow:
     def create_builder_mode_ui(self):
         """Create full UI for workflow builder in separate window with scrolling"""
 
-        # Create main container frame
-        container = ttk.Frame(self.window_build_func)
-        container.pack(fill=tk.BOTH, expand=True)
+        scrollable = ScrollableTab(self.window_build_func)
+        content_frame = scrollable.content_frame
 
-        # Create canvas and scrollbar
-        canvas = tk.Canvas(container, bg='#f0f0f0', highlightthickness=0)
-        scrollbar = ttk.Scrollbar(container, orient=tk.VERTICAL, command=canvas.yview)
-
-        # Create the actual content frame that will be scrolled
-        content_frame = ttk.Frame(canvas)
-        canvas.configure(yscrollcommand=scrollbar.set)
-
-        # Pack scrollbar and canvas
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        # Create window inside canvas
-        canvas_window = canvas.create_window((0, 0), window=content_frame, anchor='nw')
-
-        # Configure scroll region
-        def configure_scroll(_=None):
-            canvas.configure(scrollregion=canvas.bbox("all"))
-            canvas_width = canvas.winfo_width()
-            if canvas_width > 1:
-                canvas.itemconfig(canvas_window, width=canvas_width)
-
-        content_frame.bind('<Configure>', configure_scroll)
-        canvas.bind('<Configure>', configure_scroll)
-
-        # Enable mousewheel scrolling
-        def on_mousewheel(event):
-            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-
-        def on_mousewheel_linux_up(event):
-            canvas.yview_scroll(-1, "units")
-
-        def on_mousewheel_linux_down(event):
-            canvas.yview_scroll(1, "units")
-
-        # Bind to canvas ONLY (automatically unbinds when canvas is destroyed)
-        canvas.bind("<MouseWheel>", on_mousewheel)  # Windows/MacOS
-        canvas.bind("<Button-4>", on_mousewheel_linux_up)  # Linux scroll up
-        canvas.bind("<Button-5>", on_mousewheel_linux_down)  # Linux scroll down
-
-        # Also bind when mouse enters the canvas area
-        content_frame.bind("<Enter>", lambda e: canvas.focus_set())
-
-        # NOW use content_frame instead of self.window_build_func for grid layout
         # Grid configuration
-        content_frame.columnconfigure(0, weight=1)  # Left: buttons
-        content_frame.columnconfigure(1, weight=1)  # Middle: selection
-        content_frame.columnconfigure(2, weight=1)  # Right: workflow queue
-
+        for i in range(3):
+            content_frame.columnconfigure(i, weight=1, uniform="equal")
         for i in range(12):
             content_frame.rowconfigure(i, weight=1)
 
         # Header
         self.label_header = ttk.Label(
-            content_frame,  # Changed from self.window_build_func
+            content_frame,
             text="",
             anchor="center",
             font=('Helvetica', 14)
@@ -372,154 +236,84 @@ class FunctionWindow:
         self.label_header.grid(row=0, column=0, columnspan=3, sticky="nsew", pady=10)
 
         # Left column: Operation buttons
-        button_container = ttk.Frame(content_frame)  # Changed
+        button_container = ttk.Frame(content_frame)
         button_container.grid(row=1, column=0, rowspan=10, sticky="nsew", padx=5)
         self.place_operation_buttons(button_container)
 
         # Middle column: Selection area
-        self.stage_label = ttk.Label(
-            content_frame,  # Changed
-            text="",
-            font=('Arial', 14),
-            foreground="gray"
-        )
+        self.stage_label = ttk.Label(content_frame, text="", foreground="gray",
+                                     wraplength=350,anchor="w",justify="left")
         self.stage_label.grid(row=1, column=1, sticky="ew", padx=5, pady=2)
 
-        self.edit_info_label = ttk.Label(
-            content_frame,
-            text="",
-            font=('Arial', 10, 'bold'),
-            foreground="orange"
-        )
+        self.edit_info_label = ttk.Label(content_frame, text="", font=('Arial', 10, 'bold'), foreground="orange",
+                                         wraplength=350,anchor="w",justify="left")
         self.edit_info_label.grid(row=2, column=1, sticky="ew", padx=5, pady=2)
 
-        self.second_column_frame = ttk.Frame(content_frame)  # Changed
+
+        self.second_column_frame = ttk.Frame(content_frame)
         self.second_column_frame.grid(row=3, column=1, rowspan=9, sticky="nsew")
         self.second_column_frame.columnconfigure(0, weight=1)
         for i in range(10):
             self.second_column_frame.rowconfigure(i, weight=1)
 
-        # Right column
+        # Right column: Queue header
         queue_header_frame = ttk.Frame(content_frame)
         queue_header_frame.grid(row=0, column=2, sticky="ew", padx=10, pady=5)
+        queue_header_frame.columnconfigure(0, weight=1)
 
-        # Title (left)
-        title_label = ttk.Label(
-            queue_header_frame,
-            text="Workflow Queue",
-            font=('Helvetica', 14)
-        )
-        title_label.grid(row=0, column=0, sticky="w")
+        ttk.Label(queue_header_frame, text="Workflow Queue", font=('Helvetica', 14)).grid(row=0, column=0, sticky="w")
 
-        # --- Controls container (right side) ---
         controls_frame = ttk.Frame(queue_header_frame)
         controls_frame.grid(row=0, column=1, sticky="e")
 
-        # Copy button
-        self.copy_btn = ttk.Button(
-            controls_frame,
-            text="Copy",
-            command=self.copy_selected_operations,
-            state='disabled',
-            bootstyle="info-outline",
-            width=8
-        )
-        self.copy_btn.grid(row=0, column=0, padx=3)
+        button_configs = [
+            {"text": "Copy", "command": self.copy_selected_operations, "state": "disabled"},
+            {"text": "Paste", "command": self.paste_operations, "state": "disabled",}
+        ]
+        _, buttons = create_button_bar(controls_frame, button_configs, btns_per_row=2)
+        self.copy_btn = buttons["Copy"]
+        self.paste_btn = buttons["Paste"]
 
-        # Paste button
-        self.paste_btn = ttk.Button(
-            controls_frame,
-            text="Paste",
-            command=self.paste_operations,
-            state='disabled',
-            bootstyle="success-outline",
-            width=8
-        )
-        self.paste_btn.grid(row=0, column=1, padx=3)
-
-        # Paste position entry
-        self.paste_position_var = tk.StringVar(value="After selected")
-
-        # Paste position entry
         self.paste_position_var = tk.StringVar(value="End")
+        self.paste_position_menu = ttk.Combobox(controls_frame, textvariable=self.paste_position_var,
+                                                values=["End", "Top", "Or enter index..."], width=12, state='disabled')
+        self.paste_position_menu.pack(side=tk.LEFT, padx=3)
 
-        # Paste position entry
-        self.paste_position_var = tk.StringVar(value="End")
-
-        paste_position_menu = ttk.Combobox(
-            controls_frame,
-            textvariable=self.paste_position_var,
-            values=["End", "Top", "Or enter index..."],
-            width=12
-        )
-        paste_position_menu.grid(row=0, column=2, padx=3)
-
-        paste_position_menu.config(state='disabled')
-        self.paste_position_menu = paste_position_menu
-
-        # Stretch title column
-        queue_header_frame.columnconfigure(0, weight=1)
-
-        self.third_column_frame = ttk.Frame(content_frame)  # Changed
+        # Right column: Queue display
+        self.third_column_frame = ttk.Frame(content_frame)
         self.third_column_frame.grid(row=1, column=2, rowspan=9, sticky="nsew", padx=5)
         self.third_column_frame.columnconfigure(0, weight=1)
         for i in range(20):
             self.third_column_frame.rowconfigure(i, weight=1)
 
         # Bottom: Workflow controls
-        self.frame_name = ttk.Frame(content_frame)  # Changed
+        self.frame_name = ttk.Frame(content_frame)
         self.frame_name.grid(row=11, column=0, columnspan=3, sticky="nsew", padx=10, pady=5)
 
         self.frame_name.columnconfigure(0, weight=3)
-        self.frame_name.columnconfigure(1, weight=1)
-        self.frame_name.columnconfigure(2, weight=1)
-        self.frame_name.columnconfigure(3, weight=1)
-        self.frame_name.columnconfigure(4, weight=1)
-        self.frame_name.columnconfigure(5, weight=1)
+        for i in range(1, 6):
+            self.frame_name.columnconfigure(i, weight=1)
 
-        ttk.Label(self.frame_name, text="Workflow Name:", font=('Arial', 11)).grid(
-            row=0, column=0, sticky='w', padx=(0, 10)
-        )
+        ttk.Label(self.frame_name, text="Workflow Name:", font=('Arial', 11)).grid(row=0, column=0, sticky='w',
+                                                                                   padx=(0, 10))
 
         self.entry_name = ttk.Entry(self.frame_name)
         self.entry_name.grid(row=1, column=0, sticky="ew", padx=(0, 10))
 
-        ttk.Button(
-            self.frame_name,
-            text="Create",
-            command=self.callback_create_button,
-            bootstyle="success"
-        ).grid(row=1, column=1, sticky="ew", padx=2)
+        # Workflow control buttons
+        buttons = [
+            ("Create", self.callback_create_button, "success"),
+            ("Clear", self.clear_workflow_queue, "danger"),
+            ("Remap", self.callback_remap_labware, "info"),
+            ("Validate", self.callback_validate_workflow, "warning"),
+            ("Close", self.callback_close_builder, "secondary")
+        ]
 
-        ttk.Button(
-            self.frame_name,
-            text="Clear",
-            command=self.clear_workflow_queue,
-            bootstyle="danger"
-        ).grid(row=1, column=2, sticky="ew", padx=2)
-
-        ttk.Button(
-            self.frame_name,
-            text="Remap",
-            command=self.callback_remap_labware,
-            bootstyle="info"
-        ).grid(row=1, column=3, sticky="ew", padx=2)
-
-
-        self.validate_execute_btn = ttk.Button(
-            self.frame_name,
-            text="Validate",
-            command=self.callback_validate_workflow,
-            bootstyle="warning"
-        )
-        self.validate_execute_btn.grid(row=1, column=4, sticky="ew", padx=2)
-
-        ttk.Button(
-            self.frame_name,
-            text="Close",
-            command=self.callback_close_builder,
-            bootstyle="secondary"
-        ).grid(row=1, column=5, sticky="ew", padx=2)
+        for i, (text, cmd, style) in enumerate(buttons, start=1):
+            btn = ttk.Button(self.frame_name, text=text, command=cmd, bootstyle=style)
+            btn.grid(row=1, column=i, sticky="ew", padx=2)
+            if text == "Validate":
+                self.validate_execute_btn = btn
 
     def set_stage(self, text: str):
         """Update stage indicator"""
@@ -528,55 +322,33 @@ class FunctionWindow:
 
     def place_operation_buttons(self, parent_frame):
         """Place all operation buttons (shared between modes)"""
-        # Tip Operations
+
+        # === TIP MANAGEMENT ===
         tip_frame = ttk.Labelframe(parent_frame, text="Tip Management", padding=10)
         tip_frame.pack(fill=tk.X, pady=5, padx=5)
 
-        self.pick_tips_btn = ttk.Button(
-            tip_frame, text=" Pick Tips",
-            command=lambda: self.callback_pick_tips(func_str="Pick Tips"),
-            bootstyle="primary"
-        )
-        self.pick_tips_btn.pack(fill=tk.X, pady=2)
+        tip_buttons = [
+            {"text": "Pick Tips", "command": self.callback_pick_tips},
+            {"text": "Return Tips", "command": self.callback_return_tips},
+            {"text": "Replace Tips", "command": self.callback_replace_tips},
+            {"text": "Discard Tips", "command": self.callback_discard_tips}
+        ]
 
-        self.return_tips_btn = ttk.Button(
-            tip_frame, text=" Return Tips",
-            command=lambda: self.callback_return_tips(func_str="Return Tips"),
-            bootstyle="primary"
-        )
-        self.return_tips_btn.pack(fill=tk.X, pady=2)
+        create_button_bar(tip_frame, tip_buttons, fill=True)
 
-        self.replace_tips_btn = ttk.Button(
-            tip_frame, text=" Replace Tips",
-            command=lambda: self.callback_replace_tips(func_str="Replace Tips"),
-            bootstyle="primary"
-        )
-        self.replace_tips_btn.pack(fill=tk.X, pady=2)
-
-        self.discard_tips_btn = ttk.Button(
-            tip_frame, text=" Discard Tips",
-            command=lambda: self.callback_discard_tips(func_str="Discard Tips"),
-            bootstyle="primary"
-        )
-        self.discard_tips_btn.pack(fill=tk.X, pady=2)
-
-        # Liquid Handling
+        # === LIQUID HANDLING ===
         liquid_frame = ttk.Labelframe(parent_frame, text="Liquid Handling", padding=10)
         liquid_frame.pack(fill=tk.X, pady=5, padx=5)
 
         # Change tips checkbox
         self.change_tips_var = tk.BooleanVar(value=False)
-        change_tips_frame = ttk.Frame(liquid_frame)
-        change_tips_frame.pack(fill=tk.X, pady=(0, 10), padx=5)
-
         ttk.Checkbutton(
-            change_tips_frame,
+            liquid_frame,
             text="Auto change tips between Wells",
             variable=self.change_tips_var,
             bootstyle="round-toggle"
-        ).pack(side=tk.LEFT)
+        ).pack(fill=tk.X, pady=(0, 5), padx=5)
 
-        # separator
         ttk.Separator(liquid_frame, orient='horizontal').pack(fill=tk.X, pady=5)
 
         # Mixing controls
@@ -592,111 +364,348 @@ class FunctionWindow:
             command=self._toggle_mixing_controls
         ).pack(side=tk.LEFT)
 
-        ttk.Label(
-            mixing_frame,
-            text="Volume:",
-            font=('Arial', 9)
-        ).pack(side=tk.LEFT, padx=(10, 5))
+        ttk.Label(mixing_frame, text="Volume:", font=('Arial', 9)).pack(side=tk.LEFT, padx=(10, 5))
 
         self.mix_volume_var = tk.StringVar(value="100")
-        self.mix_volume_entry = ttk.Entry(
-            mixing_frame,
-            textvariable=self.mix_volume_var,
-            width=8,
-            state='disabled'  # Disabled initially
-        )
+        self.mix_volume_entry = ttk.Entry(mixing_frame, textvariable=self.mix_volume_var, width=8, state='disabled')
         self.mix_volume_entry.pack(side=tk.LEFT)
 
-        ttk.Label(
-            mixing_frame,
-            text="µL",
-            font=('Arial', 9)
-        ).pack(side=tk.LEFT, padx=(2, 5))
+        ttk.Label(mixing_frame, text="µL", font=('Arial', 9)).pack(side=tk.LEFT, padx=(2, 5))
 
         ttk.Separator(liquid_frame, orient='horizontal').pack(fill=tk.X, pady=5)
 
-        #operation buttons
-        self.add_medium_btn = ttk.Button(
-            liquid_frame, text=" Add Medium",
-            command=lambda: self.callback_add_medium(func_str="Add Medium"),
-            bootstyle="success"
-        )
-        self.add_medium_btn.pack(fill=tk.X, pady=2)
+        # Liquid operation buttons
+        liquid_buttons = [
+            {"text": "Add Medium", "command": self.callback_add_medium},
+            {"text": "Remove Medium", "command": self.callback_remove_medium},
+            {"text": "Transfer Plate to Plate", "command": self.callback_transfer_plate_to_plate},
+            {"text": "Remove & Add (Batched)", "command": self.callback_remove_and_add},
+        ]
 
-        self.remove_medium_btn = ttk.Button(
-            liquid_frame, text=" Remove Medium",
-            command=lambda: self.callback_remove_medium(func_str="Remove Medium"),
-            bootstyle="success"
-        )
-        self.remove_medium_btn.pack(fill=tk.X, pady=2)
+        create_button_bar(liquid_frame, liquid_buttons, fill=True)
 
-        self.transfer_plate_btn = ttk.Button(
-            liquid_frame, text=" Transfer Plate to Plate",
-            command=lambda: self.callback_transfer_plate_to_plate(func_str="Transfer Plate to Plate"),
-            bootstyle="success"
-        )
-        self.transfer_plate_btn.pack(fill=tk.X, pady=2)
-
-        self.remove_and_add_btn = ttk.Button(
-            liquid_frame, text=" Remove & Add (Batched)",
-            command=lambda: self.callback_remove_and_add(func_str="Remove & Add"),
-            bootstyle="success"
-        )
-        self.remove_and_add_btn.pack(fill=tk.X, pady=2)
-
-        self.foc_frame = ttk.Labelframe(parent_frame, text=" FOC Measurement", padding=5)
+        # === FOC MEASUREMENT ===
+        self.foc_frame = ttk.Labelframe(parent_frame, text="FOC Measurement", padding=5)
         self.foc_frame.pack(fill=tk.X, pady=5, padx=5)
-
-        # Initial population of FOC section
         self.update_foc_section()
 
-        # === SYSTEM OPERATIONS - COLLAPSIBLE ===
+        # === SYSTEM OPERATIONS (COLLAPSIBLE) ===
         self.system_collapsible = CollapsibleFrame(parent_frame, text="System")
         self.system_collapsible.pack(fill=tk.X, pady=5, padx=5)
 
-        # Put buttons inside the content_frame
-        self.home_btn = ttk.Button(
-            self.system_collapsible.content_frame, text=" Home",
-            command=lambda: self.callback_home(),
-            bootstyle="secondary"
-        )
-        self.home_btn.pack(fill=tk.X, pady=2, padx=5)
-
-        self.move_xy_btn = ttk.Button(
-            self.system_collapsible.content_frame, text=" Move X, Y",
-            command=lambda: self.callback_move_xy(),
-            bootstyle="secondary"
-        )
-        self.move_xy_btn.pack(fill=tk.X, pady=2, padx=5)
-
-        self.move_z_btn = ttk.Button(
-            self.system_collapsible.content_frame, text=" Move Z",
-            command=lambda: self.callback_move_z(),
-            bootstyle="secondary"
-        )
-        self.move_z_btn.pack(fill=tk.X, pady=2, padx=5)
+        system_buttons = [
+            {"text": "Home", "command": lambda: self.callback_home(),},
+            {"text": "Move X, Y", "command": lambda: self.callback_move_xy()},
+            {"text": "Move Z", "command": lambda: self.callback_move_z()}
+        ]
 
         if self.mode == "direct":
-            self.force_eject_btn = ttk.Button(
-                self.system_collapsible.content_frame, text="⚠ Force Eject Tips",
-                command=self.callback_force_eject,
-                bootstyle="secondary"
-            )
-            self.force_eject_btn.pack(fill=tk.X, pady=2)
+            system_buttons.extend([
+                {"text": "⚠ Force Eject Tips", "command": self.callback_force_eject},
+                {"text": "⚠ Force Aspirate", "command": self.callback_force_aspirate},
+                {"text": "⚠ Force Dispense", "command": self.callback_force_dispense}
+            ])
 
-            self.force_aspirate_btn = ttk.Button(
-                self.system_collapsible.content_frame, text="⚠ Force Aspirate",
-                command=self.callback_force_aspirate,
-                bootstyle="secondary"
-            )
-            self.force_aspirate_btn.pack(fill=tk.X, pady=2)
+        create_button_bar(self.system_collapsible.content_frame, system_buttons, fill=True)
 
-            self.force_dispense_btn = ttk.Button(
-                self.system_collapsible.content_frame, text="⚠ Force Dispense",
-                command=self.callback_force_dispense,
-                bootstyle="secondary"
-            )
-            self.force_dispense_btn.pack(fill=tk.X, pady=2)
+    def run_operation_wizard(self):
+        """Main wizard controller - routes to appropriate step handler"""
+        if not self.current_session:
+            return
+
+        session = self.current_session
+        step_key = session.current_step()
+
+        # Check if complete
+        if session.is_complete():
+            self._finalize_operation(session)
+            self.current_session = None
+            return
+
+        # Update stage label (for builder mode)
+        if self.mode == "builder" and hasattr(self, 'stage_label'):
+            progress = session.get_progress()
+            self.stage_label.config(text=f"{progress}: {session.config['display_name']}")
+
+        # Route to appropriate handler
+        if step_key == 'volume':
+            self._handle_volume_step(session)
+        elif step_key == 'wait_time':
+            self._handle_wait_time_step(session)
+        elif step_key == 'position':
+            self._handle_position_step(session)
+        elif 'labware' in step_key or 'reservoir' in step_key:
+            self._handle_labware_step(step_key, session)
+        elif 'wells' in step_key or 'positions' in step_key:
+            self._handle_wells_step(step_key, session)
+        else:
+            raise ValueError(f"Unknown step type: {step_key}")
+
+    # ========== STEP HANDLERS ==========
+
+    def _handle_volume_step(self, session: OperationSession):
+        """Handle volume input step"""
+        self.set_stage("")
+        volume = self.ask_volume_dialog(
+            title=f"{session.config['display_name']} Volume",
+            initial_value=100
+        )
+
+        if volume is not None:
+            session.store('volume', volume)
+            session.advance()
+            self.run_operation_wizard()
+        # If cancelled, session stays at current step (user can try again or cancel operation)
+
+    def _handle_wait_time_step(self, session: OperationSession):
+        """Handle wait time input step (for FOC measurement)"""
+        self.set_stage("")
+        label = session.config.get('wait_time_label', 'Wait time (sec):')
+
+        wait_time = self.ask_volume_dialog(
+            title=f"{session.config['display_name']}",
+            initial_value=0,
+            label_text=label
+        )
+
+        if wait_time is not None:
+            session.store('wait_seconds', int(wait_time))
+            session.advance()
+            self.run_operation_wizard()
+
+    def _handle_position_step(self, session: OperationSession):
+        """Handle X/Y/Z position input step"""
+        self.set_stage("")
+
+        # Build axes config from session config
+        axes_config = []
+        for axis_name, range_attr, position_attr in session.config['axes']:
+            deck_range = getattr(self.deck, range_attr)
+            current_pos = getattr(self.pipettor, position_attr, 0.0)
+
+            if axis_name == 'Z':
+                min_val, max_val = 0.0, deck_range
+            else:
+                min_val, max_val = deck_range[0], deck_range[1]
+
+            axes_config.append((axis_name, min_val, max_val, current_pos))
+
+        result = self.ask_position_dialog(axes_config)
+
+        if result is not None:
+            # Store based on number of axes
+            if len(axes_config) == 1:
+                session.store(session.config['axes'][0][0].lower(), result)
+            else:
+                for i, (axis_name, _, _, _) in enumerate(axes_config):
+                    session.store(axis_name.lower(), result[i])
+
+            session.advance()
+            self.run_operation_wizard()
+
+    def _handle_labware_step(self, step_key: str, session: OperationSession):
+        """Handle labware selection step"""
+        labware_config = session.config.get(step_key, {})
+
+        if not labware_config:
+            raise ValueError(f"No config found for step: {step_key}")
+
+        labware_type = labware_config['type']
+        label = labware_config['label']
+
+        if self.mode == "builder":
+            self.clear_grid(self.second_column_frame)
+
+        self.set_stage(f"choose {label}")
+
+        # Check if user came back to this step (don't auto-select)
+        auto_select = not session.came_from_back
+
+        # Show labware selection UI
+        self.display_possible_labware(
+            labware_type=labware_type,
+            next_callback=lambda labware_obj: self._on_labware_selected(step_key, labware_obj, session),
+            auto_select_single=auto_select
+        )
+
+    def _on_labware_selected(self, step_key: str, labware_obj: Labware, session: OperationSession):
+        """Callback when user selects a labware"""
+        session.store(step_key, labware_obj)
+        session.advance()
+        self.run_operation_wizard()
+
+    def _handle_wells_step(self, step_key: str, session: OperationSession):
+        """Handle well/position selection step"""
+        wells_config = session.config.get(step_key, {})
+
+        if not wells_config:
+            raise ValueError(f"No config found for step: {step_key}")
+
+        # Get the associated labware object
+        labware_key = wells_config['labware_key']
+        labware_obj = session.selections.get(labware_key)
+
+        if not labware_obj:
+            raise ValueError(f"Labware not selected yet for {labware_key}")
+
+        # Get labware config for constraints
+        labware_config = session.config.get(labware_key, {})
+
+        # Determine multichannel mode based on labware type
+        if isinstance(labware_obj, ReservoirHolder) and not labware_obj.each_tip_needs_separate_item():
+            # Shared reservoirs don't need multichannel selection
+            multichannel_mode = False
+        else:
+            # Use the pipettor's current configuration
+            multichannel_mode = self.multichannel  # ← CHANGED: Always use pipettor's mode
+
+        # Get dimensions
+        if isinstance(labware_obj, Plate):
+            rows, cols = labware_obj._rows, labware_obj._columns
+        elif isinstance(labware_obj, ReservoirHolder):
+            rows, cols = labware_obj.hooks_across_y, labware_obj.hooks_across_x
+        elif isinstance(labware_obj, PipetteHolder):
+            rows, cols = labware_obj.holders_across_y, labware_obj.holders_across_x
+        else:
+            raise TypeError(f"Unsupported labware type: {type(labware_obj)}")
+
+        # Get available wells
+        source_mode = labware_config.get('source_mode', False)
+        wells_list = self.get_wells_list_from_labware(labware_obj, source=source_mode)
+
+        # For builder mode, show all positions. max_selected for tip_operation is none if in direct mode
+        if self.mode == "builder":
+            wells_list = [(r, c) for r in range(rows) for c in range(cols)]
+            max_selected = wells_config.get('max_selected',1)
+        else:
+            # Direct mode: check if this is a tip operation on PipetteHolder
+            if isinstance(labware_obj, PipetteHolder):
+                max_selected = None
+            else:
+                max_selected = wells_config.get('max_selected', None)
+
+        # Show well selection window
+        window = WellWindow(
+            rows=rows,
+            columns=cols,
+            labware_id=labware_obj.labware_id,
+            max_selected=max_selected,
+            multichannel_mode=multichannel_mode,
+            master=self.get_master_window(),
+            title=f"Select wells on {labware_obj.labware_id}",
+            wells_list=wells_list,
+            allow_auto_select=wells_config.get('allow_auto_select', False)
+        )
+
+        self.get_master_window().wait_window(window.get_root())
+
+        if window.back_requested:
+            if session.go_back():
+                self.run_operation_wizard()
+            else:
+                # Already at first step - cancel operation
+                self.current_session = None
+                if self.mode == "builder":
+                    self.clear_grid(self.second_column_frame)
+                    self.stage_label.config(text="Select an operation to continue")
+            return
+
+        # Process selection
+        if window.auto_selected:
+            positions = None
+        elif window.confirmed:
+            if multichannel_mode:
+                positions = [(c, r) for r, c in window.get_start_positions()]
+            else:
+                positions = [(c, r) for r, row in enumerate(window.well_state)
+                             for c, v in enumerate(row) if v]
+        else:
+            # User cancelled
+            self.current_session = None  # ← ADD THIS: Clear the session
+            if self.mode == "builder":
+                self.clear_grid(self.second_column_frame)
+                self.stage_label.config(text="Select an operation to continue")
+            return
+
+        if positions is not None or window.auto_selected:
+            session.store(step_key, positions)
+            session.advance()
+            self.run_operation_wizard()
+
+    def _finalize_operation(self, session: OperationSession):
+        """Build and execute/stage the completed operation"""
+
+        # Special validation for operations that need it
+        if session.config.get('validate_count_match'):
+            source_positions = session.selections.get('source_wells') or session.selections.get('source_positions')
+            dest_positions = session.selections.get('dest_wells') or session.selections.get('dest_positions')
+
+            if source_positions and dest_positions:
+                if len(source_positions) != len(dest_positions):
+                    messagebox.showerror(
+                        "Selection Error",
+                        f"Mismatch in selected positions!\n\n"
+                        f"Source Count: {len(source_positions)}\n"
+                        f"Destination Count: {len(dest_positions)}\n\n"
+                        f"Please ensure counts match.",
+                        parent=self.get_master_window()
+                    )
+                    return
+
+        # Build operation using OperationBuilder
+        builder_method_name = session.config['builder_method']
+        builder_method = getattr(OperationBuilder, builder_method_name)
+
+        # Extract parameters
+        params = self._extract_builder_params(session)
+
+        # Build operation
+        operation = builder_method(**params)
+
+        # Mode-specific handling
+        self.mode_dependent_action(operation)
+
+    def _extract_builder_params(self, session: OperationSession) -> dict:
+        """Convert session selections to OperationBuilder parameters"""
+        params = {}
+
+        # Handle labware objects - extract id and type
+        for key, value in session.selections.items():
+            if isinstance(value, Labware):
+                # Map to builder parameter names
+                params[f'{key}_id'] = value.labware_id
+                params[f'{key}_type'] = value.__class__.__name__
+            else:
+                # Direct mapping for simple types (volume, positions, etc.)
+                params[key] = value
+
+        # Add channels if required
+        if session.config.get('needs_channels'):
+            params['channels'] = self.channels
+
+        # Add optional parameters based on config
+        if session.config.get('needs_tip_change'):
+            params['change_tips'] = self.change_tips_var.get()
+
+        if session.config.get('needs_mixing'):
+            params['mix_volume'] = self._get_mix_volume()
+
+        # Special handling for specific operations
+        if session.operation_key == 'measure_foc':
+            params['plate_name'] = self.pipettor.foc_plate_name
+
+        # Map parameter names that don't match builder expectations
+        # (e.g., 'wells' -> 'positions')
+        renamed_params = {}
+        for key, value in params.items():
+            if key.endswith('_wells'):
+                # Rename source_wells -> source_positions, etc.
+                new_key = key.replace('_wells', '_positions')
+                renamed_params[new_key] = value
+            else:
+                renamed_params[key] = value
+
+        return renamed_params
 
     def _toggle_mixing_controls(self):
         """Enable/disable mixing volume entry based on checkbox state"""
@@ -775,182 +784,104 @@ class FunctionWindow:
         # Update display
         self.display_workflow_queue()
 
-    def launch_edit_callback(self, index: int):
-        """Launch the appropriate callback for editing this operation"""
+    def show_unified_mapping_dialog(self, labware_info, missing_ids, present_ids):
+        """Show dialog with two sections: missing labware (required) and present labware (optional)"""
 
-        if index >= len(self.workflow.operations):
-            return
-
-        operation = self.workflow.operations[index]
-
-        op_type = operation.operation_type
-
-        # Store edit context
-        self.edit_mode = True
-        self.edit_index = index
-
-        # Clear middle column
-        self.clear_grid(self.second_column_frame)
-
-        params = operation.parameters
-        formatted_text = "\n".join([f"{key}: {value}" for key, value in params.items()])
-
-        # Update the label
-        self.edit_info_label.config(text=formatted_text)
-
-        # Launch appropriate callback based on operation type
-        if op_type == OperationType.PICK_TIPS:
-            self.callback_pick_tips(func_str="Pick Tips", edit_mode=True)
-        elif op_type == OperationType.RETURN_TIPS:
-            self.callback_return_tips(func_str="Return Tips", edit_mode=True)
-        elif op_type == OperationType.REPLACE_TIPS:
-            self.callback_replace_tips(func_str="Replace Tips", edit_mode=True)
-        elif op_type == OperationType.DISCARD_TIPS:
-            self.callback_discard_tips(func_str="Discard Tips", edit_mode=True)
-        elif op_type == OperationType.ADD_MEDIUM:
-            self.callback_add_medium(func_str="Add Medium", edit_mode=True)
-        elif op_type == OperationType.REMOVE_MEDIUM:
-            self.callback_remove_medium(func_str="Remove Medium", edit_mode=True)
-        elif op_type == OperationType.TRANSFER_PLATE_TO_PLATE:
-            self.callback_transfer_plate_to_plate(func_str="Transfer Plate to Plate", edit_mode=True)
-        elif op_type == OperationType.MOVE_XY:
-            self.callback_move_xy(edit_mode=True)
-        elif op_type == OperationType.MOVE_Z:
-            self.callback_move_z(edit_mode=True)
-        elif op_type == OperationType.HOME:
-            self.callback_home(edit_mode=True)
-        elif op_type == OperationType.MEASURE_FOC:
-            self.callback_measure_foc(func_str="Measure FOC", edit_mode=True)
-        elif op_type == OperationType.REMOVE_AND_ADD:
-            self.callback_remove_and_add(func_str="Remove and Add", edit_mode=True)
-
-    def show_labware_mapping_dialog(self, workflow, missing_labware_ids):
-        """
-        Show dialog to map missing labware to current deck labware.
-
-        Returns
-        -------
-        dict or None
-            Mapping {old_id: new_id} or None if cancelled
-        """
-        dialog = tk.Toplevel(self.get_master_window())
-        dialog.title("Map Labware to Current Deck")
-        dialog.geometry("600x500")
-        dialog.transient(self.get_master_window())
-        dialog.grab_set()
-
-        # Center dialog
-        dialog.update_idletasks()
-        x = (dialog.winfo_screenwidth() // 2) - (600 // 2)
-        y = (dialog.winfo_screenheight() // 2) - (500 // 2)
-        dialog.geometry(f"600x500+{x}+{y}")
+        # Create dialog using ScrollableDialog base
+        dialog = ScrollableDialog(
+            parent=self.get_master_window(),
+            title="Remap Labware",
+            size="700x600"
+        )
 
         result = {'mapping': {}, 'cancelled': False}
+        dropdown_vars = {}
 
-        # Main frame with scrolling
-        main_frame = ttk.Frame(dialog, padding=10)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        # Section 1: Missing labware (REQUIRED)
+        if missing_ids:
+            ttk.Label(
+                dialog.scroll_frame,
+                text="⚠️ Missing Labware (Required)",
+                font=('Arial', 12, 'bold'),
+                foreground='red'
+            ).pack(pady=(0, 10), anchor='w')
 
-        # Info label
-        ttk.Label(
-            main_frame,
-            text="Some labware from this workflow is not on the current deck.\nMap missing labware to available labware:",
-            font=('Arial', 10),
-            justify=tk.LEFT
-        ).pack(pady=(0, 10))
+            for lw_id in sorted(missing_ids):
+                lw_type = labware_info[lw_id]
+                frame = ttk.Labelframe(dialog.scroll_frame, text=f"{lw_id} ({lw_type})", padding=10)
+                frame.pack(fill=tk.X, pady=5)
 
-        # Scrollable frame for mappings
-        canvas = tk.Canvas(main_frame)
-        scrollbar = ttk.Scrollbar(main_frame, orient=tk.VERTICAL, command=canvas.yview)
-        mapping_frame = ttk.Frame(canvas)
+                compatible = [
+                    (lw.labware_id, f"{lw.labware_id} ({lw.__class__.__name__})")
+                    for lw in self.dict_top_labware.values()
+                    if lw.__class__.__name__ == lw_type and lw.labware_id != lw_id
+                ]
 
-        canvas.configure(yscrollcommand=scrollbar.set)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+                options = ["[Required - Select labware]"] + [display for _, display in compatible]
+                var = tk.StringVar(value=options[0])
+                dropdown_vars[lw_id] = (var, dict(compatible), True)
 
-        canvas_window = canvas.create_window((0, 0), window=mapping_frame, anchor='nw')
+                ttk.Combobox(frame, textvariable=var, values=options, state='readonly', width=50).pack(fill=tk.X)
 
-        def configure_scroll(_=None):
-            canvas.configure(scrollregion=canvas.bbox("all"))
-            canvas_width = canvas.winfo_width()
-            if canvas_width > 1:
-                canvas.itemconfig(canvas_window, width=canvas_width)
+        # Section 2: Present labware (OPTIONAL)
+        if present_ids:
+            ttk.Separator(dialog.scroll_frame, orient='horizontal').pack(fill=tk.X, pady=20)
+            ttk.Label(
+                dialog.scroll_frame,
+                text="✓ Current Labware (Optional Remap)",
+                font=('Arial', 12, 'bold'),
+                foreground='green'
+            ).pack(pady=(0, 10), anchor='w')
 
-        mapping_frame.bind('<Configure>', configure_scroll)
-        canvas.bind('<Configure>', configure_scroll)
+            for lw_id in sorted(present_ids):
+                lw_type = labware_info[lw_id]
+                frame = ttk.Labelframe(dialog.scroll_frame, text=f"{lw_id} ({lw_type})", padding=10)
+                frame.pack(fill=tk.X, pady=5)
 
-        # For each missing labware, create mapping row
-        dropdown_vars = {}  # {old_labware_id: StringVar}
+                compatible = [
+                    (lw.labware_id, f"{lw.labware_id} ({lw.__class__.__name__})")
+                    for lw in self.dict_top_labware.values()
+                    if lw.__class__.__name__ == lw_type and lw.labware_id != lw_id
+                ]
 
-        for missing_id in sorted(missing_labware_ids):
-            # Find labware type from workflow (check first operation using this ID)
-            labware_type = None
-            example_ops = []
+                options = ["[Keep current]"] + [display for _, display in compatible]
+                var = tk.StringVar(value=options[0])
+                dropdown_vars[lw_id] = (var, dict(compatible), False)
 
-            for i, op in enumerate(workflow.operations):
-                uses_this_labware = False
-                for param_key, param_val in op.parameters.items():
-                    # Check if parameter is dict with 'id' key (new format)
-                    if isinstance(param_val, dict) and 'id' in param_val:
-                        if param_val['id'] == missing_id:
-                            uses_this_labware = True
-                            if len(example_ops) < 3:
-                                example_ops.append(f"#{i + 1}: {op.operation_type.value}")
-                            # Store the type if we haven't found it yet
-                            if labware_type is None and 'type' in param_val:
-                                labware_type = param_val['type']
+                ttk.Combobox(frame, textvariable=var, values=options, state='readonly', width=50).pack(fill=tk.X)
 
-            # Create frame for this labware
-            labware_frame = ttk.Labelframe(
-                mapping_frame,
-                text=f"Missing: {missing_id}" + (f" ({labware_type})" if labware_type else ""),
-                padding=10
-            )
-            labware_frame.pack(fill=tk.X, pady=5, padx=5)
-
-        # Buttons
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill=tk.X, pady=(10, 0))
-        button_frame.columnconfigure(0, weight=1)
-        button_frame.columnconfigure(1, weight=1)
-
+        # Button handlers
         def on_apply():
-            # Build mapping from dropdowns
-            for old_id, (var, id_map) in dropdown_vars.items():
+            for lw_id, (var, id_map, required) in dropdown_vars.items():
                 selection = var.get()
-                if selection != "[Leave unmapped]":
-                    # Extract labware_id from display string
+                if required and "[Required" in selection:
+                    messagebox.showerror("Missing Mapping", f"Must map: {lw_id}", parent=dialog)
+                    return
+
+                if "[" not in selection:
                     for labware_id, display in id_map.items():
                         if display == selection:
-                            result['mapping'][old_id] = labware_id
+                            result['mapping'][lw_id] = labware_id
                             break
 
+            dialog.result = result['mapping']
             dialog.destroy()
 
         def on_cancel():
-            result['cancelled'] = True
+            dialog.result = None
             dialog.destroy()
 
-        ttk.Button(
-            button_frame,
-            text="Apply Mapping",
-            command=on_apply,
-            bootstyle="success"
-        ).grid(row=0, column=0, sticky='ew', padx=(0, 5))
+        # Add button bar using helper
+        dialog.add_button_bar(
+            create_cmd=on_apply,
+            create_text="Apply Mapping",
+            cancel_text="Cancel"
+        )
 
-        ttk.Button(
-            button_frame,
-            text="Cancel",
-            command=on_cancel,
-            bootstyle="secondary"
-        ).grid(row=0, column=1, sticky='ew', padx=(5, 0))
+        # Wait for dialog to close
+        self.get_master_window().wait_window(dialog)
 
-        dialog.wait_window()
-
-        if result['cancelled']:
-            return None
-
-        return result['mapping']
+        return dialog.result
 
     # ========== STAGING OPERATIONS (DIRECT MODE) ==========
     def stage_operation(self, operation: Operation):
@@ -1060,76 +991,6 @@ class FunctionWindow:
         # Start in background thread
         thread = threading.Thread(target=run_operation, daemon=True)
         thread.start()
-
-    def on_execution_success(self, overlay):
-        """Called in main thread when operation succeeds"""
-        overlay.close()
-
-        if self.on_operation_complete:
-            self.on_operation_complete()
-
-        self.clear_staged_operation()
-        self.container.winfo_toplevel().focus_force()
-
-    def on_execution_failed(self, overlay, error_msg, is_abort):
-        """Called in main thread when operation fails"""
-        overlay.close()
-
-        if is_abort:
-            messagebox.showwarning("Aborted", f"Operation aborted:\n\n{error_msg}")
-        else:
-            messagebox.showerror("Error", f"Operation failed:\n\n{error_msg}")
-
-    def clear_staged_operation(self):
-        """Clear the staging area"""
-        self.staged_operation = None
-        self.staged_operation_name = None
-        self.staged_operation_details = None
-        self.staged_operation_validated = False
-        if hasattr(self, 'execute_button'):
-            self.execute_button.unbind('<Return>')
-        self.update_staged_display()
-
-    def callback_close_builder(self):
-        """Close builder with confirmation if operations exist"""
-        if self.workflow_modified:
-            msg = f"You have unsaved changes to '{self.workflow.name}'.\n"
-            msg += "Close anyway?"
-
-            if not messagebox.askyesno("Unsaved Changes", msg, default="no"):
-                return
-
-        if self.mode == "builder":
-            self.pipettor.pop_state(self._state_snapshot)
-        self.window_build_func.destroy()
-
-    def callback_measure_foc(self, func_str: str, edit_mode: bool = False):
-        """Handle FOC measurement operation"""
-        if not edit_mode:
-            self.clear_edit_mode()
-
-        # Ask for wait time using the generic dialog
-        wait_time = self.ask_volume_dialog(
-            title="FOC Measurement Wait Time",
-            initial_value=0,
-            label_text="Incubation time (sec):"
-        )
-
-        if wait_time is None:
-            return  # User cancelled
-
-        wait_time = int(wait_time)
-        plate_name = self.pipettor.foc_plate_name
-
-        operation = OperationBuilder.build_measure_foc(
-            wait_seconds=wait_time,
-            plate_name=plate_name
-        )
-
-        if self.mode == "builder":
-            self.builder_config(operation)
-        else:  # direct mode
-            self.stage_operation(operation)
 
     def callback_execute_workflow(self):
         """Execute workflow with modal overlay and threading"""
@@ -1247,6 +1108,50 @@ class FunctionWindow:
         thread = threading.Thread(target=run_workflow, daemon=True)
         thread.start()
 
+    def on_execution_success(self, overlay):
+        """Called in main thread when operation succeeds"""
+        overlay.close()
+
+        if self.on_operation_complete:
+            self.on_operation_complete()
+
+        self.clear_staged_operation()
+        self.container.winfo_toplevel().focus_force()
+
+    def on_execution_failed(overlay, error_msg, is_abort):
+        """Called in main thread when operation fails"""
+        overlay.close()
+
+        if is_abort:
+            messagebox.showwarning("Aborted", f"Operation aborted:\n\n{error_msg}")
+        else:
+            messagebox.showerror("Error", f"Operation failed:\n\n{error_msg}")
+
+    def clear_staged_operation(self):
+        """Clear the staging area"""
+        self.staged_operation = None
+        self.staged_operation_name = None
+        self.staged_operation_details = None
+        self.staged_operation_validated = False
+        if hasattr(self, 'execute_button'):
+            self.execute_button.unbind('<Return>')
+        self.update_staged_display()
+
+    def callback_close_builder(self):
+        """Close builder with confirmation if operations exist"""
+        if self.workflow_modified:
+            msg = f"You have unsaved changes to '{self.workflow.name}'.\n"
+            msg += "Close anyway?"
+
+            if not messagebox.askyesno("Unsaved Changes", msg, default="no"):
+                return
+
+        if self.mode == "builder":
+            self.pipettor.pop_state(self._state_snapshot)
+        self.window_build_func.destroy()
+
+
+
     def on_workflow_success(self, overlay, name, num_ops, parent):
         """Called in main thread when workflow succeeds"""
         overlay.close()
@@ -1296,13 +1201,6 @@ class FunctionWindow:
         if hasattr(builder, 'window_build_func'):
             builder.window_build_func.protocol("WM_DELETE_WINDOW", builder.callback_close_builder)
 
-    def add_current_function(self, func: Callable, func_str: str, labware_id: str):
-        """Add function to workflow queue (builder mode)"""
-        self.current_func_list.append(func)
-        self.current_func_details.append(f"{func_str}: {labware_id}")
-        self.display_workflow_queue()
-        self.clear_grid(self.second_column_frame)
-
     def display_workflow_queue(self):
         """Display the current workflow queue"""
         if self.mode != "builder":
@@ -1325,9 +1223,9 @@ class FunctionWindow:
         for idx, operation in enumerate(self.workflow.operations):
             frame = ttk.Frame(self.third_column_frame, relief=tk.RAISED, borderwidth=1)
             frame.grid(row=idx, column=0, sticky="ew", pady=2, padx=5)
-            frame.columnconfigure(0, weight=1)  # Label column expands
+            frame.columnconfigure(1, weight=1)  # Label column expands
 
-            # Operation label
+            # Checkbox
             var = tk.BooleanVar(value=(idx in self.selected_operations))
             checkbox = ttk.Checkbutton(
                 frame,
@@ -1337,6 +1235,7 @@ class FunctionWindow:
             )
             checkbox.grid(row=0, column=0, sticky="w", padx=(5, 2))
 
+            # Operation label
             op_text = f"{idx + 1}. {operation.operation_type.value}"
             if 'labware_id' in operation.parameters:
                 op_text += f": {operation.parameters['labware_id']}"
@@ -1344,48 +1243,58 @@ class FunctionWindow:
             label = ttk.Label(frame, text=op_text, font=("Helvetica", 11))
             label.grid(row=0, column=1, sticky="w", padx=5)
 
-            # Move button (NEW)
-            move_btn = ttk.Button(
-                frame,
-                text="↕",  # Up-down arrow
-                width=3,
-                command=lambda i=idx: self.reorder_operation(i),
-                bootstyle="info-outline"
-            )
-            move_btn.grid(row=0, column=2, sticky="e", padx=2)
+            # Action buttons using create_button_bar
+            button_configs = [
+                {"text": "↕", "command": lambda i=idx: self.reorder_operation(i), "style": "info-outline"},
+                {"text": "✏", "command": lambda i=idx: self.launch_edit_callback(i), "style": "warning-outline"},
+                {"text": "🗑", "command": lambda i=idx: self.remove_operation_from_workflow(i),
+                 "style": "danger-outline"}
+            ]
 
-            # Edit button
-            edit_btn = ttk.Button(
-                frame,
-                text="✏",
-                width=3,
-                command=lambda i=idx: self.launch_edit_callback(i),
-                bootstyle="warning-outline"
-            )
-            edit_btn.grid(row=0, column=3, sticky="e", padx=2)
+            # Create button container in frame
+            btn_container = ttk.Frame(frame)
+            btn_container.grid(row=0, column=2, sticky="e", padx=2)
 
-            # Info button
-            info_btn = ttk.Button(
-                frame,
-                text="ℹ",
-                width=3,
-                command=lambda op=operation: self.show_operation_details(op),
-                bootstyle="info-outline"
-            )
-            info_btn.grid(row=0, column=4, sticky="e", padx=2)
+            # Create buttons with fixed width
+            for col, config in enumerate(button_configs):
+                btn = ttk.Button(
+                    btn_container,
+                    text=config["text"],
+                    command=config["command"],
+                    bootstyle=config["style"],
+                    width=3
+                )
+                btn.grid(row=0, column=col, padx=1)
 
-            # Remove button
-            remove_btn = ttk.Button(
-                frame,
-                text="🗑",
-                width=3,
-                command=lambda i=idx: self.remove_operation_from_workflow(i),
-                bootstyle="danger-outline"
-            )
-            remove_btn.grid(row=0, column=5, sticky="e", padx=2)
         self.update_copy_paste_buttons()
 
     # --- Helper Methods ---
+    def launch_edit_callback(self, index: int):
+        """Launch the appropriate callback for editing this operation"""
+
+        if index >= len(self.workflow.operations):
+            return
+
+        operation = self.workflow.operations[index]
+
+        # Store edit context
+        self.edit_mode = True
+        self.edit_index = index
+
+        # Clear middle column
+        self.clear_grid(self.second_column_frame)
+
+        # Show current parameters
+        info_lines = [f"Description: {operation.description}"]
+        info_lines.extend([f"{key}: {value}" for key, value in operation.parameters.items()])
+        formatted_text = "\n".join(info_lines)
+        self.edit_info_label.config(text=formatted_text)
+
+        operation_key = operation.operation_type.value
+
+        # Launch wizard for this operation type
+        self._start_operation(operation_key, edit_mode=True)
+
     def clear_edit_mode(self):
         """Clear edit mode when starting a fresh operation"""
         if hasattr(self, 'edit_mode'):
@@ -1425,7 +1334,7 @@ class FunctionWindow:
         if not hasattr(self, 'foc_frame'):
             return
 
-        # Clear frame
+        # Clear fraame
         for w in self.foc_frame.winfo_children():
             w.destroy()
 
@@ -1451,7 +1360,7 @@ class FunctionWindow:
             ttk.Button(
                 self.foc_frame,
                 text="▶ Run FOC Measurement",
-                command=lambda: self.callback_measure_foc(func_str="Measure FOC"),
+                command=self.callback_measure_foc,
                 bootstyle="success"
             ).pack(fill=tk.X, pady=5)
         else:
@@ -1554,99 +1463,6 @@ class FunctionWindow:
         # Reset to "End" for next paste
         self.paste_position_var.set("End")
 
-    def ask_position_in_second_frame(self, total_ops: int, default_position: int, operation_name: str) -> int:
-        """
-        Display position selector in second frame.
-
-        Returns
-        -------
-        int
-            0-based position, or None if cancelled
-        """
-        self.clear_grid(self.second_column_frame)
-
-        result = {'position': None, 'done': False}
-
-        # Title
-        ttk.Label(
-            self.second_column_frame,
-            text=f"Position for: {operation_name}",
-            font=('Arial', 12, 'bold')
-        ).grid(row=0, column=0, pady=10, padx=10, sticky='w')
-
-        # Instructions
-        ttk.Label(
-            self.second_column_frame,
-            text="Select where to insert this operation:",
-            font=('Arial', 10)
-        ).grid(row=1, column=0, pady=5, padx=10, sticky='w')
-
-        # Position frame
-        pos_frame = ttk.Frame(self.second_column_frame)
-        pos_frame.grid(row=2, column=0, pady=10, padx=10, sticky='ew')
-
-        ttk.Label(
-            pos_frame,
-            text="Position:",
-            font=('Arial', 11)
-        ).pack(side=tk.LEFT, padx=(0, 10))
-
-        # Spinbox
-        position_var = tk.IntVar(value=default_position + 1)  # 1-based for display
-        spinbox = ttk.Spinbox(
-            pos_frame,
-            from_=1,
-            to=total_ops + 1,
-            textvariable=position_var,
-            width=8,
-            font=('Arial', 12)
-        )
-        spinbox.pack(side=tk.LEFT, padx=5)
-
-        # Buttons
-        button_frame = ttk.Frame(self.second_column_frame)
-        button_frame.grid(row=4, column=0, pady=20, padx=10, sticky='ew')
-        button_frame.columnconfigure(0, weight=1)
-        button_frame.columnconfigure(1, weight=1)
-
-        # Create a BooleanVar to wait on
-        wait_var = tk.BooleanVar(value=False)
-
-        def on_confirm():
-            result['position'] = position_var.get() - 1  # Convert to 0-based
-            result['done'] = True
-            wait_var.set(True)  # Trigger the wait to end
-
-        def on_cancel():
-            result['position'] = None
-            result['done'] = True
-            wait_var.set(True)  # Trigger the wait to end
-
-        ttk.Button(
-            button_frame,
-            text="Confirm",
-            command=on_confirm,
-            bootstyle="success"
-        ).grid(row=0, column=0, sticky='ew', padx=(0, 5))
-
-        ttk.Button(
-            button_frame,
-            text="Cancel",
-            command=on_cancel,
-            bootstyle="secondary"
-        ).grid(row=0, column=1, sticky='ew', padx=(5, 0))
-
-        # Focus and select
-        spinbox.focus()
-        spinbox.selection_range(0, tk.END)
-
-        # Bind Enter key
-        spinbox.bind('<Return>', lambda e: on_confirm())
-
-        # Wait for user decision using wait_variable on the BooleanVar
-        self.get_master_window().wait_variable(wait_var)
-
-        return result['position']
 
     def remove_operation_from_workflow(self, index: int):
         """Remove operation - NO VALIDATION"""
@@ -1670,34 +1486,6 @@ class FunctionWindow:
                                              command=self.callback_validate_workflow)
 
             self.display_workflow_queue()
-
-    def show_operation_details(self, operation: Operation):
-        """Show detailed information about an operation"""
-        details_window = ttk.Toplevel(self.get_master_window())
-        details_window.title(f"Operation Details")
-        details_window.geometry("500x400")
-        details_window.transient(self.get_master_window())
-
-        # Details text
-        text = tk.Text(details_window, wrap=tk.WORD, font=("Courier", 10))
-        text.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-        # Format operation details
-        details = f"Operation Type: {operation.operation_type.value}\n"
-        details += f"Description: {operation.description}\n"
-        details += "Parameters:\n"
-        for key, value in operation.parameters.items():
-            details += f"  {key}: {value}\n"
-
-        text.insert(1.0, details)
-        text.config(state='disabled')
-
-        # Close button
-        ttk.Button(
-            details_window,
-            text="Close",
-            command=details_window.destroy
-        ).pack(pady=10)
 
     def clear_workflow_queue(self):
         """Clear all operations from queue"""
@@ -1997,116 +1785,6 @@ class FunctionWindow:
 
         messagebox.showinfo("Remapped", f"Applied {len(mapping)} remapping(s)")
 
-    def show_unified_mapping_dialog(self, labware_info, missing_ids, present_ids):
-        """Show dialog with two sections: missing labware (required) and present labware (optional)"""
-        dialog = tk.Toplevel(self.get_master_window())
-        dialog.title("Remap Labware")
-        dialog.geometry("700x600")
-        dialog.transient(self.get_master_window())
-        dialog.grab_set()
-
-        result = {'mapping': {}, 'cancelled': False}
-
-        main_frame = ttk.Frame(dialog, padding=10)
-        main_frame.pack(fill=tk.BOTH, expand=True)
-
-        # Scrollable canvas
-        canvas = tk.Canvas(main_frame)
-        scrollbar = ttk.Scrollbar(main_frame, orient=tk.VERTICAL, command=canvas.yview)
-        content_frame = ttk.Frame(canvas)
-        canvas.configure(yscrollcommand=scrollbar.set)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        canvas_window = canvas.create_window((0, 0), window=content_frame, anchor='nw')
-
-        def configure_scroll(_=None):
-            canvas.configure(scrollregion=canvas.bbox("all"))
-            canvas_width = canvas.winfo_width()
-            if canvas_width > 1:
-                canvas.itemconfig(canvas_window, width=canvas_width)
-
-        content_frame.bind('<Configure>', configure_scroll)
-        canvas.bind('<Configure>', configure_scroll)
-
-        dropdown_vars = {}
-
-        # Section 1: Missing labware (REQUIRED)
-        if missing_ids:
-            ttk.Label(content_frame, text="⚠️ Missing Labware (Required)",
-                      font=('Arial', 12, 'bold'), foreground='red').pack(pady=(0, 10), anchor='w')
-
-            for lw_id in sorted(missing_ids):
-                lw_type = labware_info[lw_id]
-                frame = ttk.Labelframe(content_frame, text=f"{lw_id} ({lw_type})", padding=10)
-                frame.pack(fill=tk.X, pady=5)
-
-                # Get compatible labware (same type)
-                compatible = [(lw.labware_id, f"{lw.labware_id} ({lw.__class__.__name__})")
-                              for lw in self.dict_top_labware.values()
-                              if lw.__class__.__name__ == lw_type and lw.labware_id != lw_id]
-
-                options = ["[Optional - Select labware]"] + [display for _, display in compatible]
-                var = tk.StringVar(value=options[0])
-                dropdown_vars[lw_id] = (var, dict(compatible), False)
-
-                ttk.Combobox(frame, textvariable=var, values=options, state='readonly', width=50).pack(fill=tk.X)
-
-        # Section 2: Present labware (OPTIONAL)
-        if present_ids:
-            ttk.Separator(content_frame, orient='horizontal').pack(fill=tk.X, pady=20)
-            ttk.Label(content_frame, text="✓ Current Labware (Optional Remap)",
-                      font=('Arial', 12, 'bold'), foreground='green').pack(pady=(0, 10), anchor='w')
-
-            for lw_id in sorted(present_ids):
-                lw_type = labware_info[lw_id]
-                frame = ttk.Labelframe(content_frame, text=f"{lw_id} ({lw_type})", padding=10)
-                frame.pack(fill=tk.X, pady=5)
-
-                # Get compatible labware (same type)
-                compatible = [(lw.labware_id, f"{lw.labware_id} ({lw.__class__.__name__})")
-                              for lw in self.dict_top_labware.values()
-                              if lw.__class__.__name__ == lw_type and lw.labware_id != lw_id]
-
-                options = ["[Keep current]"] + [display for _, display in compatible]
-                var = tk.StringVar(value=options[0])
-                dropdown_vars[lw_id] = (var, dict(compatible), False)  # False = optional
-
-                ttk.Combobox(frame, textvariable=var, values=options, state='readonly', width=50).pack(fill=tk.X)
-
-        # Buttons
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill=tk.X, pady=(10, 0))
-
-        def on_apply():
-            # Check required fields
-            for lw_id, (var, id_map, required) in dropdown_vars.items():
-                selection = var.get()
-                if required and "[Required" in selection:
-                    messagebox.showerror("Missing Mapping", f"Must map: {lw_id}", parent=dialog)
-                    return
-
-                # Build mapping
-                if "[" not in selection:  # Not a placeholder
-                    for labware_id, display in id_map.items():
-                        if display == selection:
-                            result['mapping'][lw_id] = labware_id
-                            break
-
-            dialog.destroy()
-
-        def on_cancel():
-            result['cancelled'] = True
-            dialog.destroy()
-
-        ttk.Button(button_frame, text="Apply", command=on_apply, bootstyle="success").pack(side=tk.LEFT, fill=tk.X,
-                                                                                           expand=True, padx=(0, 5))
-        ttk.Button(button_frame, text="Cancel", command=on_cancel, bootstyle="secondary").pack(side=tk.LEFT, fill=tk.X,
-                                                                                               expand=True, padx=(5, 0))
-
-        dialog.wait_window()
-
-        return None if result['cancelled'] else result['mapping']
-
     def get_top_labwares(self) -> dict[str, Labware]:
         """Get the topmost labware from each slot"""
         top_labwares = {}
@@ -2136,27 +1814,23 @@ class FunctionWindow:
         for widget in frame.grid_slaves():
             widget.destroy()
 
-    def display_possible_labware(
-            self,
-            labware_type,
-            next_callback,
-            func_str,
-            part="first",
-            start_row=0,
-            **kwargs
-    ):
-        """Display selectable labware buttons"""
+    def display_possible_labware(self, labware_type, next_callback, start_row=0, auto_select_single=True):
+        """Display selectable labware buttons - optionally auto-select if only one"""
+
+        # Get matching labware
+        matching_labware = [
+            (slot_id, labware) for slot_id, labware in self.dict_top_labware.items()
+            if isinstance(labware, labware_type)
+        ]
+
+        # BUILDER MODE - show in second column frame
         if self.mode == "builder":
             target_frame = self.second_column_frame
 
-            #parameters are printed on start_row = 0
             if hasattr(self, 'edit_mode') and self.edit_mode:
                 start_row = 1
 
-            for slot_id, labware in self.dict_top_labware.items():
-                if not isinstance(labware, labware_type):
-                    continue
-
+            for slot_id, labware in matching_labware:
                 label = ttk.Label(target_frame, text=f"Slot: {slot_id}")
                 label.grid(column=0, row=start_row, sticky="nsew", pady=5, padx=5)
                 start_row += 1
@@ -2165,106 +1839,84 @@ class FunctionWindow:
                     target_frame,
                     text=labware.labware_id,
                     bootstyle="warning",
-                    command=lambda lw=labware: next_callback(
-                        func_str=func_str,
-                        part=part,
-                        labware_obj=lw,
-                        **kwargs
-                    )
+                    command=lambda lw=labware: next_callback(lw)
                 )
                 button.grid(column=0, row=start_row, sticky="nsew", pady=5, padx=5)
                 start_row += 1
 
-        else:  # DIRECT MODE
-            # Create selection dialog
-            dialog = tk.Toplevel(self.get_master_window())
-            #dialog.title(f"Select {labware_type.__name__}")
-            dialog.title(f"Select labware")
-            dialog.geometry("400x500")
-            dialog.transient(self.get_master_window())
-            dialog.grab_set()
+            # Auto-select if only one option and auto_select enabled
+            if len(matching_labware) == 1 and auto_select_single:
+                self.get_master_window().after(100, lambda: next_callback(matching_labware[0][1]))
 
-            # Create scrollable frame
-            canvas = tk.Canvas(dialog)
-            scrollbar = ttk.Scrollbar(dialog, orient=tk.VERTICAL, command=canvas.yview)
-            frame = ttk.Frame(canvas)
+        # DIRECT MODE - show dialog with ScrollableDialog
+        else:
+            dialog = ScrollableDialog(
+                parent=self.get_master_window(),
+                title="Select Labware",
+                size="400x500"
+            )
 
-            canvas.configure(yscrollcommand=scrollbar.set)
-            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-            canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-            canvas_window = canvas.create_window((0, 0), window=frame, anchor='nw')
-
-            # Configure scrolling
-            def configure_scroll(_=None):
-                canvas.configure(scrollregion=canvas.bbox("all"))
-                canvas_width = canvas.winfo_width()
-                if canvas_width > 1:
-                    canvas.itemconfig(canvas_window, width=canvas_width)
-
-            frame.bind('<Configure>', configure_scroll)
-            canvas.bind('<Configure>', configure_scroll)
-
-            # Add labware buttons
-            row = 0
-            found_labware = False
-
-            for slot_id, labware in self.dict_top_labware.items():
-                if not isinstance(labware, labware_type):
-                    continue
-
-                found_labware = True
-
+            if not matching_labware:
+                # No labware found
                 ttk.Label(
-                    frame,
-                    text=f"Slot: {slot_id}",
-                    font=('Arial', 11, 'bold')
-                ).grid(column=0, row=row, sticky="w", pady=(10, 2), padx=10)
-                row += 1
-
-                def make_callback(lw=labware):
-                    def callback():
-                        dialog.destroy()
-                        next_callback(
-                            func_str=func_str,
-                            part=part,
-                            labware_obj=lw,
-                            **kwargs
-                        )
-
-                    return callback
-
-                ttk.Button(
-                    frame,
-                    text=f"{labware.labware_id} ({labware.__class__.__name__})",
-                    command=make_callback(labware),
-                    bootstyle="primary"
-                ).grid(column=0, row=row, sticky="ew", pady=2, padx=10)
-                row += 1
-
-            if not found_labware:
-                ttk.Label(
-                    frame,
-                    #text=f"No {labware_type.__name__} found on deck",
-                    text=f"No labware found on deck",
+                    dialog.scroll_frame,
+                    text=f"No {labware_type.__name__} found on deck",
                     font=('Arial', 12),
                     foreground='red'
-                ).grid(column=0, row=0, pady=20, padx=20)
+                ).pack(pady=20, padx=20)
 
+                button_configs = [{"text": "Close", "command": dialog.destroy}]
+                create_button_bar(dialog.scroll_frame, button_configs, fill=True)
+            else:
+                # Add slot labels and build button configs
+                button_configs = []
+
+                for slot_id, labware in matching_labware:
+                    # Create a frame for this labware item
+                    item_frame = ttk.Frame(dialog.scroll_frame)
+                    item_frame.pack(fill=tk.X, pady=5, padx=10)
+
+                    # Slot label
+                    ttk.Label(
+                        item_frame,
+                        text=f"Slot: {slot_id}",
+                        font=('Arial', 11, 'bold')
+                    ).pack(anchor="w", pady=(0, 2))
+
+                    # Create callback
+                    def make_callback(lw=labware):
+                        def callback():
+                            dialog.destroy()
+                            next_callback(lw)
+
+                        return callback
+
+                    # Button
+                    ttk.Button(
+                        item_frame,
+                        text=f"{labware.labware_id} ({labware.__class__.__name__})",
+                        command=make_callback(labware),
+                        bootstyle="primary"
+                    ).pack(fill=tk.X)
+
+                # Add cancel button at bottom
                 ttk.Button(
-                    frame,
-                    text="Close",
+                    dialog.scroll_frame,
+                    text="Cancel",
                     command=dialog.destroy,
                     bootstyle="secondary"
-                ).grid(column=0, row=1, pady=10, padx=20)
+                ).pack(fill=tk.X, pady=10, padx=10)
 
-            # Add cancel button at bottom
-            ttk.Button(
-                frame,
-                text="Cancel",
-                command=dialog.destroy,
-                bootstyle="secondary"
-            ).grid(column=0, row=row, sticky="ew", pady=10, padx=10)
+                # Auto-click if only one option and auto_select enabled
+                if len(matching_labware) == 1 and auto_select_single:
+                    # Find the first primary button (it's in item_frame)
+                    for widget in dialog.scroll_frame.winfo_children():
+                        if isinstance(widget, ttk.Frame):
+                            for btn in widget.winfo_children():
+                                if isinstance(btn, ttk.Button):
+                                    dialog.after(100, lambda b=btn: b.invoke())
+                                    break
+                            break
 
     def get_wells_list_from_labware(
             self,
@@ -2405,6 +2057,90 @@ class FunctionWindow:
             self.workflow_validated = False
             self.validate_execute_btn.config(text="Validate", bootstyle="warning")
 
+    def ask_position_in_second_frame(self, total_ops: int, default_position: int, operation_name: str) -> int:
+        """
+        Display position selector in second frame.
+
+        Returns
+        -------
+        int
+            0-based position, or None if cancelled
+        """
+        self.clear_grid(self.second_column_frame)
+
+        result = {'position': None, 'done': False}
+
+        # Title
+        ttk.Label(
+            self.second_column_frame,
+            text=f"Position for: {operation_name}",
+            font=('Arial', 12, 'bold')
+        ).grid(row=0, column=0, pady=10, padx=10, sticky='w')
+
+        # Instructions
+        ttk.Label(
+            self.second_column_frame,
+            text="Select where to insert this operation:",
+            font=('Arial', 10)
+        ).grid(row=1, column=0, pady=5, padx=10, sticky='w')
+
+        # Position frame
+        pos_frame = ttk.Frame(self.second_column_frame)
+        pos_frame.grid(row=2, column=0, pady=10, padx=10, sticky='ew')
+
+        ttk.Label(
+            pos_frame,
+            text="Position:",
+            font=('Arial', 11)
+        ).pack(side=tk.LEFT, padx=(0, 10))
+
+        # Spinbox
+        position_var = tk.IntVar(value=default_position + 1)  # 1-based for display
+        spinbox = ttk.Spinbox(
+            pos_frame,
+            from_=1,
+            to=total_ops + 1,
+            textvariable=position_var,
+            width=8,
+            font=('Arial', 12)
+        )
+        spinbox.pack(side=tk.LEFT, padx=5)
+
+        # Buttons
+        button_frame = ttk.Frame(self.second_column_frame)
+        button_frame.grid(row=4, column=0, pady=20, padx=10, sticky='ew')
+        button_frame.columnconfigure(0, weight=1)
+        button_frame.columnconfigure(1, weight=1)
+
+        # Create a BooleanVar to wait on
+        wait_var = tk.BooleanVar(value=False)
+
+        def on_confirm():
+            result['position'] = position_var.get() - 1  # Convert to 0-based
+            result['done'] = True
+            wait_var.set(True)  # Trigger the wait to end
+
+        def on_cancel():
+            result['position'] = None
+            result['done'] = True
+            wait_var.set(True)  # Trigger the wait to end
+
+        btn_config =[{'text': 'confirm', 'command': on_confirm},
+                     {'text': 'cancel', 'command': on_cancel},]
+        create_button_bar(button_frame,btn_config, btns_per_row=2)
+
+
+        # Focus and select
+        spinbox.focus()
+        spinbox.selection_range(0, tk.END)
+
+        # Bind Enter key
+        spinbox.bind('<Return>', lambda e: on_confirm())
+
+        # Wait for user decision using wait_variable on the BooleanVar
+        self.get_master_window().wait_variable(wait_var)
+
+        return result['position']
 
     def ask_position_dialog(self, axes_config: list[tuple[str, float, float, float]]):
         """
@@ -2641,1020 +2377,22 @@ class FunctionWindow:
         dialog.wait_window()
         return result['value']
 
-    def compute_volume_constraints(self, labware_obj, volume_per_well: float, is_multichannel: bool = False,
-                                   operation: str = 'removal'):
-        """
-        Compute wells that should be deactivated based on volume requirements.
-
-        Parameters
-        ----------
-        labware_obj : Labware
-            The labware object (Plate or ReservoirHolder)
-        volume_per_well : float
-            Volume per well (µL) - to be removed or added
-        is_multichannel : bool
-            Whether this is for multichannel operation
-        operation : str
-            'removal' - check if wells have enough volume to remove
-            'addition' - check if wells have enough space to add
-
-        Returns
-        -------
-        dict[tuple[int, int], dict]
-            Dictionary mapping (row, col) to constraint info for wells that should be deactivated
-        """
-        if not labware_obj.each_tip_needs_separate_item():
-            is_multichannel = False
-
-        constraints = {}
-
-        if isinstance(labware_obj, Plate):
-            wells = labware_obj.get_wells()
-            for (col, row), well in wells.items():
-
-                # Determine what to check based on operation
-                if operation == 'removal':
-                    check_volume = well.get_total_volume()
-                    has_constraint = check_volume < volume_per_well
-                    reason = 'insufficient_volume'
-                    volume_key = 'current_volume'
-                else:  # addition
-                    check_volume = well.get_available_volume()
-                    has_constraint = check_volume < volume_per_well
-                    reason = 'overflow_risk'
-                    volume_key = 'available_volume'
-
-
-                # For multichannel, check if start position - need consecutive wells
-                if row + self.channels <= labware_obj._rows:
-                    # Check all wells in this column starting from this row
-                    fails_constraint = False
-                    for i in range(self.channels):
-                        check_well = labware_obj.get_well_at(col, row + i)
-                        if check_well:
-                            if operation == 'removal':
-                                if check_well.get_total_volume() < volume_per_well:
-                                    fails_constraint = True
-                                    break
-                            else:  # addition
-                                if check_well.get_available_volume() < volume_per_well:
-                                    fails_constraint = True
-                                    break
-
-                    if fails_constraint:
-                        constraints[(row, col)] = {
-                            'reason': reason,
-                            volume_key: check_volume,
-                            'required_volume': volume_per_well
-                        }
-
-        elif isinstance(labware_obj, ReservoirHolder):
-            # For reservoirs, check total volume for all wells it will serve/receive
-            hook_to_reservoir = labware_obj.get_hook_to_reservoir_map()
-
-            for hook_id, reservoir in hook_to_reservoir.items():
-                if reservoir is not None:
-                    col, row = labware_obj.hook_id_to_position(hook_id)
-
-                    # Calculate total volume
-                    total_volume = volume_per_well * self.channels
-
-                    # Determine what to check based on operation
-                    if operation == 'removal':
-                        check_volume = reservoir.get_total_volume()
-                        has_constraint = check_volume < total_volume
-                        reason = 'insufficient_volume'
-                        volume_key = 'current_volume'
-                    else:  # addition
-                        check_volume = reservoir.get_available_volume()
-                        has_constraint = check_volume < total_volume
-                        reason = 'overflow_risk'
-                        volume_key = 'available_volume'
-
-                    if has_constraint:
-                        constraints[(row, col)] = {
-                            'reason': reason,
-                            volume_key: check_volume,
-                            'required_volume': total_volume
-                        }
-
-        return constraints
-
-    # ========== call back functions ==========
-
-    def callback_pick_tips(
-            self,
-            func_str: str,
-            part: str = "first",
-            labware_obj: PipetteHolder = None,
-            edit_mode: bool = False,
-            **kwargs
-    ):
-
-        """Handle Pick Tips operation"""
-        if part == "first":
-            if not edit_mode:  # Only clear if not explicitly in edit mode
-                self.clear_edit_mode()
-
-            self.set_stage("choose labware to pick tip from")
-
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
-            self.display_possible_labware(
-                labware_type=PipetteHolder,
-                next_callback=self.callback_pick_tips,
-                func_str=func_str,
-                part="second",
-                **kwargs
-            )
-
-        elif part == "second" and labware_obj is not None:
-
-            window = WellWindow(
-                rows=labware_obj.holders_across_y,
-                columns=labware_obj.holders_across_x,
-                labware_id=labware_obj.labware_id,
-                max_selected=1 if self.mode == "builder" else None, # only way to allow tracking in the builder mode
-                master=self.get_master_window(),
-                multichannel_mode=self.multichannel,
-                title=f"Pick tips from: {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(
-                    labware_obj=labware_obj,
-                    source=True,
-                ) if self.mode == "direct" else [(r, c) for r in range(labware_obj.holders_across_y)
-                                               for c in range(labware_obj.holders_across_x)],
-                allow_auto_select=True
-            )
-            self.get_master_window().wait_window(window.get_root())
-
-            if window.auto_selected:  # ← NEW FLAG
-                list_col_row = None  # Pass None to let pipettor auto-detect
-            else:
-
-                start_positions = window.get_start_positions()
-                if not start_positions or not window.confirmed:
-                    return
-
-                # Convert from (row, col) to (col, row) format for pipettor
-                list_col_row = [(c, r) for r, c in start_positions]
-
-            operation = OperationBuilder.build_pick_tips(
-                labware_id=labware_obj.labware_id,
-                labware_type=labware_obj.__class__.__name__,
-                positions=list_col_row,
-                channels=self.channels
-            )
-
-            # Mode-specific handling
-            if self.mode == "direct":
-                self.stage_operation(operation)
-            elif self.mode == "builder":
-                self.builder_config(operation)
-
-    def callback_return_tips(
-            self,
-            func_str: str,
-            part: str = "first",
-            labware_obj: PipetteHolder = None,
-            edit_mode: bool = False,
-            **kwargs
-    ):
-        """Handle Return Tips operation"""
-        if part == "first":
-            if not edit_mode:  # Only clear if not explicitly in edit mode
-                self.clear_edit_mode()
-            self.set_stage("choose labware to return tip to")
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
-            self.display_possible_labware(
-                labware_type=PipetteHolder,
-                next_callback=self.callback_return_tips,
-                func_str=func_str,
-                part="second",
-                **kwargs
-            )
-
-        elif part == "second" and labware_obj is not None:
-
-            window = WellWindow(
-                rows=labware_obj.holders_across_y,
-                columns=labware_obj.holders_across_x,
-                labware_id=labware_obj.labware_id,
-                max_selected=1 if self.mode == "builder" else None,
-                master=self.get_master_window(),
-                multichannel_mode= self.multichannel,
-                title=f"Return tips to: {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(
-                    labware_obj=labware_obj,
-                    source=False,  # Empty positions
-                ) if self.mode == "direct" else [(r, c) for r in range(labware_obj.holders_across_y)
-                                               for c in range(labware_obj.holders_across_x)],
-                allow_auto_select=True
-            )
-            self.get_master_window().wait_window(window.get_root())
-
-            if window.auto_selected:
-                list_col_row = None
-            else:
-                start_positions = window.get_start_positions()
-                if not start_positions or not window.confirmed:
-                    return
-                list_col_row = [(c, r) for r, c in start_positions]
-
-            # Create details
-            operation = OperationBuilder.build_return_tips(
-                labware_id=labware_obj.labware_id,
-                labware_type=labware_obj.__class__.__name__,
-                positions=list_col_row,
-                channels=self.channels
-            )
-
-            # Mode-specific handling
-            if self.mode == "direct":
-                self.stage_operation(operation)
-            elif self.mode == "builder":
-                self.builder_config(operation)
-
-    def callback_replace_tips(
-            self,
-            func_str: str,
-            part: str = "first",
-            labware_obj: PipetteHolder = None,
-            edit_mode: bool = False,
-            **kwargs
-    ):
-        """Handle Replace Tips operation"""
-        if part == "first":
-            if not edit_mode:  # Only clear if not explicitly in edit mode
-                self.clear_edit_mode()
-            self.set_stage("")
-            # Ask for RETURN labware
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
-            self.set_stage("choose labware to return tips to")
-            self.display_possible_labware(
-                labware_type=PipetteHolder,
-                next_callback=self.callback_replace_tips,
-                func_str=func_str,
-                part="second",  # Go to part="second" to select return positions
-                **kwargs
-            )
-
-        elif part == "second" and labware_obj is not None:
-            # Store the RETURN labware
-            kwargs['return_labware'] = labware_obj
-
-            # ===== STEP 1: Select return positions =====
-            window_return = WellWindow(
-                rows=labware_obj.holders_across_y,
-                columns=labware_obj.holders_across_x,
-                labware_id=labware_obj.labware_id,
-                max_selected=1 if self.mode == "builder" else None,
-                master=self.get_master_window(),
-                multichannel_mode=self.multichannel,
-                title=f"Return tips to: {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(
-                    labware_obj=labware_obj,
-                    source=False,  # Empty positions
-                ) if self.mode == "direct" else [(r, c) for r in range(labware_obj.holders_across_y)
-                                               for c in range(labware_obj.holders_across_x)],
-                allow_auto_select=True
-            )
-            self.get_master_window().wait_window(window_return.get_root())
-
-            if window_return.auto_selected:
-                kwargs['return_positions'] = None
-            else:
-                start_positions_return = window_return.get_start_positions()
-                if not start_positions_return or not window_return.confirmed:
-                    return
-                kwargs['return_positions'] = [(c, r) for r, c in start_positions_return]
-
-            # Now ask for PICK labware
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
-            self.set_stage("choose labware to pick tip from")
-            self.display_possible_labware(
-                labware_type=PipetteHolder,
-                next_callback=self.callback_replace_tips,
-                func_str=func_str,
-                part="third",  # Go to part="third" to select pick positions
-                **kwargs
-            )
-
-        elif part == "third" and labware_obj is not None:
-            # Store the PICK labware
-            kwargs['pick_labware'] = labware_obj
-
-            # ===== STEP 2: Select pick positions =====
-            window_pick = WellWindow(
-                rows=labware_obj.holders_across_y,
-                columns=labware_obj.holders_across_x,
-                labware_id=labware_obj.labware_id,
-                max_selected=1 if self.mode == "builder" else None,
-                master=self.get_master_window(),
-                multichannel_mode=self.multichannel,
-                title=f"Pick new tips from: {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(
-                    labware_obj=labware_obj,
-                    source=True,
-                ) if self.mode == "direct" else [(r, c) for r in range(labware_obj.holders_across_y)
-                                               for c in range(labware_obj.holders_across_x)],
-                allow_auto_select=True
-            )
-            self.get_master_window().wait_window(window_pick.get_root())
-
-            if window_pick.auto_selected:
-                list_pick = None
-            else:
-                start_positions_pick = window_pick.get_start_positions()
-                if not start_positions_pick or not window_pick.confirmed:
-                    return
-                list_pick = [(c, r) for r, c in start_positions_pick]
-
-            # Create operation with BOTH labware
-            operation = OperationBuilder.build_replace_tips(
-                return_labware_id=kwargs['return_labware'].labware_id,
-                return_labware_type=kwargs['return_labware'].__class__.__name__,
-                return_positions=kwargs['return_positions'],
-                pick_labware_id=kwargs['pick_labware'].labware_id,  # Different labware!
-                pick_labware_type=kwargs['pick_labware'].__class__.__name__,
-                pick_positions=list_pick,
-                channels=self.channels
-            )
-
-            # Mode-specific handling
-            if self.mode == "direct":
-                self.stage_operation(operation)
-            elif self.mode == "builder":
-                self.builder_config(operation)
-
-    def callback_discard_tips(
-            self,
-            func_str: str,
-            part: str = "first",
-            labware_obj: TipDropzone = None,
-            edit_mode: bool = False,
-            **kwargs
-    ):
-        """Handle Discard Tips operation"""
-        if part == "first":
-            if not edit_mode:  # Only clear if not explicitly in edit mode
-                self.clear_edit_mode()
-            self.set_stage("choose labware to discard tips to")
-
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
-
-            self.display_possible_labware(
-                labware_type=TipDropzone,
-                next_callback=self.callback_discard_tips,
-                func_str=func_str,
-                part="second",
-                **kwargs
-            )
-
-        elif part == "second" and labware_obj is not None:
-            operation = OperationBuilder.build_discard_tips(
-                labware_id=labware_obj.labware_id,
-                labware_type=labware_obj.__class__.__name__,
-            )
-
-            # Mode-specific handling
-            if self.mode == "direct":
-                self.stage_operation(operation)
-            elif self.mode == "builder":
-                self.builder_config(operation)
-
-    def callback_add_medium(
-            self,
-            func_str: str,
-            part: str = "first",
-            labware_obj=None,
-            edit_mode: bool = False,
-            **kwargs
-    ):
-        """
-        Handle Add Medium operation.
-        Order: Volume -> Destination (Plate) -> Source (Reservoir)
-        """
-        # --- PART 1: GET VOLUME ---
-        if part == "first":
-            if not edit_mode:  # Only clear if not explicitly in edit mode
-                self.clear_edit_mode()
-            self.set_stage("")
-            volume = self.ask_volume_dialog(title="Add Medium Volume", initial_value=100)
-            if volume:
-                self.callback_add_medium(func_str, part="second", volume=volume, **kwargs)
-
-        # --- PART 2: SELECT DESTINATION (PLATE) ---
-        elif part == "second":
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
-            self.set_stage("choose plate to dispense liquid to")
-            kwargs['volume'] = kwargs.get('volume')
-            self.display_possible_labware(
-                labware_type=Plate,
-                next_callback=self.callback_add_medium,
-                func_str=func_str,
-                part="third",
-                **kwargs
-            )
-
-        # --- PART 3: HANDLE PLATE SELECTION & ASK RESERVOIR ---
-        elif part == "third" and labware_obj is not None:
-            # Compute volume constraints for addition (overflow check)
-            volume = kwargs.get('volume')
-            volume_constraints = self.compute_volume_constraints(
-                labware_obj, volume, self.multichannel, operation='addition'
-            )
-
-
-            window = WellWindow(
-                rows=labware_obj._rows,
-                columns=labware_obj._columns,
-                labware_id=labware_obj.labware_id,
-                max_selected=None,
-                multichannel_mode=self.multichannel,
-                master=self.get_master_window(),
-                title=f"DESTINATION: Select wells on {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False),
-                volume_constraints= volume_constraints if self.mode == "direct" else {}
-            )
-            self.get_master_window().wait_variable(window.safe_var)
-
-            kwargs["dest_labware"] = labware_obj
-            if self.multichannel:
-                kwargs["dest_positions"] = [(c, r) for r, c in window.get_start_positions()]
-            else:
-                kwargs["dest_positions"] = [(c, r) for r, row in enumerate(window.well_state)
-                                            for c, v in enumerate(row) if v]
-            del window
-
-            if not kwargs["dest_positions"]:
-                return
-
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
-            self.set_stage("choose reservoir to aspirate liquid from")
-            self.display_possible_labware(
-                labware_type=ReservoirHolder,
-                next_callback=self.callback_add_medium,
-                func_str=func_str,
-                part="fourth",
-                **kwargs
-            )
-
-        # --- PART 4: HANDLE RESERVOIR SELECTION & CREATE OPERATION ---
-        elif part == "fourth" and labware_obj is not None:
-            # Compute volume constraints for source reservoir (insufficient volume check)
-            volume = kwargs.get('volume')
-            num_dest_positions = len(kwargs['dest_positions'])
-            volume_constraints = self.compute_volume_constraints(
-                labware_obj, volume * num_dest_positions, self.multichannel, operation='removal'
-            )
-
-            window = WellWindow(
-                rows=labware_obj.hooks_across_y,
-                columns=labware_obj.hooks_across_x,
-                labware_id=labware_obj.labware_id,
-                max_selected=1,
-                multichannel_mode=False if not labware_obj.each_tip_needs_separate_item() else self.multichannel,
-                master=self.get_master_window(),
-                title=f"SOURCE: Choose reservoir {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True),
-                volume_constraints= volume_constraints if self.mode == "direct" else {}
-            )
-            self.get_master_window().wait_variable(window.safe_var)
-
-            kwargs["source_labware"] = labware_obj
-            selected = [(c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v]
-            kwargs["source_positions"] = selected[0] if selected else None
-            del window
-
-            if not kwargs["source_positions"]:
-                return
-
-            operation = OperationBuilder.build_add_medium(
-                source_labware_id=kwargs["source_labware"].labware_id,
-                source_labware_type=kwargs["source_labware"].__class__.__name__,
-                source_positions=kwargs["source_positions"],
-                dest_labware_id=kwargs["dest_labware"].labware_id,
-                dest_labware_type=kwargs["dest_labware"].__class__.__name__,
-                dest_positions=kwargs["dest_positions"],
-                volume=kwargs['volume'],
-                channels=self.channels,
-                change_tips = self.change_tips_var.get(),
-                mix_volume = self._get_mix_volume(),
-            )
-
-            if self.mode == "direct":
-                self.stage_operation(operation)
-            elif self.mode == "builder":
-                self.builder_config(operation)
-
-    def callback_remove_medium(
-            self,
-            func_str: str,
-            part: str = "first",
-            labware_obj=None,
-            edit_mode: bool = False,
-            **kwargs
-    ):
-        """
-        Handle Remove Medium operation.
-        Order: Volume -> Source (Plate) -> Destination (Reservoir)
-        """
-        # --- PART 1: GET VOLUME ---
-        if part == "first":
-            if not edit_mode:  # Only clear if not explicitly in edit mode
-                self.clear_edit_mode()
-            self.set_stage("")
-            volume = self.ask_volume_dialog(title="Remove Medium Volume", initial_value=100)
-            if volume:
-                self.callback_remove_medium(func_str, part="second", volume=volume, **kwargs)
-
-        # --- PART 2: SELECT SOURCE (PLATE) ---
-        elif part == "second":
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
-            self.set_stage("choose plate to aspirate liquid from")
-            kwargs['volume'] = kwargs.get('volume')
-            self.display_possible_labware(
-                labware_type=Plate,
-                next_callback=self.callback_remove_medium,
-                func_str=func_str,
-                part="third",
-                **kwargs
-            )
-
-        # --- PART 3: HANDLE PLATE SELECTION & ASK RESERVOIR ---
-        elif part == "third" and labware_obj is not None:
-            # Compute volume constraints for removal (insufficient volume check)
-            volume = kwargs.get('volume')
-            volume_constraints = self.compute_volume_constraints(
-                labware_obj, volume, self.multichannel, operation='removal'
-            )
-
-            window = WellWindow(
-                rows=labware_obj._rows,
-                columns=labware_obj._columns,
-                labware_id=labware_obj.labware_id,
-                max_selected=None,
-                multichannel_mode=self.multichannel,
-                master=self.get_master_window(),
-                title=f"SOURCE: Select wells on {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True),
-                volume_constraints= volume_constraints if self.mode == "direct" else {}
-            )
-            self.get_master_window().wait_variable(window.safe_var)
-
-            kwargs["source_labware"] = labware_obj
-            if self.multichannel:
-                kwargs["source_positions"] = [(c, r) for r, c in window.get_start_positions()]
-            else:
-                kwargs["source_positions"] = [(c, r) for r, row in enumerate(window.well_state)
-                                              for c, v in enumerate(row) if v]
-            del window
-
-            if not kwargs["source_positions"]:
-                return
-
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
-
-            self.set_stage("choose reservoir to dispense liquid to")
-            self.display_possible_labware(
-                labware_type=ReservoirHolder,
-                next_callback=self.callback_remove_medium,
-                func_str=func_str,
-                part="fourth",
-                **kwargs
-            )
-
-        # --- PART 4: HANDLE RESERVOIR SELECTION & CREATE OPERATION ---
-        elif part == "fourth" and labware_obj is not None:
-            # Compute volume constraints for reservoir (overflow check)
-            volume = kwargs.get('volume')
-            num_source_positions = len(kwargs['source_positions'])
-            volume_constraints = self.compute_volume_constraints(
-                labware_obj, volume, self.multichannel, operation='addition'
-            )
-
-            window = WellWindow(
-                rows=labware_obj.hooks_across_y,
-                columns=labware_obj.hooks_across_x,
-                labware_id=labware_obj.labware_id,
-                max_selected=1,
-                multichannel_mode=False if not labware_obj.each_tip_needs_separate_item() else self.multichannel,
-                master=self.get_master_window(),
-                title=f"DESTINATION: Select reservoir {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False),
-                volume_constraints= volume_constraints if self.mode == "direct" else {}
-            )
-            self.get_master_window().wait_variable(window.safe_var)
-
-            kwargs["dest_labware"] = labware_obj
-            selected = [(c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v]
-            kwargs["dest_positions"] = selected[0] if selected else None
-            del window
-
-            if not kwargs["dest_positions"]:
-                return
-
-            # Create Operation object (unified for both modes)
-            operation = OperationBuilder.build_remove_medium(
-                source_labware_id=kwargs["source_labware"].labware_id,
-                source_labware_type=kwargs["source_labware"].__class__.__name__,
-                source_positions=kwargs["source_positions"],
-                dest_labware_id=kwargs["dest_labware"].labware_id,
-                dest_labware_type= kwargs["dest_labware"].__class__.__name__,
-                dest_positions=kwargs["dest_positions"],
-                volume=kwargs['volume'],
-                channels=self.channels,
-                change_tips=self.change_tips_var.get(),
-            )
-
-            # Mode-specific handling
-            if self.mode == "direct":
-                self.stage_operation(operation)
-            elif self.mode == "builder":
-                self.builder_config(operation)
-
-    def callback_transfer_plate_to_plate(
-            self,
-            func_str: str,
-            part: str = "first",
-            labware_obj=None,
-            edit_mode: bool = False,
-            **kwargs
-    ):
-        """
-        Handle Transfer Plate to Plate operation.
-        Order: Volume -> Source (Plate) -> Destination (Plate)
-        Validates: Source count == Destination count
-        """
-        # --- PART 1: GET VOLUME ---
-        if part == "first":
-            if not edit_mode:  # Only clear if not explicitly in edit mode
-                self.clear_edit_mode()
-            self.set_stage("")
-            volume = self.ask_volume_dialog(title="Transfer Medium Volume", initial_value=100)
-            if volume:
-                self.callback_transfer_plate_to_plate(func_str, part="second", volume=volume, **kwargs)
-
-
-        # --- PART 2: SELECT SOURCE (PLATE) ---
-        elif part == "second":
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
-
-            self.set_stage("choose plate to aspirate liquid from")
-            kwargs['volume'] = kwargs.get('volume')
-            self.display_possible_labware(
-                labware_type=Plate,
-                next_callback=self.callback_transfer_plate_to_plate,
-                func_str=func_str,
-                part="third",
-                **kwargs
-            )
-
-        # --- PART 3: HANDLE SOURCE SELECTION & ASK DESTINATION ---
-        elif part == "third" and labware_obj is not None:
-            # Compute volume constraints for removal (insufficient volume check)
-            volume = kwargs.get('volume')
-            volume_constraints = self.compute_volume_constraints(
-                labware_obj, volume, self.multichannel, operation='removal'
-            )
-
-            window = WellWindow(
-                rows=labware_obj._rows,
-                columns=labware_obj._columns,
-                labware_id=labware_obj.labware_id,
-                max_selected=None,
-                multichannel_mode=self.multichannel,
-                master=self.get_master_window(),
-                title=f"SOURCE: Select wells on {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True),
-                volume_constraints= volume_constraints if self.mode == "direct" else {}
-            )
-            self.get_master_window().wait_variable(window.safe_var)
-
-            kwargs["source_labware"] = labware_obj
-            if self.multichannel:
-                kwargs["source_positions"] = [(c, r) for r, c in window.get_start_positions()]
-            else:
-                kwargs["source_positions"] = [(c, r) for r, row in enumerate(window.well_state)
-                                              for c, v in enumerate(row) if v]
-            del window
-
-            if not kwargs["source_positions"]:
-                return
-
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
-
-            self.set_stage("choose plate to dispense liquid to")
-            self.display_possible_labware(
-                labware_type=Plate,
-                next_callback=self.callback_transfer_plate_to_plate,
-                func_str=func_str,
-                part="fourth",
-                **kwargs
-            )
-
-        # --- PART 4: HANDLE DESTINATION SELECTION & CREATE OPERATION ---
-        elif part == "fourth" and labware_obj is not None:
-            # Compute volume constraints for addition (overflow check)
-            volume = kwargs.get('volume')
-            volume_constraints = self.compute_volume_constraints(
-                labware_obj, volume, self.multichannel, operation='addition'
-            )
-
-            window = WellWindow(
-                rows=labware_obj._rows,
-                columns=labware_obj._columns,
-                labware_id=labware_obj.labware_id,
-                max_selected=None,
-                multichannel_mode=self.multichannel,
-                master=self.get_master_window(),
-                title=f"DESTINATION: Select wells on {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False),
-                volume_constraints= volume_constraints if self.mode == "direct" else {}
-            )
-            self.get_master_window().wait_variable(window.safe_var)
-
-            kwargs["dest_labware"] = labware_obj
-            if self.multichannel:
-                kwargs["dest_positions"] = [(c, r) for r, c in window.get_start_positions()]
-            else:
-                kwargs["dest_positions"] = [(c, r) for r, row in enumerate(window.well_state)
-                                            for c, v in enumerate(row) if v]
-            del window
-
-            if not kwargs["dest_positions"]:
-                return
-
-            # Validation check - ensure counts match
-            if len(kwargs["source_positions"]) != len(kwargs["dest_positions"]):
-                messagebox.showerror(
-                    "Selection Error",
-                    f"Mismatch in selected positions!\n\n"
-                    f"Source Count: {len(kwargs['source_positions'])}\n"
-                    f"Destination Count: {len(kwargs['dest_positions'])}\n\n"
-                    f"Please ensure counts match.",
-                    parent=self.get_master_window()
-                )
-                return
-
-            # Create Operation object (unified for both modes)
-            operation = OperationBuilder.build_transfer_plate_to_plate(
-                source_labware_id=kwargs["source_labware"].labware_id,
-                source_labware_type= kwargs["source_labware"].__class__.__name__,
-                source_positions=kwargs["source_positions"],
-                dest_labware_id=kwargs["dest_labware"].labware_id,
-                dest_labware_type= kwargs["dest_labware"].__class__.__name__,
-                dest_positions=kwargs["dest_positions"],
-                volume=kwargs['volume'],
-                channels=self.channels,
-                change_tips=self.change_tips_var.get(),
-                mix_volume = self._get_mix_volume(),
-            )
-
-            # Mode-specific handling
-            if self.mode == "direct":
-                self.stage_operation(operation)
-            elif self.mode == "builder":
-                self.builder_config(operation)
-
-    def callback_remove_and_add(
-            self,
-            func_str: str,
-            part: str = "first",
-            labware_obj=None,
-            edit_mode: bool = False,
-            **kwargs
-    ):
-        """
-        Handle Remove & Add operation (batched).
-        1. Select wells on plate
-        2. Remove medium to remove reservoir
-        3. Add fresh medium from source reservoir
-        """
-        if part == "first":
-            if not edit_mode:
-                self.clear_edit_mode()
-            self.set_stage("")
-            volume = self.ask_volume_dialog(title="Remove & Add Volume", initial_value=100)
-            if volume:
-                self.callback_remove_and_add(func_str, part="second", volume=volume, **kwargs)
-
-        elif part == "second":
-            # Select plate and wells
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
-            self.set_stage("choose plate and wells to work with")
-            kwargs['volume'] = kwargs.get('volume')
-            self.display_possible_labware(
-                labware_type=Plate,
-                next_callback=self.callback_remove_and_add,
-                func_str=func_str,
-                part="third",
-                **kwargs
-            )
-
-        elif part == "third" and labware_obj is not None:
-            # Select wells on plate
-            volume = kwargs.get('volume')
-            volume_constraints = self.compute_volume_constraints(
-                labware_obj, volume, self.multichannel, operation='removal'
-            )
-
-            window = WellWindow(
-                rows=labware_obj._rows,
-                columns=labware_obj._columns,
-                labware_id=labware_obj.labware_id,
-                max_selected=None,
-                multichannel_mode=self.multichannel,
-                master=self.get_master_window(),
-                title=f"Select wells on {labware_obj.labware_id}",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True),
-                volume_constraints=volume_constraints if self.mode == "direct" else {}
-            )
-            self.get_master_window().wait_variable(window.safe_var)
-
-            kwargs["plate_labware"] = labware_obj
-            if self.multichannel:
-                kwargs["plate_positions"] = [(c, r) for r, c in window.get_start_positions()]
-            else:
-                kwargs["plate_positions"] = [(c, r) for r, row in enumerate(window.well_state)
-                                             for c, v in enumerate(row) if v]
-            del window
-
-            if not kwargs["plate_positions"]:
-                return
-
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
-
-            # Next: select remove reservoir
-            self.set_stage("choose reservoir to remove medium to")
-            self.display_possible_labware(
-                labware_type=ReservoirHolder,
-                next_callback=self.callback_remove_and_add,
-                func_str=func_str,
-                part="fourth",
-                **kwargs
-            )
-
-        elif part == "fourth" and labware_obj is not None:
-            #Select remove reservoir position
-            volume = kwargs.get('volume')
-            num_positions = len(kwargs['plate_positions'])
-            volume_constraints = self.compute_volume_constraints(
-                labware_obj, volume * num_positions, self.multichannel, operation='addition'
-            )
-
-            window = WellWindow(
-                rows=labware_obj.hooks_across_y,
-                columns=labware_obj.hooks_across_x,
-                labware_id=labware_obj.labware_id,
-                max_selected=1,
-                multichannel_mode=False if not labware_obj.each_tip_needs_separate_item() else self.multichannel,
-                master=self.get_master_window(),
-                title=f"REMOVE TO: Select reservoir {labware_obj.labware_id} (old medium destination)",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=False),
-                volume_constraints=volume_constraints if self.mode == "direct" else {}
-            )
-            self.get_master_window().wait_variable(window.safe_var)
-
-            kwargs["remove_reservoir"] = labware_obj
-            selected = [(c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v]
-            kwargs["remove_position"] = selected[0] if selected else None
-            del window
-
-            if not kwargs["remove_position"]:
-                return
-
-            if self.mode == "builder":
-                self.clear_grid(self.second_column_frame)
-
-            # Next: select source reservoir
-            self.set_stage("choose reservoir to add fresh medium from")
-            self.display_possible_labware(
-                labware_type=ReservoirHolder,
-                next_callback=self.callback_remove_and_add,
-                func_str=func_str,
-                part="fifth",
-                **kwargs
-            )
-
-        elif part == "fifth" and labware_obj is not None:
-            # Select source reservoir position
-            volume = kwargs.get('volume')
-            num_positions = len(kwargs['plate_positions'])
-            volume_constraints = self.compute_volume_constraints(
-                labware_obj, volume * num_positions, self.multichannel, operation='removal'
-            )
-
-            window = WellWindow(
-                rows=labware_obj.hooks_across_y,
-                columns=labware_obj.hooks_across_x,
-                labware_id=labware_obj.labware_id,
-                max_selected=1,
-                multichannel_mode=False if not labware_obj.each_tip_needs_separate_item() else self.multichannel,
-                master=self.get_master_window(),
-                title=f"ADD FROM: Select reservoir {labware_obj.labware_id} (fresh medium source)",
-                wells_list=self.get_wells_list_from_labware(labware_obj=labware_obj, source=True),
-                volume_constraints=volume_constraints if self.mode == "direct" else {}
-            )
-            self.get_master_window().wait_variable(window.safe_var)
-
-            kwargs["source_reservoir"] = labware_obj
-            selected = [(c, r) for r, row in enumerate(window.well_state) for c, v in enumerate(row) if v]
-            kwargs["source_position"] = selected[0] if selected else None
-            del window
-
-            if not kwargs["source_position"]:
-                return
-
-            operation = OperationBuilder.build_remove_and_add(
-                plate_labware_id=kwargs["plate_labware"].labware_id,
-                plate_positions=kwargs["plate_positions"],
-                plate_labware_type=kwargs["plate_labware"].__class__.__name__,
-                remove_reservoir_id=kwargs["remove_reservoir"].labware_id,
-                remove_position=kwargs["remove_position"],
-                source_reservoir_id=kwargs["source_reservoir"].labware_id,
-                source_reservoir_type=kwargs["source_reservoir"].__class__.__name__,
-                source_position=kwargs["source_position"],
-                volume=kwargs['volume'],
-                channels=self.channels,
-                change_tips = self.change_tips_var.get(),
-                mix_volume = self._get_mix_volume(),
-            )
-
-            if self.mode == "direct":
-                self.stage_operation(operation)
-            elif self.mode == "builder":
-                self.builder_config(operation)
-
-    def callback_move_xy(self, edit_mode: bool = False):
-        """Handle Move X and Y operation"""
-
-        if not edit_mode:  # Only clear if not explicitly in edit mode
-            self.clear_edit_mode()
-
-        # Get current positions from pipettor
-        current_x = self.pipettor.x_position if hasattr(self.pipettor, 'x_position') else 0.0
-        current_y = self.pipettor.y_position if hasattr(self.pipettor, 'y_position') else 0.0
-
-        xy_result = self.ask_position_dialog([
-            ('X', self.deck.range_x[0], self.deck.range_x[1], current_x),
-            ('Y', self.deck.range_y[0], self.deck.range_y[1], current_y)
-        ])
-
-        if xy_result:
-            x_pos, y_pos = xy_result
-
-            operation = OperationBuilder.build_move_xy(x=x_pos, y=y_pos)
-
-            if self.mode == "direct":
-                self.stage_operation(operation)
-            elif self.mode == "builder":
-                self.builder_config(operation)
-
-    def callback_move_z(self, edit_mode: bool = False):
-        """Handle Move Z operation"""
-
-        if not edit_mode:
-            self.clear_edit_mode()
-
-        # Get current Z position from pipettor
-        current_z = self.pipettor.z_position if hasattr(self.pipettor, 'z_position') else 0.0
-
-        z_pos = self.ask_position_dialog([
-            ('Z', 0.0, self.deck.range_z, current_z)
-        ])
-
-        if z_pos is not None:
-            operation = OperationBuilder.build_move_z(z=z_pos)
-
-            if self.mode == "direct":
-                self.stage_operation(operation)
-            elif self.mode == "builder":
-                self.builder_config(operation)
-
-    def callback_home(self,  edit_mode: bool = False):
-        """Handle Home operation"""
-        if not edit_mode:
-            self.clear_edit_mode()
-
-        operation = OperationBuilder.build_home()
-
+    def mode_dependent_action(self, operation):
         if self.mode == "direct":
             self.stage_operation(operation)
         elif self.mode == "builder":
             self.builder_config(operation)
+
+    # ========== callback functions ==========
+
+    def _start_operation(self, operation_key: str, edit_mode: bool = False):
+        """Generic operation starter - works for all operations"""
+        if not edit_mode:
+            self.clear_edit_mode()
+
+        config = OPERATION_CONFIGS[operation_key]
+        self.current_session = OperationSession(operation_key, config)
+        self.run_operation_wizard()
 
     def callback_force_eject(self):
         self.pipettor.eject_tip()
@@ -3669,4 +2407,3 @@ class FunctionWindow:
         volume = self.ask_volume_dialog(title="Dispense Volume", initial_value=0)
         if volume:
             self.pipettor.dispense(volume)
-

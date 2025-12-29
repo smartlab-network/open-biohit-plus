@@ -10,8 +10,7 @@ from ..deck_structure import *
 from .function_window import FunctionWindow
 from ..pipettor_plus.pipettor_plus import PipettorPlus
 from .gui_dialogs import EditLabwareDialog, AddLabwareToSlotDialog, LabwareDialog, SlotDialog,CreateLowLevelLabwareDialog, ViewChildrenLabwareDialog
-from .ui_helper import (create_form,create_button_bar,create_scrolled_listbox,CollapsibleFrame, create_managed_list_section,
-                        update_detailed_info_text,draw_labware_grid,ScrollableTab, create_info_panel)
+from .ui_helper import *
 
 class DeckGUI:
     def __init__(self, deck=None):
@@ -157,7 +156,7 @@ class DeckGUI:
             root,
             title="Selection Info",
             clear_cmd=self.clear_selection,
-            collapsed=False
+            collapsed=True
         )
         # 3. Low-Level Labware Section
         self.low_level_collapsible = CollapsibleFrame(root, text="Low-Level Labware", collapsed=False)
@@ -595,7 +594,6 @@ class DeckGUI:
         _, buttons_dict = create_button_bar(
             parent=ctx['btn_frame'],
             button_configs=configs,
-            orientation="vertical",
             fill=True,
             btns_per_row=2
         )

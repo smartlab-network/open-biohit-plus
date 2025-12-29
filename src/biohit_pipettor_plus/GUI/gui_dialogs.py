@@ -858,7 +858,7 @@ class PlaceReservoirDialog(ScrollableDialog):
         # Populate initial list
         self.update_listbox_data()
         configs = [{"text": " Create New Reservoir", "command": self.create_new_reservoir}]
-        create_button_bar(res_frame, configs, orientation="vertical", fill=True)
+        create_button_bar(res_frame, configs, fill=True)
 
         # 2. Preview Section
         preview_frame = ttk.Labelframe(self.scroll_frame, text="Reservoir Preview", padding="10")

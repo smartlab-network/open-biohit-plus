@@ -137,9 +137,9 @@ class PipettorPlus(Pipettor):
         """Enable or disable simulation mode."""
         self._simulation_mode = enabled
         if enabled:
-            print("  → Simulation mode ENABLED (hardware calls will be skipped)")
+            print("  → Simulation mode ENABLED ")
         else:
-            print("  → Simulation mode DISABLED (hardware calls will execute)")
+            print("  → Simulation mode DISABLED")
 
     def _check_abort_and_pause(self):
         """Check for abort or pause requests at safe checkpoints"""
@@ -938,7 +938,6 @@ class PipettorPlus(Pipettor):
                     del tip_content[content_type]
 
     def home(self):
-        self.move_z(0)
         self.move_xy(0, 0)
 
     def move_xy(self, x: float, y: float):

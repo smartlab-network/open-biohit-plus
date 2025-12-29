@@ -1,11 +1,11 @@
 import tkinter as tk
-from tkinter import ttk
+import ttkbootstrap as ttk
 
 class CollapsibleFrame(ttk.Frame):
     """A frame that can be collapsed/expanded by clicking on its title."""
 
     def __init__(self, parent, text, collapsed=True, **kw):
-        import ttkbootstrap as ttk
+
         super().__init__(parent, **kw)
 
         # Title bar
@@ -286,71 +286,66 @@ def create_scrolled_listbox(parent, items, label_text="Available Items", height=
 
     return listbox, frame
 
-def create_button_bar(parent, button_configs, orientation="horizontal", align="center", fill=False, btns_per_row=1):
-    """
-    Flexible helper for button layouts. Supports Tuple/Dict configs and grid-based rows.
-    """
-    btn_frame = ttk.Frame(parent)
-
-    # Standardize packing for the container frame
-    frame_fill = "x" if (orientation == "horizontal" or fill or btns_per_row > 1) else None
-    btn_frame.pack(fill=frame_fill, pady=5)
-
-    # Configure columns if we are doing a grid (btns_per_row > 1)
-    if btns_per_row > 1:
-        for i in range(btns_per_row):
-            btn_frame.columnconfigure(i, weight=1)
+def create_button_bar(parent, button_configs, btns_per_row=1,  fill=False, padx=5, pady=2):
+    frame = ttk.Frame(parent)
+    frame.pack(fill="x", pady=5)
 
     buttons = {}
 
-    # Map alignment to Tkinter packing sides
-    side_map = {
-        "left": tk.LEFT, "right": tk.RIGHT,
-        "top": tk.TOP, "bottom": tk.BOTTOM, "center": tk.LEFT
-    }
-    side = side_map.get(align, tk.LEFT if orientation == "horizontal" else tk.TOP)
+    # GRID MODE (btns_per_row > 1)
+    if btns_per_row > 1:
+        for c in range(btns_per_row):
+            frame.columnconfigure(c, weight=1)
 
-    for index, config in enumerate(button_configs):
-        if isinstance(config, tuple):
-            text, command = config[0], config[1]
-            state, style = "normal", "TButton"
-        elif isinstance(config, dict):
-            text = config.get("text", "Button")
-            command = config.get("command")
-            state = config.get("state", "normal")
-            style = config.get("style", "TButton")
-        else:
-            continue
+        for i, cfg in enumerate(button_configs):
+            if isinstance(cfg, tuple):
+                cfg = {"text": cfg[0], "command": cfg[1]}
 
-        btn = ttk.Button(
-            btn_frame,
-            text=text,
-            command=command,
-            state=state,
-            style=style
-        )
+            r, c = divmod(i, btns_per_row)
 
-        # FLOW LOGIC: Use grid for multiple buttons per row, otherwise use pack
-        if btns_per_row > 1:
-            row = index // btns_per_row
-            col = index % btns_per_row
+            btn = ttk.Button(
+                frame,
+                text=cfg.get("text", "Button"),
+                command=cfg.get("command"),
+                state=cfg.get("state", "normal"),
+                style=cfg.get("style", "TButton"),
+            )
 
-            # Check if this is the last button
-            is_last = (index == len(button_configs) - 1)
-            if is_last and col == 0:
-                btn.grid(row=row, column=col, columnspan=btns_per_row, sticky="ew", padx=2, pady=2)
-            else:
-                btn.grid(row=row, column=col, sticky="ew", padx=2, pady=2)
-        else:
-            # Original Packing Logic
-            pack_kwargs = {"side": side, "padx": 5, "pady": 2}
-            if fill:
-                pack_kwargs.update({"expand": True, "fill": "x"})
-            btn.pack(**pack_kwargs)
+            btn.grid(
+                row=r,
+                column=c,
+                sticky="ew" if fill else "",
+                padx=padx,
+                pady=pady
+            )
 
-        buttons[text] = btn
+            buttons[cfg["text"]] = btn
 
-    return btn_frame, buttons
+    # PACK MODE (vertical stack)
+    else:
+        for cfg in button_configs:
+            if isinstance(cfg, tuple):
+                cfg = {"text": cfg[0], "command": cfg[1]}
+
+            btn = ttk.Button(
+                frame,
+                text=cfg.get("text", "Button"),
+                command=cfg.get("command"),
+                state=cfg.get("state", "normal"),
+                style=cfg.get("style", "TButton"),
+            )
+
+            btn.pack(
+                side=tk.TOP,
+                fill="x" if fill else None,
+                expand=fill,
+                padx=padx,
+                pady=pady
+            )
+
+            buttons[cfg["text"]] = btn
+
+    return frame, buttons
 
 def validate_numeric(text):
     """Allows only numbers, decimal points, and minus signs."""
@@ -458,8 +453,8 @@ def update_detailed_info_text(text_widget, obj=None, modules=None):
     text_widget.insert(tk.END, "\n".join(full_text))
     text_widget.config(state='disabled')
 
-def draw_labware_grid(canvas, labware, selected_child=None, copy_source=None, paste_targets=None, check_box=False, pad=40, min_cell=40,
-                      max_cell=150):
+def draw_labware_grid(canvas, labware, selected_child=None, copy_source=None, paste_targets=None,
+                      check_box=False, pad=40, min_cell=40, max_cell=150):
     """
     Unified grid drawer for any labware with children.
     Handles cell scaling, coloring, and selection highlighting.

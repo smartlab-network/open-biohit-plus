@@ -69,7 +69,7 @@ class OperationBuilder:
         )
 
     @staticmethod
-    def build_discard_tips(labware_id: str, labware_type: str, positions: list[tuple[int, int]] = None) -> Operation:
+    def build_discard_tips(labware_id: str, labware_type: str) -> Operation:
         """Build a DISCARD_TIPS operation"""
         description = f"Discard tips to {labware_id}"
         params = {'labware': {'id': labware_id, 'type': labware_type}}
@@ -94,6 +94,7 @@ class OperationBuilder:
             mix_volume: float = 0,
     ) -> Operation:
         """Build an ADD_MEDIUM operation"""
+
         total_wells = len(dest_positions) * (Pipettors_in_Multi if channels == Pipettors_in_Multi else 1)
         total_volume = volume * total_wells
 
@@ -247,10 +248,10 @@ class OperationBuilder:
             plate_positions: list[tuple[int, int]],
             remove_reservoir_id: str,
             remove_reservoir_type: str,
-            remove_position: tuple[int, int],
+            remove_positions: tuple[int, int],
             source_reservoir_id: str,
             source_reservoir_type: str,
-            source_position: tuple[int, int],
+            source_positions: tuple[int, int],
             volume: float,
             channels: int,
             change_tips: bool = False,
@@ -266,9 +267,9 @@ class OperationBuilder:
                 'plate_labware': {'id': plate_labware_id, 'type': plate_labware_type},
                 'plate_positions': plate_positions,
                 'remove_reservoir': {'id': remove_reservoir_id, 'type': remove_reservoir_type},
-                'remove_position': remove_position,
+                'remove_positions': remove_positions,
                 'source_reservoir': {'id': source_reservoir_id, 'type': source_reservoir_type},
-                'source_position': source_position,
+                'source_positions': source_positions,
                 'volume': volume,
                 'channels': channels,
                 'change_tips': change_tips,

@@ -30,15 +30,11 @@ class WellWindow:
         Wells not in this list are disabled.
     max_selected : int, optional
         Maximum number of simultaneously selected wells.
-    volume_constraints : dict[tuple[int, int], dict], optional
-        Dictionary of wells that fail volume requirements.
-        Format: {(row, col): {'reason': str, 'current_volume': float, 'required_volume': float}}
     """
 
     def __init__(self, rows: int, columns: int, labware_id: str, title: str = "",
                  master=None, wells_list: list[tuple[int, int]] = None,
                  max_selected: int = None, multichannel_mode: bool = False,
-                 volume_constraints: dict[tuple[int, int], dict] = None,
                  allow_auto_select: bool = False):
 
 
@@ -78,13 +74,13 @@ class WellWindow:
         self.auto_selected = False
         self.allow_auto_select = allow_auto_select
         self.is_well_window = True
+        self.back_requested = False
 
         # --- Core attributes ---
         self.rows = rows
         self.columns = columns
         self.labware_id = labware_id
         self.wells_list = wells_list if wells_list else []
-        self.volume_constraints = volume_constraints if volume_constraints else {}
 
         if max_selected:
             self.max_selected = max_selected
@@ -102,8 +98,10 @@ class WellWindow:
         self.buttons = [[None for _ in range(self.columns)] for _ in range(self.rows)]
         self.multichannel_mode = multichannel_mode
         self.channels = Pipettors_in_Multi if self.multichannel_mode else 1
-
         self.max_selected = max_selected if max_selected else self.rows * self.columns
+
+        # Handle OS window close button (X)
+        self.__root.protocol("WM_DELETE_WINDOW", self.on_window_close)
 
         # Add info label at top
         info_frame = ttk.Frame(self.__root)
@@ -124,6 +122,22 @@ class WellWindow:
             ).pack(side=tk.LEFT, padx=5)
 
         # Buttons
+        button_row = self.rows + 2
+
+        self.button_back = ttk.Button(
+            self.__root,
+            text="← Back",
+            command=self.callback_back,
+            bootstyle="secondary"
+        )
+        self.button_back.grid(
+            column=0,
+            row=button_row,
+            sticky="nsew",
+            padx=10,
+            pady=10
+        )
+
         if self.allow_auto_select:
             # Single smart button with dynamic text
             self.button_confirm = ttk.Button(
@@ -134,14 +148,14 @@ class WellWindow:
             )
             self.button_confirm.grid(
                 column=1,
-                row=self.rows + 2,
+                row=button_row,
                 sticky="nsew",
                 columnspan=self.columns,
                 padx=10,
                 pady=10
             )
 
-            self.__root.bind('<Return>', lambda e: self.callback_save())
+            self.__root.bind('<Return>', self.on_enter_key)
             self.button_confirm.focus_set()
 
             # Track selection state for button text updates
@@ -153,7 +167,9 @@ class WellWindow:
                 self.__root,
                 text="✓ Confirm Selection",
                 command=self.callback_save,
-                bootstyle="success-outline"
+                bootstyle="success-outline",
+                state = 'disabled'
+
             )
             self.button_save.grid(
                 column=1,
@@ -163,7 +179,7 @@ class WellWindow:
                 padx=10,
                 pady=10
             )
-            self.__root.bind('<Return>', lambda e: self.callback_save())
+            self.__root.bind('<Return>', self.on_enter_key)
             self.button_save.focus_set()
 
 
@@ -182,38 +198,8 @@ class WellWindow:
         if self.wells_list:
             self.update_all_button_states()
 
-    def _format_constraint_tooltip(self, constraint_info: dict) -> str:
-        """Format constraint info into readable tooltip text."""
-        reason = constraint_info.get('reason', '')
-        if reason == 'insufficient_volume':
-            current = constraint_info.get('current_volume', 0)
-            required = constraint_info.get('required_volume', 0)
-            return f"Insufficient Volume\nCurrent: {current:.1f} µL\nRequired: {required:.1f} µL"
-        elif reason == 'overflow_risk':
-            available = constraint_info.get('available_volume', 0)
-            required = constraint_info.get('required_volume', 0)
-            return f"Overflow Risk\nAvailable: {available:.1f} µL\nNeeded: {required:.1f} µL"
-        return "Volume constraint violation"
-
-    def _create_tooltip(self, widget, text: str):
-        """Create a simple tooltip for a widget."""
-
-        def show_tooltip(event):
-            tooltip = tk.Toplevel()
-            tooltip.wm_overrideredirect(True)
-            tooltip.wm_geometry(f"+{event.x_root + 10}+{event.y_root + 10}")
-            label = tk.Label(tooltip, text=text, background="yellow", relief="solid", borderwidth=1,
-                             font=("Arial", 9))
-            label.pack()
-            widget.tooltip = tooltip
-
-        def hide_tooltip(event):
-            if hasattr(widget, 'tooltip'):
-                widget.tooltip.destroy()
-                del widget.tooltip
-
-        widget.bind('<Enter>', show_tooltip)
-        widget.bind('<Leave>', hide_tooltip)
+        # Initialize button state based on current selection
+        self.update_confirm_button_state()
 
     def set_grid(self):
         """Configure Tkinter grid layout for the window."""
@@ -263,55 +249,32 @@ class WellWindow:
             self.__root.deiconify()
             self.is_well_window = True
 
+    def callback_back(self):
+        """Handle back button - go to previous wizard step"""
+        self.back_requested = True
+        self.__root.destroy()
+
     def create_well_buttons(self):
-        """Create a grid of well buttons with volume constraint awareness."""
+        """Create a grid of well buttons."""
         for r in range(self.rows):
             for c in range(self.columns):
                 well_name = f"{string.ascii_uppercase[r]}{c}"
                 well_available = (r, c) in self.wells_list
-                has_volume_constraint = (r, c) in self.volume_constraints
 
-                if has_volume_constraint:
-                    # Well FAILS volume constraint - show as RED with tooltip
-                    constraint_info = self.volume_constraints[(r, c)]
-                    tooltip_text = self._format_constraint_tooltip(constraint_info)
-
-                    cur_label = ttk.Label(
-                        self.__root,
-                        text=well_name,
-                        bootstyle="danger-inverse",  # Red background
-                        anchor="center",
-                        font=('Arial', 10)
-                    )
-                    cur_label.grid(
-                        row=r + 2,
-                        column=c + 1,
-                        sticky='nsew',
-                        ipadx=20,
-                        ipady=10,
-                        padx=2,
-                        pady=2
-                    )
-                    self.buttons[r][c] = cur_label
-
-                    self._create_tooltip(cur_label, tooltip_text)
-
-                elif well_available:
-                    # Well is available AND passes volume constraints - make it clickable
+                if well_available:
+                    # Well is available - make it clickable
                     if self.multichannel_mode:
                         # Check if valid starting position (has enough consecutive rows below)
                         if r + self.channels <= self.rows:
-                            # Check all positions are available AND pass constraints
+                            # Check all positions are available
                             all_available = all((r + i, c) in self.wells_list for i in range(self.channels))
-                            all_pass_constraints = all(
-                                (r + i, c) not in self.volume_constraints for i in range(self.channels))
-                            if all_available and all_pass_constraints:
+                            if all_available:
                                 # VALID STARTING POSITION - make clickable
                                 state = "normal"
                                 style = "light"
                                 command = lambda c=c, r=r: self.callback_well_button(r, c)
                             else:
-                                # Some positions missing or fail constraints
+                                # Some positions missing
                                 state = "disabled"
                                 style = "light"
                                 command = None
@@ -352,7 +315,7 @@ class WellWindow:
                         cur_button.configure(cursor="crosshair")
 
                 else:
-                    # Well not available AND no volume constraint info - just unavailable
+                    # Well not available - show as disabled label
                     cur_label = ttk.Label(
                         self.__root,
                         text=well_name,
@@ -423,6 +386,7 @@ class WellWindow:
         self.buttons[row][col].configure(bootstyle="success")
         self.selected_queue.append((row, col))
         self.update_confirm_button_text()
+        self.update_confirm_button_state()
 
     def deactivate_well(self, row: int, col: int):
         """
@@ -440,6 +404,7 @@ class WellWindow:
         self.well_state[row][col] = False
         self.buttons[row][col].configure(bootstyle="light")
         self.update_confirm_button_text()
+        self.update_confirm_button_state()
 
     def show_multichannel_preview(self, row: int, col: int):
         """Highlight all consecutive wells that will be selected with preview colors."""
@@ -584,13 +549,14 @@ class WellWindow:
                 self.deactivate_well(row, column)
             else:
                 self.activate_well(row, column)
+        self.update_confirm_button_state()
 
     def toggle_row(self, row: int):
         """Toggle all wells in a given row."""
         check_var = self.row_vars[row].get()
 
         for c in range(self.columns):
-            if (row, c) not in self.wells_list or (row, c) in self.volume_constraints:
+            if (row, c) not in self.wells_list:
                 continue
 
             if check_var:
@@ -605,7 +571,7 @@ class WellWindow:
         check_var = self.col_vars[column].get()
 
         for r in range(self.rows):
-            if (r, column) not in self.wells_list or (r, column) in self.volume_constraints:
+            if (r, column) not in self.wells_list:
                 continue
 
             if check_var:
@@ -630,6 +596,38 @@ class WellWindow:
         """(Placeholder) Update all button states from external data."""
         pass
 
+    def on_enter_key(self, event=None):
+        """Handle Enter key - only proceed if confirm button is enabled"""
+        if self.allow_auto_select:
+            if hasattr(self, 'button_confirm'):
+                button_state = str(self.button_confirm['state'])
+                if button_state != 'disabled':
+                    self.callback_save()
+        else:
+            if hasattr(self, 'button_save'):
+                button_state = str(self.button_save['state'])
+                if button_state != 'disabled':
+                    self.callback_save()
+
+    def update_confirm_button_state(self):
+        """Enable/disable confirm button based on selection state"""
+        if not hasattr(self, 'button_save') and not hasattr(self, 'button_confirm'):
+            return
+
+        has_selection = any(any(row) for row in self.well_state)
+
+        if self.allow_auto_select:
+            # Auto-select mode: always enabled (can auto-select if empty)
+            if hasattr(self, 'button_confirm'):
+                self.button_confirm.config(state='normal')
+        else:
+            # No auto-select: only enable if there's a selection
+            if hasattr(self, 'button_save'):
+                if has_selection:
+                    self.button_save.config(state='normal')
+                else:
+                    self.button_save.config(state='disabled')
+
     def callback_save(self):
         """Save and close - auto-select if no manual selection made"""
         has_selection = any(any(row) for row in self.well_state)
@@ -641,5 +639,13 @@ class WellWindow:
 
         self.safe_var.set(True)
         self.confirmed = True
+        self.__root.destroy()
+
+    def on_window_close(self):
+        """Handle OS window close button - treat as cancellation"""
+        self.confirmed = False
+        self.auto_selected = False
+        self.back_requested = False
+        # Don't set anything - just destroy (all flags False = cancelled)
         self.__root.destroy()
 
