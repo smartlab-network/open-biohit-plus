@@ -447,6 +447,9 @@ class DeckGUI:
         # === CANVAS CLICK PATH (item_id provided) ===
         if item_id is not None:
 
+            # switch to deck editor
+            self.right_panel_notebook.select(0)
+
             # Switch to placed view ONLY if needed (prevents loop!)
             self.clear_selection()
             needs_mode_switch = False
@@ -1261,7 +1264,6 @@ class DeckGUI:
             outline='blue',
             width=2,
             fill='lightblue',
-            stipple='gray50',
             tags=f'slot_{slot_id}'
         )
 
@@ -1495,8 +1497,8 @@ class DeckGUI:
             self.root.destroy()
         elif response is False:  # No - close without saving
             self.root.destroy()
-        # None (Cancel) - do nothing, keep window open
-"""
+
+
 # Main entry point
 if __name__ == "__main__":
     # Create a sample deck for testing
@@ -1504,29 +1506,4 @@ if __name__ == "__main__":
 
     # Run GUI
     gui = DeckGUI(deck)
-    gui.run()
-"""
-
-if __name__ == "__main__":
-
-    # Load deck from Downloads
-    deck_file = os.path.expanduser("~/Downloads/deck1.json")
-
-    with open(deck_file, "r") as f:
-        data = json.load(f)
-
-    deck = Serializable.from_dict(data['deck'])
-
-    # Initialize pipettor as multichannel with 1000µL capacity
-    pipettor = PipettorPlus(
-        tip_volume=1000, multichannel=True, deck=deck,
-    )
-
-    # Run GUI
-    gui = DeckGUI(deck)
-    gui.pipettor = pipettor
-
-    if hasattr(gui, 'rebuild_operations_tab'):
-        gui.rebuild_operations_tab()
-
     gui.run()
