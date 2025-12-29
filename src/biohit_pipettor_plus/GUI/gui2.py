@@ -111,6 +111,12 @@ class DeckGUI:
             clear_cmd=self.clear_selection
         )
 
+        #refresh button
+        refresh_button_configs = [
+            {"text": "Refresh Deck", "command": lambda: self.draw_deck(auto_scale=True)}
+        ]
+        create_button_bar(root, refresh_button_configs, fill=True, btns_per_row=1)
+
         # 3. Slots Section (Modularized)
         create_managed_list_section(
             instance=self,

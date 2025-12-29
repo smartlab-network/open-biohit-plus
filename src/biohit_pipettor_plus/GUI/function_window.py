@@ -1125,7 +1125,7 @@ class FunctionWindow:
         self.clear_staged_operation()
         self.container.winfo_toplevel().focus_force()
 
-    def on_execution_failed(overlay, error_msg, is_abort):
+    def on_execution_failed(self, overlay, error_msg, is_abort):
         """Called in main thread when operation fails"""
         overlay.close()
 

@@ -642,10 +642,6 @@ class WellWindow:
         self.__root.destroy()
 
     def on_window_close(self):
-        """Handle OS window close button - treat as cancellation"""
-        self.confirmed = False
-        self.auto_selected = False
-        self.back_requested = False
-        # Don't set anything - just destroy (all flags False = cancelled)
+        """Handle OS window close button - treat as back navigation"""
+        self.back_requested = True
         self.__root.destroy()
-
