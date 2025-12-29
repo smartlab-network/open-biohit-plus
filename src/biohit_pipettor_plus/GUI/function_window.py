@@ -627,10 +627,17 @@ class FunctionWindow:
                 self.stage_label.config(text="Select an operation to continue")
             return
 
-        if positions is not None or window.auto_selected:
+        # handles edge case of empty selection:
+        if window.auto_selected or (positions is not None and len(positions) > 0):
             session.store(step_key, positions)
             session.advance()
             self.run_operation_wizard()
+        else:
+            # Safety: User confirmed but has no selection (shouldn't happen with disabled button)
+            self.current_session = None
+            if self.mode == "builder":
+                self.clear_grid(self.second_column_frame)
+                self.stage_label.config(text="Select an operation to continue")
 
     def _finalize_operation(self, session: OperationSession):
         """Build and execute/stage the completed operation"""

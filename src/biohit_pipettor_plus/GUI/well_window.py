@@ -128,7 +128,7 @@ class WellWindow:
             self.__root,
             text="← Back",
             command=self.callback_back,
-            bootstyle="secondary"
+            bootstyle="danger"
         )
         self.button_back.grid(
             column=0,
