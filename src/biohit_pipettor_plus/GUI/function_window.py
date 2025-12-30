@@ -127,7 +127,6 @@ class FunctionWindow:
 
 
     # ========== UI CREATION ==========
-
     def create_direct_mode_ui(self):
         """Create embedded UI for direct execution with staging area"""
 
@@ -442,7 +441,6 @@ class FunctionWindow:
             raise ValueError(f"Unknown step type: {step_key}")
 
     # ========== STEP HANDLERS ==========
-
     def _handle_volume_step(self, session: OperationSession):
         """Handle volume input step"""
         self.set_stage("")
@@ -804,13 +802,13 @@ class FunctionWindow:
         result = {'mapping': {}, 'cancelled': False}
         dropdown_vars = {}
 
-        # Section 1: Missing labware (REQUIRED)
+        # Section 1: Missing labware
         if missing_ids:
             ttk.Label(
                 dialog.scroll_frame,
-                text="⚠️ Missing Labware (Required)",
+                text="⚠️ Missing Labware (Recommended)",
                 font=('Arial', 12, 'bold'),
-                foreground='red'
+                foreground='orange'
             ).pack(pady=(0, 10), anchor='w')
 
             for lw_id in sorted(missing_ids):
@@ -824,9 +822,10 @@ class FunctionWindow:
                     if lw.__class__.__name__ == lw_type and lw.labware_id != lw_id
                 ]
 
-                options = ["[Required - Select labware]"] + [display for _, display in compatible]
+                options = ["[Recommended"
+                           " - Select labware]"] + [display for _, display in compatible]
                 var = tk.StringVar(value=options[0])
-                dropdown_vars[lw_id] = (var, dict(compatible), True)
+                dropdown_vars[lw_id] = (var, dict(compatible), False)
 
                 ttk.Combobox(frame, textvariable=var, values=options, state='readonly', width=50).pack(fill=tk.X)
 
@@ -861,9 +860,6 @@ class FunctionWindow:
         def on_apply():
             for lw_id, (var, id_map, required) in dropdown_vars.items():
                 selection = var.get()
-                if required and "[Required" in selection:
-                    messagebox.showerror("Missing Mapping", f"Must map: {lw_id}", parent=dialog)
-                    return
 
                 if "[" not in selection:
                     for labware_id, display in id_map.items():
@@ -881,7 +877,7 @@ class FunctionWindow:
         # Add button bar using helper
         dialog.add_button_bar(
             create_cmd=on_apply,
-            create_text="Apply Mapping",
+            create_text="Apply",
             cancel_text="Cancel"
         )
 
@@ -1156,8 +1152,6 @@ class FunctionWindow:
         if self.mode == "builder":
             self.pipettor.pop_state(self._state_snapshot)
         self.window_build_func.destroy()
-
-
 
     def on_workflow_success(self, overlay, name, num_ops, parent):
         """Called in main thread when workflow succeeds"""
@@ -1470,7 +1464,6 @@ class FunctionWindow:
         # Reset to "End" for next paste
         self.paste_position_var.set("End")
 
-
     def remove_operation_from_workflow(self, index: int):
         """Remove operation - NO VALIDATION"""
         self.clear_edit_mode()
@@ -1621,6 +1614,8 @@ class FunctionWindow:
             messagebox.showerror("Error", f"Workflow '{workflow_name}' not found in memory")
             return
 
+        # Extract labware info from workflow
+
         labware_info = {}
         for op in workflow.operations:
             for param_value in op.parameters.values():
@@ -1711,10 +1706,7 @@ class FunctionWindow:
 
         try:
             workflow.save_to_file(filepath)
-            messagebox.showinfo(
-                "Saved",
-                f"Workflow '{workflow_name}' saved to:\n{filepath}"
-            )
+
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save workflow:\n\n{str(e)}")
 
@@ -1774,7 +1766,6 @@ class FunctionWindow:
 
         # Show unified mapping dialog
         mapping = self.show_unified_mapping_dialog(labware_info, missing_ids, present_ids)
-
         if not mapping:
             return
 
