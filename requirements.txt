@@ -16,6 +16,3 @@ pythonnet==3.0.5
 
 
 
-# example of foc.bat required to run and save measurements
-#cd c:\labhub\import
-#start /WAIT FOC48_20230523.exe myrPlate.xml -e %1

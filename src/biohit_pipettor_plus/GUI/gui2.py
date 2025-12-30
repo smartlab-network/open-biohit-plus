@@ -16,7 +16,7 @@ class DeckGUI:
     def __init__(self, deck=None):
         self.root = tk.Tk()
         self.root.title("Deck Editor")
-        self.root.geometry("1200x800")
+        self.root.geometry("1200x1000")
 
         # Create or use provided deck
         if deck is None:

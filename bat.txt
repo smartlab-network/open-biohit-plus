@@ -1,0 +1,11 @@
+# example of foc.bat required to run and save measurements
+    #cd c:\labhub\import
+    #start /WAIT FOC48_20230523.exe myrPlate.xml -e %1
+
+
+# bat file required to open gui from terminal
+
+@echo off
+cd /d "C:\Labhub\smartlab-network"
+"venv\Scripts\python.exe" -m open-biohit-plus.src.biohit_pipettor_plus.gui.gui2
+pause

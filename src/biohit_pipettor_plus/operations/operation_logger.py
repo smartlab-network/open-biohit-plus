@@ -1,4 +1,3 @@
-
 import os
 from datetime import datetime
 from typing import Optional
@@ -9,46 +8,37 @@ class OperationLogger:
     """
     Logger for recording operation execution results to a session-based log file.
 
-    Creates one log file per application session with format:
-    operation_status_YYYY-MM-DD_HH-MM-SS.txt
+    Creates one unique log file per application session with format:
+    pipettor_operation_logs_YYYY-MM-DD_HH-MM-SS.txt
     """
 
-    def __init__(self, log_dir: str = "logs"):
+    def __init__(self, log_dir: str = "pipettor_operation_logs"):
         """
         Initialize the operation logger.
 
         Parameters
         ----------
         log_dir : str
-            Directory to store log files (default: "logs")
+            Directory to store log files (default: "pipettor_operation_logs")
         """
         self.log_dir = log_dir
 
-        # Create logs directory if it doesn't exist
+        # Create pipettor_operation_logs directory if it doesn't exist
         os.makedirs(self.log_dir, exist_ok=True)
 
-        # Create log file with timestamp
-        date_str = datetime.now().strftime("%Y-%m-%d")
-        self.log_file_path = os.path.join(self.log_dir, f"operation_status_{date_str}.txt")
+        # Create log file with full timestamp for each session
+        timestamp_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        self.log_file_path = os.path.join(self.log_dir, f"pipettor_operation_logs_{timestamp_str}.txt")
 
-        # Write header to log file
-        self._write_header_if_new()
+        # Write header to new log file
+        self._write_header()
 
-    def _write_header_if_new(self):
-        """Write header only if this is a new file"""
-        # Check if file already exists
-        if os.path.exists(self.log_file_path):
-            # File exists - append session start marker
-            with open(self.log_file_path, 'a') as f:
-                f.write("\n" + "=" * 100 + "\n")
-                f.write(f"NEW SESSION - Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                f.write("=" * 100 + "\n\n")
-        else:
-            # New file - write full header
-            with open(self.log_file_path, 'w') as f:
-                f.write("=" * 100 + "\n")
-                f.write(f"OPERATION LOG - {datetime.now().strftime('%Y-%m-%d')}\n")
-                f.write("=" * 100 + "\n\n")
+    def _write_header(self):
+        """Write header for new session log file"""
+        with open(self.log_file_path, 'w') as f:
+            f.write("=" * 100 + "\n")
+            f.write(f"OPERATION LOG - SESSION STARTED: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write("=" * 100 + "\n\n")
 
     def _format_parameters(self, params: dict) -> str:
         """

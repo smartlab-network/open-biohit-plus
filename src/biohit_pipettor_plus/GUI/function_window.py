@@ -113,7 +113,7 @@ class FunctionWindow:
             else:
                 self.window_build_func = ttk.Window(themename="darkly")
 
-            self.window_build_func.geometry("1300x800")
+            self.window_build_func.geometry("1300x900")
             self.window_build_func.title("Workflow Builder")
             self.window_build_func.attributes('-topmost', False)
 
@@ -389,7 +389,7 @@ class FunctionWindow:
         self.update_foc_section()
 
         # === SYSTEM OPERATIONS (COLLAPSIBLE) ===
-        self.system_collapsible = CollapsibleFrame(parent_frame, text="System")
+        self.system_collapsible = CollapsibleFrame(parent_frame, text="System", collapsed=False)
         self.system_collapsible.pack(fill=tk.X, pady=5, padx=5)
 
         system_buttons = [
