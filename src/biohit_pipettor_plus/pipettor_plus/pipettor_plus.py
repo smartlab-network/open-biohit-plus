@@ -2,6 +2,21 @@ class AbortException(Exception):
     """Raised when user aborts an operation"""
     pass
 
+from biohit_pipettor import Pipettor
+from biohit_pipettor.errors import CommandFailed
+
+from ..deck_structure import *
+from .pipettor_constants import Pipettors_in_Multi, MAX_BATCH_SIZE, TIP_LENGTHS, Z_MAX
+from .geometry import (calculate_liquid_height, calculate_dynamic_remove_height)
+
+import time
+import os
+import subprocess
+from typing import Literal, List
+from math import ceil
+
+'''
+if biohit_pipettor is not available
 try:
     from biohit_pipettor import Pipettor
     from biohit_pipettor.errors import CommandFailed
@@ -42,17 +57,8 @@ except ImportError:
         """Mock exception for when hardware commands fail"""
         pass
 
-#from biohit_pipettor import Pipettor
-from ..deck_structure import *
-from .pipettor_constants import Pipettors_in_Multi, MAX_BATCH_SIZE, TIP_LENGTHS, Z_MAX
-from .geometry import (calculate_liquid_height, calculate_dynamic_remove_height)
 
-import time
-import os
-import subprocess
-from typing import Literal, List
-from math import ceil
-
+'''
 
 class PipettorPlus(Pipettor):
 
