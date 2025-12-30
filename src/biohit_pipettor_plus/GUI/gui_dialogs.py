@@ -1184,6 +1184,15 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
                     self.selected_child = child
                     self.refresh_view()
                     self.update_edit_panel()
+
+                    #update x and y position in move frame
+                    if hasattr(self, 'coordinates') and hasattr(child, 'position'):
+
+                        new_x, new_y = child.position
+                        self.coordinates['x_cod'].set(f"{new_x:.2f}")
+                        self.coordinates['y_cod'].set(f"{new_y:.2f}")
+                        self.coordinates['z_cod'].set(0)
+
                 return
 
     def start_copy_mode(self):
@@ -1279,47 +1288,61 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
 
         child = self.selected_child
 
+        #move frame
         move_frame = ttk.Labelframe(self.controls_container, text="Move", padding="10")
         move_frame.pack(fill=tk.X, pady=5)
 
+        # Start with current pipettor position or child position as default
         try:
-            x,y,z = self.pipettor.xyz_position
-        except Exception as e:
-            x,y,z= 0,0,0
-
-        coordinates = [
-            ("X:", "x_cod", "entry", x, None, "Numeric"),
-            ("Y:", "y_cod", "entry", y, None, "Numeric"),
-            ("Z:", "z_cod", "entry", z, None, "Numeric"),
+            curr_x, curr_y, curr_z = self.pipettor.xyz_position
+        except:
+            curr_x, curr_y = child.position # Fallback to clicked child's coords
+            curr_z = 0
+        fields = [
+            ("X:", "x_cod", "entry", curr_x, None, "Numeric"),
+            ("Y:", "y_cod", "entry", curr_y, None, "Numeric"),
+            ("Z:", "z_cod", "entry", curr_z, None, "Numeric"),
         ]
 
-        self.coordinates = create_form(move_frame, coordinates, field_width=10)
+        self.coordinates = create_form(move_frame, fields, field_width=10)
 
-        def do_move(x=None,y=None,z=None):
+        def do_move():
             try:
-                if x is None:
-                    x = float(self.coordinates['x_cod'].get())
-                if y is None:
-                    y = float(self.coordinates['y_cod'].get())
-                if z is None:
-                    z= float(self.coordinates['z_cod'].get())
+                # 1. Get and round UI values
+                new_x = round(float(self.coordinates['x_cod'].get()), 2)
+                new_y = round(float(self.coordinates['y_cod'].get()), 2)
+                new_z = round(float(self.coordinates['z_cod'].get()), 2)
 
-                self.pipettor.move_x(x)
-                self.pipettor.move_y(y)
-                self.pipettor.move_z(z)
-                self.update_edit_panel()
+                # 2. Get and round hardware values
+                try:
+                    raw_x, raw_y, raw_z = self.pipettor.xyz_position
+                    curr_x, curr_y, curr_z = round(raw_x, 2), round(raw_y, 2), round(raw_z, 2)
+
+                except Exception:
+                    curr_x, curr_y, curr_z = None, None, None
+
+                # 3. Compare rounded values
+                if abs(new_x - curr_x) > 0.05 or abs(new_y - curr_y) > 0.05:
+                    self.pipettor.move_xy(new_x, new_y)
+                    print(f'Moving to x:{new_x}, y:{new_y}')
+
+                # Check for Z movement change
+                if curr_z is None or abs(new_z - curr_z) > 0.05:
+                    self.pipettor.move_z(new_z)
+                    print(f'Moving to z:{new_z}')
+
+
+            except ValueError:
+                messagebox.showerror("Error", "Please enter valid numeric coordinates.")
             except Exception as e:
                 messagebox.showerror("Error", str(e))
 
-        move_btn = ttk.Button(move_frame, text="Move", command=do_move)
-        move_btn.grid(row=3, column=0, sticky='we', pady=5, padx=2)
-
-        visit_btn = ttk.Button(move_frame, text="Visit Position", command=lambda:do_move(*child.position))
-        visit_btn.grid(row=3, column=1, sticky='we', pady=5, padx=2)
+        move_btn = ttk.Button(move_frame, text="Execute Move", command=do_move)
+        move_btn.grid(row=3, column=0, columnspan=2, sticky='we', pady=5, padx=2)
 
         if not self.pipettor:
             move_btn.config(state='disabled')
-            visit_btn.config(state='disabled')
+
 
         # Content editing (Wells/Reservoirs)
         if hasattr(child, 'add_content'):
