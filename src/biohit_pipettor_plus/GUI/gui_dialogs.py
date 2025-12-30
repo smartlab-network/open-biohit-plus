@@ -696,7 +696,7 @@ class CreateLowLevelLabwareDialog(ScrollableDialog):
 class SelectOrCreateComponentDialog(ScrollableDialog):
     """Dialog for selecting or creating a low-level component """
     def __init__(self, parent, component_type, available_components):
-        super().__init__(parent, title=f"Select or Create {component_type}", size="450x550")
+        super().__init__(parent, title=f"Select or Create {component_type}", size="550x550")
         self.component_type = component_type
         self.available_components = available_components
         self.create_widgets()
@@ -987,7 +987,6 @@ class ConfigureReservoirTemplateDialog(ScrollableDialog):
             template_frame,
             display_list,
             label_text="Available Reservoirs",
-            height=6
         )
 
         # Bind selection event
@@ -1262,31 +1261,16 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
             mode_label = ttk.Label(
                 self.controls_container,
                 text=" COPY MODE: Select targets on grid",
-                font=('Arial', 10, 'bold'),
-                foreground='blue'
+                font=('Arial', 10, 'bold')
             )
             mode_label.pack(fill=tk.X, pady=(0, 10))
 
             btn_frame = ttk.Frame(self.controls_container)
             btn_frame.pack(fill=tk.X, pady=5)
 
-            ttk.Button(
-                btn_frame,
-                text="Paste to Selected",
-                command=self.execute_paste
-            ).pack(fill=tk.X, pady=2)
-
-            ttk.Button(
-                btn_frame,
-                text="Cancel",
-                command=self.cancel_copy_mode
-            ).pack(fill=tk.X, pady=2)
-
-            ttk.Button(
-                self.controls_container,
-                text="Close",
-                command=self.destroy
-            ).pack(side=tk.BOTTOM, pady=10)
+            paste_config = [{"text": "Paste to Selected", "command":self.execute_paste},{"text": "Cancel",
+                            "command":self.cancel_copy_mode}, {"text": "Close", "command":self.destroy}]
+            create_button_bar(btn_frame,paste_config, fill=True)
             return
 
         # NORMAL MODE UI
@@ -1295,17 +1279,46 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
 
         child = self.selected_child
 
-        # Visit button
-        def do_visit():
-            try:
-                x, y = child.position
-                self.pipettor.move_xy(x, y)
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to visit: {str(e)}")
+        move_frame = ttk.Labelframe(self.controls_container, text="Move", padding="10")
+        move_frame.pack(fill=tk.X, pady=5)
 
-        visit_btn = ttk.Button(self.controls_container, text="Visit Position", command=do_visit)
-        visit_btn.pack(fill=tk.X, pady=5)
+        try:
+            x,y,z = self.pipettor.xyz_position
+        except Exception as e:
+            x,y,z= 0,0,0
+
+        coordinates = [
+            ("X:", "x_cod", "entry", x, None, "Numeric"),
+            ("Y:", "y_cod", "entry", y, None, "Numeric"),
+            ("Z:", "z_cod", "entry", z, None, "Numeric"),
+        ]
+
+        self.coordinates = create_form(move_frame, coordinates, field_width=10)
+
+        def do_move(x=None,y=None,z=None):
+            try:
+                if x is None:
+                    x = float(self.coordinates['x_cod'].get())
+                if y is None:
+                    y = float(self.coordinates['y_cod'].get())
+                if z is None:
+                    z= float(self.coordinates['z_cod'].get())
+
+                self.pipettor.move_x(x)
+                self.pipettor.move_y(y)
+                self.pipettor.move_z(z)
+                self.update_edit_panel()
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
+
+        move_btn = ttk.Button(move_frame, text="Move", command=do_move)
+        move_btn.grid(row=3, column=0, sticky='we', pady=5, padx=2)
+
+        visit_btn = ttk.Button(move_frame, text="Visit Position", command=lambda:do_move(*child.position))
+        visit_btn.grid(row=3, column=1, sticky='we', pady=5, padx=2)
+
         if not self.pipettor:
+            move_btn.config(state='disabled')
             visit_btn.config(state='disabled')
 
         # Content editing (Wells/Reservoirs)

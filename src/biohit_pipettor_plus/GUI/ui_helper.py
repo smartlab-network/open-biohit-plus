@@ -255,7 +255,7 @@ def create_form(container, fields, field_width = 25, return_widgets=False):
         return variables, widgets
     return variables
 
-def create_scrolled_listbox(parent, items, label_text="Available Items", height=10, double_click_cmd=None):
+def create_scrolled_listbox(parent, items, label_text="Available Items", height=15, width=50, double_click_cmd=None):
     """
     Creates a scrollable listbox inside a Labelframe.
     Optional: double_click_cmd
@@ -271,6 +271,7 @@ def create_scrolled_listbox(parent, items, label_text="Available Items", height=
         yscrollcommand=scrollbar.set,
         font=("Consolas", 10),
         height=height,
+        width=width,
         exportselection=False # Prevents losing selection when clicking other widgets
     )
     scrollbar.config(command=listbox.yview)
