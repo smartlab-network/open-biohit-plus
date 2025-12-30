@@ -1,0 +1,21 @@
+#biohit-pipettor==0.0.1. this has to be installed by going to the open-biohit directory in smartlab-network.
+    #I did that using pip install -e with pip updated to newest vrsion python -m pip install --upgrade pip
+
+        #after this uninstall the pythonnet that biohit-pipettor==0.0.1 requierd and then install requirements here
+
+pillow==11.3.0
+ttkbootstrap==1.18.2
+pythonnet==3.0.5
+
+#can safely ignore the error
+#ERROR: pip's dependency resolver does not currently take into account all the packages that are installed.
+#This behaviour is the source of the following dependency conflicts.
+#biohit-pipettor 0.0.1 requires pythonnet==3.0.0a2, but you have pythonnet 3.0.5 which is incompatible.
+
+# can run gui using terminal now python -m open-biohit-plus.src.biohit_pipettor_plus.gui.gui2
+
+
+
+# example of foc.bat required to run and save measurements
+#cd c:\labhub\import
+#start /WAIT FOC48_20230523.exe myrPlate.xml -e %1
