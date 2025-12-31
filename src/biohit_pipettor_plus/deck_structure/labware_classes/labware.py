@@ -153,7 +153,8 @@ class Labware(Serializable):
             if item_size_y < min_required_y:
                 return (False,
                         f"Item size_y ({item_size_y}mm) is too small for multichannel operation. "
-                        f"Minimum required: {min_required_y}mm")
+                        f"Minimum required: {min_required_y}mm. "
+                        f"Increase size y or set labware to one item per tip ")
 
         return (True, "")
 

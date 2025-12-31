@@ -79,7 +79,8 @@ class LabwareDialog(ScrollableDialog):
                 ("Hooks X:", "hx", "entry", "7", None, "numeric"),
                 ("Hooks Y:", "hy", "entry", "1", None, "numeric"),
                 ("Add Height:", "add", "entry", "0.0", None, "numeric"),
-                ("Rem Height:", "rem", "entry", "20.0", None, "numeric")
+                ("Rem Height:", "rem", "entry", "20.0", None, "numeric"),
+                ("One reservoir per tip :", "sep_item", "checkbox", False, None, None)
             ])
             self.create_selection_row(spec_frame, "Mapping", self.launch_mapping_dialog)
 
@@ -194,7 +195,8 @@ class LabwareDialog(ScrollableDialog):
                     hooks_across_y=int(s['hy']),
                     reservoir_template=self.res_template,
                     add_height=s['add'],
-                    remove_height=s['rem']
+                    remove_height=s['rem'],
+                    each_tip_needs_separate_item=s['sep_item']
                 )
 
             elif lw_type == "PipetteHolder":
