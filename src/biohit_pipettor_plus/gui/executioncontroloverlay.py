@@ -3,7 +3,7 @@ import ttkbootstrap as ttk
 import tkinter as tk
 
 class ExecutionControlOverlay:
-    """Modal overlay that blocks all gui2 interaction except Pause/Abort"""
+    """Modal overlay that blocks all gui interaction except Pause/Abort"""
 
     def __init__(self, parent_window, pipettor):
         self.pipettor = pipettor

@@ -238,7 +238,7 @@ class Deck(Serializable):
                     holder.position = None
 
         print(f"✓ Removed '{labware_id}' from slot '{slot_id}'")
-        return labware  # Return the object to the caller (gui2)
+        return labware  # Return the object to the caller (gui)
 
     def _is_within_range(self, slot: Slot) -> bool:
         return (

@@ -1,5 +1,5 @@
 """
-Headless workflow execution - no gui2 required
+Headless workflow execution - no gui required
 Run saved workflows automatically from command line with validation
 """
 
@@ -231,7 +231,7 @@ def execute_workflow(pipettor: PipettorPlus, deck: Deck, workflow: Workflow,
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Execute Biohit Pipettor Plus workflows without gui2 (with validation)',
+        description='Execute Biohit Pipettor Plus workflows without gui (with validation)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 

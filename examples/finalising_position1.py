@@ -102,7 +102,7 @@ print("📂 Loading deck...")
 loaded_deck = read_json("deck")
 
 
-print("\nSaving deck to gui2-compatible file...")
+print("\nSaving deck to gui-compatible file...")
 output_filename = "deck1_for_gui.json"
 save_deck_for_gui(deck1, "deck1")
 
