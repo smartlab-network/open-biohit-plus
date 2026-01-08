@@ -26,7 +26,7 @@ class FunctionWindow:
 
     Modes
     -----
-    direct : Embedded in main GUI, operations staged for execution
+    direct : Embedded in main gui, operations staged for execution
     builder : Separate window for creating custom workflows
     """
 
@@ -947,7 +947,7 @@ class FunctionWindow:
             )
             return
 
-        # Create modal overlay - blocks all GUI interaction
+        # Create modal overlay - blocks all gui interaction
         overlay = ExecutionControlOverlay(
             self.get_master_window(),
             self.pipettor

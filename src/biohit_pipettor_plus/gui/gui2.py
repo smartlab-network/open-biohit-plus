@@ -762,7 +762,7 @@ class DeckGUI:
         days = [str(d).zfill(2) for d in range(1, 32)]
         alphabets = list(string.ascii_uppercase)  # ['A', 'B', 'C'...]
 
-        # --- GUI Layout ---
+        # --- gui Layout ---
         frame = ttk.Frame(dialog, padding=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
@@ -1494,7 +1494,7 @@ class DeckGUI:
                 messagebox.showerror("Error", f"Failed to load: {str(e)}")
 
     def run(self):
-        """Start the GUI"""
+        """Start the gui"""
         self.root.mainloop()
 
     def on_closing(self):
@@ -1517,7 +1517,7 @@ def main():
     # Create a sample deck for testing
     deck = Deck(range_x=(0, 265), range_y=(0, 244), deck_id="test_deck", range_z=141)
 
-    # Run GUI
+    # Run gui
     gui = DeckGUI(deck)
     gui.run()
 

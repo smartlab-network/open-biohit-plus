@@ -1031,7 +1031,7 @@ class PipettorPlus:
             print(f"[ERROR] Failed to run FOC measurement: {str(e)}")
 
 
-    # Helper Functions. Not necessarily available for GUI
+    # Helper Functions. Not necessarily available for gui
     def _validate_transfer(self, source, source_positions, destination, destination_positions,
                            source_consecutive_rows: int, dest_consecutive_rows: int) -> None:
         """Helper: Validate source and destination positions."""

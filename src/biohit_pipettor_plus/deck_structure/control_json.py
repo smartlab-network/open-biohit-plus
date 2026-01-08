@@ -146,7 +146,7 @@ def save_deck_for_gui(deck_object: Serializable,
                       available_reservoirs: list = None,
                       available_individual_holders: list = None):
     """
-    Saves a Deck object and its related components in the GUI-compatible format.
+    Saves a Deck object and its related components in the gui-compatible format.
 
     This saves to a specific 'filename' (e.g., "deck1_for_gui.json")
     in the default directory (C:/ProgramData/biohit).
@@ -187,6 +187,6 @@ def save_deck_for_gui(deck_object: Serializable,
     try:
         with open(path, 'w') as f:
             json.dump(gui_data, f, indent=2)
-        print(f"Deck configuration saved to {path} in GUI-compatible format.")
+        print(f"Deck configuration saved to {path} in gui-compatible format.")
     except Exception as e:
         print(f"Failed to save deck: {str(e)}")
