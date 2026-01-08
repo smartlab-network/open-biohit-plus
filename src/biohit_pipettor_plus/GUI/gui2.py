@@ -862,6 +862,8 @@ class DeckGUI:
 
             # Close existing pipettor if any
             if hasattr(self, 'pipettor') and self.pipettor:
+                if hasattr(self.pipettor, 'show_plot'):
+                    self.pipettor.show_plot()
                 self.pipettor.close()
 
             # Create pipettor
