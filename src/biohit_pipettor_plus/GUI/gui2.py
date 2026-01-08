@@ -1513,11 +1513,15 @@ class DeckGUI:
             self.root.destroy()
 
 
-# Main entry point
-if __name__ == "__main__":
+def main():
     # Create a sample deck for testing
     deck = Deck(range_x=(0, 265), range_y=(0, 244), deck_id="test_deck", range_z=141)
 
     # Run GUI
     gui = DeckGUI(deck)
     gui.run()
+
+
+# Main entry point
+if __name__ == "__main__":
+    main()

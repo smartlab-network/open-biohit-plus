@@ -6,8 +6,9 @@
 # bat file required to open gui from terminal
 
 @echo off
-cd /d "C:\Labhub\smartlab-network"
-"venv\Scripts\python.exe" -m open-biohit-plus.src.biohit_pipettor_plus.gui.gui2
+cd /d "C:\Users\Acer\PycharmProjects\open-biohit-plus"
+call .venv\Scripts\activate.bat
+pipettor-gui
 pause
 
 #if mac, .sh file
@@ -22,7 +23,8 @@ cd "/Users/advaitlath/PycharmProjects/open-biohit-plus" || {
 }
 
 # Run the GUI using virtual environment Python
-.venv/bin/python -m src.biohit_pipettor_plus.GUI.gui2
+source .venv/bin/activate
+pipettor-gui
 
 # Wait for user input before closing (optional)
 read -p "Press Enter to close..."

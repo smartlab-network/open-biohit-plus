@@ -9,8 +9,11 @@ description = "Designed to be used with pipettor_package following similar struc
 authors = ["Advait Lath <advaitlath1@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-packages = [{ include = "src/biohit_pipettor_plus" }]
+packages = [{include = "biohit_pipettor_plus", from = "src"}]
 repository = "https://github.com/smartlab-network/open-biohit-plus"
+
+[tool.poetry.scripts]
+pipettor-gui = "biohit_pipettor_plus.GUI.gui2:main"
 
 [tool.poetry.dependencies]
 python = "^3.9"
