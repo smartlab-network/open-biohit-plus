@@ -15,4 +15,5 @@ repository = "https://github.com/deinuser/mein_projekt"
 [tool.poetry.dependencies]
 python = "^3.9"
 open-biohit = "^0.0.2"
-
+pillow = "^11.3.0"
+ttkbootstrap="^1.18.2"

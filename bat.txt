@@ -9,3 +9,20 @@
 cd /d "C:\Labhub\smartlab-network"
 "venv\Scripts\python.exe" -m open-biohit-plus.src.biohit_pipettor_plus.gui.gui2
 pause
+
+#if mac, .sh file
+#!/bin/bash
+# Mac/Linux launcher for Biohit Pipettor Plus GUI
+
+# Navigate to project directory
+cd "/Users/advaitlath/PycharmProjects/open-biohit-plus" || {
+    echo "Error: Could not find project directory"
+    echo "Please update the path in this script to match your installation"
+    exit 1
+}
+
+# Run the GUI using virtual environment Python
+.venv/bin/python -m src.biohit_pipettor_plus.GUI.gui2
+
+# Wait for user input before closing (optional)
+read -p "Press Enter to close..."
