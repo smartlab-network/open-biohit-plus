@@ -214,13 +214,16 @@ class DeckGUI:
         # Checkboxes
         self.multichannel_var = tk.BooleanVar(value=False)
         self.initialize_hw_var = tk.BooleanVar(value=False)
+        self.simulate_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(pip_section, text="Multichannel", variable=self.multichannel_var).pack(anchor='w', pady=5)
         ttk.Checkbutton(pip_section, text="Initialize on connect", variable=self.initialize_hw_var).pack(anchor='w',
+                                                                                                         pady=5)
+        ttk.Checkbutton(pip_section, text="Use mock pipettor", variable=self.simulate_var).pack(anchor='w',
                                                                                                          pady=5)
 
         self.pipettor_status_label = ttk.Label(pip_section, text="", foreground="gray")
         self.pipettor_status_label.pack(pady=5)
-        ttk.Button(pip_section, text="Connect to Pipettor", command=self.initialize_pipettor).pack(fill=tk.X)
+        ttk.Button(pip_section, text="Connect to Pipettor", command=self.initialize_pipettor).pack(fill=tk.X, pady=5)
 
         # 6. Runtime Parameters
         self.runtime_collapsible = CollapsibleFrame(root, text="Runtime Parameters")
@@ -375,7 +378,7 @@ class DeckGUI:
             messagebox.showerror("Error", str(e))
 
     def update_item_list(self, category):
-        """Unified method to update listboxes and buttons for slots or labware or lll."""
+        """Unified method to update list boxes and buttons for slots or labware or lll."""
         ctx = self.get_context(category)
 
         # For LLL, refresh the dynamic list
@@ -636,7 +639,7 @@ class DeckGUI:
             self.root.after_idle(lambda: self.select_item(category, getattr(obj, ctx['id_attr'])))
 
     def on_item_select(self, category, event=None):
-        """Unified selection handler for slot, labware, and LLL listboxes"""
+        """Unified selection handler for slot, labware, and LLL list boxes"""
         self.select_item(category, event=event)
 
     def get_target_lll_list(self):
@@ -769,7 +772,7 @@ class DeckGUI:
         ttk.Label(frame, text="Day").grid(row=0, column=2, padx=5)
         ttk.Label(frame, text="Suffix").grid(row=0, column=3, padx=5)
 
-        # Comboboxes
+        # Combo boxes
         cb_year = ttk.Combobox(frame, values=years, width=5, state="readonly")
         cb_year.set(current_year)
         cb_year.grid(row=1, column=0, padx=5)
@@ -846,6 +849,7 @@ class DeckGUI:
             tip_volume = self.tip_volume_var.get()
             multichannel = self.multichannel_var.get()
             initialize = self.initialize_hw_var.get()
+            use_simulator = self.simulate_var.get()
 
             # Get tip length (set once during connection)
             tip_length_str = self.tip_length_var.get().strip()
@@ -856,14 +860,20 @@ class DeckGUI:
                 messagebox.showerror("Error", "Deck must be created before initializing pipettor")
                 return
 
+            # Close existing pipettor if any
+            if hasattr(self, 'pipettor') and self.pipettor:
+                self.pipettor.close()
+
             # Create pipettor
             self.pipettor = PipettorPlus(
                 tip_volume=tip_volume,
                 multichannel=multichannel,
                 initialize=initialize,
                 deck=self.deck,
-                tip_length=tip_length
+                tip_length=tip_length,
+                mock_pipettor = use_simulator
             )
+
 
             if hasattr(self, 'foc_bat_script_path'):
                 self.pipettor.foc_bat_script_path = self.foc_bat_script_path
@@ -1368,7 +1378,7 @@ class DeckGUI:
 
     def clear_selection(self):
         """
-        Clears the current selection on the canvas, listboxes, and resets item styles.
+        Clears the current selection on the canvas, list boxes, and resets item styles.
         It ensures the information panel is cleared by explicitly calling the update function.
         """
 
@@ -1396,7 +1406,7 @@ class DeckGUI:
             # Clear the internal canvas selection tracking state
             self.selected_item = None
 
-        # --- 2. Clear ALL listboxes ---
+        # --- 2. Clear ALL list boxes ---
         self.slots_listbox.selection_clear(0, tk.END)
         self.labware_listbox.selection_clear(0, tk.END)
         if hasattr(self, 'lll_listbox'):
@@ -1496,6 +1506,8 @@ class DeckGUI:
             self.save_deck()
             self.root.destroy()
         elif response is False:  # No - close without saving
+            if hasattr(self, 'pipettor') and self.pipettor:
+                self.pipettor.close()
             self.root.destroy()
 
 

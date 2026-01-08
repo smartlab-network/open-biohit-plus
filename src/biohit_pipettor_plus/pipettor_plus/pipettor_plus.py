@@ -4,6 +4,9 @@ class AbortException(Exception):
 
 from biohit_pipettor import Pipettor
 from biohit_pipettor.errors import CommandFailed
+#from biohit_pipettor import PipettorSimulator
+from .mock_pipettor import PipettorSimulator
+
 
 from ..deck_structure import *
 from .pipettor_constants import Pipettors_in_Multi, MAX_BATCH_SIZE, TIP_LENGTHS, Z_MAX
@@ -15,54 +18,10 @@ import subprocess
 from typing import Literal, List
 from math import ceil
 
-'''
-if biohit_pipettor is not available
-try:
-    from biohit_pipettor import Pipettor
-    from biohit_pipettor.errors import CommandFailed
+class PipettorPlus:
 
-    HARDWARE_AVAILABLE = True
-
-except ImportError:
-    print("⚠️ Hardware not available - running in simulation mode")
-    HARDWARE_AVAILABLE = False
-
-
-    # Create a mock Pipettor class for testing
-    class Pipettor:
-        def __init__(self, *args, **kwargs):
-            print("Mock Pipettor initialized")
-
-        def move_xy(self, x, y):
-            print(f"Mock: move_xy({x}, {y})")
-
-        def move_z(self, z):
-            print(f"Mock: move_z({z})")
-
-        def aspirate(self, volume):
-            print(f"Mock: aspirate({volume})")
-
-        def dispense(self, volume):
-            print(f"Mock: dispense({volume})")
-
-        def pick_tip(self, z):
-            print(f"Mock: pick_tip({z})")
-
-        def eject_tip(self):
-            print("Mock: eject_tip()")
-
-
-    # Mock the CommandFailed exception too
-    class CommandFailed(Exception):
-        """Mock exception for when hardware commands fail"""
-        pass
-
-
-'''
-
-class PipettorPlus(Pipettor):
-
-    def __init__(self, tip_volume: Literal[200, 1000], *, multichannel: bool,  initialize: bool = True, deck: Deck, tip_length: float = None):
+    def __init__(self, tip_volume: Literal[200, 1000], *, multichannel: bool,  initialize: bool = True, deck: Deck,
+                 tip_length: float = None, mock_pipettor=False):
         """
         Interface to the Biohit Robo pipettor with deck/slot/labware structure
 
@@ -76,12 +35,29 @@ class PipettorPlus(Pipettor):
             If True, the device will be initialized
         deck : Deck
             The deck containing slots and labware
+        tip_length : float
+            The tip length in mm
+        use_simulator : bool
+            If True, the simulator will be used instead of Biohit Robo pipettor
                 """
-        super().__init__(tip_volume=tip_volume, multichannel=multichannel, initialize=initialize)
+        if mock_pipettor:
+            pipettor_class = PipettorSimulator
+        else:
+            pipettor_class = Pipettor
+
+        self._pipettor_context = pipettor_class(
+            tip_volume=tip_volume,
+            multichannel=multichannel,
+            initialize=True if mock_pipettor else initialize,
+        ) # initialize has to be true when using mock_pipettor as per documentation
+
+        # Enter context immediately
+        self._pipettor = self._pipettor_context.__enter__()
+
+        self._simulation_mode = False
         self.multichannel = multichannel
         self._deck = deck
         self._slots: dict[str, Slot] = deck.slots
-        self._simulation_mode = False
         self.abort_requested = False
         self.pause_requested = False
 
@@ -95,6 +71,29 @@ class PipettorPlus(Pipettor):
 
         self.batch_size = MAX_BATCH_SIZE
         self.foc_bat_script_path = None
+
+    def __getattr__(self, name):
+        """Forward any attribute access to the underlying pipettor"""
+        if '_pipettor' not in self.__dict__:
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+        return getattr(self._pipettor, name)
+
+    def close(self):
+        """Manually close the pipettor connection and exit context"""
+
+        pipettor_context = getattr(self, '_pipettor_context', None)
+        if pipettor_context:
+            try:
+                pipettor_context.__exit__(None, None, None)
+            except Exception as e:
+                print(f"Error closing pipettor: {e}")
+            finally:
+                self._pipettor_context = None
+                self._pipettor = None
+
+    def __del__(self):
+        """Cleanup when object is destroyed"""
+        self.close()
 
     def push_state(self):
         """Save complete state snapshot for later restoration."""
@@ -951,43 +950,43 @@ class PipettorPlus(Pipettor):
         if self._simulation_mode:
             return
         self._check_abort_and_pause()
-        super().move_z(0)
-        super().move_xy(x, y)
+        self._pipettor.move_z(0)
+        self._pipettor.move_xy(x, y)
 
     def move_z(self, z: float):
         """Override parent to add simulation mode check"""
         if self._simulation_mode:
             return
         self._check_abort_and_pause()
-        super().move_z(z)
+        self._pipettor.move_z(z)
 
     def pick_tip(self, z):
         """Override parent to add simulation mode check"""
         if self._simulation_mode:
             return
         self._check_abort_and_pause()
-        super().pick_tip(z)
+        self._pipettor.pick_tip(z)
 
     def eject_tip(self):
         """Override parent to add simulation mode check"""
         if self._simulation_mode:
             return
         self._check_abort_and_pause()
-        super().eject_tip()
+        self._pipettor.eject_tip()
 
     def aspirate(self, volume):
         """Override parent to add simulation mode check"""
         if self._simulation_mode:
             return
         self._check_abort_and_pause()
-        super().aspirate(volume)
+        self._pipettor.aspirate(volume)
 
     def dispense(self, volume):
         """Override parent to add simulation mode check"""
         if self._simulation_mode:
             return
         self._check_abort_and_pause()
-        super().dispense(volume)
+        self._pipettor.dispense(volume)
 
     def measure_foc(self, seconds: int, platename: str = None, bat_script_path: str = None):
         """
