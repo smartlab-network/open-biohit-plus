@@ -5,15 +5,16 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "open-biohit-plus"
 version = "0.0.1"
-description = "Extention for open-biohit"
+description = "Designed to be used with pipettor_package following similar structure to open-biohit"
 authors = ["Advait Lath <advaitlath1@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 packages = [{ include = "src/biohit_pipettor_plus" }]
-repository = "https://github.com/deinuser/mein_projekt"
+repository = "https://github.com/smartlab-network/open-biohit-plus"
 
 [tool.poetry.dependencies]
 python = "^3.9"
 open-biohit = "^0.0.2"
 pillow = "^11.3.0"
-ttkbootstrap="^1.18.2"
+ttkbootstrap="^1.10.0"
+matplotlib = "^3.5.0"
