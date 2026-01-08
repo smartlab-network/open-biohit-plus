@@ -226,7 +226,7 @@ class LabwareDialog(ScrollableDialog):
 class EditLabwareDialog(ScrollableDialog):
     """
     Refactored Dialog for editing labware using ScrollableDialog
-    and unified gui helpers.
+    and unified gui2 helpers.
     """
 
     def __init__(self, parent, labware, available_reservoirs=None):
