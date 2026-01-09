@@ -20,4 +20,6 @@ python = "^3.9"
 open-biohit = "^0.0.2"
 pillow = "^11.3.0"
 ttkbootstrap="^1.10.0"
-matplotlib = "^3.5.0"
+matplotlib = "~3.7.0"
+kiwisolver = "~1.3.0"
+
