@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from .serializable import Serializable
+from biohit_pipettor_plus.deck_structure.serializable import Serializable
 
 
 def get_json_dir() -> Path:
@@ -149,7 +149,7 @@ def save_deck_for_gui(deck_object: Serializable,
     Saves a Deck object and its related components in the gui-compatible format.
 
     This saves to a specific 'filename' (e.g., "deck1_for_gui.json")
-    in the default directory (C:/ProgramData/biohit).
+    in the default directory (C:/ProgramData/Biohit).
 
     It converts lists of objects into lists of dictionaries for JSON serialization.
     """

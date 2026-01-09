@@ -1,8 +1,8 @@
 
 
-from .labware import Labware
-from ..serializable import register_class
-from .labware import Default_Reservoir_Capacity, Defined_shape
+from biohit_pipettor_plus.deck_structure.labware_classes import Labware
+from biohit_pipettor_plus.deck_structure.serializable import register_class
+from biohit_pipettor_plus.deck_structure.labware_classes.labware import Default_Reservoir_Capacity, Defined_shape
 
 from typing import Optional
 

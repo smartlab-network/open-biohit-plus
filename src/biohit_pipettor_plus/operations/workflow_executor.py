@@ -9,10 +9,10 @@ This module handles the execution of workflows, providing:
 """
 
 from typing import Callable, Optional
-from .workflow import Workflow
-from .operation import Operation
-from .operationtype import OperationType
-from .executionresult import ExecutionResult
+from biohit_pipettor_plus.operations.workflow import Workflow
+from biohit_pipettor_plus.operations.operation import Operation
+from biohit_pipettor_plus.operations.operationtype import OperationType
+from biohit_pipettor_plus.operations.executionresult import ExecutionResult
 import traceback
 
 class WorkflowExecutor:

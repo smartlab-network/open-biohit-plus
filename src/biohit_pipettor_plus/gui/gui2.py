@@ -1,16 +1,14 @@
-import tkinter as tk
 from tkinter import messagebox, filedialog, simpledialog
-import ttkbootstrap as ttk
 import json
 import os
 import datetime
 import string
 
-from ..deck_structure import *
-from .function_window import FunctionWindow
-from ..pipettor_plus.pipettor_plus import PipettorPlus
-from .gui_dialogs import EditLabwareDialog, AddLabwareToSlotDialog, LabwareDialog, SlotDialog,CreateLowLevelLabwareDialog, ViewChildrenLabwareDialog
-from .ui_helper import *
+from biohit_pipettor_plus.deck_structure import *
+from biohit_pipettor_plus.gui.function_window import FunctionWindow
+from biohit_pipettor_plus.pipettor_plus.pipettor_plus import PipettorPlus
+from biohit_pipettor_plus.gui.gui_dialogs import EditLabwareDialog, AddLabwareToSlotDialog, LabwareDialog, SlotDialog,CreateLowLevelLabwareDialog, ViewChildrenLabwareDialog
+from biohit_pipettor_plus.gui.ui_helper import *
 
 class DeckGUI:
     def __init__(self, deck=None):

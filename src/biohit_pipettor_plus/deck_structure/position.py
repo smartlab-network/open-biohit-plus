@@ -1,5 +1,5 @@
-from .labware_classes import *
-from .serializable import register_class
+from biohit_pipettor_plus.deck_structure.labware_classes import *
+from biohit_pipettor_plus.deck_structure.serializable import register_class
 
 
 @register_class

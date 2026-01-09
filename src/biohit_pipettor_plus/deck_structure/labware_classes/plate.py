@@ -1,7 +1,7 @@
 
-from .labware import Labware
-from ..serializable import register_class, Serializable
-from .well import Well
+from biohit_pipettor_plus.deck_structure.labware_classes.labware import Labware
+from biohit_pipettor_plus.deck_structure.serializable import register_class, Serializable
+from biohit_pipettor_plus.deck_structure.labware_classes.well import Well
 
 from typing import Optional
 import copy

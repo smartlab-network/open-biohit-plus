@@ -1,8 +1,8 @@
 
 import tkinter as tk
 from tkinter import messagebox
-from ..deck_structure import *
-from .ui_helper import create_form, ScrollableDialog, create_button_bar, create_scrolled_listbox, update_detailed_info_text, draw_labware_grid
+from biohit_pipettor_plus.deck_structure import *
+from biohit_pipettor_plus.gui.ui_helper import create_form, ScrollableDialog, create_button_bar, create_scrolled_listbox, update_detailed_info_text, draw_labware_grid
 import ttkbootstrap as ttk
 import copy
 

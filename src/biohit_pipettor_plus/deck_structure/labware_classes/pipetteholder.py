@@ -1,7 +1,7 @@
 
-from .labware import Labware, Pipettors_in_Multi
-from ..serializable import register_class, Serializable
-from .individualpipetteholder import IndividualPipetteHolder
+from biohit_pipettor_plus.deck_structure.labware_classes.labware import Labware, Pipettors_in_Multi
+from biohit_pipettor_plus.deck_structure.serializable import register_class, Serializable
+from biohit_pipettor_plus.deck_structure.labware_classes.individualpipetteholder import IndividualPipetteHolder
 
 from typing import Optional
 import copy

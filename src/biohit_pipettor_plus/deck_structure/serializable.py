@@ -1,5 +1,3 @@
-import uuid
-
 # Global registry for all serializable classes
 CLASS_REGISTRY: dict[str, type] = {}
 

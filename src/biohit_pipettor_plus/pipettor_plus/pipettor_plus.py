@@ -5,12 +5,12 @@ class AbortException(Exception):
 from biohit_pipettor import Pipettor
 from biohit_pipettor.errors import CommandFailed
 #from biohit_pipettor import PipettorSimulator
-from .mock_pipettor import PipettorSimulator
+from biohit_pipettor_plus.pipettor_plus.mock_pipettor import PipettorSimulator
 
 
-from ..deck_structure import *
-from .pipettor_constants import Pipettors_in_Multi, MAX_BATCH_SIZE, TIP_LENGTHS, Z_MAX
-from .geometry import (calculate_liquid_height, calculate_dynamic_remove_height)
+from biohit_pipettor_plus.deck_structure import *
+from biohit_pipettor_plus.pipettor_plus.pipettor_constants import Pipettors_in_Multi, MAX_BATCH_SIZE, TIP_LENGTHS, Z_MAX
+from biohit_pipettor_plus.pipettor_plus.geometry import (calculate_liquid_height, calculate_dynamic_remove_height)
 
 import time
 import os

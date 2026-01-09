@@ -1,6 +1,7 @@
-from .slot import Slot
-from .labware_classes import *
-from .serializable import Serializable, register_class
+
+from biohit_pipettor_plus.deck_structure.slot import Slot
+from biohit_pipettor_plus.deck_structure.labware_classes import *
+from biohit_pipettor_plus.deck_structure.serializable import Serializable, register_class
 
 from typing import Optional
 

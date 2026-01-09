@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from typing import Optional
-from .operation import Operation
+from biohit_pipettor_plus.operations.operation import Operation
 
 
 class OperationLogger:

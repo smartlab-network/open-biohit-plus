@@ -1,8 +1,9 @@
 from typing import Literal
 
 import uuid
-from ..serializable import Serializable, register_class
-from ...pipettor_plus.pipettor_constants import Pipettors_in_Multi, Spacing_Between_Adjacent_Pipettor
+from biohit_pipettor_plus.deck_structure.serializable import register_class, Serializable
+from biohit_pipettor_plus.pipettor_plus.pipettor_constants import (Pipettors_in_Multi,
+                                                                   Spacing_Between_Adjacent_Pipettor)
 
 Default_Reservoir_Capacity = 30000
 Default_well_capacity = 1000

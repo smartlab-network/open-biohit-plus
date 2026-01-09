@@ -1,7 +1,7 @@
 
-from .labware import Labware
-from ..serializable import register_class, Serializable
-from .reservoir import Reservoir
+from biohit_pipettor_plus.deck_structure.labware_classes.labware import Labware
+from biohit_pipettor_plus.deck_structure.serializable import register_class, Serializable
+from biohit_pipettor_plus.deck_structure.labware_classes.reservoir import Reservoir
 
 from typing import Optional
 import copy

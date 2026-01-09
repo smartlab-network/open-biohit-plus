@@ -1,6 +1,6 @@
 
-from .labware import Labware
-from ..serializable import register_class
+from biohit_pipettor_plus.deck_structure.labware_classes.labware import Labware
+from biohit_pipettor_plus.deck_structure.serializable import register_class
 
 @register_class
 class TipDropzone(Labware):

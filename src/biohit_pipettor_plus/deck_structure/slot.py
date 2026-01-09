@@ -1,7 +1,7 @@
 from typing import Dict, List
-from .labware_classes import *
-from .serializable import Serializable, register_class
-from .position import Position_allocator
+from biohit_pipettor_plus.deck_structure.labware_classes import *
+from biohit_pipettor_plus.deck_structure.serializable import Serializable, register_class
+from biohit_pipettor_plus.deck_structure.position import Position_allocator
 
 @register_class
 class Slot(Serializable):
