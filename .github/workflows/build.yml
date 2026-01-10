@@ -37,7 +37,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: BiohitPipettorPlus-Windows
-        path: dist/BiohitPipettorPlus.exe
+        path: dist/BiohitPipettorPlus/
 
     - name: Upload to Release (if release)
       if: github.event_name == 'release'
