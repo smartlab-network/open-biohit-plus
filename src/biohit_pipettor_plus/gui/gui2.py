@@ -163,7 +163,7 @@ class DeckGUI:
             collapsed=True
         )
         # 3. Low-Level Labware Section
-        self.low_level_collapsible = CollapsibleFrame(root, text="Low-Level Labware", collapsed=False)
+        self.low_level_collapsible = CollapsibleFrame(root, text="Low-Level Labware" )
         self.low_level_collapsible.pack(fill=tk.X, pady=5, padx=5)
 
         lll_inner = ttk.Frame(self.low_level_collapsible.content_frame, padding=10)
