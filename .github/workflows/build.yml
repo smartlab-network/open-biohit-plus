@@ -31,6 +31,10 @@ jobs:
         pip install -e .
         pip install pyinstaller
 
+    - name: Smoke test
+      run: |
+        pytest tests/ -v --tb=shor
+
     - name: Build with PyInstaller
       run: |
         pyinstaller BiohitPipettorPlus.spec
