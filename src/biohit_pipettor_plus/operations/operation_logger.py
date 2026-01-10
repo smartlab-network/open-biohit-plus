@@ -2,6 +2,8 @@ import os
 from datetime import datetime
 from typing import Optional
 from biohit_pipettor_plus.operations.operation import Operation
+import sys
+from pathlib import Path
 
 
 class OperationLogger:
@@ -21,6 +23,17 @@ class OperationLogger:
         log_dir : str
             Directory to store log files (default: "pipettor_operation_logs")
         """
+        if log_dir is None:
+            # Robust path handling for both development and .exe
+            if getattr(sys, 'frozen', False):
+                # Running as compiled .exe
+                base_dir = Path(sys.executable).parent
+            else:
+                # Running as script - use project root
+                base_dir = Path(__file__).resolve().parent.parent.parent
+
+            log_dir = str(base_dir / "pipettor_operation_logs")
+
         self.log_dir = log_dir
 
         # Create pipettor_operation_logs directory if it doesn't exist

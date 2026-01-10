@@ -19,6 +19,9 @@ from biohit_pipettor_plus.gui.operationsession import OperationSession
 
 import os
 import copy
+from pathlib import Path
+import sys
+
 
 class FunctionWindow:
     """
@@ -77,7 +80,15 @@ class FunctionWindow:
         else:
             self.workflow = None
             self.workflows_in_memory = {}
-            self.workflows_dir = "../saved_workflows"
+            # Robust path handling for both development and .exe
+            if getattr(sys, 'frozen', False):
+                # Running as compiled .exe
+                base_dir = Path(sys.executable).parent
+            else:
+                # Running as script - go up from GUI folder to project root
+                base_dir = Path(__file__).resolve().parent.parent.parent.parent
+
+            self.workflows_dir = base_dir / "saved_workflows"
             os.makedirs(self.workflows_dir, exist_ok=True)
 
             self.operation_logger = OperationLogger()
