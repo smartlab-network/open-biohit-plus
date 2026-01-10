@@ -1,0 +1,51 @@
+name: Build BiohitPipettorPlus
+
+on:
+  push:
+    branches: [ dev_advait ]
+  pull_request:
+    branches: [ dev_advait]
+  release:
+    types: [created]
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -e .
+        pip install pyinstaller
+
+    - name: Build with PyInstaller
+      run: |
+        pyinstaller BiohitPipettorPlus.spec
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: BiohitPipettorPlus-Windows
+        path: dist/BiohitPipettorPlus.exe
+
+    - name: Upload to Release (if release)
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: dist/BiohitPipettorPlus.exe
+        asset_name: BiohitPipettorPlus.exe
+        asset_content_type: application/octet-stream
