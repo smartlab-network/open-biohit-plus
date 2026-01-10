@@ -41,11 +41,16 @@ jobs:
         name: BiohitPipettorPlus-Windows
         path: dist/BiohitPipettorPlus/
 
+    - name: Zip the distribution
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        Compress-Archive -Path dist/BiohitPipettorPlus/* -DestinationPath BiohitPipettorPlus-Windows.zip
+
     - name: Create Release and Upload Files
       if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
-        files: dist/BiohitPipettorPlus/**/*
+        files: BiohitPipettorPlus-Windows.zip
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
