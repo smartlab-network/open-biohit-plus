@@ -33,7 +33,7 @@ jobs:
 
     - name: Smoke test
       run: |
-        pytest tests/ -v --tb=shor
+        pytest tests/ -v --tb=short
 
     - name: Build with PyInstaller
       run: |
