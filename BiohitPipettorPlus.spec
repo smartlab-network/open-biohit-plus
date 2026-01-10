@@ -1,10 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import os
+import biohit_pipettor
+
+pkg_dir = os.path.dirname(biohit_pipettor.__file__)
+dll_path = os.path.join(pkg_dir, "include", "InstrumentLib.dll")
 
 a = Analysis(
     ['src\\biohit_pipettor_plus\\GUI\\gui2.py'],
     pathex=[],
-    binaries=[('.venv\\Lib\\site-packages\\biohit_pipettor\\include\\InstrumentLib.dll', '.')],
+    binaries=[(dll_path, '.')],
     datas=[],
     hiddenimports=[],
     hookspath=[],
