@@ -12,7 +12,7 @@ readme = "README.md"
 packages = [{include = "biohit_pipettor_plus", from = "src"}]
 repository = "https://github.com/smartlab-network/open-biohit-plus"
 
-[tool.poetry.scripts]
+[tool.poetry.sipts]
 pipettor-gui = "biohit_pipettor_plus.gui.gui2:main"
 
 [tool.poetry.dependencies]
@@ -22,4 +22,6 @@ pillow = "^11.3.0"
 ttkbootstrap = "^1.10.0"
 matplotlib = "~3.7.0"
 kiwisolver = "~1.3.0"
+pytest = "^7.0.0"
+
 
