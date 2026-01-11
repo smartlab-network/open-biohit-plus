@@ -12,7 +12,7 @@ readme = "README.md"
 packages = [{include = "biohit_pipettor_plus", from = "src"}]
 repository = "https://github.com/smartlab-network/open-biohit-plus"
 
-[tool.poetry.sipts]
+[tool.poetry.scripts]
 pipettor-gui = "biohit_pipettor_plus.gui.gui2:main"
 
 [tool.poetry.dependencies]
