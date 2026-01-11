@@ -16,7 +16,7 @@ repository = "https://github.com/smartlab-network/open-biohit-plus"
 pipettor-gui = "biohit_pipettor_plus.gui.gui2:main"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.9,<3.11"
 open-biohit = "^0.0.2"
 pillow = "^11.3.0"
 ttkbootstrap = "^1.10.0"
