@@ -1,7 +1,0 @@
-#!/bin/bash
-
-set -ex
-
-# reformat code
-python -m isort .
-python -m black .

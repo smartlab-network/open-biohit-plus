@@ -7,7 +7,7 @@ pkg_dir = os.path.dirname(biohit_pipettor.__file__)
 dll_path = os.path.join(pkg_dir, "include", "InstrumentLib.dll")
 
 a = Analysis(
-    ['src\\biohit_pipettor_plus\\GUI\\gui2.py'],
+    ['src\\biohit_pipettor_plus\\gui\\gui2.py'],
     pathex=[],
     binaries=[(dll_path, '.')],
     datas=[],

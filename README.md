@@ -7,7 +7,7 @@ See more in documentation
 ## Features
 1. Interactive GUI with Custom Deck, slot, and labware. Easy definition and visualization.
 2. Works on both single and multi pipettor
-3. Direct implementation of labware based operations like pick_tips, return_tips, add_medium, remove_medium ....
+3. Direct implementation of labware based operations like pick_tips, return_tips, add_medium, remove_medium .
 4. Workflow builder to build and run a list of operation 
 5. Operation logging. 
 6. Ability to save & load Workflow and Deck. 
@@ -27,7 +27,7 @@ See more in documentation
 ## Development
 Built with:
     - Python 3.10 
-    - ttkbootstrap (Modern UI)
+    - ttkbootstrap and Tkinter (Modern UI) 
     - matplotlib (Data visualization)
 
 ## License
