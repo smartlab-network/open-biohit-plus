@@ -219,7 +219,7 @@ class DeckGUI:
         ttk.Checkbutton(pip_section, text="Use mock pipettor", variable=self.simulate_var).pack(anchor='w',
                                                                                                          pady=5)
 
-        self.pipettor_status_label = ttk.Label(pip_section, text="", foreground="gray")
+        self.pipettor_status_label = ttk.Label(pip_section, text="", foreground="gray", wraplength=300)
         self.pipettor_status_label.pack(pady=5)
         ttk.Button(pip_section, text="Connect to Pipettor", command=self.initialize_pipettor).pack(fill=tk.X, pady=5)
 
@@ -985,6 +985,11 @@ class DeckGUI:
 
             if not updated_params:
                 messagebox.showinfo("Info", "No parameters were changed (all fields empty)")
+
+            self.pipettor_status_label.config(
+                text=updated_params,
+                foreground='green'
+            )
 
         except ValueError as e:
             messagebox.showerror("Invalid Input", str(e))

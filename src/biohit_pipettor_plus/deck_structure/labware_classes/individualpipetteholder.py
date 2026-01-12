@@ -116,8 +116,6 @@ class IndividualPipetteHolder(Labware):
     def to_dict(self) -> dict:
         """
         Serialize the IndividualPipetteHolder to a dictionary.
-        Returns dict
-            Dictionary containing all holder attributes.
         """
         base = super().to_dict()
         base.update({

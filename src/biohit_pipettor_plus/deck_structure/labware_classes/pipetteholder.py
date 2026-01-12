@@ -5,7 +5,7 @@ from biohit_pipettor_plus.deck_structure.labware_classes.individualpipetteholder
 
 from typing import Optional
 import copy
-
+import warnings
 
 @register_class
 class PipetteHolder(Labware):
@@ -57,15 +57,19 @@ class PipetteHolder(Labware):
         min_required_y = round((holders_across_y * individual_holder.size_y) + (2*abs(offset[1])),2)
 
         if size_x < min_required_x:
-            raise ValueError(
-                f"PipetteHolder width ({size_x}mm) is too small for {holders_across_x} holders of width {individual_holder.size_x}mm. "
-                f"Minimum required: {min_required_x:.1f}mm (including offsets)"
+            warnings.warn(
+                 f"PipetteHolder width ({size_x}mm) is too small for {holders_across_x} holders of width {individual_holder.size_x}mm. "
+                f"Minimum required: {min_required_x:.1f}mm (including offsets)",
+                UserWarning,
+                stacklevel=2
             )
 
         if size_y < min_required_y:
-            raise ValueError(
+            warnings.warn(
                 f"PipetteHolder height ({size_y}mm) is too small for {holders_across_y} holders of height {individual_holder.size_y}mm. "
-                f"Minimum required: {min_required_y:.1f}mm (including offsets)"
+                f"Minimum required: {min_required_y:.1f}mm (including offsets)",
+                UserWarning,
+                stacklevel=2
             )
 
         if individual_holder.size_z > size_z:

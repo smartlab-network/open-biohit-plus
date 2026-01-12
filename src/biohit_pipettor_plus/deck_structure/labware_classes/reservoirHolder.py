@@ -79,14 +79,16 @@ class ReservoirHolder(Labware):
         Returns
         -------
         tuple[int, int]
-            (col, row) where col is 0 to hooks_across_x-1, row is 0 to hooks_across_y-1
+            (col, row) where col is 0 to hooks_across_x-1,
+            row is 0 to hooks_across_y-1
 
         Example
         -------
-        For hooks_across_x=3, hooks_across_y=2:
-        hook_id: 1 2 3 4 5 6
-        layout: [1 2 3]  <- row 0
-                [4 5 6]  <- row 1
+        For hooks_across_x=3, hooks_across_y=2::
+
+            hook_id: 1 2 3 4 5 6
+            layout: [1 2 3]  <- row 0
+                    [4 5 6]  <- row 1
         """
         if hook_id < 1 or hook_id > self.total_hooks:
             raise ValueError(f"hook_id {hook_id} out of range (1 to {self.total_hooks})")

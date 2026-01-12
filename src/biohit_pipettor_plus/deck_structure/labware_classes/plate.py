@@ -5,6 +5,8 @@ from biohit_pipettor_plus.deck_structure.labware_classes.well import Well
 
 from typing import Optional
 import copy
+import warnings
+
 
 @register_class
 class Plate(Labware):
@@ -66,18 +68,19 @@ class Plate(Labware):
         min_required_y = round((wells_y * well.size_y) +  (2*abs(offset[1])),2)
 
         if size_x < min_required_x:
-            print("to fix size validation after taking real value from Tim")
-            pass
-            """raise ValueError(
+            warnings.warn(
                 f"Plate width ({size_x}mm) is too small for {wells_x} wells of width {well.size_x}mm. "
-                f"Minimum required: {min_required_x:.1f}mm (including offsets)"
+                f"Minimum required: {min_required_x:.1f}mm (including offsets)",
+                UserWarning,
+                stacklevel=2
             )
-            """
 
         if size_y < min_required_y:
-            raise ValueError(
+            warnings.warn(
                 f"Plate height ({size_y}mm) is too small for {wells_y} wells of height {well.size_y}mm. "
-                f"Minimum required: {min_required_y:.1f}mm (including offsets)"
+                f"Minimum required: {min_required_y:.1f}mm (including offsets)",
+                UserWarning,
+                stacklevel=2
             )
 
         if well.size_z > size_z:

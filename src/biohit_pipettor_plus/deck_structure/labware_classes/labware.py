@@ -127,12 +127,12 @@ class Labware(Serializable):
         """
             For multichannel operation, does each tip need to access a separate item?
 
-                Returns
-                -------
-                bool
-                    True: Each tip needs its own item (e.g., Plate - small wells)
-                    False: All tips can share one item (e.g., ReservoirHolder - large reservoirs)
-                """
+            Returns
+            -------
+            bool
+                True: Each tip needs its own item (e.g., Plate - small wells)
+                False: All tips can share one item (e.g., ReservoirHolder - large reservoirs)
+        """
         return True  # Default: items are small, tips need separate items. overwritten for some labwares like plate
 
     def validate_multichannel_compatible(self, item_size_y: float) -> tuple[bool, str]:
