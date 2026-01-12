@@ -2,7 +2,7 @@
 A modern GUI application for controlling electronic pipettors with advanced 
 workflow capabilities. Currently, in use with Biohit but can be used with other pipettors as well.
 See more in documentation
-[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://<your-username>.github.io/<repository-name>/)
+[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://smartlab-network.github.io/open-biohit-plus/)
 
 ## Features
 1. Interactive GUI with Custom Deck, slot, and labware. Easy definition and visualization.
