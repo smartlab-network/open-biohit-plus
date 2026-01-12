@@ -37,4 +37,3 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./docs/_build/html
-        force_orphan: true  # Clean gh-pages branch each time

@@ -1075,18 +1075,78 @@ class DeckGUI:
         )
 
     def new_deck(self):
-        """Create a new deck"""
-        deck_id = simpledialog.askstring("New Deck", "Enter Deck ID:", initialvalue="new_deck")
-        if not deck_id:
-            return
+        """Create a new deck using a unified dialog"""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Create New Deck")
+        dialog.geometry("350x250")
+        dialog.transient(self.root)
+        dialog.grab_set()
 
-        # Ask for dimensions
-        x_max = simpledialog.askfloat("Deck Size", "Enter X range (max mm):", initialvalue=500)
-        y_max = simpledialog.askfloat("Deck Size", "Enter Y range (max mm):", initialvalue=400)
-        z_max = simpledialog.askfloat("Deck Size", "Enter Z range (max mm):", initialvalue=500)
+        # Storage for result
+        result = {"confirmed": False}
 
-        if x_max and y_max and z_max:
-            self.deck = Deck(range_x=(0, x_max), range_y=(0, y_max), range_z=z_max, deck_id=deck_id)
+        # Main frame
+        frame = ttk.Frame(dialog, padding=20)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        # Define form fields
+        deck_form_fields = [
+            ("Deck ID:", "deck_id", "entry", "new_deck", None, None),
+            ("X Range (mm):", "x_max", "entry", "500", None, "numeric"),
+            ("Y Range (mm):", "y_max", "entry", "400", None, "numeric"),
+            ("Z Range (mm):", "z_max", "entry", "500", None, "numeric"),
+        ]
+
+        # Create form using your helper
+        form_vars = create_form(frame, deck_form_fields, field_width=15)
+
+        # Button callbacks
+        def on_ok():
+            try:
+                # Validate all numeric fields
+                x_max = float(form_vars['x_max'].get())
+                y_max = float(form_vars['y_max'].get())
+                z_max = float(form_vars['z_max'].get())
+                deck_id = form_vars['deck_id'].get().strip()
+
+                if not deck_id:
+                    messagebox.showwarning("Invalid Input", "Deck ID cannot be empty", parent=dialog)
+                    return
+
+                if x_max <= 0 or y_max <= 0 or z_max <= 0:
+                    messagebox.showwarning("Invalid Input", "Dimensions must be positive", parent=dialog)
+                    return
+
+                result["deck_id"] = deck_id
+                result["x_max"] = x_max
+                result["y_max"] = y_max
+                result["z_max"] = z_max
+                result["confirmed"] = True
+                dialog.destroy()
+
+            except ValueError:
+                messagebox.showerror("Invalid Input", "Please enter valid numbers for dimensions", parent=dialog)
+
+        def on_cancel():
+            dialog.destroy()
+
+        # Buttons
+        btn_frame = ttk.Frame(dialog, padding=(0, 20, 0, 0))
+        btn_frame.pack()
+        ttk.Button(btn_frame, text="Create", command=on_ok).pack(side=tk.LEFT, padx=10)
+        ttk.Button(btn_frame, text="Cancel", command=on_cancel).pack(side=tk.LEFT, padx=10)
+
+        # Wait for dialog
+        self.root.wait_window(dialog)
+
+        # Process result
+        if result["confirmed"]:
+            self.deck = Deck(
+                range_x=(0, result["x_max"]),
+                range_y=(0, result["y_max"]),
+                range_z=result["z_max"],
+                deck_id=result["deck_id"]
+            )
             self.unplaced_labware = []
             self.unplaced_slots = []
             self.available_wells = []
