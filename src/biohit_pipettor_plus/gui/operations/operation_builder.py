@@ -5,8 +5,8 @@ These helper functions convert UI inputs into Operation objects,
 separating the UI logic from operation creation logic.
 """
 
-from biohit_pipettor_plus.operations.operation import Operation
-from biohit_pipettor_plus.operations.operationtype import OperationType
+from biohit_pipettor_plus.gui.operations.operation import Operation
+from biohit_pipettor_plus.gui.operations.operationtype import OperationType
 from biohit_pipettor_plus.pipettor_plus.pipettor_constants import Pipettors_in_Multi
 
 class OperationBuilder:

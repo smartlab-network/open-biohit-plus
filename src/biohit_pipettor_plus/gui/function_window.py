@@ -9,13 +9,8 @@ from biohit_pipettor_plus.gui.well_window import WellWindow
 from biohit_pipettor_plus.gui.ui_helper import *
 from biohit_pipettor_plus.pipettor_plus.pipettor_plus import PipettorPlus
 from biohit_pipettor_plus.deck_structure import *
-from biohit_pipettor_plus.operations.workflow import Workflow
-from biohit_pipettor_plus.operations.operation import Operation
-from biohit_pipettor_plus.operations.operation_builder import OperationBuilder
-from biohit_pipettor_plus.operations.operation_logger import OperationLogger
+from biohit_pipettor_plus.gui.operations import *
 from biohit_pipettor_plus.gui.executioncontroloverlay import ExecutionControlOverlay
-from biohit_pipettor_plus.gui.operationconfig import OPERATION_CONFIGS
-from biohit_pipettor_plus.gui.operationsession import OperationSession
 
 import os
 import copy

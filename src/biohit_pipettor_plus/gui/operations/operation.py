@@ -1,5 +1,5 @@
 
-from biohit_pipettor_plus.operations.operationtype import OperationType
+from biohit_pipettor_plus.gui.operations.operationtype import OperationType
 
 from typing import Any
 from dataclasses import dataclass, field
@@ -58,7 +58,7 @@ class Operation:
             Deck instance to use
         """
         # Import here to avoid circular dependency
-        from biohit_pipettor_plus.operations.workflow_executor import WorkflowExecutor
+        from biohit_pipettor_plus.gui.operations.workflow_executor import WorkflowExecutor
 
         executor = WorkflowExecutor(pipettor, deck)
         executor.execute_single_operation(self)

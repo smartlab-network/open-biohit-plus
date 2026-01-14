@@ -6,13 +6,12 @@ Run saved workflows automatically from command line with validation
 import argparse
 import json
 import sys
-from datetime import datetime
 from pathlib import Path
 
 from src.biohit_pipettor_plus.deck_structure import Deck, Serializable
 from src.biohit_pipettor_plus.pipettor_plus.pipettor_plus import PipettorPlus
-from src.biohit_pipettor_plus.operations.workflow import Workflow
-from src.biohit_pipettor_plus.operations.operation_logger import OperationLogger
+from src.biohit_pipettor_plus.gui.operations import Workflow
+from src.biohit_pipettor_plus.gui.operations import OperationLogger
 
 
 def load_deck(deck_path: str) -> Deck:

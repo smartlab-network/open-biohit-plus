@@ -11,7 +11,7 @@ This module provides a serializable, inspectable workflow system. It enables:
 import json
 import uuid
 from dataclasses import dataclass, field
-from biohit_pipettor_plus.operations.operation import Operation
+from biohit_pipettor_plus.gui.operations.operation import Operation
 
 
 @dataclass
