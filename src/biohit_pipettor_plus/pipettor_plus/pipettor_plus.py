@@ -27,7 +27,7 @@ class PipettorPlus:
 
         Parameters
         ----------
-       tip_volume : Literal[200, 1000]
+        tip_volume : Literal[200, 1000]
             The tip volume (must be 1000 if multichannel is True)
         multichannel : bool
             If True, it is assumed the device uses a multichannel pipet
@@ -1511,10 +1511,18 @@ class PipettorPlus:
         """
 
         lw = self.find_labware_by_type("PipetteHolder")[0]  # Gets first PipetteHolder found
+        try:
+            discard_lw = self.find_labware_by_type("TipDropzone")[0]
+        except ValueError:
+            discard_lw = None
         if self.change_tips and not self.has_tips:
             self.pick_tips(lw)
         elif self.change_tips and self.has_tips:
-            self.replace_tips(lw)
+            if discard_lw is not None:
+                self.discard_tips(discard_lw)
+                self.pick_tips(lw)
+            else:
+                self.replace_tips(lw)
         elif not self.has_tips:
             raise ValueError("No tips loaded. Pick tips first.")
 

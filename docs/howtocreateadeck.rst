@@ -1,0 +1,85 @@
+How to create a deck
+========================
+
+"Deck_Editor" and "Low Level Parameter" tab of GUI are involoved in creating and setting up deck for pipetting operations.
+
+Defining a new Deck
+--------------------
+
+1. Open the **File** menu in the top menu bar.
+2. Select **New Deck** and enter desired parameters.
+3. A new, empty deck will be created and displayed in the **Deck_Editor** tab.
+
+At this stage, the deck contains no slots or labware. The current deck info can be seen in the **Deck_Editor** tab.
+
+Working with Slot
+------------------
+
+To create a slot:
+
+1. Navigate to the **Deck_Editor** tab.
+2. Click **Create Slot** and enter desired parameters.
+3. The slot now exists in **unplaced state** and should be seen in the selection box.
+4. Unplaced slot can be placed, edited, or deleted. **Double click** on the slot also places the slot on deck
+5. To unplace a slot --- **Triple click** the slot or click on **Unplace slot** button
+
+Working with Labware
+----------------------
+
+Creating a labware is slightly more complex because of various types of labware.
+
+1. Low level labware can be created by clicking on **Create lll** in the **Low level parameter** tab.
+    List of available lll can also be seen there.
+
+2. High level labware can be created by clicking on **Create labware** in the **Deck_Editor** tab.
+    If lll for the hll does not exist, the required lll can also be created when creating a hll.
+
+Labware placement and editing:
+
+* After creation, hll can be placed on slot by clicking on **Place on Slot on Deck**. Double clicking does the same job
+* Triple click removes placed labware from deck
+* Physical attributes (such as size, offset, stackable) are editable for a hll
+* Physical attribute of the lll used in hll creation is not editable
+* Some properties of the lll (like has_tips/ content) is however editable
+* Note - For ReservoirHolder, lll can be removed and custom reservoir spanning (more than one row/column) can be used
+
+After Labware is placed
+------------------------------
+TODO - write view children labware. and validatew
+
+Saving and Loading Decks
+------------------------
+Deck configurations can be saved and reused.
+
+To save a deck:
+
+1. Open the **File** menu.
+2. Select **Save Deck**.
+
+To load an existing deck:
+
+1. Open the **File** menu.
+2. Select **Load Deck**.
+3. Choose a previously saved deck configuration.
+
+Important Notes
+^^^^^^^^^^^^^^^^
+
+.. important::
+
+   If a deck is created or modified during an active session, the pipettor must
+   be reconnected. The pipettor connection requires a valid deck reference, which
+   changes whenever the deck is updated.
+
+Always ensure that the virtual deck layout matches the physical setup of the
+instrument to avoid incorrect pipetting behavior or hardware collisions.
+
+
+Next Steps
+^^^^^^^^^^^^
+
+Once the deck has been created and validated, you can proceed to:
+
+* Configure pipettor
+* Build workflows
+* Execute pipetting operations

@@ -22,39 +22,26 @@ Key Features
 
 * **Interactive GUI** - Custom deck, slot, and labware definition with easy visualization
 * **Flexible Operation** - Works with both single and multi-channel pipettors
-* **Labware-Based Operations** - Direct implementation of common operations:
-
-  * ``pick_tips()`` - Automated tip picking
-  * ``return_tips()`` - Tip disposal and return
-  * ``add_medium()`` - Liquid addition
-  * ``remove_medium()`` - Liquid removal
-
+* **Labware-Based Operations** - Direct implementation of operations like pick_tips, return_tips,etc.
 * **Workflow Builder** - Build, save, and run complex operation sequences
 * **Operation Logging** - Complete tracking of all pipetting operations
 * **Save & Load** - Persistent storage of workflows and deck configurations
 
 User Guide
 ----------
+For understanding Graphical User Interface (GUI) and its backend code
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents
 
    deck_slot_labware
+   howtocreateadeck
    pipettor
    operation
    workflow
    troubleshooting
-
-API Reference
--------------
-
-Complete API documentation for all modules and classes.
-
-.. automodule:: biohit_pipettor_plus
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   api.rst
 
 Support
 -------

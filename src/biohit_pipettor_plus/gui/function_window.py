@@ -395,7 +395,7 @@ class FunctionWindow:
         create_button_bar(liquid_frame, liquid_buttons, fill=True)
 
         # === FOC MEASUREMENT ===
-        self.foc_frame = ttk.Labelframe(parent_frame, text="FOC Measurement", padding=5)
+        self.foc_frame = ttk.Labelframe(parent_frame, text="Measurement", padding=5)
         self.foc_frame.pack(fill=tk.X, pady=5, padx=5)
         self.update_foc_section()
 
@@ -1371,7 +1371,7 @@ class FunctionWindow:
             # Run button - opens dialog when clicked
             ttk.Button(
                 self.foc_frame,
-                text="▶ Run FOC Measurement",
+                text="▶ Run Measurement",
                 command=self.callback_measure_foc,
                 bootstyle="success"
             ).pack(fill=tk.X, pady=5)
@@ -1379,14 +1379,14 @@ class FunctionWindow:
             # Not configured
             ttk.Button(
                 self.foc_frame,
-                text="Measure FOC",
+                text="Start Measurement",
                 command=None,
                 state="disabled"
             ).pack(fill="x", pady=(0, 5))
 
             ttk.Label(
                 self.foc_frame,
-                text="Configure FOC script and plate name\nin 'Low level parameters' tab.",
+                text="Configure bat script and plate name\nin 'Low level parameters' tab.",
                 foreground="gray",
                 font=('Arial', 9, 'italic'),
                 justify=tk.LEFT

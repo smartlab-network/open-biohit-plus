@@ -49,8 +49,8 @@ class DeckGUI:
             ("X Speed (1-8):", "x_speed", "entry", "7", None, "numeric"),
             ("Y Speed (1-8):", "y_speed", "entry", "7", None, "numeric"),
             ("Z Speed (1-8):", "z_speed", "entry", "5", None, "numeric"),
-            ("Aspirate (1-6):", "aspirate_speed", "entry", "1", None, "numeric"),
-            ("Dispense (1-6):", "dispense_speed", "entry", "1", None, "numeric"),
+            ("Aspirate Force (1-6):", "aspirate_speed", "entry", "1", None, "numeric"),
+            ("Dispense Force (1-6):", "dispense_speed", "entry", "1", None, "numeric"),
         ]
 
         self.lll_mapping = {
@@ -183,13 +183,13 @@ class DeckGUI:
         self.update_item_buttons('lll')
 
         # 4. FOC Configuration
-        foc_section = ttk.Labelframe(root, text="FOC Configuration", padding=15)
+        foc_section = ttk.Labelframe(root, text="Measurement Configuration", padding=15)
         foc_section.pack(fill=tk.X, pady=5, padx=5)
 
         self.foc_config_status_label = ttk.Label(foc_section, text="Status: Not configured", foreground='gray')
         self.foc_config_status_label.pack(anchor='w', pady=5)
 
-        ttk.Button(foc_section, text="Open FOC Script Location", command=self.configure_foc_script).pack(fill=tk.X)
+        ttk.Button(foc_section, text="Open Measurement Script Location", command=self.configure_foc_script).pack(fill=tk.X)
 
         # 5. Pipettor Configuration
         pip_section = ttk.Labelframe(root, text="Pipettor Configuration", padding=15)
@@ -812,7 +812,7 @@ class DeckGUI:
 
         # Browse for BAT file
         filename = filedialog.askopenfilename(
-            title="Select FOC48.bat Script",
+            title="Select .bat Script",
             filetypes=[("Batch files", "*.bat"), ("All files", "*.*")],
             initialdir="C:\\labhub\\Import\\" if os.path.exists("C:\\labhub\\Import\\") else None
         )
@@ -1092,9 +1092,11 @@ class DeckGUI:
         # Define form fields
         deck_form_fields = [
             ("Deck ID:", "deck_id", "entry", "new_deck", None, None),
-            ("X Range (mm):", "x_max", "entry", "500", None, "numeric"),
-            ("Y Range (mm):", "y_max", "entry", "400", None, "numeric"),
-            ("Z Range (mm):", "z_max", "entry", "500", None, "numeric"),
+            ("X_min (mm):", "x_min", "entry", "0", None, "numeric"),
+            ("X_max (mm):", "x_max", "entry", "500", None, "numeric"),
+            ("Y_min (mm):", "y_min", "entry", "0", None, "numeric"),
+            ("Y_max (mm):", "y_max", "entry", "400", None, "numeric"),
+            ("Z_max (mm):", "z_max", "entry", "500", None, "numeric"),
         ]
 
         # Create form using your helper
@@ -1104,7 +1106,9 @@ class DeckGUI:
         def on_ok():
             try:
                 # Validate all numeric fields
+                x_min = float(form_vars["x_min"].get())
                 x_max = float(form_vars['x_max'].get())
+                y_min = float(form_vars['y_min'].get())
                 y_max = float(form_vars['y_max'].get())
                 z_max = float(form_vars['z_max'].get())
                 deck_id = form_vars['deck_id'].get().strip()
@@ -1113,12 +1117,14 @@ class DeckGUI:
                     messagebox.showwarning("Invalid Input", "Deck ID cannot be empty", parent=dialog)
                     return
 
-                if x_max <= 0 or y_max <= 0 or z_max <= 0:
+                if x_max <= x_min or y_max <= y_min or z_max <= 0 or x_min < 0 or y_max < 0:
                     messagebox.showwarning("Invalid Input", "Dimensions must be positive", parent=dialog)
                     return
 
                 result["deck_id"] = deck_id
+                result["x_min"] = x_min
                 result["x_max"] = x_max
+                result["y_min"] = y_min
                 result["y_max"] = y_max
                 result["z_max"] = z_max
                 result["confirmed"] = True
@@ -1142,8 +1148,8 @@ class DeckGUI:
         # Process result
         if result["confirmed"]:
             self.deck = Deck(
-                range_x=(0, result["x_max"]),
-                range_y=(0, result["y_max"]),
+                range_x=(result["x_min"], result["x_max"]),
+                range_y=(result["y_min"], result["y_max"]),
                 range_z=result["z_max"],
                 deck_id=result["deck_id"]
             )

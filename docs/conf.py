@@ -32,3 +32,4 @@ autodoc_member_order = "groupwise"
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
 }
+toc_object_entries = False

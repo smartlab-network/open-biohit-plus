@@ -20,10 +20,6 @@ class Deck(Serializable):
         Minimum and maximum x coordinates of the deck.
     range_y : tuple[int, int]
         Minimum and maximum y coordinates of the deck.
-    used_pos_x : list[tuple]
-        List of used x-ranges (reserved for future use).
-    used_pos_y : list[tuple]
-        List of used y-ranges (reserved for future use).
     slots : dict[str, Slot]
         Dictionary mapping slot IDs to Slot objects.
     labware : dict[str, Labware]
@@ -38,9 +34,6 @@ class Deck(Serializable):
         self.range_x = range_x
         self.range_y = range_y
         self.range_z = range_z
-
-        self.used_pos_x: list[tuple] = [range_x]  # reserved x-ranges
-        self.used_pos_y: list[tuple] = [range_y]  # reserved y-ranges
 
         self.slots: dict[str, Slot] = {}           # store Slot objects
         self.labware: dict[str, Labware] = {}     # global access to Labware objects
@@ -185,7 +178,7 @@ class Deck(Serializable):
     def remove_labware(self, labware_id: str) -> Labware:
         """
         Remove a Labware from its Slot and the Deck.
-        ENFORCES THE RULE that only the topmost labware in a slot's stack can be removed.
+        Only the topmost labware in a slot's stack can be removed.
         Returns the Labware object for reuse or deletion.
         """
         if labware_id not in self.labware:
