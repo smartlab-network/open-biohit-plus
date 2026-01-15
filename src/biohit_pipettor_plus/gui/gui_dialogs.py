@@ -6,6 +6,7 @@ from biohit_pipettor_plus.gui.ui_helper import create_form, ScrollableDialog, cr
 import ttkbootstrap as ttk
 import copy
 from biohit_pipettor_plus.gui.ui_helper import ScrollableTab
+from biohit_pipettor_plus.pipettor_plus.config import load_config, save_config
 
 class LabwareDialog(ScrollableDialog):
     """Refactored Manager Dialog for all Labware types."""
@@ -1536,3 +1537,44 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
                 self.paste_targets.add(item)
 
         self.refresh_view()
+
+class ParametersDialog(ScrollableDialog):
+    def __init__(self, parent):
+        super().__init__(parent, title="Parameters", size="700x600")
+
+        cfg = load_config()
+
+        form_frame = ttk.Labelframe(self.scroll_frame, text="Editable Parameters", padding="10")
+        form_frame.pack(fill=tk.X, padx=10, pady=10)
+
+
+        fields = [
+            ("Pipettors in Multi", "Pipettors_in_Multi", "entry", cfg["Pipettors_in_Multi"], None, "numeric"),
+            ("Spacing Between Adjacent Pipettor", "Spacing_Between_Adjacent_Pipettor", "entry", cfg["Spacing_Between_Adjacent_Pipettor"], None, "numeric"),
+            ("Max Batch Size", "MAX_BATCH_SIZE", "entry", cfg["MAX_BATCH_SIZE"], None, "numeric"),
+            ("Z Max", "Z_MAX", "entry", cfg["Z_MAX"], None, "numeric"),
+        ]
+
+        self.vars = create_form(form_frame, fields, field_width=25)
+
+        self.add_button_bar(self.on_save, create_text="Save", cancel_text="Cancel")
+
+    def on_save(self):
+        try:
+            data = self.get_inputs(
+                self.vars,
+                numeric_keys=["Pipettors_in_Multi", "Spacing_Between_Adjacent_Pipettor", "MAX_BATCH_SIZE", "Z_MAX"]
+            )
+
+            # Convert to int (since these are integer settings)
+            data["Pipettors_in_Multi"] = int(data["Pipettors_in_Multi"])
+            data["Spacing_Between_Adjacent_Pipettor"] = int(data["Spacing_Between_Adjacent_Pipettor"])
+            data["MAX_BATCH_SIZE"] = int(data["MAX_BATCH_SIZE"])
+            data["Z_MAX"] = int(data["Z_MAX"])
+
+            save_config(data)
+            self.result = data
+            self.destroy()
+
+        except Exception as e:
+            messagebox.showerror("Invalid Parameters", str(e))

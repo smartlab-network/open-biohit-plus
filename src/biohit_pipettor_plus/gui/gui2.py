@@ -1,4 +1,4 @@
-from tkinter import messagebox, filedialog, simpledialog
+from tkinter import messagebox, filedialog
 import json
 import os
 import datetime
@@ -7,7 +7,7 @@ import string
 from biohit_pipettor_plus.deck_structure import *
 from biohit_pipettor_plus.gui.function_window import FunctionWindow
 from biohit_pipettor_plus.pipettor_plus.pipettor_plus import PipettorPlus
-from biohit_pipettor_plus.gui.gui_dialogs import EditLabwareDialog, AddLabwareToSlotDialog, LabwareDialog, SlotDialog,CreateLowLevelLabwareDialog, ViewChildrenLabwareDialog
+from biohit_pipettor_plus.gui.gui_dialogs import *
 from biohit_pipettor_plus.gui.ui_helper import *
 
 class DeckGUI:
@@ -267,7 +267,6 @@ class DeckGUI:
         file_menu.add_command(label="Exit", command=self.root.quit)
 
         # View menu
-
         view_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="View", menu=view_menu)
         view_menu.add_command(label="Refresh", command=lambda: self.draw_deck(auto_scale=True))
@@ -275,6 +274,18 @@ class DeckGUI:
                                                                     , self.draw_deck()))
         view_menu.add_command(label="Zoom Out", command=lambda: (setattr(self, 'scale', self.scale * 0.8),
                                                                  self.draw_deck()))
+
+        #parameters
+        settings = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Settings", menu=settings)
+        settings.add_command(label="Parameters", command=self._set_parameter_dialog)
+
+    def _set_parameter_dialog(self):
+        dlg = ParametersDialog(self.root)
+        self.root.wait_window(dlg)
+
+        if dlg.result is not None:
+            self.config = dlg.result
 
     def _create_canvas_area(self, parent):
         """Creates the left-side canvas with scrollbars."""
@@ -660,7 +671,6 @@ class DeckGUI:
 
         if not labware:
             return
-
 
         dialog = ViewChildrenLabwareDialog(self.root, labware, pipettor=getattr(self, 'pipettor', None))
         self.root.wait_window(dialog)
@@ -1388,8 +1398,8 @@ class DeckGUI:
         # Make clickable
         self.canvas.tag_bind(f'labware_{lw_id}', '<Button-1>',
                              lambda e, lid=lw_id: self.select_item('labware', lid))
-    # Event handlers
 
+    # Event handlers
     def on_canvas_triple_click(self, event):
         """Show context menu on canvas (FIXED)"""
         item = self.canvas.find_closest(event.x, event.y)[0]

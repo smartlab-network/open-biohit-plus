@@ -8,6 +8,8 @@ separating the UI logic from operation creation logic.
 from biohit_pipettor_plus.gui.operations.operation import Operation
 from biohit_pipettor_plus.gui.operations.operationtype import OperationType
 from biohit_pipettor_plus.pipettor_plus.pipettor_constants import Pipettors_in_Multi
+from biohit_pipettor_plus.pipettor_plus.config import load_config
+
 
 class OperationBuilder:
     """Helper class to build Operation objects from UI inputs"""
@@ -95,7 +97,9 @@ class OperationBuilder:
     ) -> Operation:
         """Build an ADD_MEDIUM operation"""
 
-        total_wells = len(dest_positions) * (Pipettors_in_Multi if channels == Pipettors_in_Multi else 1)
+        cfg = load_config()
+        pipettors_in_multi = int(cfg["Pipettors_in_Multi"])
+        total_wells = len(dest_positions) * (pipettors_in_multi if channels == pipettors_in_multi else 1)
         total_volume = volume * total_wells
 
         description = (
@@ -133,7 +137,9 @@ class OperationBuilder:
             change_tips: bool = False,
     ) -> Operation:
         """Build a REMOVE_MEDIUM operation"""
-        total_wells = len(source_positions) * (Pipettors_in_Multi if channels == Pipettors_in_Multi else 1)
+        cfg = load_config()
+        pipettors_in_multi = int(cfg["Pipettors_in_Multi"])
+        total_wells = len(source_positions) * (pipettors_in_multi if channels == pipettors_in_multi else 1)
         total_volume = volume * total_wells
 
         description = (
@@ -171,7 +177,9 @@ class OperationBuilder:
             mix_volume: float = 0
     ) -> Operation:
         """Build a TRANSFER_PLATE_TO_PLATE operation"""
-        total_wells = len(source_positions) * (Pipettors_in_Multi if channels == Pipettors_in_Multi else 1)
+        cfg = load_config()
+        pipettors_in_multi = int(cfg["Pipettors_in_Multi"])
+        total_wells = len(source_positions) * (pipettors_in_multi if channels == pipettors_in_multi else 1)
         total_volume = volume * total_wells
 
         description = (

@@ -2,8 +2,8 @@ from typing import Literal
 
 import uuid
 from biohit_pipettor_plus.deck_structure.serializable import register_class, Serializable
-from biohit_pipettor_plus.pipettor_plus.pipettor_constants import (Pipettors_in_Multi,
-                                                                   Spacing_Between_Adjacent_Pipettor)
+from biohit_pipettor_plus.pipettor_plus.config import load_config
+
 
 Default_Reservoir_Capacity = 30000
 Default_well_capacity = 1000
@@ -150,7 +150,11 @@ class Labware(Serializable):
             (is_valid, error_message)
         """
         if not self.each_tip_needs_separate_item():
-            min_required_y = Pipettors_in_Multi * Spacing_Between_Adjacent_Pipettor
+            cfg = load_config()
+            pipettors_in_multi = int(cfg["Pipettors_in_Multi"])
+            spacing = float(cfg["Spacing_Between_Adjacent_Pipettor"])
+
+            min_required_y = pipettors_in_multi * spacing
             if item_size_y < min_required_y:
                 return (False,
                         f"Item size_y ({item_size_y}mm) is too small for multichannel operation. "

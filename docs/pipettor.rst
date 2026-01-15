@@ -42,6 +42,22 @@ Once connected, additional parameters can be tuned:
 * Aspirate force
 * Dispense force
 
+Changing Parameters
+----------------------
+
+These parameters control key pipettor and workflow behaviours.
+To edit them in the GUI, go to **Settings → Parameters**.
+
+You can modify:
+
+- **Pipettors in Multi** - Number of tips on the multi-channel pipettor. The default (and standard) is **8**.
+
+- **Spacing Between Adjacent Pipettor** - Distance (in mm) between neighbouring tips on the multi-channel pipettor.
+
+- **Batch Size** - Controls the maximum number of operations grouped into a single batch. See :ref:`Liquid handling operations <liquid_handling_operation>` for how batching affects workflow execution.
+
+- **Z-Max** - Maximum allowed travel on the Z-axis (in mm). Any command exceeding this limit will raise a validation error.
+
 Tip lengths
 -----------
 ``TIP_LENGTHS`` provides default tip lengths:

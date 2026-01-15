@@ -9,8 +9,8 @@ from biohit_pipettor_plus.pipettor_plus.mock_pipettor import PipettorSimulator
 
 
 from biohit_pipettor_plus.deck_structure import *
-from biohit_pipettor_plus.pipettor_plus.pipettor_constants import Pipettors_in_Multi, MAX_BATCH_SIZE, TIP_LENGTHS, Z_MAX
 from biohit_pipettor_plus.pipettor_plus.geometry import (calculate_liquid_height, calculate_dynamic_remove_height)
+from biohit_pipettor_plus.pipettor_plus.config import load_config, save_config
 
 import time
 import os
@@ -37,8 +37,8 @@ class PipettorPlus:
             The deck containing slots and labware
         tip_length : float
             The tip length in mm
-        use_simulator : bool
-            If True, the simulator will be used instead of Biohit Robo pipettor
+        mock_pipettor : bool
+            If True, mock_pipettor will be used instead of Biohit Robo pipettor
                 """
         if mock_pipettor:
             pipettor_class = PipettorSimulator
@@ -61,15 +61,19 @@ class PipettorPlus:
         self.abort_requested = False
         self.pause_requested = False
 
+        cfg = load_config()
+
         #creates a dict of all tips, each tips having its own dict where content and volume in tip can be stored.
-        self.tip_length = tip_length if tip_length is not None else TIP_LENGTHS[tip_volume]
-        self.tip_count = Pipettors_in_Multi if self.multichannel else 1
+        tip_lengths = cfg["TIP_LENGTHS"]
+        self.tip_length = tip_length if tip_length is not None else tip_lengths[int(tip_volume)]
+
+        self.tip_count = int(cfg["Pipettors_in_Multi"]) if self.multichannel else 1
         self.tip_dict = {i: {} for i in range(0, self.tip_count)}
         self.has_tips = False
         self.change_tips = False
         self.tip_volume = tip_volume
 
-        self.batch_size = MAX_BATCH_SIZE
+        self.batch_size = int(cfg["MAX_BATCH_SIZE"])
         self.foc_bat_script_path = None
 
     def __getattr__(self, name):
@@ -1709,9 +1713,13 @@ class PipettorPlus:
                     f"Cannot reach pipettor_z={pipettor_z:.1f}mm with tips attached "
                     f"Maximum reachable height: {deck_range_z - self.tip_length:.1f}mm "
                 )
-            elif pipettor_z > Z_MAX:
-                raise ValueError(f"pipettor_z cannot be higher than Z_MAX: {pipettor_z:.1f}mm ")
+            cfg = load_config()
+            zmax = float(cfg["Z_MAX"])
 
+            if pipettor_z > zmax:
+                raise ValueError(
+                    f"pipettor_z cannot be higher than Z_MAX ({zmax:.1f} mm). Got {pipettor_z:.1f} mm."
+                )
 
         else:
             # No tips - full range available
@@ -1719,12 +1727,15 @@ class PipettorPlus:
             print(f"No Tips: pipettor_z({pipettor_z}) = deck_range_z({deck_range_z}) - absolute_height ({absolute_height})")
 
             # Validation without tips
+            cfg = load_config()
+            zmax = float(cfg["Z_MAX"])
+
             if pipettor_z < 0:
                 raise ValueError(
                     f"Invalid height: absolute_z={absolute_height:.1f}mm exceeds deck range={deck_range_z:.1f}mm"
                 )
-            elif pipettor_z > Z_MAX:
-                raise ValueError(f"pipettor_z cannot be higher than Z_MAX: {pipettor_z:.1f}mm ")
+            elif pipettor_z > zmax:
+                raise ValueError(f"pipettor_z cannot be higher than ({zmax:.1f} mm). Got {pipettor_z:.1f}mm")
         return round(pipettor_z, 2)
 
     def _get_robot_xy_position(self, items: List[Labware]) -> tuple[float, float]:

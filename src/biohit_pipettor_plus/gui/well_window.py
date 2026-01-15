@@ -2,7 +2,7 @@ import ttkbootstrap as ttk
 import tkinter as tk
 import string
 from collections import deque
-from biohit_pipettor_plus.pipettor_plus.pipettor_constants import Pipettors_in_Multi
+from biohit_pipettor_plus.pipettor_plus.config import load_config, save_config
 
 class WellWindow:
     """
@@ -97,7 +97,9 @@ class WellWindow:
 
         self.buttons = [[None for _ in range(self.columns)] for _ in range(self.rows)]
         self.multichannel_mode = multichannel_mode
-        self.channels = Pipettors_in_Multi if self.multichannel_mode else 1
+        cfg = load_config()
+        pipettors_in_multi = int(cfg["Pipettors_in_Multi"])
+        self.channels = pipettors_in_multi if self.multichannel_mode else 1
         self.max_selected = max_selected if max_selected else self.rows * self.columns
 
         # Handle OS window close button (X)

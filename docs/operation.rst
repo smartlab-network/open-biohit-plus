@@ -30,6 +30,8 @@ Since IndividualPipetteHolder contains pick_tip attribute, a simple autoselect f
 without selecting any individualHolder. For Pick_tips operation, holder with has_tip = TRUE are selected and opposite
 for Return_tips. To assist the user, non-usable holders for the operation are automatically disabled.
 
+.. _liquid_handling_operation:
+
 Liquid handling operations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 These operations include interaction of the pipettor with the Plate(wells) and ReservoirHolder(reservoirs) labware. It
@@ -47,7 +49,7 @@ Key feature of the operations -:
 
 **Batch_mode_transfer** - This ensure efficiency in one to many operation or many to one operation. For example, if 190ul is to be
 added to 10 well and tip_volume is 1000ul, the pipettor will aspirate 950ul and dispense 190ul to 5 wells and do same
-for remaining 5. Not applicable for one to one operation.
+for remaining 5. Not applicable for one to one operation. Batch size is capped by Maximum_Batch_Size.
 
 **Multi_trip_transfer** - If working volume exceeds max tip_volume, then each labware item gets accessed the
 required number of times to fulfil the volume.

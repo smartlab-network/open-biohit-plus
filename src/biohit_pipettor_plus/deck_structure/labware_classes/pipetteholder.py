@@ -1,7 +1,9 @@
 
-from biohit_pipettor_plus.deck_structure.labware_classes.labware import Labware, Pipettors_in_Multi
+from biohit_pipettor_plus.deck_structure.labware_classes.labware import Labware
 from biohit_pipettor_plus.deck_structure.serializable import register_class, Serializable
 from biohit_pipettor_plus.deck_structure.labware_classes.individualpipetteholder import IndividualPipetteHolder
+
+from biohit_pipettor_plus.pipettor_plus.config import load_config
 
 from typing import Optional
 import copy
@@ -52,6 +54,9 @@ class PipetteHolder(Labware):
         self._rows = holders_across_y
         self.__individual_holders: dict[tuple[int, int], IndividualPipetteHolder] = {}
         self.individual_holder = individual_holder
+
+        cfg = load_config()
+        self.tip_count = int(cfg["Pipettors_in_Multi"])
 
         min_required_x = round((holders_across_x * individual_holder.size_x) + (2*abs(offset[0])),2)
         min_required_y = round((holders_across_y * individual_holder.size_y) + (2*abs(offset[1])),2)
@@ -213,11 +218,11 @@ class PipetteHolder(Labware):
             in the specified columns is already occupied.
         """
 
-        self.validate_col_row_or_raise(columns, row, Pipettors_in_Multi)
+        self.validate_col_row_or_raise(columns, row, self.tip_count)
 
         # Check if all positions are available before placing
         for col in columns:
-            for i in range(Pipettors_in_Multi):
+            for i in range(self.tip_count):
                 current_row = row + i
                 individual_holder = self.get_holder_at(col, current_row)
 
@@ -233,7 +238,7 @@ class PipetteHolder(Labware):
 
         # Place pipettes in all positions
         for col in columns:
-            for i in range(Pipettors_in_Multi):
+            for i in range(self.tip_count):
                 current_row = row + i
                 individual_holder = self.get_holder_at(col, current_row)
                 individual_holder.place_pipette()
@@ -257,11 +262,11 @@ class PipetteHolder(Labware):
             in the specified columns is already empty.
         """
 
-        self.validate_col_row_or_raise(columns, row, Pipettors_in_Multi)
+        self.validate_col_row_or_raise(columns, row, self.tip_count)
 
         # Check if all positions have pipettes before removing
         for col in columns:
-            for i in range(Pipettors_in_Multi):
+            for i in range(self.tip_count):
                 current_row = row + i
                 individual_holder = self.get_holder_at(col, current_row)
 
@@ -277,7 +282,7 @@ class PipetteHolder(Labware):
 
         # Remove pipettes from all positions
         for col in columns:
-            for i in range(Pipettors_in_Multi):
+            for i in range(self.tip_count):
                 current_row = row + i
                 individual_holder = self.get_holder_at(col, current_row)
                 individual_holder.remove_pipette()
@@ -305,12 +310,12 @@ class PipetteHolder(Labware):
         # Check if all positions exist
         if col < 0 or col >= self._columns:
             return "INVALID"
-        if start_row < 0 or start_row + Pipettors_in_Multi > self._rows:
+        if start_row < 0 or start_row + self.tip_count > self._rows:
             return "INVALID"
 
         # Check occupancy of all 8 positions
         occupied_count = 0
-        for i in range(Pipettors_in_Multi):
+        for i in range(self.tip_count):
             current_row = start_row + i
             individual_holder = self.get_holder_at(col, current_row)
 
@@ -321,7 +326,7 @@ class PipetteHolder(Labware):
                 occupied_count += 1
 
         # Determine status
-        if occupied_count == Pipettors_in_Multi:
+        if occupied_count == self.tip_count:
             return "FULLY_OCCUPIED"
         elif occupied_count == 0:
             return "FULLY_AVAILABLE"
@@ -338,7 +343,7 @@ class PipetteHolder(Labware):
         for col in range(self._columns):
             used_rows = set()
 
-            for start_row in range(self._rows - Pipettors_in_Multi + 1):
+            for start_row in range(self._rows - self.tip_count + 1):
                 if start_row in used_rows:
                     continue
 
@@ -348,7 +353,7 @@ class PipetteHolder(Labware):
                 if status == "FULLY_OCCUPIED":
                     occupied_positions.append((col, start_row))
                     # Mark all rows in this block as used
-                    for i in range(Pipettors_in_Multi):
+                    for i in range(self.tip_count):
                         used_rows.add(start_row + i)
 
         return occupied_positions
@@ -363,7 +368,7 @@ class PipetteHolder(Labware):
         for col in range(self._columns):
             used_rows = set()
 
-            for start_row in range(self._rows - Pipettors_in_Multi + 1):
+            for start_row in range(self._rows - self.tip_count + 1):
                 if start_row in used_rows:
                     continue
 
@@ -371,7 +376,7 @@ class PipetteHolder(Labware):
 
                 if status == "FULLY_AVAILABLE":
                     available_positions.append((col, start_row))
-                    for i in range(Pipettors_in_Multi):
+                    for i in range(self.tip_count):
                         used_rows.add(start_row + i)
 
         return available_positions

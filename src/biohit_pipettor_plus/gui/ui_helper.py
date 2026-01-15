@@ -1,5 +1,6 @@
 import tkinter as tk
 import ttkbootstrap as ttk
+from tkinter import messagebox
 from typing import Optional
 
 
@@ -387,7 +388,6 @@ def update_detailed_info_text(text_widget, obj=None, modules=None):
         full_text.append(f"ID:    {obj.labware_id}")
         full_text.append(f"Type:  {obj.__class__.__name__}")
         full_text.append(f"Position: {getattr(obj, 'position', 'N/A')}")
-        full_text.append("")
 
     # --- 2. PHYSICAL INFO (Dimensions) ---
     if 'physical' in modules:
@@ -403,7 +403,6 @@ def update_detailed_info_text(text_widget, obj=None, modules=None):
             if hasattr(obj, attr):
                 value = getattr(obj, attr)
                 full_text.append(f"{label}: {value}")
-        full_text.append("")
 
     # --- 3. CONTENT INFO (Dynamic Dictionary Dump) ---
     if 'content' in modules and hasattr(obj, 'get_content_info'):
@@ -432,7 +431,6 @@ def update_detailed_info_text(text_widget, obj=None, modules=None):
                 full_text.append(f"{clean_key}: {value}")
 
     if 'parent' in modules:
-
         attributes = {
             '_rows': 'Row',
             '_columns': 'Column',
