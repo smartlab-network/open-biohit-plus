@@ -12,7 +12,8 @@ when interacting with follwoing labware type
 - **ReservoirHolder (Reservoir)** - Overflow when dispensing /Not enough Volume when aspirating
 - **PipetteHolder ( IndividualPipeeteHolder)** - Pipettor fail to pick tip from selected holder during pick_tip/ replace_tip.
 
-If the operation is physically possible, then changing children value by clicking on edit children Lw in deck_Editor.
+If the operation is physically possible, then changing children value by clicking on ** Edit children lw ** button in
+Deck Editor tab.
 
 
 .. _pipettor-connection-issues:
@@ -35,8 +36,7 @@ Installing a new pipettor
 ---------------------------
 
 A package similar to open-biohit must be created with similar pipettor functions. Mock pipettor should also be
-consdiered to allow virtual testing. Clone the open-biohit-plus package and change import in pipettor_plus.py file in
-biohit_pipettor_plus.pipettor_plus folder. Change pyproject.toml and spec file accordingly Make sure python in use
-matches the bit version of dll file
+consdiered to allow virtual testing. Clone the open-biohit-plus package and change import in pipettor_plus.py file.
+Change pyproject.toml and spec file accordingly.  Make sure python in use matches the bit version of dll file
 
 Go through the documentation of `open-biohit (biohit-pipettor-python) <https://umg-pharma-lab-automation.pages.gwdg.de/biohit-pipettor-python/>`_

@@ -1,5 +1,7 @@
 import tkinter as tk
 import ttkbootstrap as ttk
+from typing import Optional
+
 
 class CollapsibleFrame(ttk.Frame):
     """A frame that can be collapsed/expanded by clicking on its title."""
@@ -477,12 +479,15 @@ def draw_labware_grid(canvas, labware, selected_child=None, copy_source=None, pa
     grid_y = getattr(labware, 'grid_y', 1)
     cell_size = min((c_w - 2 * pad) / grid_x, (c_h - 2 * pad) / grid_y)
     cell_size = max(min_cell, min(cell_size, max_cell))
+    if hasattr(labware, "get_all_children"):
+        all_children = labware.get_all_children() or []
+    else:
+        all_children = []
+
 
     #create all required checkbox
     if check_box:
         box_s = 15  # Size of the checkbox square
-        all_children = labware.get_all_children()
-
         # 1. Master Checkbox (Top-Left)
         is_all = len(paste_targets) == len(all_children) and len(all_children) > 0
         canvas.create_rectangle(
@@ -544,8 +549,33 @@ def draw_labware_grid(canvas, labware, selected_child=None, copy_source=None, pa
         tags='grid_boundary'
     )
 
+    # --- Fallback: draw a single box for labware (no children) ---
+    if not all_children:
+        x1, y1 = pad, pad
+        x2 = pad + total_width
+        y2 = pad + total_height
+
+        canvas.create_rectangle(
+            x1, y1, x2, y2,
+            fill="#808080",
+            outline="black",
+            width=3,
+            tags=("clickable_labware",)
+        )
+
+        canvas.create_text(
+            (x1 + x2) / 2,
+            (y1 + y2) / 2,
+            text=getattr(labware, "labware_id", labware.__class__.__name__),
+            font=("Arial", 14, "bold"),
+            fill="white",
+            state="disabled"
+        )
+
+        return cell_size
+
     # Draw children
-    for child in labware.get_all_children():
+    for child in all_children:
         # 1. Geometry
         w_span = getattr(child, 'grid_width', 1)
         h_span = getattr(child, 'grid_height', 1)
@@ -669,3 +699,87 @@ def create_managed_list_section(instance, parent, title, var, list_attr, btn_fra
     setattr(instance, btn_frame_attr, btn_frame)
 
     return frame
+
+def ask_volume_dialog(parent, title="Enter Volume", initial_value=0, label_text="Volume per well (ul):")-> Optional[float]:
+
+
+    """
+    Create a simple, focused dialog for numeric input.
+
+    Returns
+    -------
+        Value entered by user(float), or None if cancelled
+    """
+    dialog = tk.Toplevel(parent)
+    dialog.title(title)
+    dialog.geometry("300x150")
+    dialog.resizable(False, False)
+    dialog.transient(parent)
+    dialog.grab_set()
+
+    # Center the dialog
+    dialog.update_idletasks()
+    x = (dialog.winfo_screenwidth() // 2) - (300 // 2)
+    y = (dialog.winfo_screenheight() // 2) - (150 // 2)
+    dialog.geometry(f"300x150+{x}+{y}")
+
+    result = {'value': None}
+
+    # Main frame with padding
+    main_frame = ttk.Frame(dialog, padding=20)
+    main_frame.pack(fill=tk.BOTH, expand=True)
+
+    # Label
+    ttk.Label(
+        main_frame,
+        text=label_text,
+        font=('Arial', 13)
+    ).pack(pady=(0, 10))
+
+    # Entry
+    value_var = tk.StringVar(value=str(initial_value))
+    entry = ttk.Entry(main_frame, textvariable=value_var, font=('Arial', 13), justify='center')
+    entry.pack(fill=tk.X, pady=(0, 15))
+    entry.select_range(0, tk.END)
+    entry.focus()
+
+    # Button frame
+    button_frame = ttk.Frame(main_frame)
+    button_frame.pack(fill=tk.X)
+    button_frame.columnconfigure(0, weight=1)
+    button_frame.columnconfigure(1, weight=1)
+
+    def on_ok():
+        try:
+            val = float(value_var.get())
+            if val < 0:
+                messagebox.showerror("Invalid Input", "Value must be non-negative", parent=dialog)
+                return
+            result['value'] = val
+            dialog.destroy()
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Please enter a valid number", parent=dialog)
+
+    def on_cancel():
+        dialog.destroy()
+
+    ttk.Button(
+        button_frame,
+        text="OK",
+        command=on_ok,
+        bootstyle="success"
+    ).grid(row=0, column=0, sticky='ew', padx=(0, 5))
+
+    ttk.Button(
+        button_frame,
+        text="Cancel",
+        command=on_cancel,
+        bootstyle="secondary"
+    ).grid(row=0, column=1, sticky='ew', padx=(5, 0))
+
+    # Bind Enter key to OK
+    entry.bind('<Return>', lambda e: on_ok())
+    dialog.bind('<Escape>', lambda e: on_cancel())
+
+    dialog.wait_window()
+    return result['value']

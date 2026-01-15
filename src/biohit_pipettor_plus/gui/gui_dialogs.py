@@ -2,9 +2,10 @@
 import tkinter as tk
 from tkinter import messagebox
 from biohit_pipettor_plus.deck_structure import *
-from biohit_pipettor_plus.gui.ui_helper import create_form, ScrollableDialog, create_button_bar, create_scrolled_listbox, update_detailed_info_text, draw_labware_grid
+from biohit_pipettor_plus.gui.ui_helper import create_form, ScrollableDialog, create_button_bar, create_scrolled_listbox, update_detailed_info_text, draw_labware_grid, ask_volume_dialog
 import ttkbootstrap as ttk
 import copy
+from biohit_pipettor_plus.gui.ui_helper import ScrollableTab
 
 class LabwareDialog(ScrollableDialog):
     """Refactored Manager Dialog for all Labware types."""
@@ -1126,9 +1127,8 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
         self.right_panel.pack(side=tk.RIGHT, fill=tk.Y, padx=(5, 0))
         self.right_panel.pack_propagate(False)
 
-        self.controls_container = ttk.Frame(self.right_panel)
-        self.controls_container.pack(fill=tk.BOTH, expand=True)
-
+        self.scroll_helper = ScrollableTab(self.right_panel)
+        self.controls_container = self.scroll_helper.get_frame()
         self.update_edit_panel()
 
     def refresh_view(self):
@@ -1188,12 +1188,36 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
                     self.update_edit_panel()
 
                     #update x and y position in move frame
-                    if hasattr(self, 'coordinates') and hasattr(child, 'position'):
 
-                        new_x, new_y = child.position
+                    if hasattr(self, 'coordinates') and hasattr(child, 'position'):
+                        pos = getattr(self.selected_child, "position", None)
+
+                        if pos and len(pos) >= 2:
+                            new_x, new_y = pos[0], pos[1]
+                        else:
+                            new_x, new_y = 0.0, 0.0
+
                         self.coordinates['x_cod'].set(f"{new_x:.2f}")
                         self.coordinates['y_cod'].set(f"{new_y:.2f}")
                         self.coordinates['z_cod'].set(0)
+
+                return
+
+            elif 'clickable_labware' in tags:
+                self.selected_child = self.labware  # labware is considered as child
+                self.refresh_view()
+                self.update_edit_panel()
+
+                if hasattr(self, 'coordinates') and hasattr(self.labware, 'position'):
+                    pos = getattr(self.labware, "position", None)
+
+                    if pos and len(pos) >= 2:
+                        new_x, new_y = pos[0], pos[1]
+                    else:
+                        new_x, new_y = 0.0, 0.0
+                    self.coordinates['x_cod'].set(f"{new_x:.2f}")
+                    self.coordinates['y_cod'].set(f"{new_y:.2f}")
+                    self.coordinates['z_cod'].set(0)
 
                 return
 
@@ -1259,7 +1283,7 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
             widget.destroy()
 
         # INFO BOX
-        info_text = tk.Text(self.controls_container, height=12, width=30,
+        info_text = tk.Text(self.controls_container, height=8, width=30,
                             bg="#F8F9FA", relief="flat", padx=10, pady=10)
         info_text.pack(fill=tk.X, pady=(0, 15))
 
@@ -1290,6 +1314,13 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
 
         child = self.selected_child
 
+        # Copy button
+        ttk.Button(
+            self.controls_container,
+            text="Copy Content",
+            command=self.start_copy_mode
+        ).pack(fill=tk.X, pady=5)
+
         #move frame
         move_frame = ttk.Labelframe(self.controls_container, text="Move", padding="10")
         move_frame.pack(fill=tk.X, pady=5)
@@ -1298,7 +1329,10 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
         try:
             curr_x, curr_y, curr_z = self.pipettor.xyz_position
         except:
-            curr_x, curr_y = child.position # Fallback to clicked child's coords
+            try:
+                curr_x, curr_y = child.position # Fallback to clicked child's coords
+            except:
+                curr_x, curr_y = 0,0
             curr_z = 0
         fields = [
             ("X:", "x_cod", "entry", curr_x, None, "Numeric"),
@@ -1333,18 +1367,71 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
                     self.pipettor.move_z(new_z)
                     print(f'Moving to z:{new_z}')
 
-
             except ValueError:
                 messagebox.showerror("Error", "Please enter valid numeric coordinates.")
             except Exception as e:
                 messagebox.showerror("Error", str(e))
 
+        def get_add_height():
+
+            original_tip = self.pipettor.has_tips
+            try:
+                volume = None
+
+                #all add operation require tips to be present
+                self.pipettor.has_tips = True
+
+                if self.labware.__class__.__name__ == "ReservoirHolder" or self.labware.__class__.__name__ == "Plate":
+                    volume = ask_volume_dialog(self,title="Dispense Volume (Optional)", initial_value=0)
+
+                relative_z = self.pipettor._get_relative_z(self.selected_child, remove=False, volume=volume)
+                pipettor_z = self.pipettor._get_pipettor_z_coord(self.labware, relative_z, child_item=self.selected_child)
+                self.coordinates['z_cod'].set(pipettor_z)
+
+            except Exception as e:
+                messagebox.showerror("Remove Height Error", str(e), parent=self)
+
+            finally:
+                self.pipettor.has_tips = original_tip
+
+        def get_remove_height():
+
+            original_tip = self.pipettor.has_tips
+            try:
+                volume= None
+                # all remove operation require tips to be there
+                self.pipettor.has_tips = True
+
+                #except for pick_tips
+                if self.labware.__class__.__name__ == "PipetteHolder":
+                    self.pipettor.has_tips = False
+
+                if self.labware.__class__.__name__ == "ReservoirHolder" or self.labware.__class__.__name__ == "Plate":
+                    volume = ask_volume_dialog(self,title="Aspirate Volume (Optional)", initial_value=0)
+
+                relative_z = self.pipettor._get_relative_z(self.selected_child, remove=True, volume=volume)
+                pipettor_z = self.pipettor._get_pipettor_z_coord(self.labware, relative_z, child_item=self.selected_child)
+                self.coordinates['z_cod'].set(pipettor_z)
+
+            except Exception as e:
+                messagebox.showerror("Remove Height Error", str(e), parent=self)
+            finally:
+                self.pipettor.has_tips = original_tip
+
         move_btn = ttk.Button(move_frame, text="Execute Move", command=do_move)
         move_btn.grid(row=3, column=0, columnspan=2, sticky='we', pady=5, padx=2)
 
-        if not self.pipettor:
-            move_btn.config(state='disabled')
+        remove_height_btn = ttk.Button(move_frame, text="Get Operation Remove height", command=get_remove_height)
+        remove_height_btn.grid(row=4, column=0, columnspan=2, sticky='we', pady=5, padx=2)
 
+        add_height_btn = ttk.Button(move_frame, text="Get Operation Add height", command=get_add_height)
+        add_height_btn.grid(row=5, column=0, columnspan=2, sticky='we', pady=5, padx=2)
+
+        #require labware to be placed and pipettor to be connected
+        if not self.pipettor or not self.labware.position:
+            move_btn.config(state='disabled')
+            remove_height_btn.config(state='disabled')
+            add_height_btn.config(state='disabled')
 
         # Content editing (Wells/Reservoirs)
         if hasattr(child, 'add_content'):
@@ -1353,13 +1440,6 @@ class ViewChildrenLabwareDialog(tk.Toplevel):
         # Tip editing (PipetteHolders)
         elif hasattr(child, 'is_occupied'):
             self._create_tip_editor(child)
-
-        # Copy button
-        ttk.Button(
-            self.controls_container,
-            text="Copy Content",
-            command=self.start_copy_mode
-        ).pack(fill=tk.X, pady=5)
 
         # Close button
         ttk.Button(

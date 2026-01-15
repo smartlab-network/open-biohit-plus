@@ -139,10 +139,6 @@ class FunctionWindow:
         scrollable = ScrollableTab(self.container)
         self.control_frame = scrollable.content_frame
 
-        # Title
-        ttk.Label( self.control_frame, text="Operations",
-            font=('Arial', 14, 'bold')).pack(pady=5)
-
         # === CUSTOM WORKFLOWS SECTION ===
         workflows_frame = ttk.Labelframe(self.control_frame, text="Custom Workflows", padding=10)
         workflows_frame.pack(fill=tk.X, padx=10, pady=5)
@@ -250,7 +246,7 @@ class FunctionWindow:
                                      wraplength=350,anchor="w",justify="left")
         self.stage_label.grid(row=1, column=1, sticky="ew", padx=5, pady=2)
 
-        self.edit_info_label = ttk.Label(content_frame, text="", font=('Arial', 10, 'bold'), foreground="orange",
+        self.edit_info_label = ttk.Label(content_frame, text="", font=('Arial', 14, 'bold'), foreground="orange",
                                          wraplength=350,anchor="w",justify="left")
         self.edit_info_label.grid(row=2, column=1, sticky="ew", padx=5, pady=2)
 
@@ -299,7 +295,7 @@ class FunctionWindow:
         for i in range(1, 6):
             self.frame_name.columnconfigure(i, weight=1)
 
-        ttk.Label(self.frame_name, text="Workflow Name:", font=('Arial', 11)).grid(row=0, column=0, sticky='w',
+        ttk.Label(self.frame_name, text="Workflow Name:", font=('Arial', 14)).grid(row=0, column=0, sticky='w',
                                                                                    padx=(0, 10))
 
         self.entry_name = ttk.Entry(self.frame_name)
@@ -369,13 +365,13 @@ class FunctionWindow:
             command=self._toggle_mixing_controls
         ).pack(side=tk.LEFT)
 
-        ttk.Label(mixing_frame, text="Volume:", font=('Arial', 9)).pack(side=tk.LEFT, padx=(10, 5))
+        ttk.Label(mixing_frame, text="Volume:", font=('Arial', 11)).pack(side=tk.LEFT, padx=(10, 5))
 
         self.mix_volume_var = tk.StringVar(value="100")
         self.mix_volume_entry = ttk.Entry(mixing_frame, textvariable=self.mix_volume_var, width=8, state='disabled')
         self.mix_volume_entry.pack(side=tk.LEFT)
 
-        ttk.Label(mixing_frame, text="µL", font=('Arial', 9)).pack(side=tk.LEFT, padx=(2, 5))
+        ttk.Label(mixing_frame, text="µL", font=('Arial', 11)).pack(side=tk.LEFT, padx=(2, 5))
 
         ttk.Separator(liquid_frame, orient='horizontal').pack(fill=tk.X, pady=5)
 
@@ -395,7 +391,7 @@ class FunctionWindow:
         self.update_foc_section()
 
         # === SYSTEM OPERATIONS (COLLAPSIBLE) ===
-        self.system_collapsible = CollapsibleFrame(parent_frame, text="System", collapsed=False)
+        self.system_collapsible = CollapsibleFrame(parent_frame, text="System", collapsed=True)
         self.system_collapsible.pack(fill=tk.X, pady=5, padx=5)
 
         system_buttons = [
@@ -406,6 +402,7 @@ class FunctionWindow:
 
         if self.mode == "direct":
             system_buttons.extend([
+                {"text": "⚠ Force Pick Tips", "command": self.callback_force_pick},
                 {"text": "⚠ Force Eject Tips", "command": self.callback_force_eject},
                 {"text": "⚠ Force Aspirate", "command": self.callback_force_aspirate},
                 {"text": "⚠ Force Dispense", "command": self.callback_force_dispense}
@@ -450,7 +447,7 @@ class FunctionWindow:
     def _handle_volume_step(self, session: OperationSession):
         """Handle volume input step"""
         self.set_stage("")
-        volume = self.ask_volume_dialog(
+        volume = ask_volume_dialog(self.get_master_window(),
             title=f"{session.config['display_name']} Volume",
             initial_value=100
         )
@@ -466,7 +463,7 @@ class FunctionWindow:
         self.set_stage("")
         label = session.config.get('wait_time_label', 'Wait time (sec):')
 
-        wait_time = self.ask_volume_dialog(
+        wait_time = ask_volume_dialog(self.get_master_window(),
             title=f"{session.config['display_name']}",
             initial_value=0,
             label_text=label
@@ -1247,15 +1244,15 @@ class FunctionWindow:
             if 'labware_id' in operation.parameters:
                 op_text += f": {operation.parameters['labware_id']}"
 
-            label = ttk.Label(frame, text=op_text, font=("Helvetica", 11))
+            label = ttk.Label(frame, text=op_text, font=("Helvetica", 14))
             label.grid(row=0, column=1, sticky="w", padx=5)
 
             # Action buttons using create_button_bar
             button_configs = [
+                {"text": "i", "command": lambda i=idx: self.update_operation_info(i), "style": "primary-outline"},
                 {"text": "↕", "command": lambda i=idx: self.reorder_operation(i), "style": "info-outline"},
                 {"text": "✏", "command": lambda i=idx: self.launch_edit_callback(i), "style": "warning-outline"},
-                {"text": "🗑", "command": lambda i=idx: self.remove_operation_from_workflow(i),
-                 "style": "danger-outline"}
+                {"text": "🗑", "command": lambda i=idx: self.remove_operation_from_workflow(i), "style": "danger-outline"}
             ]
 
             # Create button container in frame
@@ -1276,17 +1273,11 @@ class FunctionWindow:
         self.update_copy_paste_buttons()
 
     # --- Helper Methods ---
-    def launch_edit_callback(self, index: int):
-        """Launch the appropriate callback for editing this operation"""
-
+    def update_operation_info(self, index: int,) -> Optional[Operation]:
         if index >= len(self.workflow.operations):
-            return
+            return None
 
         operation = self.workflow.operations[index]
-
-        # Store edit context
-        self.edit_mode = True
-        self.edit_index = index
 
         # Clear middle column
         self.clear_grid(self.second_column_frame)
@@ -1296,6 +1287,20 @@ class FunctionWindow:
         info_lines.extend([f"{key}: {value}" for key, value in operation.parameters.items()])
         formatted_text = "\n".join(info_lines)
         self.edit_info_label.config(text=formatted_text)
+
+        return operation
+
+
+    def launch_edit_callback(self, index: int):
+        """Launch the appropriate callback for editing this operation"""
+
+        operation = self.update_operation_info(index)
+        if operation is None:
+            return
+
+        # Store edit context
+        self.edit_mode = True
+        self.edit_index = index
 
         operation_key = operation.operation_type.value
 
@@ -1311,6 +1316,8 @@ class FunctionWindow:
         # Clear edit info label
         if hasattr(self, 'edit_info_label'):
             self.edit_info_label.config(text="")
+        if self.mode == "builder":
+            self.clear_grid(self.second_column_frame)
 
     def toggle_operation_selection(self, index: int, var: tk.BooleanVar):
         """Toggle selection state of an operation"""
@@ -1360,7 +1367,7 @@ class FunctionWindow:
                 self.foc_frame,
                 text=f"✓ Plate: {self.pipettor.foc_plate_name}",
                 foreground='green',
-                font=('Arial', 9, 'bold')
+                font=('Arial', 11, 'bold')
             ).pack(anchor='w', pady=(0, 5))
 
             # Run button - opens dialog when clicked
@@ -1383,7 +1390,7 @@ class FunctionWindow:
                 self.foc_frame,
                 text="Configure bat script and plate name\nin 'Low level parameters' tab.",
                 foreground="gray",
-                font=('Arial', 9, 'italic'),
+                font=('Arial', 11, 'italic'),
                 justify=tk.LEFT
             ).pack(anchor="w")
 
@@ -1620,32 +1627,6 @@ class FunctionWindow:
             messagebox.showerror("Error", f"Workflow '{workflow_name}' not found in memory")
             return
 
-        # Extract labware info from workflow
-
-        labware_info = {}
-        for op in workflow.operations:
-            for param_value in op.parameters.values():
-                if isinstance(param_value, dict) and 'id' in param_value and 'type' in param_value:
-                    labware_info[param_value['id']] = param_value['type']
-
-        current_ids = {lw.labware_id for lw in self.dict_top_labware.values()}
-        missing_ids = set(labware_info.keys()) - current_ids
-        present_ids = set(labware_info.keys()) & current_ids
-
-        if missing_ids:
-            mapping = self.show_unified_mapping_dialog(labware_info, missing_ids, present_ids)
-            if mapping is None:
-                return  # User cancelled
-
-            mapped_workflow = copy.deepcopy(workflow)
-            for op in mapped_workflow.operations:
-                for param_value in op.parameters.values():
-                    if isinstance(param_value, dict) and 'id' in param_value:
-                        if param_value['id'] in mapping:
-                            param_value['id'] = mapping[param_value['id']]
-        else:
-            mapped_workflow = copy.deepcopy(workflow)
-
         # Open workflow builder with this workflow loaded
         builder = FunctionWindow(
             deck=self.deck,
@@ -1657,8 +1638,8 @@ class FunctionWindow:
         # Give builder a reference to this direct mode window
         builder.parent_function_window = self
 
-        # Load the mapped_workflow into the builder without executing operations
-        builder.workflow = mapped_workflow
+        # Load the workflow into the builder without executing operations
+        builder.workflow = copy.deepcopy(workflow)
         builder.entry_name.delete(0, tk.END)
         builder.entry_name.insert(0, workflow.name)
 
@@ -1677,6 +1658,8 @@ class FunctionWindow:
         # Set up close handler
         if hasattr(builder, 'window_build_func'):
             builder.window_build_func.protocol("WM_DELETE_WINDOW", builder.callback_close_builder)
+
+        builder.callback_remap_labware(check=True)
 
     def save_selected_workflow_to_file(self):
         """Save the selected workflow to a JSON file (with file dialog)"""
@@ -1748,7 +1731,7 @@ class FunctionWindow:
         messagebox.showinfo("Deleted", f"Workflow '{workflow_name}' removed from memory.")
 
     # ========== HELPER METHODS ==========
-    def callback_remap_labware(self):
+    def callback_remap_labware(self, check: bool = False):
         """Manual remap button - remap all labware in current workflow"""
         if not self.workflow or not self.workflow.operations:
             messagebox.showwarning("Empty Workflow", "No operations to remap")
@@ -1769,6 +1752,9 @@ class FunctionWindow:
         current_ids = {lw.labware_id for lw in self.dict_top_labware.values()}
         missing_ids = set(labware_info.keys()) - current_ids
         present_ids = set(labware_info.keys()) & current_ids
+
+        if check and missing_ids == set():
+            return
 
         # Show unified mapping dialog
         mapping = self.show_unified_mapping_dialog(labware_info, missing_ids, present_ids)
@@ -1865,7 +1851,7 @@ class FunctionWindow:
                 ttk.Label(
                     dialog.scroll_frame,
                     text=f"No {labware_type.__name__} found on deck",
-                    font=('Arial', 12),
+                    font=('Arial', 13),
                     foreground='red'
                 ).pack(pady=20, padx=20)
 
@@ -1884,7 +1870,7 @@ class FunctionWindow:
                     ttk.Label(
                         item_frame,
                         text=f"Slot: {slot_id}",
-                        font=('Arial', 11, 'bold')
+                        font=('Arial', 13, 'bold')
                     ).pack(anchor="w", pady=(0, 2))
 
                     # Create callback
@@ -2078,14 +2064,14 @@ class FunctionWindow:
         ttk.Label(
             self.second_column_frame,
             text=f"Position for: {operation_name}",
-            font=('Arial', 12, 'bold')
+            font=('Arial', 14, 'bold')
         ).grid(row=0, column=0, pady=10, padx=10, sticky='w')
 
         # Instructions
         ttk.Label(
             self.second_column_frame,
             text="Select where to insert this operation:",
-            font=('Arial', 10)
+            font=('Arial', 13)
         ).grid(row=1, column=0, pady=5, padx=10, sticky='w')
 
         # Position frame
@@ -2095,7 +2081,7 @@ class FunctionWindow:
         ttk.Label(
             pos_frame,
             text="Position:",
-            font=('Arial', 11)
+            font=('Arial', 13)
         ).pack(side=tk.LEFT, padx=(0, 10))
 
         # Spinbox
@@ -2106,7 +2092,7 @@ class FunctionWindow:
             to=total_ops + 1,
             textvariable=position_var,
             width=8,
-            font=('Arial', 12)
+            font=('Arial', 13)
         )
         spinbox.pack(side=tk.LEFT, padx=5)
 
@@ -2132,7 +2118,6 @@ class FunctionWindow:
         btn_config =[{'text': 'confirm', 'command': on_confirm},
                      {'text': 'cancel', 'command': on_cancel},]
         create_button_bar(button_frame,btn_config, btns_per_row=2)
-
 
         # Focus and select
         spinbox.focus()
@@ -2197,7 +2182,7 @@ class FunctionWindow:
             ttk.Label(
                 header,
                 text=f"Current: {init_v:.1f} mm",
-                font=('Arial', 9, 'italic'),
+                font=('Arial', 11, 'italic'),
                 foreground='blue'
             ).pack(side=tk.LEFT, padx=(10, 0))
 
@@ -2207,13 +2192,13 @@ class FunctionWindow:
             ttk.Label(
                 header,
                 text=range_txt,
-                font=('Arial', 9),
+                font=('Arial', 11),
                 foreground='gray'
             ).pack(side=tk.RIGHT)
 
             # Entry
             var = tk.StringVar(value=str(init_v))
-            entry = ttk.Entry(row, textvariable=var, font=('Arial', 12), justify='center')
+            entry = ttk.Entry(row, textvariable=var, font=('Arial', 14), justify='center')
             entry.pack(fill=tk.X)
 
             # Store metadata for the OK logic
@@ -2297,90 +2282,6 @@ class FunctionWindow:
         # If single axis, return float. If multiple, return tuple.
         return final_values[0] if len(final_values) == 1 else tuple(final_values)
 
-    def ask_volume_dialog(self, title="Enter Volume", initial_value=0, label_text="Volume per well (ul):")-> Optional[float]:
-
-
-        """
-        Create a simple, focused dialog for numeric input.
-
-        Returns
-        -------
-            Value entered by user(float), or None if cancelled
-        """
-        dialog = tk.Toplevel(self.get_master_window())
-        dialog.title(title)
-        dialog.geometry("300x150")
-        dialog.resizable(False, False)
-        dialog.transient(self.get_master_window())
-        dialog.grab_set()
-
-        # Center the dialog
-        dialog.update_idletasks()
-        x = (dialog.winfo_screenwidth() // 2) - (300 // 2)
-        y = (dialog.winfo_screenheight() // 2) - (150 // 2)
-        dialog.geometry(f"300x150+{x}+{y}")
-
-        result = {'value': None}
-
-        # Main frame with padding
-        main_frame = ttk.Frame(dialog, padding=20)
-        main_frame.pack(fill=tk.BOTH, expand=True)
-
-        # Label
-        ttk.Label(
-            main_frame,
-            text=label_text,
-            font=('Arial', 11)
-        ).pack(pady=(0, 10))
-
-        # Entry
-        value_var = tk.StringVar(value=str(initial_value))
-        entry = ttk.Entry(main_frame, textvariable=value_var, font=('Arial', 12), justify='center')
-        entry.pack(fill=tk.X, pady=(0, 15))
-        entry.select_range(0, tk.END)
-        entry.focus()
-
-        # Button frame
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill=tk.X)
-        button_frame.columnconfigure(0, weight=1)
-        button_frame.columnconfigure(1, weight=1)
-
-        def on_ok():
-            try:
-                val = float(value_var.get())
-                if val < 0:
-                    messagebox.showerror("Invalid Input", "Value must be non-negative", parent=dialog)
-                    return
-                result['value'] = val
-                dialog.destroy()
-            except ValueError:
-                messagebox.showerror("Invalid Input", "Please enter a valid number", parent=dialog)
-
-        def on_cancel():
-            dialog.destroy()
-
-        ttk.Button(
-            button_frame,
-            text="OK",
-            command=on_ok,
-            bootstyle="success"
-        ).grid(row=0, column=0, sticky='ew', padx=(0, 5))
-
-        ttk.Button(
-            button_frame,
-            text="Cancel",
-            command=on_cancel,
-            bootstyle="secondary"
-        ).grid(row=0, column=1, sticky='ew', padx=(5, 0))
-
-        # Bind Enter key to OK
-        entry.bind('<Return>', lambda e: on_ok())
-        dialog.bind('<Escape>', lambda e: on_cancel())
-
-        dialog.wait_window()
-        return result['value']
-
     def mode_dependent_action(self, operation):
         if self.mode == "direct":
             self.stage_operation(operation)
@@ -2398,16 +2299,23 @@ class FunctionWindow:
         self.current_session = OperationSession(operation_key, config)
         self.run_operation_wizard()
 
+    def callback_force_pick(self):
+        height = self.ask_position_dialog([("Z", 0.0, self.deck.range_z, 0)])
+        if height is None:
+            return
+        self.pipettor.pick_tip(height)
+        self.pipettor.has_tips = True
+
     def callback_force_eject(self):
         self.pipettor.eject_tip()
         self.pipettor.has_tips = False
 
     def callback_force_aspirate(self):
-        volume = self.ask_volume_dialog(title="Aspirate Volume", initial_value=0)
+        volume = ask_volume_dialog(self.get_master_window(), title="Aspirate Volume", initial_value=0)
         if volume:
             self.pipettor.aspirate(volume)
 
     def callback_force_dispense(self):
-        volume = self.ask_volume_dialog(title="Dispense Volume", initial_value=0)
+        volume = ask_volume_dialog(self.get_master_window(), title="Dispense Volume", initial_value=0)
         if volume:
             self.pipettor.dispense(volume)

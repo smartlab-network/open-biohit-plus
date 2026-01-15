@@ -45,7 +45,11 @@ Labware placement and editing:
 
 After Labware is placed
 ------------------------------
-TODO - write view children labware. and validatew
+It is important to validate a labware paramters atleast once. This can be done once the labware is placed.
+
+Click on **Edit children lw** button in Deck editor tab and test out position, add, and remove height for the labware.
+These values are passed on to the pipettor during operations and hence it is important to confirm them. Adjustment to
+the parameters have to be made to get desired positions and z values.
 
 Saving and Loading Decks
 ------------------------

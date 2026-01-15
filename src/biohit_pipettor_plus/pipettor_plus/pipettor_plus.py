@@ -271,7 +271,7 @@ class PipettorPlus:
 
                 # Pick tips at the specified height
                 first_holder = holders_to_use[0]
-                relative_z = getattr(pipette_holder, 'remove_height', pipette_holder.size_z)
+                relative_z = self._get_relative_z(pipette_holder, remove=True)
                 pipettor_z = self._get_pipettor_z_coord(pipette_holder, relative_z, child_item=first_holder)
 
                 self.move_xy(x, y)
@@ -332,7 +332,7 @@ class PipettorPlus:
 
                 x, y = holder.position
 
-                relative_z = getattr(pipette_holder, 'remove_height', pipette_holder.size_z)
+                relative_z = self._get_relative_z(pipette_holder, remove=True)
                 pipettor_z = self._get_pipettor_z_coord(pipette_holder, relative_z, child_item=holder)
 
                 self.move_xy(x, y)
@@ -433,7 +433,7 @@ class PipettorPlus:
 
                 # Return tips at the specified height
                 first_holder = holders_to_use[0]
-                relative_z = getattr(pipette_holder, 'add_height', pipette_holder.size_z)
+                relative_z = self._get_relative_z(pipette_holder, remove=False)
                 pipettor_z = self._get_pipettor_z_coord(pipette_holder, relative_z, child_item=first_holder)
 
                 self.move_xy(x, y)
@@ -497,7 +497,7 @@ class PipettorPlus:
                     continue
 
                 x, y = holder.position
-                relative_z = getattr(pipette_holder, 'add_height', pipette_holder.size_z)
+                relative_z = self._get_relative_z(pipette_holder, remove=False)
                 pipettor_z = self._get_pipettor_z_coord(pipette_holder, relative_z, child_item=holder)
 
                 self.move_xy(x, y)
@@ -576,7 +576,7 @@ class PipettorPlus:
             raise ValueError("discard_tips only works with TipDropzone")
 
         x, y = tip_dropzone.position
-        relative_z = tip_dropzone.drop_height_relative
+        relative_z = self._get_relative_z(tip_dropzone)
         pipettor_z = self._get_pipettor_z_coord(tip_dropzone, relative_z, child_item=None)
 
         self.move_xy(x, y)
@@ -1319,30 +1319,10 @@ class PipettorPlus:
         # Calculate center position for robot movement
         x, y = self._get_robot_xy_position(items)
 
-        # Use first item for height calculation (all items should be at same Z level)
+        # Use first item for height calculation
         item = items[0]
+        relative_z = self._get_relative_z(item, remove=True, volume=volume)
         parent_labware = self._find_parent_labware(item)
-
-        # Determine RELATIVE height from labware top
-        if hasattr(item, 'shape') and item.shape:
-            volume_per_tip = volume / self.tip_count
-            if parent_labware.each_tip_needs_separate_item():
-                relative_z = calculate_dynamic_remove_height(item, volume_per_tip)
-            else:
-                relative_z = calculate_dynamic_remove_height(item, volume)
-            liquid_height = calculate_liquid_height(item)
-
-            print(f"  → Dynamic aspiration: {relative_z:.1f}mm from bottom "
-                  f"(liquid: {liquid_height:.1f}mm, shape: {item.shape})")
-
-        elif hasattr(parent_labware, 'remove_height'):
-            relative_z = parent_labware.remove_height
-            print(f"  → Fixed aspiration: {relative_z:.1f}mm from bottom")
-
-        else:
-            relative_z = item.size_z * 0.75
-            print(f"  → Fallback aspiration: 5 mm above bottom")
-
         pipettor_z = self._get_pipettor_z_coord(parent_labware, relative_z, child_item=item)
         print(f"x, y, z = {x}, {y}, {pipettor_z}")
         self.move_xy(x, y)
@@ -1373,26 +1353,7 @@ class PipettorPlus:
         # Use first item for height calculation
         item = items[0]
         parent_labware = self._find_parent_labware(item)
-
-        # Determine RELATIVE height from labware BOTTOM
-        if hasattr(item, 'shape') and item.shape:
-            volume_per_tip = volume / self.tip_count
-            if parent_labware.each_tip_needs_separate_item():
-                relative_z = calculate_dynamic_remove_height(item, -volume_per_tip) + 5
-            else:
-                relative_z = calculate_dynamic_remove_height(item, -volume) + 5
-            liquid_height = calculate_liquid_height(item)
-
-            print(f"  → Dynamic dispensing: {relative_z:.1f}mm from bottom "
-                  f"(liquid: {liquid_height:.1f}mm, shape: {item.shape})")
-
-        elif hasattr(parent_labware, 'add_height'):
-            relative_z = parent_labware.add_height
-            print(f"  → Fixed dispensing: {relative_z:.1f}mm from bottom")
-        else:
-            relative_z = item.size_z
-            print(f"  → Fallback dispensing: item.size_z")
-
+        relative_z = self._get_relative_z(item, remove=False, volume=volume)
         pipettor_z = self._get_pipettor_z_coord(parent_labware, relative_z, child_item=item)
         print(f"x, y, z = {x}, {y}, {pipettor_z}")
 
@@ -1594,6 +1555,94 @@ class PipettorPlus:
 
         raise ValueError(f"Could not find parent labware for item {item.labware_id}")
 
+    def _get_relative_z(self, item: Labware, remove: bool = True, volume: float= None) -> float:
+        """
+        Get the relative z of the item.
+
+        Parameters
+         ----------
+        item : Labware
+            The parent labware (Plate, ReservoirHolder, PipetteHolder, etc.)
+
+        remove: bool
+            Whether to aspirate medium/pick tip or to add medium/eject tip.
+
+        volume : float, optional
+            Volume for dynamic height calculation (if applicable)
+        """
+
+        item_type = item.__class__.__name__
+
+        if item_type == "TipDropzone":
+            return getattr(item, 'drop_height_relative', item.size_z)
+
+        if item_type == "IndividualPipetteHolder":
+            parent_labware = self._find_parent_labware(item)
+            if remove:
+                return getattr(parent_labware, 'remove_height', item.size_z)
+            else:
+                return getattr(parent_labware, 'add_height', item.size_z)
+
+        if item_type == "PipetteHolder":
+            if remove:
+                return getattr(item, 'remove_height', item.size_z)
+            else:
+                return getattr(item, 'add_height', item.size_z)
+
+        if item_type in ["Reservoir", "Well"]:
+            parent_labware = self._find_parent_labware(item)
+
+            if remove:
+                # Aspiration logic
+                if volume and hasattr(item, 'shape') and item.shape:
+                    # Dynamic aspiration based on liquid level
+                    if parent_labware.each_tip_needs_separate_item():
+                        volume_per_tip = volume / self.tip_count
+                        relative_z = calculate_dynamic_remove_height(item, volume_per_tip)
+                    else:
+                        relative_z = calculate_dynamic_remove_height(item, volume)
+                    liquid_height = calculate_liquid_height(item)
+
+                    print(f"  → Dynamic aspiration: {relative_z:.1f}mm from bottom "
+                          f"(liquid: {liquid_height:.1f}mm, shape: {item.shape})")
+                    return relative_z
+
+                elif hasattr(parent_labware, 'remove_height'):
+                    relative_z = parent_labware.remove_height
+                    print(f"  → Fixed aspiration: {relative_z:.1f}mm from bottom")
+                    return relative_z
+
+                else:
+                    relative_z = item.size_z * 0.75
+                    print(f"  → Fallback aspiration: 5 mm above bottom")
+                    return relative_z
+
+            else:
+                # Determine RELATIVE height from labware BOTTOM
+                if volume and hasattr(item, 'shape') and item.shape:
+                    volume_per_tip = volume / self.tip_count
+                    if parent_labware.each_tip_needs_separate_item():
+                        relative_z = calculate_dynamic_remove_height(item, -volume_per_tip) + 5
+                    else:
+                        relative_z = calculate_dynamic_remove_height(item, -volume) + 5
+                    liquid_height = calculate_liquid_height(item)
+
+                    print(f"  → Dynamic dispensing: {relative_z:.1f}mm from bottom "
+                          f"(liquid: {liquid_height:.1f}mm, shape: {item.shape})")
+                    return relative_z
+
+                elif hasattr(parent_labware, 'add_height'):
+                    relative_z = parent_labware.add_height
+                    print(f"  → Fixed dispensing: {relative_z:.1f}mm from bottom")
+                    return relative_z
+                else:
+                    relative_z = item.size_z
+                    print(f"  → Fallback dispensing: item.size_z")
+                    return relative_z
+
+        print(f"  → Warning: Unknown item type '{item_type}', using size_z")
+        return item.size_z
+
     def _get_pipettor_z_coord(self, labware:Labware, relative_z: float, child_item: Labware = None) -> float:
         """
         Convert relative height to absolute height, passable to pipettor with and without tips.
@@ -1653,7 +1702,7 @@ class PipettorPlus:
 
         if self.has_tips:
             pipettor_z = deck_range_z - absolute_height - self.tip_length
-            print(f"pipettor_z({pipettor_z}) = deck_range_z({deck_range_z}) - absolute_height ({absolute_height}) - self.tip_length({self.tip_length})")
+            print(f" has_tips: pipettor_z({pipettor_z}) = deck_range_z({deck_range_z}) - absolute_height ({absolute_height}) - self.tip_length({self.tip_length})")
             # Validation with tips
             if pipettor_z < 0:
                 raise ValueError(
@@ -1676,8 +1725,7 @@ class PipettorPlus:
                 )
             elif pipettor_z > Z_MAX:
                 raise ValueError(f"pipettor_z cannot be higher than Z_MAX: {pipettor_z:.1f}mm ")
-        print(f"{labware.labware_id}: {pipettor_z}mm")
-        return pipettor_z
+        return round(pipettor_z, 2)
 
     def _get_robot_xy_position(self, items: List[Labware]) -> tuple[float, float]:
         """
@@ -1749,5 +1797,3 @@ class PipettorPlus:
                   f"spanning ({x_first:.1f},{y_first:.1f}) to ({x_last:.1f},{y_last:.1f})")
 
         return x_center, y_center
-
-

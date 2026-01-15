@@ -661,11 +661,6 @@ class DeckGUI:
         if not labware:
             return
 
-        # Only works for composite labware
-        if not hasattr(labware, "_rows") and not hasattr(labware, "_cols"):
-            messagebox.showinfo("Not Applicable",
-                                f"{labware.__class__.__name__} doesn't have child items to view")
-            return
 
         dialog = ViewChildrenLabwareDialog(self.root, labware, pipettor=getattr(self, 'pipettor', None))
         self.root.wait_window(dialog)
