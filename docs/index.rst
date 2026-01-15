@@ -21,8 +21,8 @@ Key Features
 ^^^^^^^^^^^^
 
 * **Interactive GUI** - Custom deck, slot, and labware definition with easy visualization
-* **Flexible Operation** - Works with both single and multi-channel pipettors
-* **Labware-Based Operations** - Direct implementation of operations like pick_tips, return_tips,etc.
+* **Flexible** - Works with both single and multi-channel pipettors
+* **Direct Operations** - Direct implementation of operations like pick_tips, return_tips,etc
 * **Workflow Builder** - Build, save, and run complex operation sequences
 * **Operation Logging** - Complete tracking of all pipetting operations
 * **Save & Load** - Persistent storage of workflows and deck configurations

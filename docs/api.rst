@@ -5,14 +5,14 @@ API Reference
 
 Deck
 ----
-.. autoclass:: Deck
+.. autoclass:: biohit_pipettor_plus.deck_structure.Deck
    :members:
    :undoc-members:
    :show-inheritance:
 
 Slot
 ----
-.. autoclass:: Slot
+.. autoclass:: biohit_pipettor_plus.deck_structure.Slot
    :members:
    :undoc-members:
    :show-inheritance:
@@ -20,14 +20,14 @@ Slot
 
 Labware
 --------
-.. autoclass:: Labware
+.. autoclass:: biohit_pipettor_plus.deck_structure.Labware
    :members:
    :undoc-members:
    :show-inheritance:
 
 Plate
 -----
-.. autoclass:: Plate
+.. autoclass:: biohit_pipettor_plus.deck_structure.Plate
    :members:
    :undoc-members:
    :show-inheritance:
@@ -35,49 +35,49 @@ Plate
 
 Well
 ----
-.. autoclass:: Well
+.. autoclass:: biohit_pipettor_plus.deck_structure.Well
    :members:
    :undoc-members:
    :show-inheritance:
 
 PipetteHolder
 -------------
-.. autoclass:: PipetteHolder
+.. autoclass:: biohit_pipettor_plus.deck_structure.PipetteHolder
    :members:
    :undoc-members:
    :show-inheritance:
 
 IndividualPipetteHolder
 --------------------------
-.. autoclass:: IndividualPipetteHolder
+.. autoclass:: biohit_pipettor_plus.deck_structure.IndividualPipetteHolder
    :members:
    :undoc-members:
    :show-inheritance:
 
 ReservoirHolder
 ------------------
-.. autoclass:: ReservoirHolder
+.. autoclass:: biohit_pipettor_plus.deck_structure.ReservoirHolder
    :members:
    :undoc-members:
    :show-inheritance:
 
 Reservoir
 -----------
-.. autoclass:: Reservoir
+.. autoclass:: biohit_pipettor_plus.deck_structure.Reservoir
    :members:
    :undoc-members:
    :show-inheritance:
 
 TipDropzone
 ------------
-.. autoclass:: TipDropzone
+.. autoclass:: biohit_pipettor_plus.deck_structure.TipDropzone
    :members:
    :undoc-members:
    :show-inheritance:
 
 Stack
 -------
-.. autoclass:: Stack
+.. autoclass:: biohit_pipettor_plus.deck_structure.Stack
    :members:
    :undoc-members:
    :show-inheritance:
@@ -85,7 +85,7 @@ Stack
 
 PipettorPlus
 --------------
-.. autoclass:: PipettorPlus
+.. autoclass:: biohit_pipettor_plus.pipettor_plus.pipettor_plus.PipettorPlus
    :members:
    :undoc-members:
    :show-inheritance:

@@ -1,8 +1,9 @@
 Direct Operation
 ==================
 
-Operations on the pipettor can be executed directly or thorugh a wrokflow. Both are availiable once
-the pipettor is connected. Before running an operation/workflwo, they are validated to ensure they can be run. For eg,
+Operations on the pipettor can be executed directly or thorugh a wrokflow. Both are availiable once the pipettor is connected.
+
+Before running an operation/workflwo, they are validated to ensure they can be run. For eg,
 if user select inidivualpipietteholders with no tips for pick tip operation, then the validation will fail. Similarly,
 aspirating more volume than available or filling more than capacity will lead to failure.
 
@@ -60,4 +61,5 @@ then return_tip and pick_tip is run.
 Start_measurement
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This runs a bat chosen bat script after a period of incubation.
+This runs the chosen bat script after a period of incubation. Example use - to measure force of measurement of beating EHMs.
+

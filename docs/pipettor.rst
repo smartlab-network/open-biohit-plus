@@ -11,9 +11,7 @@ Documentation:
 `open-biohit (biohit-pipettor-python) <https://umg-pharma-lab-automation.pages.gwdg.de/biohit-pipettor-python/>`_
 
 The ``open-biohit`` package communicates with the pipettor via a **32-bit vendor DLL**. It provides access to
-basic pipetting commands such as move_x, move_y, pick_tip, aspirate:
-
-Notes from the package documentation:
+basic pipetting commands such as move_x, move_y, pick_tip, aspirate: Notes from open-biohit documentation:
 
 * The pipettor may be **single-channel** or **multi-channel**.
 * It supports tips of **200 µL** and **1000 µL**.
@@ -57,13 +55,7 @@ Reference document:
 
 Troubleshooting connection issues
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Check the following:
 
-* Ensure the pipettor USB driver is installed.
-* Confirm the pipettor is powered on and responsive.
-* Clear any pending error/backlog state.
-  For Biohit pipettors, a **blue light** may indicate a backlog error.
-* Restart the program and try connecting again.
-* Try connecting without the GUI using the base package.
+See :ref:`Pipettor connection issues <pipettor-connection-issues>`.
 
-If the error cannot be cleared using the steps above, a technician may be required.
+

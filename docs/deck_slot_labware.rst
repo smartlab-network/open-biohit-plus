@@ -14,11 +14,9 @@ The deck-slot-labware system creates a hierarchical structure that you interact 
 
 * :class:`~biohit_pipettor_plus.Slot`
   - Individual positions on the deck that hold labware
-  - Link to API
 
 * :class:`~biohit_pipettor_plus.Labware`
   - Physical items like tip racks, well plates, and reservoirs
-  - Link to API
 
 This hierarchical organization allows for precise positioning and tracking of all components
 during automated pipetting operations. Each item has a unique id.
