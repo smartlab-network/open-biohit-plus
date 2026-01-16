@@ -714,12 +714,14 @@ class DeckGUI:
             if isinstance(dialog.result, Plate) and dialog.selected_well:
                 if dialog.selected_well not in self.available_wells:
                     self.available_wells.append(dialog.selected_well)
-                elif isinstance(dialog.result, PipetteHolder) and dialog.selected_holder:  # ← Fix here
-                    if dialog.selected_holder not in self.available_individual_holders:  # ← And here
-                        self.available_individual_holders.append(dialog.selected_holder)  # ← And here
+            elif isinstance(dialog.result, PipetteHolder) and dialog.selected_holder:
+                if dialog.selected_holder not in self.available_individual_holders:
+                    self.available_individual_holders.append(dialog.selected_holder)
+            elif isinstance(dialog.result, ReservoirHolder) and dialog.res_template:
+                if dialog.res_template not in self.available_reservoirs:
+                    self.available_reservoirs.append(dialog.res_template)
 
-
-            self.unplaced_labware.append(dialog.result)
+            self.unplaced_labware.append(new_labware)
             self.labware_view_mode.set("unplaced")
             self.update_item_list('labware')
 
@@ -734,8 +736,6 @@ class DeckGUI:
                     labware,
                     dialog.result['slot_id'],
                     dialog.result['min_z'],
-                    dialog.result['x_spacing'],
-                    dialog.result['y_spacing']
                 )
                 self.unplaced_labware.remove(labware)
                 self.draw_deck()
@@ -1083,7 +1083,7 @@ class DeckGUI:
         """Create a new deck using a unified dialog"""
         dialog = tk.Toplevel(self.root)
         dialog.title("Create New Deck")
-        dialog.geometry("350x250")
+        dialog.geometry("450x450")
         dialog.transient(self.root)
         dialog.grab_set()
 

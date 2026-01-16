@@ -72,7 +72,10 @@ class LabwareDialog(ScrollableDialog):
                 ("Rows (Y):", "ry", "entry", "8", None, "numeric"),
                 ("Cols (X):", "cx", "entry", "12", None, "numeric"),
                 ("Add Height:", "add", "entry", "0.0", None, "numeric"),
-                ("Rem Height:", "rem", "entry", "0.0", None, "numeric")
+                ("Rem Height:", "rem", "entry", "0.0", None, "numeric"),
+                ("X_spacing:", "x_sp", "entry", "0.0", None, "numeric"),
+                ("Y_spacing:", "y_sp", "entry", "0.0", None, "numeric"),
+
             ])
             self.create_selection_row(spec_frame, "Well", self.select_well)
 
@@ -82,7 +85,9 @@ class LabwareDialog(ScrollableDialog):
                 ("Hooks Y:", "hy", "entry", "1", None, "numeric"),
                 ("Add Height:", "add", "entry", "0.0", None, "numeric"),
                 ("Rem Height:", "rem", "entry", "20.0", None, "numeric"),
-                ("One reservoir per tip :", "sep_item", "checkbox", False, None, None)
+                ("One reservoir per tip :", "sep_item", "checkbox", False, None, None),
+                ("X_spacing:", "x_sp", "entry", "0.0", None, "numeric"),
+                ("Y_spacing:", "y_sp", "entry", "0.0", None, "numeric")
             ])
             self.create_selection_row(spec_frame, "Mapping", self.launch_mapping_dialog)
 
@@ -91,7 +96,9 @@ class LabwareDialog(ScrollableDialog):
                 ("Holders X:", "hx", "entry", "1", None, "numeric"),
                 ("Holders Y:", "hy", "entry", "1", None, "numeric"),
                 ("Add Height:", "add", "entry", "0.0", None, "numeric"),
-                ("Rem Height:", "rem", "entry", "0.0", None, "numeric")
+                ("Rem Height:", "rem", "entry", "0.0", None, "numeric"),
+                ("X_spacing:", "x_sp", "entry", "0.0", None, "numeric"),
+                ("Y_spacing:", "y_sp", "entry", "0.0", None, "numeric")
             ])
             self.create_selection_row(spec_frame, "IndividualHolder", self.select_holder)
 
@@ -171,11 +178,14 @@ class LabwareDialog(ScrollableDialog):
 
             # Handle Specific Inputs (Plate, Holder, etc.)
             spec_numeric = ["ry", "cx", "hx", "hy", "add", "rem", "dh"]
+            spec_optional = ["x_sp", "y_sp"]
 
             # id and shape are optional strings
-            s = self.get_inputs(self.spec_inputs, numeric_keys=spec_numeric) if hasattr(self, 'spec_inputs') else {}
+            s = self.get_inputs(self.spec_inputs, numeric_keys=spec_numeric, optional_keys=spec_optional) if hasattr(self, 'spec_inputs') else {}
 
             lw_type = self.labware_type.get()
+            x_sp = float(s.get("x_sp") or 0.0)
+            y_sp = float(s.get("y_sp") or 0.0)
 
             # 5. Object Dispatching
             if lw_type == "Plate":
@@ -186,7 +196,9 @@ class LabwareDialog(ScrollableDialog):
                     wells_y=int(s['ry']),
                     well=self.selected_well,
                     add_height=s['add'],
-                    remove_height=s['rem']
+                    remove_height=s['rem'],
+                    x_spacing=x_sp,
+                    y_spacing=y_sp
                 )
 
             elif lw_type == "ReservoirHolder":
@@ -198,7 +210,9 @@ class LabwareDialog(ScrollableDialog):
                     reservoir_template=self.res_template,
                     add_height=s['add'],
                     remove_height=s['rem'],
-                    each_tip_needs_separate_item=s['sep_item']
+                    each_tip_needs_separate_item=s['sep_item'],
+                    x_spacing=x_sp,
+                    y_spacing=y_sp
                 )
 
             elif lw_type == "PipetteHolder":
@@ -209,7 +223,9 @@ class LabwareDialog(ScrollableDialog):
                     holders_across_y=int(s['hy']),
                     individual_holder=self.selected_holder,
                     add_height=s['add'],
-                    remove_height=s['rem']
+                    remove_height=s['rem'],
+                    x_spacing=x_sp,
+                    y_spacing=y_sp
                 )
 
             elif lw_type == "TipDropzone":
@@ -305,7 +321,7 @@ class EditLabwareDialog(ScrollableDialog):
         # --- Specialized Heights ---
         self.add_height_var = self.remove_height_var = self.drop_height_var = None
 
-        if any(hasattr(self.labware, attr) for attr in ['add_height', 'remove_height', 'drop_height']):
+        if any(hasattr(self.labware, attr) for attr in ['add_height', 'remove_height', 'drop_height', 'x_spacing', 'y_spacing']):
             h_frame = ttk.Labelframe(tab, text="Process Heights", padding=10)
             h_frame.pack(fill=tk.X, pady=5)
 
@@ -317,6 +333,10 @@ class EditLabwareDialog(ScrollableDialog):
                 self.remove_height_var = add_row(h_frame, "Remove Liquid Height:", 1, self.labware.remove_height)
             if hasattr(self.labware, 'drop_height_relative'):
                 self.drop_height_var = add_row(h_frame, "Tip Drop Height:", 2, self.labware.drop_height_relative)
+            if hasattr(self.labware, 'x_spacing'):
+                self.x_spacing_var = add_row(h_frame, "X_spacing (mm):", 3, self.labware.x_spacing)
+            if hasattr(self.labware, 'y_spacing'):
+                self.y_spacing_var = add_row(h_frame, "Y_spacing (mm):", 4, self.labware.y_spacing)
 
     def create_reservoir_management_tab(self):
         """Management tab using unified draw_labware_grid function"""
@@ -411,6 +431,8 @@ class EditLabwareDialog(ScrollableDialog):
             if self.add_height_var: data["add_height"] = float(self.add_height_var.get())
             if self.remove_height_var: data["remove_height"] = float(self.remove_height_var.get())
             if self.drop_height_var: data["drop_height"] = float(self.drop_height_var.get())
+            if self.x_spacing_var: data["x_spacing"] = float(self.x_spacing_var.get())
+            if self.y_spacing_var: data["y_spacing"] = float(self.y_spacing_var.get())
 
             # 3. Instantiate temporary object to trigger class-level validation
             cls = self.labware.__class__
@@ -785,8 +807,6 @@ class AddLabwareToSlotDialog(ScrollableDialog):
         field_definitions = [
             ("Target Slot:", "slot_id", "combo", list(self.deck.slots.keys())[0], list(self.deck.slots.keys()), None),
             ("Min Z Height (mm):", "min_z", "entry", "0", None, "numeric"),
-            ("X Spacing (mm):", "x_spacing", "entry", "", None, "numeric"),
-            ("Y Spacing (mm):", "y_spacing", "entry", "", None, "numeric"),
         ]
 
         # Use the helper to generate the widgets and capture variables
@@ -820,13 +840,11 @@ class AddLabwareToSlotDialog(ScrollableDialog):
         try:
 
             # 1. Define your schema
-            numeric_keys = ['min_z', 'x_spacing', 'y_spacing']
-            optional_keys = ['x_spacing', 'y_spacing']
+            numeric_keys = ['min_z']
 
             clean_data = self.get_inputs(
                 self.form_vars,
                 numeric_keys=numeric_keys,
-                optional_keys=optional_keys
             )
             self.result = clean_data
             self.destroy()

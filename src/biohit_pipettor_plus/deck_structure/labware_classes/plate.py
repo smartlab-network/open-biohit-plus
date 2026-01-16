@@ -20,6 +20,8 @@ class Plate(Labware):
             add_height: float = -3,
             remove_height: float = -10,
             offset: tuple[float, float] = (0, 0),
+            x_spacing: float = None,
+            y_spacing: float = None,
             labware_id: str = None,
             position: tuple[float, float] = None,
             can_be_stacked_upon: bool = False):
@@ -46,6 +48,10 @@ class Plate(Labware):
             Template well to use for all wells in the plate.
         offset : tuple[float, float], optional
             Offset of the plate.
+        x_spacing : float, optional
+            Distance along x-axis between hooks in millimeters.
+        y_spacing : float, optional
+            Distance along y-axis between hooks in millimeters.
         labware_id : str, optional
             Unique ID for the plate.
         position : tuple[float, float], optional
@@ -63,6 +69,8 @@ class Plate(Labware):
         self.remove_height = remove_height
         self.__wells: dict[tuple[int, int], Well] = {}
         self.well = well
+        self.x_spacing = x_spacing
+        self.y_spacing = y_spacing
 
         min_required_x = round((wells_x * well.size_x) + (2*abs(offset[0])),2)
         min_required_y = round((wells_y * well.size_y) +  (2*abs(offset[1])),2)
@@ -164,6 +172,8 @@ class Plate(Labware):
         base.update({
             "add_height": self.add_height,
             "remove_height": self.remove_height,
+            "x_spacing": self.x_spacing,
+            "y_spacing": self.y_spacing,
             "wells_x": self.wells_x,
             "wells_y": self.wells_y,
             "wells": {
@@ -194,6 +204,8 @@ class Plate(Labware):
             add_height=data["add_height"],
             remove_height=data["remove_height"],
             labware_id=data["labware_id"],
+            x_spacing=data.get("x_spacing", None),
+            y_spacing=data.get("y_spacing", None),
             wells_x=data["wells_x"],
             wells_y=data["wells_y"],
             can_be_stacked_upon=data.get("can_be_stacked_upon", False),

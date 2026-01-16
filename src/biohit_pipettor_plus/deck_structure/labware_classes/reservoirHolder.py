@@ -10,7 +10,7 @@ import copy
 class ReservoirHolder(Labware):
     def __init__(self, size_x: float, size_y: float, size_z: float, hooks_across_x: int, hooks_across_y: int, reservoir_template: Reservoir = None,
                 remove_height: float = -45, add_height: float = 0, offset: tuple[float, float] = (0, 0),
-                 labware_id: str = None, position: tuple[float, float] = None, can_be_stacked_upon: bool = False, each_tip_needs_separate_item = False,):
+                 labware_id: str = None, position: tuple[float, float] = None, can_be_stacked_upon: bool = False, x_spacing:float=None, y_spacing:float=None, each_tip_needs_separate_item = False):
         """
         Initialize a ReservoirHolder instance that can hold multiple reservoirs.
 
@@ -37,6 +37,10 @@ class ReservoirHolder(Labware):
         position : tuple[float, float], optional
             (x, y) position coordinates of the ReservoirHolder in millimeters.
             If None, position is not set.
+        x_spacing : float, optional
+            Distance along x-axis between hooks in millimeters.
+        y_spacing : float, optional
+            Distance along y-axis between hooks in millimeters.
         each_tip_needs_separate_item : bool, optional
             If True, each pipette tip needs its own reservoir.
             If False, all tips can access the same reservoir (default: False).
@@ -53,6 +57,8 @@ class ReservoirHolder(Labware):
         self._rows = hooks_across_y
         self.total_hooks = hooks_across_x * hooks_across_y
         self._each_tip_needs_separate_item = each_tip_needs_separate_item
+        self.x_spacing = x_spacing
+        self.y_spacing = y_spacing
 
         # Initialize empty hooks - maps hook_id to reservoir (or None if empty)
         # hook_id ranges from 1 to total_hooks
@@ -505,6 +511,8 @@ class ReservoirHolder(Labware):
             "hooks_across_y": self.hooks_across_y,
             "each_tip_needs_separate_item": self._each_tip_needs_separate_item,
             "reservoirs": unique_reservoirs,
+            "x_spacing": self.x_spacing,
+            "y_spacing": self.y_spacing,
         })
         return base
 
@@ -528,6 +536,8 @@ class ReservoirHolder(Labware):
             labware_id=data["labware_id"],
             reservoir_template=None,
             position=position,
+            x_spacing=data.get("x_spacing", None),
+            y_spacing=data.get("y_spacing", None),
         )
 
         # Restore reservoirs

@@ -437,6 +437,8 @@ def update_detailed_info_text(text_widget, obj=None, modules=None):
             'add_height': 'Add_height',
             'remove_height': 'remove_height',
             'drop_height_relative': 'drop_height_relative',
+            'x_spacing': 'x_spacing',
+            'y_spacing': 'y_spacing',
         }
 
         for attr, label in attributes.items():

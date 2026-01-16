@@ -28,19 +28,13 @@ example_well = Well(
     shape = "u_bottom",
 )
 
-plate1 = Plate(118.1, 65, 53, 6, 8,well=example_well, offset=(17.05, 3),  add_height= -3, remove_height = -10)
-deck1.add_labware(plate1, slot_id="slot4", min_z=0, x_spacing=18, y_spacing=9)
+plate1 = Plate(118.1, 65, 53, 6, 8,well=example_well,
+               offset=(17.05, 3),  add_height= -3, remove_height = -10,  x_spacing = 18,
+                y_spacing = 9)
 
-# Updated reservoirs_data to use content as dictionary
-reservoirs_data = {
-    1: {"size_x": 16.5, "size_y": 79, "size_z": 45, "capacity": 30000, "content": {}, "shape": "u_bottom"},
-    2: {"size_x": 16.5, "size_y": 79, "size_z": 45, "capacity": 30000, "content": {"0 conc": 20000}, "shape": "rectangular"},
-    3: {"size_x": 16.5, "size_y": 79, "size_z": 45, "capacity": 30000, "content": {"1.8 conc": 100}},
-    4: {"size_x": 16.5, "size_y": 79, "size_z": 45, "capacity": 30000, "content": {"5 conc": 100}},
-    5: {"size_x": 16.5, "size_y": 79, "size_z": 45, "capacity": 30000, "content": {"15 conc": 100}},
-    6: {"size_x": 16.5, "size_y": 79, "size_z": 45, "capacity": 30000, "content": {"0 conc": 100}},
-    7: {"size_x": 16.5, "size_y": 79, "size_z": 45, "capacity": 30000, "content": {}},
-}
+deck1.add_labware(plate1, slot_id="slot4", min_z=0)
+
+reservoir_template = Reservoir(size_x=16.5, size_y=79, size_z=45,capacity = 30000)
 
 reservoirHolder = ReservoirHolder(
     size_x=118,
@@ -51,10 +45,12 @@ reservoirHolder = ReservoirHolder(
     hooks_across_y=1,
     add_height=-10,
     remove_height=-51,
-    reservoir_dict=reservoirs_data,
+    reservoir_template=reservoir_template,
+    x_spacing=17.25,
+    y_spacing=9
 )
 
-deck1.add_labware(reservoirHolder, slot_id="slot5", min_z=0, x_spacing=17.833)
+deck1.add_labware(reservoirHolder, slot_id="slot5", min_z=0,)
 
 
 ExamplePipetteHolder = IndividualPipetteHolder(0.8, 0.8, 1)
@@ -64,9 +60,12 @@ pipette_holder = PipetteHolder(
     holders_across_x=12, holders_across_y=8,
     remove_height= 10,
     add_height= -15,
-    individual_holder=ExamplePipetteHolder
+    individual_holder=ExamplePipetteHolder,
+    x_spacing=9,
+    y_spacing=9,
+
 )
-deck1.add_labware(pipette_holder, slot_id="slot3", min_z=0, x_spacing=9.0, y_spacing=9.0)
+deck1.add_labware(pipette_holder, slot_id="slot3", min_z=0)
 print(f"Slot3 labware_stack: {slot3.labware_stack}")
 
 tip_dropzone = TipDropzone(
@@ -88,7 +87,7 @@ print(deck1.to_dict())
 
 
 #p = PipettorPlus(tip_volume=1000, multichannel=True, deck=deck1)
-pipette_holder.place_consecutive_pipettes_multi([11],0)
+#pipette_holder.place_consecutive_pipettes_multi([11],0)
 
 
 test_well = plate1.get_well_at(0, 0)

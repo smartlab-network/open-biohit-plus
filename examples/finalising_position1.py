@@ -35,10 +35,12 @@ plate1 = Plate(
     well=example_well,
     offset=(13.8, 1),
     add_height=5,
-    remove_height=1
+    remove_height=1,
+    x_spacing=18,
+    y_spacing=9
 )
 deck1.add_labware(plate_stack, slot_id="slot4", min_z=0)
-deck1.add_labware(plate1, slot_id="slot4", min_z=45, x_spacing=18, y_spacing=9)
+deck1.add_labware(plate1, slot_id="slot4", min_z=45)
 
 # Create reservoir holder
 thirty_ml_res = Reservoir(
@@ -63,9 +65,10 @@ reservoirHolder = ReservoirHolder(
     add_height=80,
     remove_height=20,
     reservoir_template=hundred_ml_res,
+    x_spacing=17.25
 )
-deck1.add_labware(res_stack, slot_id="slot5", min_z=0, x_spacing=17.25)
-deck1.add_labware(reservoirHolder, slot_id="slot5", min_z=40, x_spacing=17.25)
+deck1.add_labware(res_stack, slot_id="slot5", min_z=0, )
+deck1.add_labware(reservoirHolder, slot_id="slot5", min_z=40)
 
 # Create pipette holder
 ExamplePipetteHolder = IndividualPipetteHolder(0.8, 0.8, 1)
@@ -75,12 +78,13 @@ pipette_holder = PipetteHolder(
     holders_across_x=12, holders_across_y=8,
     remove_height=0,
     add_height=0,
-    individual_holder=ExamplePipetteHolder
+    individual_holder=ExamplePipetteHolder,
+        x_spacing=9, y_spacing=9
 )
 pip_stack = Stack( size_x=102, size_y=65, size_z=75,
     offset=(12.85, 6.1), can_be_stacked_upon=True, labware_id="pip_stack1")
 deck1.add_labware(pip_stack, slot_id="slot6", min_z=0  )
-deck1.add_labware(pipette_holder, slot_id="slot6", min_z=75, x_spacing=9, y_spacing=9)
+deck1.add_labware(pipette_holder, slot_id="slot6", min_z=75)
 
 # Create tip dropzone
 tip_dropzone = TipDropzone(

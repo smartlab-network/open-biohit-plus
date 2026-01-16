@@ -13,7 +13,7 @@ import warnings
 class PipetteHolder(Labware):
     def __init__(self, size_x: float, size_y: float, size_z: float, holders_across_x: int, holders_across_y: int,
                  individual_holder: IndividualPipetteHolder, add_height: float = 0, remove_height : float = 0, offset: tuple[float, float] = (0, 0),
-                 labware_id: str = None, position: tuple[float, float] = None, can_be_stacked_upon: bool = False,):
+                 x_spacing: float = None, y_spacing: float = None, labware_id: str = None, position: tuple[float, float] = None, can_be_stacked_upon: bool = False,):
         """
         Initialize a PipetteHolder instance.
 
@@ -37,6 +37,10 @@ class PipetteHolder(Labware):
             Height above the well bottom used when adding liquid (in mm).
         remove_height : float
             Height above the well bottom used when removing liquid (in mm).
+        x_spacing : float, optional
+            Distance along x-axis between hooks in millimeters.
+        y_spacing : float, optional
+            Distance along y-axis between hooks in millimeters.
         position : tuple[float, float], optional
             (x, y) position coordinates of the pipette holder in millimeters.
             If None, position is not set.
@@ -54,6 +58,8 @@ class PipetteHolder(Labware):
         self._rows = holders_across_y
         self.__individual_holders: dict[tuple[int, int], IndividualPipetteHolder] = {}
         self.individual_holder = individual_holder
+        self.x_spacing = x_spacing
+        self.y_spacing = y_spacing
 
         cfg = load_config()
         self.tip_count = int(cfg["Pipettors_in_Multi"])
@@ -408,6 +414,8 @@ class PipetteHolder(Labware):
             "remove_height": self.remove_height,
             "holders_across_x": self.holders_across_x,
             "holders_across_y": self.holders_across_y,
+            "x_spacing": self.x_spacing,
+            "y_spacing": self.y_spacing,
             "individual_holders": {
             f"{col}:{row}": holder.to_dict()
             for (col, row), holder in self.__individual_holders.items()
@@ -443,6 +451,8 @@ class PipetteHolder(Labware):
             holders_across_y=data["holders_across_y"],
             individual_holder=template_holder,
             position=position,
+            x_spacing=data.get("x_spacing", None),
+            y_spacing=data.get("y_spacing", None),
         )
 
         # Restore individual holders with tuple keys

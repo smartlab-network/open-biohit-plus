@@ -3,17 +3,15 @@ from biohit_pipettor_plus.deck_structure.serializable import register_class
 
 
 @register_class
-class Position_allocator:
+class PositionAllocator:
 
     def calculate_multi(
             self,
             lw: Labware,
             x_corner: float,
             y_corner: float,
-            x_spacing: float,
-            y_spacing: float,
-            rows: float,
-            columns: float,
+            rows: int,
+            columns: int,
     ):
         """
         Generate grid positions for labware containers inside a slot.
@@ -26,48 +24,43 @@ class Position_allocator:
             Y coordinate of the slot's corner. Top
         lw : Labware
             Labware object to place.
-        x_spacing : float
-            Distance between containers along X.
-        y_spacing : float
-            Distance between containers along Y.
         rows: float
             Number of rows in the labware.
         columns: float
             Number of columns in the labware.
         """
         positions = []
-
-        rows = rows
-        columns = columns
+        rows = int(rows)
+        columns = int(columns)
         offset_x, offset_y = lw.offset
 
-        if x_spacing is None:
+        if lw.x_spacing is None:
             # Handle single column case (no horizontal spacing needed)
             if columns == 1:
-                x_spacing = 0
+                lw.x_spacing = 0
             else:
-                x_spacing = round((lw.size_x - 2 * offset_x) / (columns - 1), 2)
+                lw.x_spacing = round((lw.size_x - 2 * offset_x) / (columns - 1), 2)
                 # Ensure spacing is never negative
-                if x_spacing < 0:
-                    x_spacing = 0
+                if lw.x_spacing < 0:
+                    lw.x_spacing = 0
 
-        if y_spacing is None:
+        if lw.y_spacing is None:
             # Handle single row case (no vertical spacing needed)
             if rows == 1:
-                y_spacing = 0
+                lw.y_spacing = 0
             else:
-                y_spacing = round((lw.size_y - 2 * offset_y) / (rows - 1), 2)
+                lw.y_spacing = round((lw.size_y - 2 * offset_y) / (rows - 1), 2)
                 # Ensure spacing is never negative
-                if y_spacing < 0:
-                    y_spacing = 0
+                if lw.y_spacing < 0:
+                    lw.y_spacing = 0
 
-        print(f"labware : {lw.labware_id} x_spacing: {x_spacing}, y_spacing: {y_spacing}")
+        print(f"labware : {lw.labware_id} x_spacing: {lw.x_spacing}, y_spacing: {lw.y_spacing}")
 
         for i in range(rows):
             for j in range(columns):
-                x_pos = x_corner - j * x_spacing
-                y_pos = y_corner + i * y_spacing
-                location = (f"{j},{i}")
+                x_pos = x_corner - j * lw.x_spacing
+                y_pos = y_corner + i * lw.y_spacing
+                location = f"{j},{i}"
                 positions.append((x_pos, y_pos, location))
 
         # Special handling for labware which contain labwares
@@ -78,7 +71,7 @@ class Position_allocator:
             self.update_plate_positions(lw, positions)
 
         if isinstance(lw, PipetteHolder):
-            self.update_PipetteHolder_positions(lw, positions)
+            self.update_pipetteholder_positions(lw, positions)
 
     def update_reservoir_positions(
             self,
@@ -159,7 +152,7 @@ class Position_allocator:
                     center_y = round(y_pos + (well.size_y / 2) + well.offset[1], 2)
                     well.position = (center_x, center_y)
 
-    def update_PipetteHolder_positions(
+    def update_pipetteholder_positions(
             self,
             holder: PipetteHolder,
             positions: list[tuple[float, float, str]]  # positions from calculate_multi

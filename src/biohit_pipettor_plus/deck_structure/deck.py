@@ -125,8 +125,7 @@ class Deck(Serializable):
         print(f"✓ Removed slot '{slot_id}' from deck.")
         return slot, unplaced_labware_list  # Return the slot and any unplaced labware
 
-    def add_labware(self, labware: Labware, slot_id: str, min_z: float, x_spacing: float = None,
-                    y_spacing: float = None):
+    def add_labware(self, labware: Labware, slot_id: str, min_z: float):
         """
         Add a Labware to a specific Slot at a specific Z position.
 
@@ -138,11 +137,6 @@ class Deck(Serializable):
             ID of the slot where the labware will be placed.
         min_z : float
             Starting Z coordinate within the slot.
-        x_spacing : float
-            X spacing of the labware.
-        y_spacing : float
-            Y spacing of the labware.
-
         Raises
         ------
         TypeError
@@ -170,7 +164,7 @@ class Deck(Serializable):
         slot._place_labware(lw=labware, min_z=min_z)
 
         # allocation position to labware on deck.
-        slot._allocate_position(labware, x_spacing, y_spacing)
+        slot._allocate_position(labware)
 
         # store in deck's global labware dict
         self.labware[labware.labware_id] = labware

@@ -1,7 +1,7 @@
 from typing import Dict, List
 from biohit_pipettor_plus.deck_structure.labware_classes import *
 from biohit_pipettor_plus.deck_structure.serializable import Serializable, register_class
-from biohit_pipettor_plus.deck_structure.position import Position_allocator
+from biohit_pipettor_plus.deck_structure.position import PositionAllocator
 
 @register_class
 class Slot(Serializable):
@@ -69,8 +69,6 @@ class Slot(Serializable):
     def _allocate_position(
             self,
             lw: Labware,
-            x_spacing: float = None,
-            y_spacing: float = None,
     ):
         """
         if labware is placed in slot, x & y coordinates of the labware + offset is slot.
@@ -85,18 +83,16 @@ class Slot(Serializable):
         #position is slot corner + offset of the labware.
         lw.position = (x_corner, y_corner)
 
-        #if not none, then labware contains labware within them. Like ReservoirHolder - reservoirs, Plate - wells, pipetteHolder -Zone
+        #if not none, then labware contains labware within them. Like ReservoirHolder - reservoirs, Plate - wells, pipetteHolder -IndividualPipetteHolder
         if hasattr(lw, "_rows") and hasattr(lw, "_columns"):
             if not isinstance(lw, (Plate, ReservoirHolder, PipetteHolder)):
                 raise ValueError("Only (plate, reservoir, pipetteHolder) contain labware within them (wells, reservoirs, zone). Update the code for your labware")
             else:
-                position_allocator = Position_allocator()
+                position_allocator = PositionAllocator()
                 position_allocator.calculate_multi(
                     lw,
                     lw.position[0],
                     lw.position[1],
-                    x_spacing,
-                    y_spacing,
                     lw._rows,
                     lw._columns,
                 )
