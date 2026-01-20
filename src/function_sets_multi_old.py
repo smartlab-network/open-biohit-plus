@@ -18,10 +18,10 @@ class EHMPlatePos:
         self.y_step = 9
         self.x_tight = x_corner + 11
         self.y_tight = y_corner + 8
-        self.x_corner_multi = x_corner + 12
+        self.x_corner_multi = x_corner + 15.5
         self.y_corner_multi = y_corner + 43
         self.add_height = 30
-        self.remove_height = 38
+        self.remove_height = 38.5
         self.cols = 6
 
 
@@ -52,13 +52,13 @@ class Reservoirs:
         Remember to edit dimension in ReservoirGeometry if changing wells to adjust height calculations. #Store wells geometry in class maybe
         """
         default_capacities = {
-            1: 30000,  # 1 Waste
+            1: 35000,  # 1 Waste
             2: 30000,  # 2 0mM
             3: 30000,  # 3 1.8mM
             4: 30000,  # 4 5 mM
-            5: 30000,  # 5 15mM
+            5: 30000,  # 5 10mM
             6: 30000,  # 6 0mM
-            7: 30000,  # 7 Waste
+            7: 35000,  # 7 Waste
         }
 
         if capacities is not None:
@@ -102,7 +102,7 @@ class Reservoirs:
 
     def remove_volume(self, well: int, volume: float):
         """Remove liquid from a well if enough is available."""
-        if self.current_volume[well] - 5000 < volume:  # -5ml coz its way difficult to reach the bottom and take all liquid out
+        if self.current_volume[well]  < volume:  # -5ml coz its way difficult to reach the bottom and take all liquid out
             raise ValueError(f"Reservoir {well} underflow! Only {self.current_volume[well]} µl available.")
         self.current_volume[well] -= volume
 
@@ -171,7 +171,7 @@ class ReservoirGeometry:
             raise ValueError("total_volume_ml must be an integer (mL)")
 
         self.total_volume_ml = total_volume_ml
-        self.default_height = 98.0 # safe height
+        self.default_height = 66 # safe height
         # Assign geometry if predefined, else None
         if total_volume_ml == 30:
             self.geometry = self.Geometry30ml
@@ -214,8 +214,8 @@ class ReservoirGeometry:
             liquid_h = g.lower_h - remaining_height
 
         # Clamp height
-        max_pip_height = 103
-        min_pip_height = 98
+        max_pip_height = 72
+        min_pip_height = 60
         pip_height = max(min_pip_height, min(max_pip_height, max_pip_height - liquid_h))
 
         print(f"Calculated pipette height: {pip_height} mm")
@@ -230,7 +230,7 @@ def pick_multi_tips(p: Pipettor, pipette_tips):
     :param pipette_tips:
     """
     print("pick_multi_tips: start")
-    p.move_xy(pipette_tips.x_corner_multi, pipette_tips.y_corner_multi)
+    p.move_xy(pipette_tips.x_corner, pipette_tips.y_corner)
     for i in range(1, 13, 1):
         try:
             p.pick_tip(pipette_tips.pick_height)
