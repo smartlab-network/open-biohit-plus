@@ -5,8 +5,13 @@ import sys
 
 sys.path.append(r"C:\labhub\Repos\smartlab-network\open-biohit-plus\src")
 
+<<<<<<< HEAD
 from function_sets_multi import EHMPlatePos, Reservoirs, PipetteTips, TipDropzone, \
     remove_multi, fill_multi, pick_multi_tips, return_multi_tips, home, calc_concentration
+=======
+from function_sets import EHMPlatePos, Reservoirs, PipetteTips, TipDropzone, dilute_multi, \
+    remove_multi, fill_multi, discard_tips, home, pick_multi_tips, return_multi_tips
+>>>>>>> parent of 49ad668 (create function_sets_multi)
 
 # on bottom plate with thin wells towards back, top right corner of each lot
 A1 = (130.5, 0)

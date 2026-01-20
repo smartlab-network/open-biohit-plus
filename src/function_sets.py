@@ -29,17 +29,13 @@ class Reservoirs:
         self.well1_x  = x_corner + 6 * 18 + 3    #1
         self.medium_x = x_corner + 5 * 18 + 3    #2
         self.waste_x  = x_corner + 4 * 18 + 3    #3
-        #
         self.well4_x  = x_corner + 3 * 18 + 3    #4
         self.well5_x  = x_corner + 2 * 18 + 3
         self.well6_x  = x_corner + 1 * 18 + 3
         self.well7_x  = x_corner  + 3
-        self.well4_vol = 100  # 4
         self.y_corner = y_corner + 40
         self.add_height = 65
         self.remove_height = 90
-        self.csa          = 20*100    #mm2
-        self.base         =120
 
 
 class RoundContainers:  # TODO: adjust to 6-well setup once that�s printed
@@ -71,14 +67,6 @@ class TipDropzone:
 
 
 """Functions"""
-
-def height = remove_height(volume, csa)
-      return volume/csa + base
-
-
-
-
-
 
 
 def pick_multi_tips(p: Pipettor, pipette_tips):
