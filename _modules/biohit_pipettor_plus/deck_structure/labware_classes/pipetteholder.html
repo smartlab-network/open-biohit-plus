@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>biohit_pipettor_plus.deck_structure.labware_classes.pipetteholder &#8212; biohit-pipettor-plus  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=a9d2d1f6" />
+    <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">biohit_pipettor_plus.deck_structure.labware_classes.pipetteholder</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for biohit_pipettor_plus.deck_structure.labware_classes.pipetteholder</h1><div class="highlight"><pre>
+<span></span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.labware_classes.labware</span><span class="w"> </span><span class="kn">import</span> <span class="n">Labware</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.serializable</span><span class="w"> </span><span class="kn">import</span> <span class="n">register_class</span><span class="p">,</span> <span class="n">Serializable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.labware_classes.individualpipetteholder</span><span class="w"> </span><span class="kn">import</span> <span class="n">IndividualPipetteHolder</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.pipettor_plus.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_config</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+
+<div class="viewcode-block" id="PipetteHolder">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.PipetteHolder">[docs]</a>
+<span class="nd">@register_class</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">PipetteHolder</span><span class="p">(</span><span class="n">Labware</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size_x</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">size_y</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">size_z</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">holders_across_x</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">holders_across_y</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">individual_holder</span><span class="p">:</span> <span class="n">IndividualPipetteHolder</span><span class="p">,</span> <span class="n">add_height</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">remove_height</span> <span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                 <span class="n">x_spacing</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">y_spacing</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">labware_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">position</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">can_be_stacked_upon</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize a PipetteHolder instance.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        size_x : float</span>
+<span class="sd">            Width of the pipette holder in millimeters.</span>
+<span class="sd">        size_y : float</span>
+<span class="sd">            Depth of the pipette holder in millimeters.</span>
+<span class="sd">        size_z : float</span>
+<span class="sd">            Height of the pipette holder in millimeters.</span>
+<span class="sd">        holders_across_x : int</span>
+<span class="sd">            Number of individual holder positions across X-axis.</span>
+<span class="sd">        holders_across_y : int</span>
+<span class="sd">            Number of individual holder positions across Y-axis.</span>
+<span class="sd">        individual_holder : IndividualPipetteHolder</span>
+<span class="sd">            Template for individual holder positions. If provided, copies will be created for each position in the grid.</span>
+<span class="sd">        labware_id : str, optional</span>
+<span class="sd">            Unique ID for the pipette holder.</span>
+<span class="sd">        add_height : float</span>
+<span class="sd">            Height above the well bottom used when adding liquid (in mm).</span>
+<span class="sd">        remove_height : float</span>
+<span class="sd">            Height above the well bottom used when removing liquid (in mm).</span>
+<span class="sd">        x_spacing : float, optional</span>
+<span class="sd">            Distance along x-axis between hooks in millimeters.</span>
+<span class="sd">        y_spacing : float, optional</span>
+<span class="sd">            Distance along y-axis between hooks in millimeters.</span>
+<span class="sd">        position : tuple[float, float], optional</span>
+<span class="sd">            (x, y) position coordinates of the pipette holder in millimeters.</span>
+<span class="sd">            If None, position is not set.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">size_x</span><span class="o">=</span><span class="n">size_x</span><span class="p">,</span> <span class="n">size_y</span><span class="o">=</span><span class="n">size_y</span><span class="p">,</span> <span class="n">size_z</span><span class="o">=</span><span class="n">size_z</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="n">offset</span><span class="p">,</span> <span class="n">labware_id</span><span class="o">=</span><span class="n">labware_id</span><span class="p">,</span>
+                         <span class="n">position</span><span class="o">=</span><span class="n">position</span><span class="p">,</span> <span class="n">can_be_stacked_upon</span><span class="o">=</span><span class="n">can_be_stacked_upon</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">holders_across_x</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">holders_across_y</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;holders_across_x and holders_across_y must be positive&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_height</span> <span class="o">=</span> <span class="n">add_height</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">remove_height</span> <span class="o">=</span> <span class="n">remove_height</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_columns</span> <span class="o">=</span> <span class="n">holders_across_x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span> <span class="o">=</span> <span class="n">holders_across_y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__individual_holders</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">IndividualPipetteHolder</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">individual_holder</span> <span class="o">=</span> <span class="n">individual_holder</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_spacing</span> <span class="o">=</span> <span class="n">x_spacing</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_spacing</span> <span class="o">=</span> <span class="n">y_spacing</span>
+
+        <span class="n">cfg</span> <span class="o">=</span> <span class="n">load_config</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tip_count</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;Pipettors_in_Multi&quot;</span><span class="p">])</span>
+
+        <span class="n">min_required_x</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">holders_across_x</span> <span class="o">*</span> <span class="n">individual_holder</span><span class="o">.</span><span class="n">size_x</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="nb">abs</span><span class="p">(</span><span class="n">offset</span><span class="p">[</span><span class="mi">0</span><span class="p">])),</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">min_required_y</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">holders_across_y</span> <span class="o">*</span> <span class="n">individual_holder</span><span class="o">.</span><span class="n">size_y</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="nb">abs</span><span class="p">(</span><span class="n">offset</span><span class="p">[</span><span class="mi">1</span><span class="p">])),</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">size_x</span> <span class="o">&lt;</span> <span class="n">min_required_x</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                 <span class="sa">f</span><span class="s2">&quot;PipetteHolder width (</span><span class="si">{</span><span class="n">size_x</span><span class="si">}</span><span class="s2">mm) is too small for </span><span class="si">{</span><span class="n">holders_across_x</span><span class="si">}</span><span class="s2"> holders of width </span><span class="si">{</span><span class="n">individual_holder</span><span class="o">.</span><span class="n">size_x</span><span class="si">}</span><span class="s2">mm. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Minimum required: </span><span class="si">{</span><span class="n">min_required_x</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">mm (including offsets)&quot;</span><span class="p">,</span>
+                <span class="ne">UserWarning</span><span class="p">,</span>
+                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">size_y</span> <span class="o">&lt;</span> <span class="n">min_required_y</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;PipetteHolder height (</span><span class="si">{</span><span class="n">size_y</span><span class="si">}</span><span class="s2">mm) is too small for </span><span class="si">{</span><span class="n">holders_across_y</span><span class="si">}</span><span class="s2"> holders of height </span><span class="si">{</span><span class="n">individual_holder</span><span class="o">.</span><span class="n">size_y</span><span class="si">}</span><span class="s2">mm. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Minimum required: </span><span class="si">{</span><span class="n">min_required_y</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">mm (including offsets)&quot;</span><span class="p">,</span>
+                <span class="ne">UserWarning</span><span class="p">,</span>
+                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">individual_holder</span><span class="o">.</span><span class="n">size_z</span> <span class="o">&gt;</span> <span class="n">size_z</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Individual holder height (</span><span class="si">{</span><span class="n">individual_holder</span><span class="o">.</span><span class="n">size_z</span><span class="si">}</span><span class="s2">mm) exceeds PipetteHolder height (</span><span class="si">{</span><span class="n">size_z</span><span class="si">}</span><span class="s2">mm)&quot;</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">place_individual_holders</span><span class="p">()</span>
+
+<div class="viewcode-block" id="PipetteHolder.place_individual_holders">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.PipetteHolder.place_individual_holders">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">place_individual_holders</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create individual holder positions across the grid.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_columns</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_rows</span><span class="p">):</span>
+                <span class="n">holder</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">individual_holder</span><span class="p">)</span>
+                <span class="n">holder</span><span class="o">.</span><span class="n">labware_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">labware_id</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">y</span><span class="si">}</span><span class="s1">&#39;</span>
+                <span class="n">holder</span><span class="o">.</span><span class="n">column</span> <span class="o">=</span> <span class="n">x</span>
+                <span class="n">holder</span><span class="o">.</span><span class="n">row</span> <span class="o">=</span> <span class="n">y</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__individual_holders</span><span class="p">[(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)]</span> <span class="o">=</span> <span class="n">holder</span></div>
+
+
+<div class="viewcode-block" id="PipetteHolder.get_individual_holders">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.PipetteHolder.get_individual_holders">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_individual_holders</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">IndividualPipetteHolder</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all individual holder positions.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__individual_holders</span></div>
+
+
+<div class="viewcode-block" id="PipetteHolder.get_available_holders">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.PipetteHolder.get_available_holders">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_available_holders</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">IndividualPipetteHolder</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get all available (unoccupied) holder positions.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list[IndividualPipetteHolder]</span>
+<span class="sd">            List of available holders.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">holder</span> <span class="k">for</span> <span class="n">holder</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__individual_holders</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">holder</span> <span class="ow">and</span> <span class="n">holder</span><span class="o">.</span><span class="n">is_available</span><span class="p">()]</span></div>
+
+
+<div class="viewcode-block" id="PipetteHolder.get_occupied_holders">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.PipetteHolder.get_occupied_holders">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_occupied_holders</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">IndividualPipetteHolder</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get all occupied holder positions.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list[IndividualPipetteHolder]</span>
+<span class="sd">            List of occupied holders.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">holder</span> <span class="k">for</span> <span class="n">holder</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__individual_holders</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">holder</span> <span class="ow">and</span> <span class="n">holder</span><span class="o">.</span><span class="n">is_occupied</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="PipetteHolder.get_holder_at">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.PipetteHolder.get_holder_at">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_holder_at</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">IndividualPipetteHolder</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the individual holder at a specific position.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        column : int</span>
+<span class="sd">            Column index</span>
+<span class="sd">        row : int</span>
+<span class="sd">            Row index</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Optional[IndividualPipetteHolder]</span>
+<span class="sd">            The holder at the position, or None if not found</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__individual_holders</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="n">column</span><span class="p">,</span> <span class="n">row</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="PipetteHolder.place_pipette_at">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.PipetteHolder.place_pipette_at">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">place_pipette_at</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Place a pipette at a specific position.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        column : int</span>
+<span class="sd">            Column index (0-indexed).</span>
+<span class="sd">        row : int</span>
+<span class="sd">            Row index (0-indexed).</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If position is out of range, no holder exists, or position is occupied.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">validate_col_row_or_raise</span><span class="p">([</span><span class="n">column</span><span class="p">],</span> <span class="n">row</span><span class="p">)</span>
+        <span class="n">individual_holder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_holder_at</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">row</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">individual_holder</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;No individual holder found at position </span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="n">individual_holder</span><span class="o">.</span><span class="n">place_pipette</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="PipetteHolder.remove_pipette_at">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.PipetteHolder.remove_pipette_at">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">remove_pipette_at</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove a pipette from a specific position.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        column : int</span>
+<span class="sd">            Column index (0-indexed).</span>
+<span class="sd">        row : int</span>
+<span class="sd">            Row index (0-indexed).</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If position is out of range, no holder exists, or position is empty.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">validate_col_row_or_raise</span><span class="p">([</span><span class="n">column</span><span class="p">],</span> <span class="n">row</span><span class="p">)</span>
+        <span class="n">individual_holder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_holder_at</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">row</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">individual_holder</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;No individual holder found at position </span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">individual_holder</span><span class="o">.</span><span class="n">remove_pipette</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="PipetteHolder.get_all_children">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.PipetteHolder.get_all_children">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_all_children</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">IndividualPipetteHolder</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__individual_holders</span><span class="o">.</span><span class="n">values</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="PipetteHolder.get_child_at">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.PipetteHolder.get_child_at">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_child_at</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">IndividualPipetteHolder</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__individual_holders</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="n">column</span><span class="p">,</span> <span class="n">row</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="PipetteHolder.place_consecutive_pipettes_multi">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.PipetteHolder.place_consecutive_pipettes_multi">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">place_consecutive_pipettes_multi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Place pipettes in consecutive positions within specified columns for multichannel pipettor.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        columns : list[int]</span>
+<span class="sd">            List of column indices (0-indexed) where pipettes should be placed.</span>
+<span class="sd">        row : int, optional</span>
+<span class="sd">            Starting row index (0-indexed). Pipettes will be placed from row to row + 7.</span>
+<span class="sd">            Default is 0.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If any column index is out of range, row out of range, or if any position</span>
+<span class="sd">            in the specified columns is already occupied.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">validate_col_row_or_raise</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tip_count</span><span class="p">)</span>
+
+        <span class="c1"># Check if all positions are available before placing</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tip_count</span><span class="p">):</span>
+                <span class="n">current_row</span> <span class="o">=</span> <span class="n">row</span> <span class="o">+</span> <span class="n">i</span>
+                <span class="n">individual_holder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_holder_at</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">current_row</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">individual_holder</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;No individual holder found at position </span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">current_row</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">individual_holder</span><span class="o">.</span><span class="n">is_occupied</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Holder at position </span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">current_row</span><span class="si">}</span><span class="s2"> is already occupied&quot;</span>
+                    <span class="p">)</span>
+
+        <span class="c1"># Place pipettes in all positions</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tip_count</span><span class="p">):</span>
+                <span class="n">current_row</span> <span class="o">=</span> <span class="n">row</span> <span class="o">+</span> <span class="n">i</span>
+                <span class="n">individual_holder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_holder_at</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">current_row</span><span class="p">)</span>
+                <span class="n">individual_holder</span><span class="o">.</span><span class="n">place_pipette</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="PipetteHolder.remove_consecutive_pipettes_multi">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.PipetteHolder.remove_consecutive_pipettes_multi">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">remove_consecutive_pipettes_multi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove pipettes from consecutive positions within specified columns for multichannel pipettor.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        columns : list[int]</span>
+<span class="sd">            List of column indices (0-indexed) where pipettes should be removed.</span>
+<span class="sd">        row : int, optional</span>
+<span class="sd">            Starting row index (0-indexed). Pipettes will be removed from row to row + 7.</span>
+<span class="sd">            Default is 0.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If any column index is out of range, row out of range, or if any position</span>
+<span class="sd">            in the specified columns is already empty.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">validate_col_row_or_raise</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tip_count</span><span class="p">)</span>
+
+        <span class="c1"># Check if all positions have pipettes before removing</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tip_count</span><span class="p">):</span>
+                <span class="n">current_row</span> <span class="o">=</span> <span class="n">row</span> <span class="o">+</span> <span class="n">i</span>
+                <span class="n">individual_holder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_holder_at</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">current_row</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">individual_holder</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;No individual holder found at position </span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">current_row</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">individual_holder</span><span class="o">.</span><span class="n">is_occupied</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Holder at position </span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">current_row</span><span class="si">}</span><span class="s2"> is already empty&quot;</span>
+                    <span class="p">)</span>
+
+        <span class="c1"># Remove pipettes from all positions</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tip_count</span><span class="p">):</span>
+                <span class="n">current_row</span> <span class="o">=</span> <span class="n">row</span> <span class="o">+</span> <span class="n">i</span>
+                <span class="n">individual_holder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_holder_at</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">current_row</span><span class="p">)</span>
+                <span class="n">individual_holder</span><span class="o">.</span><span class="n">remove_pipette</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="PipetteHolder.check_col_start_row_multi">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.PipetteHolder.check_col_start_row_multi">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_col_start_row_multi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">start_row</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Check the occupancy status of 8 consecutive positions starting from (col, start_row).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        col : int</span>
+<span class="sd">            Column index</span>
+<span class="sd">        start_row : int</span>
+<span class="sd">            Starting row index</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str</span>
+<span class="sd">            Status of the 8 consecutive positions:</span>
+<span class="sd">            - &quot;FULLY_OCCUPIED&quot;: All 8 positions exist and are occupied</span>
+<span class="sd">            - &quot;FULLY_AVAILABLE&quot;: All 8 positions exist and are empty</span>
+<span class="sd">            - &quot;MIXED&quot;: All 8 positions exist but have mixed occupancy</span>
+<span class="sd">            - &quot;INVALID&quot;: One or more positions don&#39;t exist (out of bounds)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check if all positions exist</span>
+        <span class="k">if</span> <span class="n">col</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">col</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_columns</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;INVALID&quot;</span>
+        <span class="k">if</span> <span class="n">start_row</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">start_row</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">tip_count</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;INVALID&quot;</span>
+
+        <span class="c1"># Check occupancy of all 8 positions</span>
+        <span class="n">occupied_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tip_count</span><span class="p">):</span>
+            <span class="n">current_row</span> <span class="o">=</span> <span class="n">start_row</span> <span class="o">+</span> <span class="n">i</span>
+            <span class="n">individual_holder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_holder_at</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">current_row</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">individual_holder</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s2">&quot;INVALID&quot;</span>
+
+            <span class="k">if</span> <span class="n">individual_holder</span><span class="o">.</span><span class="n">is_occupied</span><span class="p">:</span>
+                <span class="n">occupied_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="c1"># Determine status</span>
+        <span class="k">if</span> <span class="n">occupied_count</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">tip_count</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;FULLY_OCCUPIED&quot;</span>
+        <span class="k">elif</span> <span class="n">occupied_count</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;FULLY_AVAILABLE&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;MIXED&quot;</span></div>
+
+
+<div class="viewcode-block" id="PipetteHolder.get_occupied_holder_multi">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.PipetteHolder.get_occupied_holder_multi">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_occupied_holder_multi</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get all columns with starting rows where 8 consecutive occupied positions exist.</span>
+<span class="sd">        No holder is reused - blocks are non-overlapping.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">occupied_positions</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_columns</span><span class="p">):</span>
+            <span class="n">used_rows</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">start_row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_rows</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">tip_count</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">start_row</span> <span class="ow">in</span> <span class="n">used_rows</span><span class="p">:</span>
+                    <span class="k">continue</span>
+
+                <span class="c1"># Use helper function instead of manual checking</span>
+                <span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_col_start_row_multi</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">start_row</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="s2">&quot;FULLY_OCCUPIED&quot;</span><span class="p">:</span>
+                    <span class="n">occupied_positions</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">col</span><span class="p">,</span> <span class="n">start_row</span><span class="p">))</span>
+                    <span class="c1"># Mark all rows in this block as used</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tip_count</span><span class="p">):</span>
+                        <span class="n">used_rows</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">start_row</span> <span class="o">+</span> <span class="n">i</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">occupied_positions</span></div>
+
+
+<div class="viewcode-block" id="PipetteHolder.get_available_holder_multi">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.PipetteHolder.get_available_holder_multi">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_available_holder_multi</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get all columns with starting rows where 8 consecutive available positions exist.</span>
+<span class="sd">        No holder is reused - blocks are non-overlapping.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">available_positions</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_columns</span><span class="p">):</span>
+            <span class="n">used_rows</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">start_row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_rows</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">tip_count</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">start_row</span> <span class="ow">in</span> <span class="n">used_rows</span><span class="p">:</span>
+                    <span class="k">continue</span>
+
+                <span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_col_start_row_multi</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">start_row</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="s2">&quot;FULLY_AVAILABLE&quot;</span><span class="p">:</span>
+                    <span class="n">available_positions</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">col</span><span class="p">,</span> <span class="n">start_row</span><span class="p">))</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tip_count</span><span class="p">):</span>
+                        <span class="n">used_rows</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">start_row</span> <span class="o">+</span> <span class="n">i</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">available_positions</span></div>
+
+
+<div class="viewcode-block" id="PipetteHolder.get_state_snapshot">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.PipetteHolder.get_state_snapshot">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_state_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return deep copy of all holders&#39; state&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">&#39;holders&#39;</span><span class="p">:</span> <span class="p">{</span><span class="n">pos</span><span class="p">:</span> <span class="n">holder</span><span class="o">.</span><span class="n">get_state_snapshot</span><span class="p">()</span>
+                        <span class="k">for</span> <span class="n">pos</span><span class="p">,</span> <span class="n">holder</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_PipetteHolder__individual_holders</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="PipetteHolder.restore_state_snapshot">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.PipetteHolder.restore_state_snapshot">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">restore_state_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">snapshot</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Restore all holders&#39; state from snapshot&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">pos</span><span class="p">,</span> <span class="n">holder_snapshot</span> <span class="ow">in</span> <span class="n">snapshot</span><span class="p">[</span><span class="s1">&#39;holders&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_PipetteHolder__individual_holders</span><span class="p">[</span><span class="n">pos</span><span class="p">]</span><span class="o">.</span><span class="n">restore_state_snapshot</span><span class="p">(</span><span class="n">holder_snapshot</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PipetteHolder.to_dict">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.PipetteHolder.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Serialize the PipetteHolder instance to a dictionary.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            Dictionary representation of the pipette holder.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+        <span class="n">base</span><span class="o">.</span><span class="n">update</span><span class="p">({</span>
+            <span class="s2">&quot;add_height&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_height</span><span class="p">,</span>
+            <span class="s2">&quot;remove_height&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">remove_height</span><span class="p">,</span>
+            <span class="s2">&quot;holders_across_x&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">holders_across_x</span><span class="p">,</span>
+            <span class="s2">&quot;holders_across_y&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">holders_across_y</span><span class="p">,</span>
+            <span class="s2">&quot;x_spacing&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_spacing</span><span class="p">,</span>
+            <span class="s2">&quot;y_spacing&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_spacing</span><span class="p">,</span>
+            <span class="s2">&quot;individual_holders&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">:</span> <span class="n">holder</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">row</span><span class="p">),</span> <span class="n">holder</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__individual_holders</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">}</span>
+        <span class="p">})</span>
+        <span class="k">return</span> <span class="n">base</span></div>
+
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PipetteHolder&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Deserialize a PipetteHolder instance from a dictionary.&quot;&quot;&quot;</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;position&quot;</span><span class="p">])</span> <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;position&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+        <span class="n">holders_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;individual_holders&quot;</span><span class="p">,</span> <span class="p">{})</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">holders_data</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot deserialize PipetteHolder without individual_holders data&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Get the first holder as a template</span>
+        <span class="n">first_holder_data</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">holders_data</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+        <span class="n">template_holder</span> <span class="o">=</span> <span class="n">Serializable</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">first_holder_data</span><span class="p">)</span>
+
+        <span class="c1"># Create the PipetteHolder with the template</span>
+        <span class="n">holder</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">size_x</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;size_x&quot;</span><span class="p">],</span>
+            <span class="n">size_y</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;size_y&quot;</span><span class="p">],</span>
+            <span class="n">size_z</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;size_z&quot;</span><span class="p">],</span>
+            <span class="n">can_be_stacked_upon</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;can_be_stacked_upon&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+            <span class="n">add_height</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;add_height&quot;</span><span class="p">],</span>
+            <span class="n">remove_height</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;remove_height&quot;</span><span class="p">],</span>
+            <span class="n">offset</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;offset&quot;</span><span class="p">],</span>
+            <span class="n">labware_id</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;labware_id&quot;</span><span class="p">],</span>
+            <span class="n">holders_across_x</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;holders_across_x&quot;</span><span class="p">],</span>
+            <span class="n">holders_across_y</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;holders_across_y&quot;</span><span class="p">],</span>
+            <span class="n">individual_holder</span><span class="o">=</span><span class="n">template_holder</span><span class="p">,</span>
+            <span class="n">position</span><span class="o">=</span><span class="n">position</span><span class="p">,</span>
+            <span class="n">x_spacing</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;x_spacing&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="n">y_spacing</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;y_spacing&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Restore individual holders with tuple keys</span>
+        <span class="k">for</span> <span class="n">hid</span><span class="p">,</span> <span class="n">hdata</span> <span class="ow">in</span> <span class="n">holders_data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="c1"># Parse &quot;col:row&quot; format from JSON</span>
+            <span class="n">col</span><span class="p">,</span> <span class="n">row</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">hid</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">))</span>
+            <span class="n">restored_holder</span> <span class="o">=</span> <span class="n">Serializable</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">hdata</span><span class="p">)</span>
+            <span class="n">holder</span><span class="o">.</span><span class="n">_PipetteHolder__individual_holders</span><span class="p">[(</span><span class="n">col</span><span class="p">,</span> <span class="n">row</span><span class="p">)]</span> <span class="o">=</span> <span class="n">restored_holder</span>
+
+        <span class="k">return</span> <span class="n">holder</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">holders_across_x</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Alias for grid_x&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_columns</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">holders_across_y</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Alias for grid_y&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">grid_x</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Standard grid dimension&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_columns</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">grid_y</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Standard grid dimension&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span></div>
+
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">biohit_pipettor_plus.deck_structure.labware_classes.pipetteholder</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2026, Advait Lath.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.7.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>biohit_pipettor_plus.deck_structure.deck &#8212; biohit-pipettor-plus  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=a9d2d1f6" />
+    <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">biohit_pipettor_plus.deck_structure.deck</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for biohit_pipettor_plus.deck_structure.deck</h1><div class="highlight"><pre>
+<span></span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.slot</span><span class="w"> </span><span class="kn">import</span> <span class="n">Slot</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.labware_classes</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.serializable</span><span class="w"> </span><span class="kn">import</span> <span class="n">Serializable</span><span class="p">,</span> <span class="n">register_class</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+
+
+<div class="viewcode-block" id="Deck">
+<a class="viewcode-back" href="../../../api.html#biohit_pipettor_plus.deck_structure.Deck">[docs]</a>
+<span class="nd">@register_class</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Deck</span><span class="p">(</span><span class="n">Serializable</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Represents the Deck of a Pipettor. The Deck can contain multiple slots,</span>
+<span class="sd">    each of which can hold multiple Labware objects stacked vertically.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ---------</span>
+<span class="sd">    deck_id : str</span>
+<span class="sd">        Unique identifier for the deck instance.</span>
+<span class="sd">    range_x : tuple[int, int]</span>
+<span class="sd">        Minimum and maximum x coordinates of the deck.</span>
+<span class="sd">    range_y : tuple[int, int]</span>
+<span class="sd">        Minimum and maximum y coordinates of the deck.</span>
+<span class="sd">    slots : dict[str, Slot]</span>
+<span class="sd">        Dictionary mapping slot IDs to Slot objects.</span>
+<span class="sd">    labware : dict[str, Labware]</span>
+<span class="sd">        Dictionary mapping labware IDs to Labware objects.</span>
+<span class="sd">    range_z : float, optional</span>
+<span class="sd">            Maximum vertical range of the deck (mm). This is the total Z-axis travel</span>
+<span class="sd">            from top (pipettor home) to bottom (deck surface).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">range_x</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">range_y</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">deck_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">range_z</span> <span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">500</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">deck_id</span> <span class="o">=</span> <span class="n">deck_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">range_x</span> <span class="o">=</span> <span class="n">range_x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">range_y</span> <span class="o">=</span> <span class="n">range_y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">range_z</span> <span class="o">=</span> <span class="n">range_z</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">slots</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Slot</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>           <span class="c1"># store Slot objects</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">labware</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Labware</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>     <span class="c1"># global access to Labware objects</span>
+
+<div class="viewcode-block" id="Deck.add_slots">
+<a class="viewcode-back" href="../../../api.html#biohit_pipettor_plus.deck_structure.Deck.add_slots">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_slots</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slots</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Slot</span><span class="p">]):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a Slot to the Deck after validating range and overlap.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        slots : list of slots</span>
+<span class="sd">            The slot to add to the deck.</span>
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If slot ID already exists, is out of deck range, or overlaps an existing slot.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">for</span> <span class="n">slot</span> <span class="ow">in</span> <span class="n">slots</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">slot</span><span class="p">,</span> <span class="n">Slot</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Object </span><span class="si">{</span><span class="n">slot</span><span class="si">}</span><span class="s2"> is not a Slot instance.&quot;</span><span class="p">)</span>
+            <span class="n">slot_id</span> <span class="o">=</span> <span class="n">slot</span><span class="o">.</span><span class="n">slot_id</span>
+
+            <span class="k">if</span> <span class="n">slot_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">slots</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Slot-ID &#39;</span><span class="si">{</span><span class="n">slot_id</span><span class="si">}</span><span class="s2">&#39; already exists in this Deck.&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_within_range</span><span class="p">(</span><span class="n">slot</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Slot &#39;</span><span class="si">{</span><span class="n">slot_id</span><span class="si">}</span><span class="s2">&#39; is outside the deck range &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;x=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">range_x</span><span class="si">}</span><span class="s2">, y=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">range_y</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">existing_id</span><span class="p">,</span> <span class="n">existing_slot</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">slots</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_overlaps</span><span class="p">(</span><span class="n">slot</span><span class="p">,</span> <span class="n">existing_slot</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Slot &#39;</span><span class="si">{</span><span class="n">slot_id</span><span class="si">}</span><span class="s2">&#39; overlaps with existing slot: &#39;</span><span class="si">{</span><span class="n">existing_id</span><span class="si">}</span><span class="s2">&#39;.&quot;</span>
+                    <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">slots</span><span class="p">[</span><span class="n">slot_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">slot</span></div>
+
+
+<div class="viewcode-block" id="Deck.remove_slot">
+<a class="viewcode-back" href="../../../api.html#biohit_pipettor_plus.deck_structure.Deck.remove_slot">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">remove_slot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slot_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">unplace_labware</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove a Slot from the Deck.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        slot_id : str</span>
+<span class="sd">            The ID of the slot to remove.</span>
+<span class="sd">        unplace_labware : bool</span>
+<span class="sd">            If True, unplace (remove) all labware contained within the slot first.</span>
+<span class="sd">            If False (default), raise an error if the slot contains labware.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list[Labware]</span>
+<span class="sd">            A list of Labware objects that were unplaced (if unplace_labware is True).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check if slot exists</span>
+        <span class="k">if</span> <span class="n">slot_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">slots</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Slot &#39;</span><span class="si">{</span><span class="n">slot_id</span><span class="si">}</span><span class="s2">&#39; does not exist in the deck.&quot;</span><span class="p">)</span>
+
+        <span class="n">slot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slots</span><span class="p">[</span><span class="n">slot_id</span><span class="p">]</span>
+        <span class="n">unplaced_labware_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Check if slot has any labware stacked</span>
+        <span class="k">if</span> <span class="n">slot</span><span class="o">.</span><span class="n">labware_stack</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">unplace_labware</span><span class="p">:</span>
+                <span class="n">labware_ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">slot</span><span class="o">.</span><span class="n">labware_stack</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Cannot remove slot &#39;</span><span class="si">{</span><span class="n">slot_id</span><span class="si">}</span><span class="s2">&#39; because it still contains labware: </span><span class="si">{</span><span class="n">labware_ids</span><span class="si">}</span><span class="s2">. &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Use remove_slot(..., unplace_labware=True) to proceed.&quot;</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># UNPLACE ALL CONTAINED LABWARE</span>
+                <span class="n">lw_ids_to_remove</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">slot</span><span class="o">.</span><span class="n">labware_stack</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>  <span class="c1"># Must copy</span>
+                <span class="n">lw_ids_to_remove</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span> <span class="c1">#ensures sequential removal</span>
+
+                <span class="k">for</span> <span class="n">lw_id</span> <span class="ow">in</span> <span class="n">lw_ids_to_remove</span><span class="p">:</span>
+                    <span class="c1"># Use the new remove_labware function</span>
+                    <span class="n">labware</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">remove_labware</span><span class="p">(</span><span class="n">lw_id</span><span class="p">)</span>
+                    <span class="n">unplaced_labware_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">labware</span><span class="p">)</span>
+
+                <span class="c1"># The slot&#39;s labware_stack is now guaranteed to be empty due to remove_labware calls.</span>
+
+        <span class="c1"># Remove slot from deck&#39;s registry</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">slots</span><span class="p">[</span><span class="n">slot_id</span><span class="p">]</span>
+
+        <span class="c1"># Reset slot position</span>
+        <span class="n">slot</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;✓ Removed slot &#39;</span><span class="si">{</span><span class="n">slot_id</span><span class="si">}</span><span class="s2">&#39; from deck.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">slot</span><span class="p">,</span> <span class="n">unplaced_labware_list</span>  <span class="c1"># Return the slot and any unplaced labware</span></div>
+
+
+<div class="viewcode-block" id="Deck.add_labware">
+<a class="viewcode-back" href="../../../api.html#biohit_pipettor_plus.deck_structure.Deck.add_labware">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_labware</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">labware</span><span class="p">:</span> <span class="n">Labware</span><span class="p">,</span> <span class="n">slot_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">min_z</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a Labware to a specific Slot at a specific Z position.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        labware : Labware</span>
+<span class="sd">            Labware object to place.</span>
+<span class="sd">        slot_id : str</span>
+<span class="sd">            ID of the slot where the labware will be placed.</span>
+<span class="sd">        min_z : float</span>
+<span class="sd">            Starting Z coordinate within the slot.</span>
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        TypeError</span>
+<span class="sd">            If the object is not a Labware instance.</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the slot does not exist, labware ID already exists, or labware does not fit in the slot.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">labware</span><span class="p">,</span> <span class="n">Labware</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Object </span><span class="si">{</span><span class="n">labware</span><span class="si">}</span><span class="s2"> is not a Labware instance.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">slot_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">slots</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Slot &#39;</span><span class="si">{</span><span class="n">slot_id</span><span class="si">}</span><span class="s2">&#39; does not exist.&quot;</span><span class="p">)</span>
+
+        <span class="c1"># CHECK FOR DUPLICATE LABWARE ID</span>
+        <span class="k">if</span> <span class="n">labware</span><span class="o">.</span><span class="n">labware_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">labware</span><span class="p">:</span>
+            <span class="n">existing_slot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_slot_for_labware</span><span class="p">(</span><span class="n">labware</span><span class="o">.</span><span class="n">labware_id</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Labware ID &#39;</span><span class="si">{</span><span class="n">labware</span><span class="o">.</span><span class="n">labware_id</span><span class="si">}</span><span class="s2">&#39; already exists in the deck &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;(in slot &#39;</span><span class="si">{</span><span class="n">existing_slot</span><span class="si">}</span><span class="s2">&#39;). Each labware must have a unique ID.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">slot</span><span class="p">:</span> <span class="n">Slot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slots</span><span class="p">[</span><span class="n">slot_id</span><span class="p">]</span>
+
+        <span class="c1"># Place labware in the slot stack</span>
+        <span class="n">slot</span><span class="o">.</span><span class="n">_place_labware</span><span class="p">(</span><span class="n">lw</span><span class="o">=</span><span class="n">labware</span><span class="p">,</span> <span class="n">min_z</span><span class="o">=</span><span class="n">min_z</span><span class="p">)</span>
+
+        <span class="c1"># allocation position to labware on deck.</span>
+        <span class="n">slot</span><span class="o">.</span><span class="n">_allocate_position</span><span class="p">(</span><span class="n">labware</span><span class="p">)</span>
+
+        <span class="c1"># store in deck&#39;s global labware dict</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">labware</span><span class="p">[</span><span class="n">labware</span><span class="o">.</span><span class="n">labware_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">labware</span></div>
+
+
+<div class="viewcode-block" id="Deck.remove_labware">
+<a class="viewcode-back" href="../../../api.html#biohit_pipettor_plus.deck_structure.Deck.remove_labware">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">remove_labware</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">labware_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Labware</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove a Labware from its Slot and the Deck.</span>
+<span class="sd">        Only the topmost labware in a slot&#39;s stack can be removed.</span>
+<span class="sd">        Returns the Labware object for reuse or deletion.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">labware_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">labware</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Labware &#39;</span><span class="si">{</span><span class="n">labware_id</span><span class="si">}</span><span class="s2">&#39; not found in deck. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Cannot remove labware that was never added.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">labware</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">labware</span><span class="p">[</span><span class="n">labware_id</span><span class="p">]</span>
+
+        <span class="c1"># Find the actual slot containing the labware</span>
+        <span class="n">slot_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_slot_for_labware</span><span class="p">(</span><span class="n">labware_id</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">slot_id</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Internal error: Labware &#39;</span><span class="si">{</span><span class="n">labware_id</span><span class="si">}</span><span class="s2">&#39; is placed but has no slot association.&quot;</span><span class="p">)</span>
+
+        <span class="n">slot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slots</span><span class="p">[</span><span class="n">slot_id</span><span class="p">]</span>
+
+        <span class="c1">#topmost level removal</span>
+        <span class="n">stack_keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">slot</span><span class="o">.</span><span class="n">labware_stack</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">stack_keys</span><span class="p">:</span>
+            <span class="c1"># This should not happen assuming get_slot_for_labware works, but safe to check</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Internal error: Slot &#39;</span><span class="si">{</span><span class="n">slot_id</span><span class="si">}</span><span class="s2">&#39; is unexpectedly empty.&quot;</span><span class="p">)</span>
+
+        <span class="n">topmost_lw_id</span> <span class="o">=</span> <span class="n">stack_keys</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">labware_id</span> <span class="o">!=</span> <span class="n">topmost_lw_id</span><span class="p">:</span>
+            <span class="c1"># If the requested labware is NOT the topmost item, raise an error.</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Cannot remove labware &#39;</span><span class="si">{</span><span class="n">labware_id</span><span class="si">}</span><span class="s2">&#39;. It is not the topmost item in slot &#39;</span><span class="si">{</span><span class="n">slot_id</span><span class="si">}</span><span class="s2">&#39;. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;The topmost labware is &#39;</span><span class="si">{</span><span class="n">topmost_lw_id</span><span class="si">}</span><span class="s2">&#39;, which must be removed first.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># 1. Call the slot&#39;s internal removal method and Remove from global labware registry</span>
+        <span class="n">slot</span><span class="o">.</span><span class="n">_remove_labware</span><span class="p">(</span><span class="n">labware_id</span><span class="p">)</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">labware</span><span class="p">[</span><span class="n">labware_id</span><span class="p">]</span>
+
+        <span class="c1"># 2. Reset labware state</span>
+        <span class="n">labware</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">labware</span><span class="p">,</span> <span class="n">Plate</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">well</span> <span class="ow">in</span> <span class="n">labware</span><span class="o">.</span><span class="n">get_wells</span><span class="p">()</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">well</span><span class="p">:</span>
+                    <span class="n">well</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">labware</span><span class="p">,</span> <span class="n">ReservoirHolder</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">reservoir</span> <span class="ow">in</span> <span class="n">labware</span><span class="o">.</span><span class="n">get_reservoirs</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">reservoir</span><span class="p">:</span>
+                    <span class="n">reservoir</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">labware</span><span class="p">,</span> <span class="n">PipetteHolder</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">holder</span> <span class="ow">in</span> <span class="n">labware</span><span class="o">.</span><span class="n">get_individual_holders</span><span class="p">()</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">holder</span><span class="p">:</span>
+                    <span class="n">holder</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;✓ Removed &#39;</span><span class="si">{</span><span class="n">labware_id</span><span class="si">}</span><span class="s2">&#39; from slot &#39;</span><span class="si">{</span><span class="n">slot_id</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">labware</span>  <span class="c1"># Return the object to the caller (gui)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_is_within_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slot</span><span class="p">:</span> <span class="n">Slot</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">range_x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">slot</span><span class="o">.</span><span class="n">range_x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="ow">and</span> <span class="n">slot</span><span class="o">.</span><span class="n">range_x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">range_x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">range_y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">slot</span><span class="o">.</span><span class="n">range_y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="ow">and</span> <span class="n">slot</span><span class="o">.</span><span class="n">range_y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">range_y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_overlaps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s1</span><span class="p">:</span> <span class="n">Slot</span><span class="p">,</span> <span class="n">s2</span><span class="p">:</span> <span class="n">Slot</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span>
+            <span class="n">s1</span><span class="o">.</span><span class="n">range_x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">s2</span><span class="o">.</span><span class="n">range_x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="ow">or</span> <span class="n">s2</span><span class="o">.</span><span class="n">range_x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">s1</span><span class="o">.</span><span class="n">range_x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="ow">or</span> <span class="n">s1</span><span class="o">.</span><span class="n">range_y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">s2</span><span class="o">.</span><span class="n">range_y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="ow">or</span> <span class="n">s2</span><span class="o">.</span><span class="n">range_y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">s1</span><span class="o">.</span><span class="n">range_y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="Deck.to_dict">
+<a class="viewcode-back" href="../../../api.html#biohit_pipettor_plus.deck_structure.Deck.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Serialize the Deck to a dictionary for JSON export, including slots</span>
+<span class="sd">        with stacked labware.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            Dictionary containing deck attributes, slots, and labware.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;class&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+            <span class="s2">&quot;deck_id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">deck_id</span><span class="p">,</span>
+            <span class="s2">&quot;range_x&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">range_x</span><span class="p">),</span>
+            <span class="s2">&quot;range_y&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">range_y</span><span class="p">),</span>
+            <span class="s2">&quot;range_z&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">range_z</span><span class="p">,</span>
+            <span class="s2">&quot;slots&quot;</span><span class="p">:</span> <span class="p">{</span><span class="n">sid</span><span class="p">:</span> <span class="n">slot</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span> <span class="k">for</span> <span class="n">sid</span><span class="p">,</span> <span class="n">slot</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">slots</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+            <span class="s2">&quot;labware&quot;</span><span class="p">:</span> <span class="p">{</span><span class="n">lid</span><span class="p">:</span> <span class="n">lw</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span> <span class="k">for</span> <span class="n">lid</span><span class="p">,</span> <span class="n">lw</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">labware</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+        <span class="p">}</span></div>
+
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Deck&quot;</span><span class="p">:</span>
+        <span class="n">deck</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">range_x</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;range_x&quot;</span><span class="p">]),</span>
+            <span class="n">range_y</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;range_y&quot;</span><span class="p">]),</span>
+            <span class="n">range_z</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;range_z&quot;</span><span class="p">],</span>
+            <span class="n">deck_id</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;deck_id&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="c1"># ✅ STEP 1: Create all labware FIRST</span>
+        <span class="k">for</span> <span class="n">lid</span><span class="p">,</span> <span class="n">lwdata</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;labware&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">deck</span><span class="o">.</span><span class="n">labware</span><span class="p">[</span><span class="n">lid</span><span class="p">]</span> <span class="o">=</span> <span class="n">Serializable</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">lwdata</span><span class="p">)</span>
+
+        <span class="c1"># ✅ STEP 2: Create slots (without labware)</span>
+        <span class="k">for</span> <span class="n">sid</span><span class="p">,</span> <span class="n">sdata</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;slots&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">deck</span><span class="o">.</span><span class="n">slots</span><span class="p">[</span><span class="n">sid</span><span class="p">]</span> <span class="o">=</span> <span class="n">Serializable</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">sdata</span><span class="p">)</span>
+
+        <span class="c1"># ✅ STEP 3: Populate slot labware_stack with existing labware objects</span>
+        <span class="k">for</span> <span class="n">slot_id</span><span class="p">,</span> <span class="n">slot</span> <span class="ow">in</span> <span class="n">deck</span><span class="o">.</span><span class="n">slots</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">slot</span><span class="p">,</span> <span class="s1">&#39;_pending_labware_data&#39;</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">lw_id</span><span class="p">,</span> <span class="p">(</span><span class="n">lw_data</span><span class="p">,</span> <span class="n">z_range</span><span class="p">)</span> <span class="ow">in</span> <span class="n">slot</span><span class="o">.</span><span class="n">_pending_labware_data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">lw_id</span> <span class="ow">in</span> <span class="n">deck</span><span class="o">.</span><span class="n">labware</span><span class="p">:</span>
+                        <span class="n">slot</span><span class="o">.</span><span class="n">labware_stack</span><span class="p">[</span><span class="n">lw_id</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">deck</span><span class="o">.</span><span class="n">labware</span><span class="p">[</span><span class="n">lw_id</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">z_range</span><span class="p">))</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;⚠️ Warning: </span><span class="si">{</span><span class="n">lw_id</span><span class="si">}</span><span class="s2"> in slot but not in deck.labware&quot;</span><span class="p">)</span>
+
+                <span class="c1"># Clean up temporary data</span>
+                <span class="nb">delattr</span><span class="p">(</span><span class="n">slot</span><span class="p">,</span> <span class="s1">&#39;_pending_labware_data&#39;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">deck</span>
+<div class="viewcode-block" id="Deck.get_slot_for_labware">
+<a class="viewcode-back" href="../../../api.html#biohit_pipettor_plus.deck_structure.Deck.get_slot_for_labware">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_slot_for_labware</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">labware_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Find the slot ID containing the given labware_id.</span>
+<span class="sd">            Parameters</span>
+<span class="sd">            ---------</span>
+<span class="sd">            labware_id : str</span>
+<span class="sd">                The ID of the labware to locate.</span>
+
+<span class="sd">            Returns</span>
+<span class="sd">            -------</span>
+<span class="sd">            Optional[str]</span>
+<span class="sd">                The slot ID if found, else None.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="k">for</span> <span class="n">slot_id</span><span class="p">,</span> <span class="n">slot</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">slots</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">labware_id</span> <span class="ow">in</span> <span class="n">slot</span><span class="o">.</span><span class="n">labware_stack</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">slot_id</span>
+            <span class="k">return</span> <span class="kc">None</span></div>
+</div>
+
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">biohit_pipettor_plus.deck_structure.deck</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2026, Advait Lath.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.7.
+    </div>
+  </body>
+</html>

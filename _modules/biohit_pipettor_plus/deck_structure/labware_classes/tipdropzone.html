@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>biohit_pipettor_plus.deck_structure.labware_classes.tipdropzone &#8212; biohit-pipettor-plus  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=a9d2d1f6" />
+    <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">biohit_pipettor_plus.deck_structure.labware_classes.tipdropzone</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for biohit_pipettor_plus.deck_structure.labware_classes.tipdropzone</h1><div class="highlight"><pre>
+<span></span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.labware_classes.labware</span><span class="w"> </span><span class="kn">import</span> <span class="n">Labware</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.serializable</span><span class="w"> </span><span class="kn">import</span> <span class="n">register_class</span>
+
+<div class="viewcode-block" id="TipDropzone">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.TipDropzone">[docs]</a>
+<span class="nd">@register_class</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">TipDropzone</span><span class="p">(</span><span class="n">Labware</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Represents a Tip Dropzone labware with relative drop position and height.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    drop_height_relative : float</span>
+<span class="sd">        Drop height relative to the labware height.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size_x</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                 <span class="n">size_y</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                 <span class="n">size_z</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                 <span class="n">can_be_stacked_upon</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                 <span class="n">offset</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                 <span class="n">drop_height_relative</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
+                 <span class="n">position</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">labware_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span>
+                 <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize a TipDropzone instance.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        size_x : float</span>
+<span class="sd">            Width of the drop zone in millimeters.</span>
+<span class="sd">        size_y : float</span>
+<span class="sd">            Depth of the drop zone in millimeters.</span>
+<span class="sd">        size_z : float</span>
+<span class="sd">            Height of the drop zone in millimeters.</span>
+<span class="sd">        labware_id : str, optional</span>
+<span class="sd">            Unique ID for the dropzone object.</span>
+<span class="sd">        position : tuple[float, float], optional</span>
+<span class="sd">            (x, y) position coordinates of the tip dropzone in millimeters.</span>
+<span class="sd">            If None, position is not set.</span>
+<span class="sd">        drop_height_relative : float, optional</span>
+<span class="sd">            Height from which tips are dropped relative to the labware. Default is 20.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">size_x</span><span class="o">=</span><span class="n">size_x</span><span class="p">,</span> <span class="n">size_y</span><span class="o">=</span><span class="n">size_y</span><span class="p">,</span> <span class="n">size_z</span><span class="o">=</span><span class="n">size_z</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="n">offset</span><span class="p">,</span> <span class="n">labware_id</span><span class="o">=</span><span class="n">labware_id</span><span class="p">,</span>
+                         <span class="n">position</span><span class="o">=</span><span class="n">position</span><span class="p">,</span> <span class="n">can_be_stacked_upon</span><span class="o">=</span><span class="n">can_be_stacked_upon</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">drop_height_relative</span> <span class="o">=</span> <span class="n">drop_height_relative</span>
+
+<div class="viewcode-block" id="TipDropzone.get_state_snapshot">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.TipDropzone.get_state_snapshot">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_state_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return empty snapshot - TipDropzone has no mutable state&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{}</span></div>
+
+
+<div class="viewcode-block" id="TipDropzone.restore_state_snapshot">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.TipDropzone.restore_state_snapshot">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">restore_state_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">snapshot</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;No-op - TipDropzone has no mutable state to restore&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="TipDropzone.to_dict">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.TipDropzone.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Serialize the TipDropzone instance to a dictionary, extending the base Labware fields.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            dictionary representation of the tip dropzone.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">base_dict</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+        <span class="n">base_dict</span><span class="o">.</span><span class="n">update</span><span class="p">({</span>
+            <span class="s2">&quot;drop_height_relative&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">drop_height_relative</span><span class="p">,</span>
+        <span class="p">})</span>
+        <span class="k">return</span> <span class="n">base_dict</span></div>
+
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;TipDropzone&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Deserialize a TipDropzone instance from a dictionary using the base Labware _from_dict.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data : dict</span>
+<span class="sd">            dictionary containing tip dropzone attributes.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        TipDropzone</span>
+<span class="sd">            Reconstructed TipDropzone instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Safely handle position deserialization</span>
+        <span class="c1"># Safely handle position deserialization</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;position&quot;</span><span class="p">])</span> <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;position&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">size_x</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;size_x&quot;</span><span class="p">],</span>
+            <span class="n">size_y</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;size_y&quot;</span><span class="p">],</span>
+            <span class="n">size_z</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;size_z&quot;</span><span class="p">],</span>
+            <span class="n">offset</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;offset&quot;</span><span class="p">],</span>
+            <span class="n">can_be_stacked_upon</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;can_be_stacked_upon&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+            <span class="n">position</span><span class="o">=</span><span class="n">position</span><span class="p">,</span>
+            <span class="n">drop_height_relative</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;drop_height_relative&quot;</span><span class="p">],</span>
+            <span class="n">labware_id</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;labware_id&quot;</span><span class="p">]</span>
+        <span class="p">)</span></div>
+
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">biohit_pipettor_plus.deck_structure.labware_classes.tipdropzone</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2026, Advait Lath.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.7.
+    </div>
+  </body>
+</html>

@@ -14,6 +14,7 @@
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API Reference" href="api.html" />
     <link rel="prev" title="Workflow" href="workflow.html" /> 
   </head><body>
     <div class="related" role="navigation" aria-label="Related">
@@ -25,6 +26,9 @@
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
+        <li class="right" >
+          <a href="api.html" title="API Reference"
+             accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="workflow.html" title="Workflow"
              accesskey="P">previous</a> |</li>
@@ -40,7 +44,39 @@
             
   <section id="troubleshooting">
 <h1>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading">¶</a></h1>
-<p>Coming soon.</p>
+<section id="workflow-operation-validation-failing">
+<h2>Workflow/Operation validation failing<a class="headerlink" href="#workflow-operation-validation-failing" title="Link to this heading">¶</a></h2>
+<p>Sometimes, the Workflow will not be validated and an error message will show up on the screen. The operation that causes
+workflow failure will be shown and the reason for the error as well. Common errors include
+when interacting with following labware type</p>
+<ul class="simple">
+<li><p><strong>Plate (Well)</strong> - Overflow when dispensing /Not enough Volume when aspirating</p></li>
+<li><p><strong>ReservoirHolder (Reservoir)</strong> - Overflow when dispensing /Not enough Volume when aspirating</p></li>
+<li><p><strong>PipetteHolder ( IndividualPipetteHolder)</strong> - Pipettor fail to pick tip from selected holder during pick_tip/ replace_tip.</p></li>
+</ul>
+<p>If the operation is physically possible, then changing children value by clicking on ** Edit children lw ** button in
+Deck Editor tab.</p>
+</section>
+<section id="pipettor-connection-issues">
+<span id="id1"></span><h2>Pipettor connection issues<a class="headerlink" href="#pipettor-connection-issues" title="Link to this heading">¶</a></h2>
+<p>Check the following:</p>
+<ul class="simple">
+<li><p>Ensure the pipettor USB driver is installed.</p></li>
+<li><p>Confirm the pipettor is powered on and responsive.</p></li>
+<li><p>Clear any pending error/backlog state.
+For Biohit pipettors, a <strong>blue light</strong> may indicate a backlog error.</p></li>
+<li><p>Restart the program and try connecting again.</p></li>
+<li><p>Try connecting without the GUI using the base package.</p></li>
+</ul>
+<p>If the error cannot be cleared using the steps above, a technician may be required.</p>
+</section>
+<section id="installing-a-new-pipettor">
+<h2>Installing a new pipettor<a class="headerlink" href="#installing-a-new-pipettor" title="Link to this heading">¶</a></h2>
+<p>A package similar to open-biohit must be created with similar pipettor functions. Mock pipettor should also be
+considered to allow virtual testing. Clone the open-biohit-plus package and change import in pipettor_plus.py file.
+Change pyproject.toml and spec file accordingly.  Make sure python in use matches the bit version of DLL file</p>
+<p>Go through the documentation of <a class="reference external" href="https://umg-pharma-lab-automation.pages.gwdg.de/biohit-pipettor-python/">open-biohit (biohit-pipettor-python)</a></p>
+</section>
 </section>
 
 
@@ -51,9 +87,26 @@
       <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
   <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">Troubleshooting</a><ul>
+<li><a class="reference internal" href="#workflow-operation-validation-failing">Workflow/Operation validation failing</a></li>
+<li><a class="reference internal" href="#pipettor-connection-issues">Pipettor connection issues</a></li>
+<li><a class="reference internal" href="#installing-a-new-pipettor">Installing a new pipettor</a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
     <h4>Previous topic</h4>
     <p class="topless"><a href="workflow.html"
                           title="previous chapter">Workflow</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="api.html"
+                          title="next chapter">API Reference</a></p>
   </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
@@ -85,6 +138,9 @@
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
+        <li class="right" >
+          <a href="api.html" title="API Reference"
+             >next</a> |</li>
         <li class="right" >
           <a href="workflow.html" title="Workflow"
              >previous</a> |</li>

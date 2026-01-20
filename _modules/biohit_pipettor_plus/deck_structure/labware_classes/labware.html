@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>biohit_pipettor_plus.deck_structure.labware_classes.labware &#8212; biohit-pipettor-plus  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=a9d2d1f6" />
+    <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">biohit_pipettor_plus.deck_structure.labware_classes.labware</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for biohit_pipettor_plus.deck_structure.labware_classes.labware</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Literal</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.serializable</span><span class="w"> </span><span class="kn">import</span> <span class="n">register_class</span><span class="p">,</span> <span class="n">Serializable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.pipettor_plus.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_config</span>
+
+
+<span class="n">Default_Reservoir_Capacity</span> <span class="o">=</span> <span class="mi">30000</span>
+<span class="n">Default_well_capacity</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">Defined_shape</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;rectangular&quot;</span><span class="p">,</span> <span class="s2">&quot;circular&quot;</span><span class="p">,</span> <span class="s2">&quot;conical&quot;</span><span class="p">,</span> <span class="s2">&quot;u_bottom&quot;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="Labware">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Labware">[docs]</a>
+<span class="nd">@register_class</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Labware</span><span class="p">(</span><span class="n">Serializable</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Base class for all labware objects with automatic subclass registry.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    size_x : float</span>
+<span class="sd">        Width of the labware in millimeters.</span>
+<span class="sd">    size_y : float</span>
+<span class="sd">        Depth of the labware in millimeters.</span>
+<span class="sd">    size_z : float</span>
+<span class="sd">        Height of the labware in millimeters.</span>
+<span class="sd">    position: tuple[float, float]</span>
+<span class="sd">        x,y coordinate of the labware.</span>
+<span class="sd">    labware_id : str</span>
+<span class="sd">        Unique identifier of the labware instance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">registry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">type</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__init_subclass__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Automatically register subclasses by their class name in the Labware registry.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init_subclass__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">Labware</span><span class="o">.</span><span class="n">registry</span><span class="p">[</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="bp">cls</span>
+
+<div class="viewcode-block" id="Labware.validate_positive_dimensions">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Labware.validate_positive_dimensions">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">validate_positive_dimensions</span><span class="p">(</span><span class="n">size_x</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">size_y</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">size_z</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">labware_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Labware&quot;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validate that dimensions are positive&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">size_x</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">labware_type</span><span class="si">}</span><span class="s2"> size_x must be positive, got </span><span class="si">{</span><span class="n">size_x</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">size_y</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">labware_type</span><span class="si">}</span><span class="s2"> size_y must be positive, got </span><span class="si">{</span><span class="n">size_y</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">size_z</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">labware_type</span><span class="si">}</span><span class="s2"> size_z must be positive, got </span><span class="si">{</span><span class="n">size_z</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size_x</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">size_y</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">size_z</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+                 <span class="n">labware_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">position</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">can_be_stacked_upon</span> <span class="p">:</span><span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize a Labware instance.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        size_x : float</span>
+<span class="sd">            Width of the labware in millimeters.</span>
+<span class="sd">        size_y : float</span>
+<span class="sd">            Depth of the labware in millimeters.</span>
+<span class="sd">        size_z : float</span>
+<span class="sd">            Height of the labware in millimeters.</span>
+<span class="sd">        labware_id : str, optional</span>
+<span class="sd">            Unique ID for the labware. If None, a UUID will be generated.</span>
+<span class="sd">        position : tuple[float, float], optional</span>
+<span class="sd">            (x, y) position coordinates of the labware in millimeters.</span>
+<span class="sd">            If None, position is not set.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+        <span class="n">Labware</span><span class="o">.</span><span class="n">validate_positive_dimensions</span><span class="p">(</span><span class="n">size_x</span><span class="p">,</span> <span class="n">size_y</span><span class="p">,</span> <span class="n">size_z</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">size_x</span> <span class="o">=</span> <span class="n">size_x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">size_y</span> <span class="o">=</span> <span class="n">size_y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">size_z</span> <span class="o">=</span> <span class="n">size_z</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">offset</span> <span class="o">=</span> <span class="n">offset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="n">position</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">can_be_stacked_upon</span> <span class="o">=</span> <span class="n">can_be_stacked_upon</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">labware_id</span> <span class="o">=</span> <span class="n">labware_id</span> <span class="ow">or</span> <span class="sa">f</span><span class="s2">&quot;labware_</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="p">[:</span><span class="mi">8</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+
+<div class="viewcode-block" id="Labware.validate_col_row">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Labware.validate_col_row">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">validate_col_row</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">consecutive_rows</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Validate column indices and row range for grid-based labware operations.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        columns : list[int]</span>
+<span class="sd">            List of column indices to validate</span>
+<span class="sd">        row : int</span>
+<span class="sd">            Starting row index</span>
+<span class="sd">        consecutive_rows : int, optional</span>
+<span class="sd">            Number of consecutive rows needed (default: 1). For multichannel pipette, generally 8</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple[bool, str]</span>
+<span class="sd">            (is_valid, error_message)</span>
+<span class="sd">            - is_valid: True if validation passes, False otherwise</span>
+<span class="sd">            - error_message: Empty string if valid, error description if invalid</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check if this labware has a grid structure</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_columns&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_rows&#39;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> does not have a grid structure&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Validate column indices</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">col</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">col</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_columns</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Column index </span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2"> is out of range. Valid range is 0 to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_columns</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Validate row range</span>
+        <span class="k">if</span> <span class="n">row</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Row index </span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2"> cannot be negative&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">row</span> <span class="o">+</span> <span class="n">consecutive_rows</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s2">&quot;Row index </span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2"> is out of range. Need </span><span class="si">{</span><span class="n">consecutive_rows</span><span class="si">}</span><span class="s2"> consecutive row(s). Valid range is 0 to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_rows</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">consecutive_rows</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Labware.validate_col_row_or_raise">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Labware.validate_col_row_or_raise">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">validate_col_row_or_raise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">consecutive_rows</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Validate column and row, raising ValueError if invalid.</span>
+
+<span class="sd">        Convenience method for when you want to raise an error immediately.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">is_valid</span><span class="p">,</span> <span class="n">error_msg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">validate_col_row</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">consecutive_rows</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_valid</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Labware.each_tip_needs_separate_item">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Labware.each_tip_needs_separate_item">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">each_tip_needs_separate_item</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            For multichannel operation, does each tip need to access a separate item?</span>
+
+<span class="sd">            Returns</span>
+<span class="sd">            -------</span>
+<span class="sd">            bool</span>
+<span class="sd">                True: Each tip needs its own item (e.g., Plate - small wells)</span>
+<span class="sd">                False: All tips can share one item (e.g., ReservoirHolder - large reservoirs)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="kc">True</span>  <span class="c1"># Default: items are small, tips need separate items. overwritten for some labwares like plate</span></div>
+
+
+<div class="viewcode-block" id="Labware.validate_multichannel_compatible">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Labware.validate_multichannel_compatible">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">validate_multichannel_compatible</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item_size_y</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Validate if an item is large enough for multichannel operation.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        item_size_y : float</span>
+<span class="sd">            The Y-dimension of the item to validate (e.g., reservoir, well)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple[bool, str]</span>
+<span class="sd">            (is_valid, error_message)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">each_tip_needs_separate_item</span><span class="p">():</span>
+            <span class="n">cfg</span> <span class="o">=</span> <span class="n">load_config</span><span class="p">()</span>
+            <span class="n">pipettors_in_multi</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;Pipettors_in_Multi&quot;</span><span class="p">])</span>
+            <span class="n">spacing</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;Spacing_Between_Adjacent_Pipettor&quot;</span><span class="p">])</span>
+
+            <span class="n">min_required_y</span> <span class="o">=</span> <span class="n">pipettors_in_multi</span> <span class="o">*</span> <span class="n">spacing</span>
+            <span class="k">if</span> <span class="n">item_size_y</span> <span class="o">&lt;</span> <span class="n">min_required_y</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">(</span><span class="kc">False</span><span class="p">,</span>
+                        <span class="sa">f</span><span class="s2">&quot;Item size_y (</span><span class="si">{</span><span class="n">item_size_y</span><span class="si">}</span><span class="s2">mm) is too small for multichannel operation. &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;Minimum required: </span><span class="si">{</span><span class="n">min_required_y</span><span class="si">}</span><span class="s2">mm. &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;Increase size y or set labware to one item per tip &quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Labware.to_dict">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Labware.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Serialize the Labware instance to a dictionary.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            dictionary representation of the labware.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;class&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+            <span class="s2">&quot;labware_id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">labware_id</span><span class="p">,</span>
+            <span class="s2">&quot;size_x&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">size_x</span><span class="p">,</span>
+            <span class="s2">&quot;size_y&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">size_y</span><span class="p">,</span>
+            <span class="s2">&quot;size_z&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">size_z</span><span class="p">,</span>
+            <span class="s2">&quot;offset&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span>
+            <span class="s2">&quot;can_be_stacked_upon&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">can_be_stacked_upon</span><span class="p">,</span>
+            <span class="s2">&quot;position&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">position</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">}</span></div>
+
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Labware&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Deserialize a Labware instance from a dictionary.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data : dict</span>
+<span class="sd">            dictionary containing labware attributes.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Labware</span>
+<span class="sd">            Reconstructed Labware instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Safely handle position deserialization</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;position&quot;</span><span class="p">])</span> <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;position&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">size_x</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;size_x&quot;</span><span class="p">],</span>
+            <span class="n">size_y</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;size_y&quot;</span><span class="p">],</span>
+            <span class="n">size_z</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;size_z&quot;</span><span class="p">],</span>
+            <span class="n">offset</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;offset&quot;</span><span class="p">],</span>
+            <span class="n">can_be_stacked_upon</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;can_be_stacked_upon&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+            <span class="n">labware_id</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;labware_id&quot;</span><span class="p">],</span>
+            <span class="n">position</span><span class="o">=</span><span class="n">position</span>
+        <span class="p">)</span></div>
+
+
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">biohit_pipettor_plus.deck_structure.labware_classes.labware</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2026, Advait Lath.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.7.
+    </div>
+  </body>
+</html>

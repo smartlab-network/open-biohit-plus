@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Pipettor &#8212; biohit-pipettor-plus  documentation</title>
+    <title>Configuring the Pipettor &#8212; biohit-pipettor-plus  documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="_static/nature.css?v=0f882399" />
     <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=a9d2d1f6" />
@@ -14,8 +14,8 @@
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Operation" href="operation.html" />
-    <link rel="prev" title="Deck, Slot, and Labware" href="deck_slot_labware.html" /> 
+    <link rel="next" title="Direct Operation" href="operation.html" />
+    <link rel="prev" title="How to create a deck" href="howtocreateadeck.html" /> 
   </head><body>
     <div class="related" role="navigation" aria-label="Related">
       <h3>Navigation</h3>
@@ -27,13 +27,13 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="operation.html" title="Operation"
+          <a href="operation.html" title="Direct Operation"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="deck_slot_labware.html" title="Deck, Slot, and Labware"
+          <a href="howtocreateadeck.html" title="How to create a deck"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
-        <li class="nav-item nav-item-this"><a href="">Pipettor</a></li> 
+        <li class="nav-item nav-item-this"><a href="">Configuring the Pipettor</a></li> 
       </ul>
     </div>  
 
@@ -42,9 +42,75 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <section id="pipettor">
-<h1>Pipettor<a class="headerlink" href="#pipettor" title="Link to this heading">¶</a></h1>
-<p>Coming soon.</p>
+  <section id="configuring-the-pipettor">
+<h1>Configuring the Pipettor<a class="headerlink" href="#configuring-the-pipettor" title="Link to this heading">¶</a></h1>
+<p>After creating a deck, you must connect to the pipettor before any operations can be performed.</p>
+<section id="brief-introduction-to-the-open-biohit-package">
+<h2>Brief introduction to the <code class="docutils literal notranslate"><span class="pre">open-biohit</span></code> package<a class="headerlink" href="#brief-introduction-to-the-open-biohit-package" title="Link to this heading">¶</a></h2>
+<p>By default, the software connects to a Sartorius Biohit pipettor using the
+<code class="docutils literal notranslate"><span class="pre">open-biohit</span></code> Python package.</p>
+<p>Documentation:
+<a class="reference external" href="https://umg-pharma-lab-automation.pages.gwdg.de/biohit-pipettor-python/">open-biohit (biohit-pipettor-python)</a></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">open-biohit</span></code> package communicates with the pipettor via a <strong>32-bit vendor DLL</strong>. It provides access to
+basic pipetting commands such as move_x, move_y, pick_tip, aspirate: Notes from open-biohit documentation:</p>
+<ul class="simple">
+<li><p>The pipettor may be <strong>single-channel</strong> or <strong>multi-channel</strong>.</p></li>
+<li><p>It supports tips of <strong>200 µL</strong> and <strong>1000 µL</strong>.</p></li>
+<li><p>The connection is handled through a <strong>context manager</strong> to prevent errors affecting future workflows.</p></li>
+<li><p>The pipettor can be <strong>initialized on connect</strong>, resetting it to its default state.</p></li>
+<li><p>A <strong>mock pipettor</strong> connection can be made with initialized parameter set as true:</p>
+<ul>
+<li><p>A plot of pipettor calls is generated using <code class="docutils literal notranslate"><span class="pre">matplotlib</span></code> when mock connection ends.</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="how-to-connect">
+<h2>How to connect<a class="headerlink" href="#how-to-connect" title="Link to this heading">¶</a></h2>
+<p>Pipettor configuration is managed from the <strong>Pipettor Configuration</strong> section inside the
+<strong>Low-Level Parameters</strong> tab.</p>
+<p>Available configuration options include:</p>
+<ul class="simple">
+<li><p>Tip volume</p></li>
+<li><p>Tip length</p></li>
+<li><p>Single-channel or multi-channel mode</p></li>
+<li><p>Initialize pipettor on connect</p></li>
+<li><p>Connect to mock pipettor</p></li>
+</ul>
+<p>After configuring these values, click <strong>Connect to Pipettor</strong> to verify the connection.</p>
+<p>Once connected, additional parameters can be tuned:</p>
+<ul class="simple">
+<li><p>Movement speed</p></li>
+<li><p>Aspirate force</p></li>
+<li><p>Dispense force</p></li>
+</ul>
+<section id="changing-parameters">
+<h3>Changing Parameters<a class="headerlink" href="#changing-parameters" title="Link to this heading">¶</a></h3>
+<p>These parameters control key pipettor and workflow behaviours.
+To edit them in the GUI, go to <strong>Settings → Parameters</strong>.</p>
+<p>You can modify:</p>
+<ul class="simple">
+<li><p><strong>Pipettors in Multi</strong> - Number of tips on the multi-channel pipettor. The default (and standard) is <strong>8</strong>.</p></li>
+<li><p><strong>Spacing Between Adjacent Pipettor</strong> - Distance (in mm) between neighbouring tips on the multi-channel pipettor.</p></li>
+<li><p><strong>Batch Size</strong> - Controls the maximum number of operations grouped into a single batch. See <a class="reference internal" href="operation.html#liquid-handling-operation"><span class="std std-ref">Liquid handling operations</span></a> for how batching affects workflow execution.</p></li>
+<li><p><strong>Z-Max</strong> - Maximum allowed travel on the Z-axis (in mm). Any command exceeding this limit will raise a validation error.</p></li>
+</ul>
+</section>
+<section id="tip-lengths">
+<h3>Tip lengths<a class="headerlink" href="#tip-lengths" title="Link to this heading">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">TIP_LENGTHS</span></code> provides default tip lengths:</p>
+<ul class="simple">
+<li><p><strong>200 µL:</strong> 38 mm</p></li>
+<li><p><strong>1000 µL:</strong> 88 mm</p></li>
+</ul>
+<p>Reference document:
+<a class="reference external" href="https://shop.sartorius.com/medias/rLINE-dispensing-module.pdf?context=bWFzdGVyfGRvY3VtZW50c3wxMDQ1NjEzfGFwcGxpY2F0aW9uL3BkZnxhRGhoTDJoaE1pODVPVEEyT0RReE9UYzJPRFl5fGFkZmZmYzFjM2UzYjAwNjI2ODA3MmVmZmYxMWU4NDExZTVlOWMyNTFjNmYzYjZmY2M3Y2ZkODgxMDEzN2U1MDg">rLINE dispensing module (PDF)</a></p>
+</section>
+</section>
+<section id="troubleshooting-connection-issues">
+<h2>Troubleshooting connection issues<a class="headerlink" href="#troubleshooting-connection-issues" title="Link to this heading">¶</a></h2>
+<p>See <a class="reference internal" href="troubleshooting.html#pipettor-connection-issues"><span class="std std-ref">Pipettor connection issues</span></a>.</p>
+</section>
 </section>
 
 
@@ -55,14 +121,30 @@
       <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
   <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">Configuring the Pipettor</a><ul>
+<li><a class="reference internal" href="#brief-introduction-to-the-open-biohit-package">Brief introduction to the <code class="docutils literal notranslate"><span class="pre">open-biohit</span></code> package</a></li>
+<li><a class="reference internal" href="#how-to-connect">How to connect</a><ul>
+<li><a class="reference internal" href="#changing-parameters">Changing Parameters</a></li>
+<li><a class="reference internal" href="#tip-lengths">Tip lengths</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#troubleshooting-connection-issues">Troubleshooting connection issues</a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
     <h4>Previous topic</h4>
-    <p class="topless"><a href="deck_slot_labware.html"
-                          title="previous chapter">Deck, Slot, and Labware</a></p>
+    <p class="topless"><a href="howtocreateadeck.html"
+                          title="previous chapter">How to create a deck</a></p>
   </div>
   <div>
     <h4>Next topic</h4>
     <p class="topless"><a href="operation.html"
-                          title="next chapter">Operation</a></p>
+                          title="next chapter">Direct Operation</a></p>
   </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
@@ -95,13 +177,13 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="operation.html" title="Operation"
+          <a href="operation.html" title="Direct Operation"
              >next</a> |</li>
         <li class="right" >
-          <a href="deck_slot_labware.html" title="Deck, Slot, and Labware"
+          <a href="howtocreateadeck.html" title="How to create a deck"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
-        <li class="nav-item nav-item-this"><a href="">Pipettor</a></li> 
+        <li class="nav-item nav-item-this"><a href="">Configuring the Pipettor</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">

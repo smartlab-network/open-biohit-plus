@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>biohit_pipettor_plus.deck_structure.labware_classes.reservoir &#8212; biohit-pipettor-plus  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=a9d2d1f6" />
+    <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">biohit_pipettor_plus.deck_structure.labware_classes.reservoir</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for biohit_pipettor_plus.deck_structure.labware_classes.reservoir</h1><div class="highlight"><pre>
+<span></span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.labware_classes</span><span class="w"> </span><span class="kn">import</span> <span class="n">Labware</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.serializable</span><span class="w"> </span><span class="kn">import</span> <span class="n">register_class</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.labware_classes.labware</span><span class="w"> </span><span class="kn">import</span> <span class="n">Default_Reservoir_Capacity</span><span class="p">,</span> <span class="n">Defined_shape</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+
+
+<div class="viewcode-block" id="Reservoir">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Reservoir">[docs]</a>
+<span class="nd">@register_class</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Reservoir</span><span class="p">(</span><span class="n">Labware</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size_x</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">size_y</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">size_z</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">labware_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">position</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">can_be_stacked_upon</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">capacity</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Default_Reservoir_Capacity</span><span class="p">,</span> <span class="n">content</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">hook_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">shape</span><span class="p">:</span> <span class="n">Defined_shape</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize a Reservoir instance. These are containers that store the medium to be filled in and removed from well.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        size_x : float</span>
+<span class="sd">            Width of the reservoir in millimeters.</span>
+<span class="sd">        size_y : float</span>
+<span class="sd">            Depth of the reservoir in millimeters.</span>
+<span class="sd">        size_z : float</span>
+<span class="sd">            Height of the reservoir in millimeters.</span>
+<span class="sd">        capacity : float, optional</span>
+<span class="sd">            Maximum amount of liquid that reservoir can hold. Default is Default_Reservoir_Capacity.</span>
+<span class="sd">        content : dict, optional</span>
+<span class="sd">            Dictionary mapping content types to volumes (µL).</span>
+<span class="sd">            Example: {&quot;PBS&quot;: 25000, &quot;water&quot;: 5000}</span>
+<span class="sd">        hook_ids : list[int], optional</span>
+<span class="sd">            List of hook locations on ReservoirHolder where this reservoir is going to be placed.</span>
+<span class="sd">        labware_id : str, optional</span>
+<span class="sd">            Unique ID for the reservoir.</span>
+<span class="sd">        position : tuple[float, float], optional</span>
+<span class="sd">            (x, y) position coordinates of the reservoir in millimeters.</span>
+<span class="sd">            If None, position is not set.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">size_x</span><span class="p">,</span> <span class="n">size_y</span><span class="p">,</span> <span class="n">size_z</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">labware_id</span><span class="p">,</span> <span class="n">position</span><span class="p">,</span> <span class="n">can_be_stacked_upon</span><span class="o">=</span><span class="n">can_be_stacked_upon</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span> <span class="o">=</span> <span class="n">capacity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hook_ids</span> <span class="o">=</span> <span class="n">hook_ids</span> <span class="k">if</span> <span class="n">hook_ids</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">row</span> <span class="o">=</span> <span class="n">row</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">column</span> <span class="o">=</span> <span class="n">column</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="n">shape</span>
+
+        <span class="c1"># Initialize content as dictionary for sophisticated tracking</span>
+        <span class="k">if</span> <span class="n">content</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="n">content</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Content must be dict or None, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">content</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Validate inputs</span>
+        <span class="n">total_volume</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_total_volume</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">total_volume</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Total content volume (</span><span class="si">{</span><span class="n">total_volume</span><span class="si">}</span><span class="s2">) cannot exceed capacity (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">capacity</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Capacity cannot be negative&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Reservoir.add_content">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Reservoir.add_content">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">content_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">volume</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add content to the reservoir with intelligent mixing logic.</span>
+
+<span class="sd">        When adding content to a reservoir:</span>
+<span class="sd">        - Same content type: volumes are combined</span>
+<span class="sd">        - Different content type: tracked separately (but physically mixed)</span>
+
+<span class="sd">        Note: Once liquids are mixed in a reservoir, they cannot be separated.</span>
+<span class="sd">        Removal is always proportional from all content types.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        content_type : str</span>
+<span class="sd">            Content to add (e.g., &quot;PBS&quot;, &quot;water&quot;, &quot;waste&quot;)</span>
+<span class="sd">        volume : float</span>
+<span class="sd">            Volume to add (µL)</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If adding volume would exceed capacity or volume is negative</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">volume</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Volume to add must be positive&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">content_type</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Content type cannot be empty&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Check if adding would exceed capacity</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_total_volume</span><span class="p">()</span> <span class="o">+</span> <span class="n">volume</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Overflow! Adding </span><span class="si">{</span><span class="n">volume</span><span class="si">}</span><span class="s2">µL would exceed capacity of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">capacity</span><span class="si">}</span><span class="s2">µL. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Current volume: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">get_total_volume</span><span class="p">()</span><span class="si">}</span><span class="s2">µL&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Add content to dictionary</span>
+        <span class="k">if</span> <span class="n">content_type</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">[</span><span class="n">content_type</span><span class="p">]</span> <span class="o">+=</span> <span class="n">volume</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">[</span><span class="n">content_type</span><span class="p">]</span> <span class="o">=</span> <span class="n">volume</span></div>
+
+
+<div class="viewcode-block" id="Reservoir.remove_content">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Reservoir.remove_content">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">remove_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">volume</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">return_dict</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove content from the reservoir proportionally.</span>
+
+<span class="sd">        When content is removed from a reservoir, it&#39;s removed proportionally from all</span>
+<span class="sd">        content types since they are mixed together.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        volume : float</span>
+<span class="sd">            Volume to remove (µL)</span>
+<span class="sd">        return_dict : bool, optional</span>
+<span class="sd">            If True, return a dictionary of removed content types and volumes (default: False)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Optional[dict[str, float]]</span>
+<span class="sd">            If return_dict is True, returns dictionary mapping content types to removed volumes.</span>
+<span class="sd">            Otherwise, returns None.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If trying to remove more volume than available or volume is negative</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">volume</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Volume to remove must be positive&quot;</span><span class="p">)</span>
+
+        <span class="n">total_volume</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_total_volume</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">total_volume</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot remove from empty reservoir&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">volume</span> <span class="o">&gt;</span> <span class="n">total_volume</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Underflow! Cannot remove </span><span class="si">{</span><span class="n">volume</span><span class="si">}</span><span class="s2">µL, only </span><span class="si">{</span><span class="n">total_volume</span><span class="si">}</span><span class="s2">µL available&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Dictionary to track what was removed</span>
+        <span class="n">removed_content</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># Remove proportionally from all content types (since they&#39;re mixed)</span>
+        <span class="n">removal_ratio</span> <span class="o">=</span> <span class="n">volume</span> <span class="o">/</span> <span class="n">total_volume</span>
+
+        <span class="c1"># Remove proportionally from each content type</span>
+        <span class="n">content_types</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="k">for</span> <span class="n">content_type</span> <span class="ow">in</span> <span class="n">content_types</span><span class="p">:</span>
+            <span class="n">remove_amount</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">[</span><span class="n">content_type</span><span class="p">]</span> <span class="o">*</span> <span class="n">removal_ratio</span>
+            <span class="n">removed_content</span><span class="p">[</span><span class="n">content_type</span><span class="p">]</span> <span class="o">=</span> <span class="n">remove_amount</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">[</span><span class="n">content_type</span><span class="p">]</span> <span class="o">-=</span> <span class="n">remove_amount</span>
+
+            <span class="c1"># Clean up zero or negative volumes</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">[</span><span class="n">content_type</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mf">1e-6</span><span class="p">:</span>  <span class="c1"># Use small epsilon for floating point comparison</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">[</span><span class="n">content_type</span><span class="p">]</span>
+
+        <span class="c1"># Return the dictionary if requested</span>
+        <span class="k">if</span> <span class="n">return_dict</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">removed_content</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="Reservoir.get_total_volume">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Reservoir.get_total_volume">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_total_volume</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get total volume of all content in the reservoir.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Total volume in µL</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">values</span><span class="p">())</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span> <span class="k">else</span> <span class="mf">0.0</span></div>
+
+
+<div class="viewcode-block" id="Reservoir.get_available_volume">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Reservoir.get_available_volume">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_available_volume</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the remaining capacity available in the reservoir.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Available volume in µL</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_total_volume</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="Reservoir.get_content_info">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Reservoir.get_content_info">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_content_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get current content information.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            Dictionary with detailed content information</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;content_summary&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_content_summary</span><span class="p">(),</span>
+            <span class="s2">&quot;available_volume&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_available_volume</span><span class="p">(),</span>
+            <span class="s2">&quot;total_capacity&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Reservoir.get_content_summary">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Reservoir.get_content_summary">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_content_summary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get a human-readable summary of reservoir content.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str</span>
+<span class="sd">            Summary string like &quot;PBS: 25000µL, water: 5000µL&quot; or &quot;empty&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_total_volume</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;empty&quot;</span>
+
+        <span class="n">parts</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">content_type</span><span class="p">,</span> <span class="n">volume</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">content_type</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">volume</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">µL&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Reservoir.get_content_by_type">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Reservoir.get_content_by_type">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_content_by_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">content_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get volume of specific content type.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        content_type : str</span>
+<span class="sd">            Type of content to query</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Volume of specified content type (0 if not present)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">content_type</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Reservoir.clear_content">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Reservoir.clear_content">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">clear_content</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Clear all content from the reservoir.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="p">{}</span></div>
+
+
+<div class="viewcode-block" id="Reservoir.has_content_type">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Reservoir.has_content_type">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">has_content_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">content_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Check if reservoir contains specific content type.l</span>
+<span class="sd">            True if content type is present</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">content_type</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">[</span><span class="n">content_type</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span></div>
+
+
+<div class="viewcode-block" id="Reservoir.get_state_snapshot">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Reservoir.get_state_snapshot">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_state_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return deep copy of mutable state&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;content&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">copy</span><span class="p">()}</span></div>
+
+
+<div class="viewcode-block" id="Reservoir.restore_state_snapshot">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Reservoir.restore_state_snapshot">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">restore_state_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">snapshot</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Restore state from snapshot&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="n">snapshot</span><span class="p">[</span><span class="s1">&#39;content&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="Reservoir.is_waste_reservoir">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Reservoir.is_waste_reservoir">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_waste_reservoir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Check if this is a waste reservoir.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        bool</span>
+<span class="sd">            True if any content type contains &quot;waste&quot; (case-insensitive)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="s2">&quot;waste&quot;</span> <span class="ow">in</span> <span class="n">ct</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">ct</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="Reservoir.to_dict">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Reservoir.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Serialize the Reservoir to a dictionary.&quot;&quot;&quot;</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+        <span class="n">base</span><span class="o">.</span><span class="n">update</span><span class="p">({</span>
+            <span class="s2">&quot;hook_ids&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">hook_ids</span><span class="p">,</span>
+            <span class="s2">&quot;capacity&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span><span class="p">,</span>
+            <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">,</span>
+            <span class="s2">&quot;row&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">row</span><span class="p">,</span>
+            <span class="s2">&quot;column&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">column</span><span class="p">,</span>
+            <span class="s2">&quot;shape&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
+        <span class="p">})</span>
+        <span class="k">return</span> <span class="n">base</span></div>
+
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Reservoir&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Deserialize a Reservoir instance from a dictionary.&quot;&quot;&quot;</span>
+        <span class="c1"># Safely handle position deserialization</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;position&quot;</span><span class="p">])</span> <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;position&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">size_x</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;size_x&quot;</span><span class="p">],</span>
+            <span class="n">size_y</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;size_y&quot;</span><span class="p">],</span>
+            <span class="n">size_z</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;size_z&quot;</span><span class="p">],</span>
+            <span class="n">offset</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;offset&quot;</span><span class="p">],</span>
+            <span class="n">can_be_stacked_upon</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;can_be_stacked_upon&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+            <span class="n">labware_id</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;labware_id&quot;</span><span class="p">],</span>
+            <span class="n">hook_ids</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;hook_ids&quot;</span><span class="p">,</span> <span class="p">[]),</span>
+            <span class="n">capacity</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;capacity&quot;</span><span class="p">,</span> <span class="n">Default_Reservoir_Capacity</span><span class="p">),</span>
+            <span class="n">content</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content&quot;</span><span class="p">),</span>
+            <span class="n">row</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;row&quot;</span><span class="p">),</span>
+            <span class="n">column</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;column&quot;</span><span class="p">),</span>
+            <span class="n">position</span><span class="o">=</span><span class="n">position</span><span class="p">,</span>
+            <span class="n">shape</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;shape&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">grid_width</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;How many grid columns this reservoir occupies.&quot;&quot;&quot;</span>
+        <span class="c1"># We use getattr to safely check if width_hooks was set during placement</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;width_hooks&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">grid_height</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;How many grid rows this reservoir occupies.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;height_hooks&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span></div>
+
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">biohit_pipettor_plus.deck_structure.labware_classes.reservoir</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2026, Advait Lath.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.7.
+    </div>
+  </body>
+</html>

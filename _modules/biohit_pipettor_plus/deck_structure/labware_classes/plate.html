@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>biohit_pipettor_plus.deck_structure.labware_classes.plate &#8212; biohit-pipettor-plus  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=a9d2d1f6" />
+    <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">biohit_pipettor_plus.deck_structure.labware_classes.plate</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for biohit_pipettor_plus.deck_structure.labware_classes.plate</h1><div class="highlight"><pre>
+<span></span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.labware_classes.labware</span><span class="w"> </span><span class="kn">import</span> <span class="n">Labware</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.serializable</span><span class="w"> </span><span class="kn">import</span> <span class="n">register_class</span><span class="p">,</span> <span class="n">Serializable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.labware_classes.well</span><span class="w"> </span><span class="kn">import</span> <span class="n">Well</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+
+
+<div class="viewcode-block" id="Plate">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Plate">[docs]</a>
+<span class="nd">@register_class</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Plate</span><span class="p">(</span><span class="n">Labware</span><span class="p">):</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size_x</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+            <span class="n">size_y</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+            <span class="n">size_z</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+            <span class="n">wells_x</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+            <span class="n">wells_y</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+            <span class="n">well</span><span class="p">:</span> <span class="n">Well</span><span class="p">,</span>
+            <span class="n">add_height</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mi">3</span><span class="p">,</span>
+            <span class="n">remove_height</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mi">10</span><span class="p">,</span>
+            <span class="n">offset</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="n">x_spacing</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">y_spacing</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">labware_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">position</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">can_be_stacked_upon</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize a Plate instance.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        size_x : float</span>
+<span class="sd">            Width of the plate.</span>
+<span class="sd">        size_y : float</span>
+<span class="sd">            Depth of the plate.</span>
+<span class="sd">        size_z : float</span>
+<span class="sd">            Height of the plate.</span>
+<span class="sd">        wells_x : int</span>
+<span class="sd">            Number of wells in X direction.</span>
+<span class="sd">        wells_y : int</span>
+<span class="sd">            Number of wells in Y direction.</span>
+<span class="sd">        add_height : float</span>
+<span class="sd">            Height above the well bottom used when adding liquid (in mm).</span>
+<span class="sd">        remove_height : float</span>
+<span class="sd">            Height above the well bottom used when removing liquid (in mm).</span>
+<span class="sd">        well : Well</span>
+<span class="sd">            Template well to use for all wells in the plate.</span>
+<span class="sd">        offset : tuple[float, float], optional</span>
+<span class="sd">            Offset of the plate.</span>
+<span class="sd">        x_spacing : float, optional</span>
+<span class="sd">            Distance along x-axis between hooks in millimeters.</span>
+<span class="sd">        y_spacing : float, optional</span>
+<span class="sd">            Distance along y-axis between hooks in millimeters.</span>
+<span class="sd">        labware_id : str, optional</span>
+<span class="sd">            Unique ID for the plate.</span>
+<span class="sd">        position : tuple[float, float], optional</span>
+<span class="sd">            (x, y) position coordinates of the plate in millimeters.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">size_x</span><span class="o">=</span><span class="n">size_x</span><span class="p">,</span> <span class="n">size_y</span><span class="o">=</span><span class="n">size_y</span><span class="p">,</span> <span class="n">size_z</span><span class="o">=</span><span class="n">size_z</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="n">offset</span><span class="p">,</span> <span class="n">labware_id</span><span class="o">=</span><span class="n">labware_id</span><span class="p">,</span>
+                         <span class="n">position</span><span class="o">=</span><span class="n">position</span><span class="p">,</span> <span class="n">can_be_stacked_upon</span><span class="o">=</span><span class="n">can_be_stacked_upon</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">wells_x</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">wells_y</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;wells_x and wells_y cannot be negative or 0&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_columns</span> <span class="o">=</span> <span class="n">wells_x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span> <span class="o">=</span> <span class="n">wells_y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_height</span> <span class="o">=</span> <span class="n">add_height</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">remove_height</span> <span class="o">=</span> <span class="n">remove_height</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__wells</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">Well</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">well</span> <span class="o">=</span> <span class="n">well</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_spacing</span> <span class="o">=</span> <span class="n">x_spacing</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_spacing</span> <span class="o">=</span> <span class="n">y_spacing</span>
+
+        <span class="n">min_required_x</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">wells_x</span> <span class="o">*</span> <span class="n">well</span><span class="o">.</span><span class="n">size_x</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="nb">abs</span><span class="p">(</span><span class="n">offset</span><span class="p">[</span><span class="mi">0</span><span class="p">])),</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">min_required_y</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">wells_y</span> <span class="o">*</span> <span class="n">well</span><span class="o">.</span><span class="n">size_y</span><span class="p">)</span> <span class="o">+</span>  <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="nb">abs</span><span class="p">(</span><span class="n">offset</span><span class="p">[</span><span class="mi">1</span><span class="p">])),</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">size_x</span> <span class="o">&lt;</span> <span class="n">min_required_x</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Plate width (</span><span class="si">{</span><span class="n">size_x</span><span class="si">}</span><span class="s2">mm) is too small for </span><span class="si">{</span><span class="n">wells_x</span><span class="si">}</span><span class="s2"> wells of width </span><span class="si">{</span><span class="n">well</span><span class="o">.</span><span class="n">size_x</span><span class="si">}</span><span class="s2">mm. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Minimum required: </span><span class="si">{</span><span class="n">min_required_x</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">mm (including offsets)&quot;</span><span class="p">,</span>
+                <span class="ne">UserWarning</span><span class="p">,</span>
+                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">size_y</span> <span class="o">&lt;</span> <span class="n">min_required_y</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Plate height (</span><span class="si">{</span><span class="n">size_y</span><span class="si">}</span><span class="s2">mm) is too small for </span><span class="si">{</span><span class="n">wells_y</span><span class="si">}</span><span class="s2"> wells of height </span><span class="si">{</span><span class="n">well</span><span class="o">.</span><span class="n">size_y</span><span class="si">}</span><span class="s2">mm. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Minimum required: </span><span class="si">{</span><span class="n">min_required_y</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">mm (including offsets)&quot;</span><span class="p">,</span>
+                <span class="ne">UserWarning</span><span class="p">,</span>
+                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">well</span><span class="o">.</span><span class="n">size_z</span> <span class="o">&gt;</span> <span class="n">size_z</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Well height (</span><span class="si">{</span><span class="n">well</span><span class="o">.</span><span class="n">size_z</span><span class="si">}</span><span class="s2">mm) exceeds plate height (</span><span class="si">{</span><span class="n">size_z</span><span class="si">}</span><span class="s2">mm)&quot;</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">place_wells</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Plate.place_wells">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Plate.place_wells">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">place_wells</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create wells across the grid using the template well.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_columns</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_rows</span><span class="p">):</span>
+                <span class="n">well</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">well</span><span class="p">)</span>
+                <span class="n">well</span><span class="o">.</span><span class="n">labware_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">labware_id</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">y</span><span class="si">}</span><span class="s1">&#39;</span>
+                <span class="n">well</span><span class="o">.</span><span class="n">row</span> <span class="o">=</span> <span class="n">y</span>
+                <span class="n">well</span><span class="o">.</span><span class="n">column</span> <span class="o">=</span> <span class="n">x</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__wells</span><span class="p">[(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)]</span> <span class="o">=</span> <span class="n">well</span></div>
+
+
+<div class="viewcode-block" id="Plate.get_wells">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Plate.get_wells">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_wells</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">Well</span><span class="p">]:</span>  <span class="c1"># ✅ Correct type</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all wells in the plate.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__wells</span></div>
+
+
+<div class="viewcode-block" id="Plate.get_all_children">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Plate.get_all_children">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_all_children</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Well</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__wells</span><span class="o">.</span><span class="n">values</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="Plate.get_child_at">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Plate.get_child_at">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_child_at</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Well</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__wells</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="n">column</span><span class="p">,</span> <span class="n">row</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="Plate.get_well_at">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Plate.get_well_at">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_well_at</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Well</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">                Get the well at a specific position.</span>
+
+<span class="sd">                Parameters</span>
+<span class="sd">                ----------</span>
+<span class="sd">                column : int</span>
+<span class="sd">                    Column index</span>
+<span class="sd">                row : int</span>
+<span class="sd">                    Row index</span>
+
+<span class="sd">                Returns</span>
+<span class="sd">                -------</span>
+<span class="sd">                Optional[Well]</span>
+<span class="sd">                    The well at the position, or None if not found</span>
+<span class="sd">                &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__wells</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="n">column</span><span class="p">,</span> <span class="n">row</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="Plate.get_wells_in_column">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Plate.get_wells_in_column">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_wells_in_column</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Well</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all wells in a specific column.&quot;&quot;&quot;</span>
+        <span class="n">wells</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_rows</span><span class="p">):</span>
+            <span class="n">well</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_well_at</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">row</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">well</span><span class="p">:</span>
+                <span class="n">wells</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">well</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">wells</span></div>
+
+
+<div class="viewcode-block" id="Plate.get_wells_in_row">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Plate.get_wells_in_row">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_wells_in_row</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Well</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all wells in a specific row.&quot;&quot;&quot;</span>
+        <span class="n">wells</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_columns</span><span class="p">):</span>
+            <span class="n">well</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_well_at</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">row</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">well</span><span class="p">:</span>
+                <span class="n">wells</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">well</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">wells</span></div>
+
+
+<div class="viewcode-block" id="Plate.get_state_snapshot">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Plate.get_state_snapshot">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_state_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return deep copy of all wells&#39; state&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">&#39;wells&#39;</span><span class="p">:</span> <span class="p">{</span><span class="n">pos</span><span class="p">:</span> <span class="n">well</span><span class="o">.</span><span class="n">get_state_snapshot</span><span class="p">()</span>
+                      <span class="k">for</span> <span class="n">pos</span><span class="p">,</span> <span class="n">well</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_Plate__wells</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Plate.restore_state_snapshot">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Plate.restore_state_snapshot">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">restore_state_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">snapshot</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Restore all wells&#39; state from snapshot&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">pos</span><span class="p">,</span> <span class="n">well_snapshot</span> <span class="ow">in</span> <span class="n">snapshot</span><span class="p">[</span><span class="s1">&#39;wells&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_Plate__wells</span><span class="p">[</span><span class="n">pos</span><span class="p">]</span><span class="o">.</span><span class="n">restore_state_snapshot</span><span class="p">(</span><span class="n">well_snapshot</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Plate.to_dict">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.Plate.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Serialize the Plate instance to a dictionary.&quot;&quot;&quot;</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+        <span class="n">base</span><span class="o">.</span><span class="n">update</span><span class="p">({</span>
+            <span class="s2">&quot;add_height&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_height</span><span class="p">,</span>
+            <span class="s2">&quot;remove_height&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">remove_height</span><span class="p">,</span>
+            <span class="s2">&quot;x_spacing&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_spacing</span><span class="p">,</span>
+            <span class="s2">&quot;y_spacing&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_spacing</span><span class="p">,</span>
+            <span class="s2">&quot;wells_x&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">wells_x</span><span class="p">,</span>
+            <span class="s2">&quot;wells_y&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">wells_y</span><span class="p">,</span>
+            <span class="s2">&quot;wells&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">:</span> <span class="n">well</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+                <span class="k">for</span> <span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">row</span><span class="p">),</span> <span class="n">well</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__wells</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="p">}</span>
+        <span class="p">})</span>
+        <span class="k">return</span> <span class="n">base</span></div>
+
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Plate&quot;</span><span class="p">:</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;position&quot;</span><span class="p">])</span> <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;position&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">wells_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;wells&quot;</span><span class="p">,</span> <span class="p">{})</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">wells_data</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot deserialize Plate without wells data&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Get the first well as a template</span>
+        <span class="n">first_well_data</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">wells_data</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+        <span class="n">template_well</span> <span class="o">=</span> <span class="n">Serializable</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">first_well_data</span><span class="p">)</span>
+
+        <span class="n">plate</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">size_x</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;size_x&quot;</span><span class="p">],</span>
+            <span class="n">size_y</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;size_y&quot;</span><span class="p">],</span>
+            <span class="n">size_z</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;size_z&quot;</span><span class="p">],</span>
+            <span class="n">offset</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;offset&quot;</span><span class="p">],</span>
+            <span class="n">add_height</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;add_height&quot;</span><span class="p">],</span>
+            <span class="n">remove_height</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;remove_height&quot;</span><span class="p">],</span>
+            <span class="n">labware_id</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;labware_id&quot;</span><span class="p">],</span>
+            <span class="n">x_spacing</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;x_spacing&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="n">y_spacing</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;y_spacing&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="n">wells_x</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;wells_x&quot;</span><span class="p">],</span>
+            <span class="n">wells_y</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;wells_y&quot;</span><span class="p">],</span>
+            <span class="n">can_be_stacked_upon</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;can_be_stacked_upon&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+            <span class="n">well</span><span class="o">=</span><span class="n">template_well</span><span class="p">,</span>
+            <span class="n">position</span><span class="o">=</span><span class="n">position</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Restore wells with their actual state</span>
+        <span class="k">for</span> <span class="n">wid</span><span class="p">,</span> <span class="n">wdata</span> <span class="ow">in</span> <span class="n">wells_data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">col</span><span class="p">,</span> <span class="n">row</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">wid</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">))</span>
+            <span class="n">restored_well</span> <span class="o">=</span> <span class="n">Serializable</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">wdata</span><span class="p">)</span>
+            <span class="n">plate</span><span class="o">.</span><span class="n">_Plate__wells</span><span class="p">[(</span><span class="n">col</span><span class="p">,</span> <span class="n">row</span><span class="p">)]</span> <span class="o">=</span> <span class="n">restored_well</span>
+
+        <span class="k">return</span> <span class="n">plate</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">wells_x</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Number of wells in X direction (columns)&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_columns</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">wells_y</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Number of wells in Y direction (rows)&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">grid_x</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Standard grid dimension (columns)&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_columns</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">grid_y</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Standard grid dimension (rows)&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span></div>
+
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">biohit_pipettor_plus.deck_structure.labware_classes.plate</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2026, Advait Lath.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.7.
+    </div>
+  </body>
+</html>

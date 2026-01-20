@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>biohit_pipettor_plus.deck_structure.labware_classes.reservoirHolder &#8212; biohit-pipettor-plus  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=a9d2d1f6" />
+    <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">biohit_pipettor_plus.deck_structure.labware_classes.reservoirHolder</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for biohit_pipettor_plus.deck_structure.labware_classes.reservoirHolder</h1><div class="highlight"><pre>
+<span></span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.labware_classes.labware</span><span class="w"> </span><span class="kn">import</span> <span class="n">Labware</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.serializable</span><span class="w"> </span><span class="kn">import</span> <span class="n">register_class</span><span class="p">,</span> <span class="n">Serializable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.labware_classes.reservoir</span><span class="w"> </span><span class="kn">import</span> <span class="n">Reservoir</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+
+<div class="viewcode-block" id="ReservoirHolder">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder">[docs]</a>
+<span class="nd">@register_class</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ReservoirHolder</span><span class="p">(</span><span class="n">Labware</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size_x</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">size_y</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">size_z</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">hooks_across_x</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">hooks_across_y</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">reservoir_template</span><span class="p">:</span> <span class="n">Reservoir</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">remove_height</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mi">45</span><span class="p">,</span> <span class="n">add_height</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                 <span class="n">labware_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">position</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">can_be_stacked_upon</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">x_spacing</span><span class="p">:</span><span class="nb">float</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">y_spacing</span><span class="p">:</span><span class="nb">float</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">each_tip_needs_separate_item</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize a ReservoirHolder instance that can hold multiple reservoirs.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        size_x : float</span>
+<span class="sd">            Width of the ReservoirHolder in millimeters.</span>
+<span class="sd">        size_y : float</span>
+<span class="sd">            Depth of the ReservoirHolder in millimeters.</span>
+<span class="sd">        size_z : float</span>
+<span class="sd">            Height of the ReservoirHolder in millimeters.</span>
+<span class="sd">        hooks_across_x : int</span>
+<span class="sd">            Number of hooks along X-axis.</span>
+<span class="sd">        hooks_across_y : int</span>
+<span class="sd">            Number of hooks along Y-axis (rows of hooks).</span>
+<span class="sd">        add_height : float</span>
+<span class="sd">            relative height at which liquid is dispensed</span>
+<span class="sd">        remove_height: float</span>
+<span class="sd">            relative height at which liquid is aspirated</span>
+<span class="sd">        reservoir_template : reservoir</span>
+<span class="sd">            example or individual reservoir that will be placed across all hooks.</span>
+<span class="sd">        labware_id : str, optional</span>
+<span class="sd">            Unique ID for the holder.</span>
+<span class="sd">        position : tuple[float, float], optional</span>
+<span class="sd">            (x, y) position coordinates of the ReservoirHolder in millimeters.</span>
+<span class="sd">            If None, position is not set.</span>
+<span class="sd">        x_spacing : float, optional</span>
+<span class="sd">            Distance along x-axis between hooks in millimeters.</span>
+<span class="sd">        y_spacing : float, optional</span>
+<span class="sd">            Distance along y-axis between hooks in millimeters.</span>
+<span class="sd">        each_tip_needs_separate_item : bool, optional</span>
+<span class="sd">            If True, each pipette tip needs its own reservoir.</span>
+<span class="sd">            If False, all tips can access the same reservoir (default: False).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">size_x</span><span class="p">,</span> <span class="n">size_y</span><span class="p">,</span> <span class="n">size_z</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">labware_id</span><span class="p">,</span> <span class="n">position</span><span class="p">,</span> <span class="n">can_be_stacked_upon</span><span class="o">=</span><span class="n">can_be_stacked_upon</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">hooks_across_x</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">hooks_across_y</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;hooks_across_x and hooks_across_y cannot be negative or 0&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_height</span> <span class="o">=</span> <span class="n">add_height</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">remove_height</span> <span class="o">=</span> <span class="n">remove_height</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_columns</span> <span class="o">=</span> <span class="n">hooks_across_x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span> <span class="o">=</span> <span class="n">hooks_across_y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">total_hooks</span> <span class="o">=</span> <span class="n">hooks_across_x</span> <span class="o">*</span> <span class="n">hooks_across_y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_each_tip_needs_separate_item</span> <span class="o">=</span> <span class="n">each_tip_needs_separate_item</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_spacing</span> <span class="o">=</span> <span class="n">x_spacing</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_spacing</span> <span class="o">=</span> <span class="n">y_spacing</span>
+
+        <span class="c1"># Initialize empty hooks - maps hook_id to reservoir (or None if empty)</span>
+        <span class="c1"># hook_id ranges from 1 to total_hooks</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__hook_to_reservoir</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Reservoir</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">i</span><span class="p">:</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_hooks</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="p">}</span>
+
+        <span class="c1"># Place reservoirs to holder if provided</span>
+        <span class="k">if</span> <span class="n">reservoir_template</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">place_reservoirs</span><span class="p">(</span><span class="n">reservoir_template</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ReservoirHolder.each_tip_needs_separate_item">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder.each_tip_needs_separate_item">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">each_tip_needs_separate_item</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_each_tip_needs_separate_item</span>  <span class="c1"># Reservoirs are large, all tips fit in one</span></div>
+
+
+<div class="viewcode-block" id="ReservoirHolder.hook_id_to_position">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder.hook_id_to_position">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">hook_id_to_position</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hook_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convert hook_id to (col, row) position.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        hook_id : int</span>
+<span class="sd">            Hook ID (1-indexed, 1 to total_hooks)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple[int, int]</span>
+<span class="sd">            (col, row) where col is 0 to hooks_across_x-1,</span>
+<span class="sd">            row is 0 to hooks_across_y-1</span>
+
+<span class="sd">        Example</span>
+<span class="sd">        -------</span>
+<span class="sd">        For hooks_across_x=3, hooks_across_y=2::</span>
+
+<span class="sd">            hook_id: 1 2 3 4 5 6</span>
+<span class="sd">            layout: [1 2 3]  &lt;- row 0</span>
+<span class="sd">                    [4 5 6]  &lt;- row 1</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">hook_id</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">hook_id</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_hooks</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;hook_id </span><span class="si">{</span><span class="n">hook_id</span><span class="si">}</span><span class="s2"> out of range (1 to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">total_hooks</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Convert to 0-indexed</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">hook_id</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="n">idx</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">_columns</span>
+        <span class="n">col</span> <span class="o">=</span> <span class="n">idx</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">_columns</span>
+        <span class="k">return</span> <span class="n">col</span><span class="p">,</span> <span class="n">row</span></div>
+
+
+<div class="viewcode-block" id="ReservoirHolder.position_to_hook_id">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder.position_to_hook_id">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">position_to_hook_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convert (col, row) position to hook_id.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        col : int</span>
+<span class="sd">            Column (0 to hooks_across_x-1)</span>
+<span class="sd">        row : int</span>
+<span class="sd">            Row (0 to hooks_across_y-1)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        int</span>
+<span class="sd">            hook_id (1-indexed)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">col</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">col</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_columns</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;col </span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2"> out of range (0 to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_columns</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">row</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">row</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;row </span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2"> out of range (0 to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_rows</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">row</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_columns</span> <span class="o">+</span> <span class="n">col</span> <span class="o">+</span> <span class="mi">1</span></div>
+
+
+<div class="viewcode-block" id="ReservoirHolder.get_reservoirs">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder.get_reservoirs">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_reservoirs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Reservoir</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return list of all unique reservoirs (no duplicates).&quot;&quot;&quot;</span>
+        <span class="n">seen_ids</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">reservoirs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__hook_to_reservoir</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">res</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">res</span><span class="o">.</span><span class="n">labware_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen_ids</span><span class="p">:</span>
+                <span class="n">seen_ids</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">labware_id</span><span class="p">)</span>
+                <span class="n">reservoirs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">reservoirs</span></div>
+
+
+<div class="viewcode-block" id="ReservoirHolder.get_hook_to_reservoir_map">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder.get_hook_to_reservoir_map">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_hook_to_reservoir_map</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Reservoir</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the complete hook to reservoir mapping.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__hook_to_reservoir</span></div>
+
+
+<div class="viewcode-block" id="ReservoirHolder.get_available_hooks">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder.get_available_hooks">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_available_hooks</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return list of available (empty) hook IDs.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">hook_id</span> <span class="k">for</span> <span class="n">hook_id</span><span class="p">,</span> <span class="n">res</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__hook_to_reservoir</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">res</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="ReservoirHolder.get_all_children">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder.get_all_children">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_all_children</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Reservoir</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_reservoirs</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="ReservoirHolder.get_child_at">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder.get_child_at">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_child_at</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">row</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Reservoir</span><span class="p">]:</span>
+        <span class="c1"># Convert grid (col, row) to hook_id (1-indexed)</span>
+        <span class="n">hook_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">position_to_hook_id</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">row</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__hook_to_reservoir</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">hook_id</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ReservoirHolder.get_occupied_hooks">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder.get_occupied_hooks">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_occupied_hooks</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return list of occupied hook IDs.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">hook_id</span> <span class="k">for</span> <span class="n">hook_id</span><span class="p">,</span> <span class="n">res</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__hook_to_reservoir</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">res</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_hooks_form_rectangle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hook_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Check if hook IDs form a rectangular grid.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple[bool, int, int]</span>
+<span class="sd">            (is_valid, width, height) where width and height are in hook units</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">hook_ids</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+
+        <span class="c1"># Convert all hook_ids to (col, row) location</span>
+        <span class="n">location</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">hook_id_to_position</span><span class="p">(</span><span class="n">hid</span><span class="p">)</span> <span class="k">for</span> <span class="n">hid</span> <span class="ow">in</span> <span class="n">hook_ids</span><span class="p">]</span>
+        <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">pos</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">pos</span> <span class="ow">in</span> <span class="n">location</span><span class="p">]</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span><span class="n">pos</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">pos</span> <span class="ow">in</span> <span class="n">location</span><span class="p">]</span>
+
+        <span class="n">min_col</span><span class="p">,</span> <span class="n">max_col</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">cols</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">cols</span><span class="p">)</span>
+        <span class="n">min_row</span><span class="p">,</span> <span class="n">max_row</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">rows</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>
+
+        <span class="n">width</span> <span class="o">=</span> <span class="n">max_col</span> <span class="o">-</span> <span class="n">min_col</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">height</span> <span class="o">=</span> <span class="n">max_row</span> <span class="o">-</span> <span class="n">min_row</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="c1"># Check if all location in the rectangle are present</span>
+        <span class="n">expected_location</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">min_col</span><span class="p">,</span> <span class="n">max_col</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">min_row</span><span class="p">,</span> <span class="n">max_row</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="n">actual_location</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
+
+        <span class="n">is_valid</span> <span class="o">=</span> <span class="n">expected_location</span> <span class="o">==</span> <span class="n">actual_location</span>
+        <span class="k">return</span> <span class="n">is_valid</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span>
+
+<div class="viewcode-block" id="ReservoirHolder.place_reservoir">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder.place_reservoir">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">place_reservoir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hook_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">reservoir</span><span class="p">:</span> <span class="n">Reservoir</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Place a single reservoir on specific hooks.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        hook_ids : list[int] or int</span>
+<span class="sd">            List of hook location to place the reservoir (must form a rectangle).</span>
+<span class="sd">        reservoir : Reservoir</span>
+<span class="sd">            Reservoir instance to place.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If hook_ids are invalid, don&#39;t form a rectangle, already occupied,</span>
+<span class="sd">            or reservoir dimensions incompatible.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Allow single int for backwards compatibility</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">hook_ids</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="n">hook_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">hook_ids</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">hook_ids</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Must specify at least one hook_id&quot;</span><span class="p">)</span>
+
+
+        <span class="c1"># Check if all hook_ids are valid and available</span>
+        <span class="k">for</span> <span class="n">hook_id</span> <span class="ow">in</span> <span class="n">hook_ids</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="n">hook_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__hook_to_reservoir</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Hook ID </span><span class="si">{</span><span class="n">hook_id</span><span class="si">}</span><span class="s2"> is invalid. Must be between 1 and </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">total_hooks</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__hook_to_reservoir</span><span class="p">[</span><span class="n">hook_id</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Hook </span><span class="si">{</span><span class="n">hook_id</span><span class="si">}</span><span class="s2"> is already occupied&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Check if hooks form a valid rectangle</span>
+        <span class="n">is_valid</span><span class="p">,</span> <span class="n">width_hooks</span><span class="p">,</span> <span class="n">height_hooks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_hooks_form_rectangle</span><span class="p">(</span><span class="n">hook_ids</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_valid</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Hook IDs </span><span class="si">{</span><span class="n">hook_ids</span><span class="si">}</span><span class="s2"> must form a rectangular grid&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Calculate maximum dimensions per hook</span>
+        <span class="n">max_width_per_hook</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">size_x</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_columns</span>
+        <span class="n">max_height_per_hook</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">size_y</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span>
+
+        <span class="c1"># Calculate available space for this reservoir</span>
+        <span class="n">max_width_for_reservoir</span> <span class="o">=</span> <span class="n">max_width_per_hook</span> <span class="o">*</span> <span class="n">width_hooks</span>
+        <span class="n">max_height_for_reservoir</span> <span class="o">=</span> <span class="n">max_height_per_hook</span> <span class="o">*</span> <span class="n">height_hooks</span>
+
+        <span class="c1"># Check dimensional compatibility</span>
+        <span class="k">if</span> <span class="n">reservoir</span><span class="o">.</span><span class="n">size_x</span> <span class="o">&gt;</span> <span class="n">max_width_for_reservoir</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Reservoir width (</span><span class="si">{</span><span class="n">reservoir</span><span class="o">.</span><span class="n">size_x</span><span class="si">}</span><span class="s2"> mm) exceeds &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;available width (</span><span class="si">{</span><span class="n">max_width_for_reservoir</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> mm = &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">max_width_per_hook</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> mm/hook × </span><span class="si">{</span><span class="n">width_hooks</span><span class="si">}</span><span class="s2"> hooks)&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">reservoir</span><span class="o">.</span><span class="n">size_y</span> <span class="o">&gt;</span> <span class="n">max_height_for_reservoir</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Reservoir depth (</span><span class="si">{</span><span class="n">reservoir</span><span class="o">.</span><span class="n">size_y</span><span class="si">}</span><span class="s2"> mm) exceeds &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;available depth (</span><span class="si">{</span><span class="n">max_height_for_reservoir</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> mm = &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">max_height_per_hook</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> mm/hook × </span><span class="si">{</span><span class="n">height_hooks</span><span class="si">}</span><span class="s2"> hooks)&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">reservoir</span><span class="o">.</span><span class="n">size_z</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">size_z</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Reservoir height (</span><span class="si">{</span><span class="n">reservoir</span><span class="o">.</span><span class="n">size_z</span><span class="si">}</span><span class="s2"> mm) exceeds &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;holder height (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">size_z</span><span class="si">}</span><span class="s2"> mm)&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">is_valid</span><span class="p">,</span> <span class="n">error_msg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">validate_multichannel_compatible</span><span class="p">(</span><span class="n">reservoir</span><span class="o">.</span><span class="n">size_y</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_valid</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span>
+
+        <span class="c1"># Assign hook_ids and place reservoir. also find col and row</span>
+        <span class="n">reservoir</span><span class="o">.</span><span class="n">hook_ids</span> <span class="o">=</span> <span class="n">hook_ids</span>
+        <span class="n">positions</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">hook_id_to_position</span><span class="p">(</span><span class="n">hid</span><span class="p">)</span> <span class="k">for</span> <span class="n">hid</span> <span class="ow">in</span> <span class="n">hook_ids</span><span class="p">]</span>
+        <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">pos</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">pos</span> <span class="ow">in</span> <span class="n">positions</span><span class="p">]</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span><span class="n">pos</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">pos</span> <span class="ow">in</span> <span class="n">positions</span><span class="p">]</span>
+        <span class="n">reservoir</span><span class="o">.</span><span class="n">column</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">cols</span><span class="p">)</span>  <span class="c1"># Leftmost column</span>
+        <span class="n">reservoir</span><span class="o">.</span><span class="n">row</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>  <span class="c1"># Topmost row</span>
+        <span class="n">reservoir</span><span class="o">.</span><span class="n">width_hooks</span> <span class="o">=</span> <span class="n">width_hooks</span>
+        <span class="n">reservoir</span><span class="o">.</span><span class="n">height_hooks</span> <span class="o">=</span> <span class="n">height_hooks</span>
+
+        <span class="n">reservoir</span><span class="o">.</span><span class="n">labware_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">labware_id</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">reservoir</span><span class="o">.</span><span class="n">column</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">reservoir</span><span class="o">.</span><span class="n">row</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="k">for</span> <span class="n">hook_id</span> <span class="ow">in</span> <span class="n">hook_ids</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__hook_to_reservoir</span><span class="p">[</span><span class="n">hook_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">reservoir</span></div>
+
+
+<div class="viewcode-block" id="ReservoirHolder.place_reservoirs">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder.place_reservoirs">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">place_reservoirs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reservoir_template</span><span class="p">:</span> <span class="n">Reservoir</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        allocate duplicate reservoir to all available hooks, unless specific hook id specified</span>
+
+<span class="sd">            If hook_ids is specified, the reservoir will be placed there, given that position is empty</span>
+<span class="sd">            Otherwise, calculates required hooks based on dimensions and allocates automatically.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If a specified hook_id is occupied, insufficient space, or</span>
+<span class="sd">            reservoir parameters are invalid.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">template</span> <span class="o">=</span> <span class="n">reservoir_template</span>
+        <span class="k">if</span> <span class="n">template</span><span class="o">.</span><span class="n">hook_ids</span><span class="p">:</span>
+            <span class="n">hook_ids_to_use</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">hook_ids</span>
+            <span class="n">reservoir_copy</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">template</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">place_reservoir</span><span class="p">(</span><span class="n">hook_ids_to_use</span><span class="p">,</span> <span class="n">reservoir_copy</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+
+            <span class="n">max_width_per_hook</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">size_x</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_columns</span>
+            <span class="n">max_height_per_hook</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">size_y</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span>
+
+            <span class="n">reservoir_width</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">size_x</span>
+            <span class="n">reservoir_height</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">size_y</span>
+
+            <span class="c1"># Calculate minimum hooks needed based on dimensions</span>
+            <span class="n">min_hooks_x</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">reservoir_width</span> <span class="o">/</span> <span class="n">max_width_per_hook</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">reservoir_width</span> <span class="o">%</span> <span class="n">max_width_per_hook</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span> <span class="n">min_hooks_x</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="n">min_hooks_y</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">reservoir_height</span> <span class="o">/</span> <span class="n">max_height_per_hook</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">reservoir_height</span> <span class="o">%</span> <span class="n">max_height_per_hook</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span> <span class="n">min_hooks_y</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="n">hooks_x</span> <span class="o">=</span> <span class="n">min_hooks_x</span>
+            <span class="n">hooks_y</span> <span class="o">=</span> <span class="n">min_hooks_y</span>
+
+            <span class="c1"># raises error if not even one placement is possible.</span>
+            <span class="k">if</span> <span class="n">hooks_x</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_columns</span> <span class="ow">or</span> <span class="n">hooks_y</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Placement Error: Required reservoir size is </span><span class="si">{</span><span class="n">hooks_x</span><span class="si">}</span><span class="s2">x</span><span class="si">{</span><span class="n">hooks_y</span><span class="si">}</span><span class="s2"> hooks, &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;but the ReservoirHolder is only </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_columns</span><span class="si">}</span><span class="s2">x</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_rows</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="p">)</span>
+
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">hook_ids_to_use</span> <span class="o">=</span> <span class="kc">None</span>
+
+                <span class="c1"># Re-check available hooks for each placement attempt</span>
+                <span class="n">available</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_available_hooks</span><span class="p">())</span>
+
+                <span class="c1"># Find the *first* available rectangular region of size hooks_x x hooks_y</span>
+                <span class="k">for</span> <span class="n">start_row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_rows</span> <span class="o">-</span> <span class="n">hooks_y</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">start_col</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_columns</span> <span class="o">-</span> <span class="n">hooks_x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+
+                        <span class="c1"># Check if this rectangular block (starting at start_row, start_col)</span>
+                        <span class="c1"># is entirely available (not occupied)</span>
+                        <span class="n">candidate_hooks</span> <span class="o">=</span> <span class="p">[]</span>
+                        <span class="n">is_available</span> <span class="o">=</span> <span class="kc">True</span>
+
+                        <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">start_row</span><span class="p">,</span> <span class="n">start_row</span> <span class="o">+</span> <span class="n">hooks_y</span><span class="p">):</span>
+                            <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">start_col</span><span class="p">,</span> <span class="n">start_col</span> <span class="o">+</span> <span class="n">hooks_x</span><span class="p">):</span>
+                                <span class="n">hook_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">position_to_hook_id</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+                                <span class="k">if</span> <span class="n">hook_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">available</span><span class="p">:</span>
+                                    <span class="n">is_available</span> <span class="o">=</span> <span class="kc">False</span>
+                                    <span class="k">break</span>
+                                <span class="n">candidate_hooks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hook_id</span><span class="p">)</span>
+                            <span class="k">if</span> <span class="ow">not</span> <span class="n">is_available</span><span class="p">:</span>
+                                <span class="k">break</span>
+
+                        <span class="k">if</span> <span class="n">is_available</span><span class="p">:</span>
+                            <span class="n">hook_ids_to_use</span> <span class="o">=</span> <span class="n">candidate_hooks</span>
+                            <span class="k">break</span>
+                    <span class="k">if</span> <span class="n">hook_ids_to_use</span><span class="p">:</span>
+                        <span class="k">break</span>
+
+                <span class="c1"># If we couldn&#39;t find a spot, we exit the loop</span>
+                <span class="k">if</span> <span class="n">hook_ids_to_use</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">break</span>
+
+                <span class="c1"># --- Placement Execution for the Found Spot ---</span>
+                <span class="n">reservoir_copy</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">template</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">place_reservoir</span><span class="p">(</span><span class="n">hook_ids_to_use</span><span class="p">,</span> <span class="n">reservoir_copy</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ReservoirHolder.remove_reservoir">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder.remove_reservoir">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">remove_reservoir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hook_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Reservoir</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove a reservoir from the holder.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        hook_id : int</span>
+<span class="sd">            Any hook ID occupied by the reservoir to remove</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Reservoir</span>
+<span class="sd">            The removed reservoir</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If no reservoir at the specified hook</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">hook_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__hook_to_reservoir</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid hook_id </span><span class="si">{</span><span class="n">hook_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">reservoir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__hook_to_reservoir</span><span class="p">[</span><span class="n">hook_id</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">reservoir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No reservoir at hook </span><span class="si">{</span><span class="n">hook_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Clear all hooks occupied by this reservoir</span>
+        <span class="k">for</span> <span class="n">hid</span> <span class="ow">in</span> <span class="n">reservoir</span><span class="o">.</span><span class="n">hook_ids</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__hook_to_reservoir</span><span class="p">[</span><span class="n">hid</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">return</span> <span class="n">reservoir</span></div>
+
+
+<div class="viewcode-block" id="ReservoirHolder.add_content">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder.add_content">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hook_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">content</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">volume</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add content to a reservoir at a specific hook.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        hook_id : int</span>
+<span class="sd">            Hook ID where the reservoir is located</span>
+<span class="sd">        content : str</span>
+<span class="sd">            Type of content to add (e.g., &quot;PBS&quot;, &quot;water&quot;)</span>
+<span class="sd">        volume : float</span>
+<span class="sd">            Volume to add (µL)</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If no reservoir at hook or volume exceeds capacity</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">hook_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__hook_to_reservoir</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">__hook_to_reservoir</span><span class="p">[</span><span class="n">hook_id</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No reservoir at hook </span><span class="si">{</span><span class="n">hook_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__hook_to_reservoir</span><span class="p">[</span><span class="n">hook_id</span><span class="p">]</span><span class="o">.</span><span class="n">add_content</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="n">volume</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ReservoirHolder.remove_content">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder.remove_content">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">remove_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hook_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">volume</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">return_dict</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove content from a reservoir at a specific hook.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        hook_id : int</span>
+<span class="sd">            Hook ID where the reservoir is located</span>
+<span class="sd">        volume : float</span>
+<span class="sd">            Volume to remove (µL)</span>
+<span class="sd">        return_dict : bool, optional</span>
+<span class="sd">            If True, return a dictionary of removed content types and volumes (default: False)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Optional[dict[str, float]]</span>
+<span class="sd">            If return_dict is True, returns dictionary mapping content types to removed volumes.</span>
+<span class="sd">            Otherwise, returns None.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If no reservoir at hook or insufficient volume</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">hook_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__hook_to_reservoir</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">__hook_to_reservoir</span><span class="p">[</span><span class="n">hook_id</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No reservoir at hook </span><span class="si">{</span><span class="n">hook_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__hook_to_reservoir</span><span class="p">[</span><span class="n">hook_id</span><span class="p">]</span><span class="o">.</span><span class="n">remove_content</span><span class="p">(</span><span class="n">volume</span><span class="p">,</span> <span class="n">return_dict</span><span class="o">=</span><span class="n">return_dict</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ReservoirHolder.get_waste_reservoirs">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder.get_waste_reservoirs">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_waste_reservoirs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Reservoir</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get all unique reservoirs that contain &#39;waste&#39; in any content type.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list[Reservoir]</span>
+<span class="sd">            List of waste reservoirs</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">res</span> <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_reservoirs</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="s2">&quot;waste&quot;</span> <span class="ow">in</span> <span class="n">content_type</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">content_type</span> <span class="ow">in</span> <span class="n">res</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="ReservoirHolder.get_reservoirs_by_content_type">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder.get_reservoirs_by_content_type">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_reservoirs_by_content_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">content_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Reservoir</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get all unique reservoirs that contain a specific content type.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        content_type : str</span>
+<span class="sd">            Content type to search for (case-insensitive)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list[Reservoir]</span>
+<span class="sd">            List of reservoirs containing this content type</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">res</span> <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_reservoirs</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">res</span><span class="o">.</span><span class="n">has_content_type</span><span class="p">(</span><span class="n">content_type</span><span class="p">)</span>
+        <span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="ReservoirHolder.get_state_snapshot">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder.get_state_snapshot">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_state_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return deep copy of all reservoirs&#39; state&quot;&quot;&quot;</span>
+        <span class="c1"># Get unique reservoirs and snapshot each once</span>
+        <span class="n">snapshots</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">reservoir</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_reservoirs</span><span class="p">():</span>
+            <span class="n">snapshots</span><span class="p">[</span><span class="n">reservoir</span><span class="o">.</span><span class="n">labware_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">reservoir</span><span class="o">.</span><span class="n">get_state_snapshot</span><span class="p">()</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;reservoirs&#39;</span><span class="p">:</span> <span class="n">snapshots</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="ReservoirHolder.restore_state_snapshot">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder.restore_state_snapshot">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">restore_state_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">snapshot</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Restore all reservoirs&#39; state from snapshot&quot;&quot;&quot;</span>
+        <span class="n">reservoir_snapshots</span> <span class="o">=</span> <span class="n">snapshot</span><span class="p">[</span><span class="s1">&#39;reservoirs&#39;</span><span class="p">]</span>
+        <span class="c1"># Restore each unique reservoir</span>
+        <span class="k">for</span> <span class="n">reservoir</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_reservoirs</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">reservoir</span><span class="o">.</span><span class="n">labware_id</span> <span class="ow">in</span> <span class="n">reservoir_snapshots</span><span class="p">:</span>
+                <span class="n">reservoir</span><span class="o">.</span><span class="n">restore_state_snapshot</span><span class="p">(</span><span class="n">reservoir_snapshots</span><span class="p">[</span><span class="n">reservoir</span><span class="o">.</span><span class="n">labware_id</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="ReservoirHolder.to_dict">
+<a class="viewcode-back" href="../../../../api.html#biohit_pipettor_plus.deck_structure.ReservoirHolder.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Serialize the ReservoirHolder instance to a dictionary.&quot;&quot;&quot;</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+
+        <span class="c1"># Store only unique reservoirs with their hook_ids</span>
+        <span class="n">unique_reservoirs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_reservoirs</span><span class="p">():</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">res</span><span class="o">.</span><span class="n">column</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">res</span><span class="o">.</span><span class="n">row</span><span class="si">}</span><span class="s2">&quot;</span>  <span class="c1"># ✅ Consistent with Plate/PipetteHolder</span>
+            <span class="n">unique_reservoirs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+
+        <span class="n">base</span><span class="o">.</span><span class="n">update</span><span class="p">({</span>
+            <span class="s2">&quot;add_height&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_height</span><span class="p">,</span>
+            <span class="s2">&quot;remove_height&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">remove_height</span><span class="p">,</span>
+            <span class="s2">&quot;hooks_across_x&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">hooks_across_x</span><span class="p">,</span>
+            <span class="s2">&quot;hooks_across_y&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">hooks_across_y</span><span class="p">,</span>
+            <span class="s2">&quot;each_tip_needs_separate_item&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_each_tip_needs_separate_item</span><span class="p">,</span>
+            <span class="s2">&quot;reservoirs&quot;</span><span class="p">:</span> <span class="n">unique_reservoirs</span><span class="p">,</span>
+            <span class="s2">&quot;x_spacing&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_spacing</span><span class="p">,</span>
+            <span class="s2">&quot;y_spacing&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_spacing</span><span class="p">,</span>
+        <span class="p">})</span>
+        <span class="k">return</span> <span class="n">base</span></div>
+
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;ReservoirHolder&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Deserialize a ReservoirHolder instance from a dictionary.&quot;&quot;&quot;</span>
+        <span class="c1"># Safely handle position deserialization</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;position&quot;</span><span class="p">])</span> <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;position&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+        <span class="n">reservoir_holder</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">size_x</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;size_x&quot;</span><span class="p">],</span>
+            <span class="n">size_y</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;size_y&quot;</span><span class="p">],</span>
+            <span class="n">size_z</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;size_z&quot;</span><span class="p">],</span>
+            <span class="n">can_be_stacked_upon</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;can_be_stacked_upon&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+            <span class="n">add_height</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;add_height&quot;</span><span class="p">],</span>
+            <span class="n">remove_height</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;remove_height&quot;</span><span class="p">],</span>
+            <span class="n">offset</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;offset&quot;</span><span class="p">],</span>
+            <span class="n">hooks_across_x</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;hooks_across_x&quot;</span><span class="p">],</span>
+            <span class="n">hooks_across_y</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;hooks_across_y&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>  <span class="c1"># Default to 1 for backwards compatibility</span>
+            <span class="n">each_tip_needs_separate_item</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;each_tip_needs_separate_item&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+            <span class="n">labware_id</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;labware_id&quot;</span><span class="p">],</span>
+            <span class="n">reservoir_template</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">position</span><span class="o">=</span><span class="n">position</span><span class="p">,</span>
+            <span class="n">x_spacing</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;x_spacing&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="n">y_spacing</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;y_spacing&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Restore reservoirs</span>
+        <span class="n">reservoirs_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;reservoirs&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="k">for</span> <span class="n">res_data</span> <span class="ow">in</span> <span class="n">reservoirs_data</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">reservoir</span> <span class="o">=</span> <span class="n">Serializable</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">res_data</span><span class="p">)</span>
+            <span class="c1"># Place on the hooks specified in hook_ids</span>
+            <span class="k">if</span> <span class="n">reservoir</span><span class="o">.</span><span class="n">hook_ids</span><span class="p">:</span>
+                <span class="n">reservoir_holder</span><span class="o">.</span><span class="n">place_reservoir</span><span class="p">(</span><span class="n">reservoir</span><span class="o">.</span><span class="n">hook_ids</span><span class="p">,</span> <span class="n">reservoir</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">reservoir_holder</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">hooks_across_x</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_columns</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">hooks_across_y</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">grid_x</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_columns</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">grid_y</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span></div>
+
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">biohit_pipettor_plus.deck_structure.labware_classes.reservoirHolder</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2026, Advait Lath.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.7.
+    </div>
+  </body>
+</html>

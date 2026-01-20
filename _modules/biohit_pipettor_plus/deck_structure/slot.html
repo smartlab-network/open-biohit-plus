@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>biohit_pipettor_plus.deck_structure.slot &#8212; biohit-pipettor-plus  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=a9d2d1f6" />
+    <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">biohit_pipettor_plus.deck_structure.slot</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for biohit_pipettor_plus.deck_structure.slot</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.labware_classes</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.serializable</span><span class="w"> </span><span class="kn">import</span> <span class="n">Serializable</span><span class="p">,</span> <span class="n">register_class</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">biohit_pipettor_plus.deck_structure.position</span><span class="w"> </span><span class="kn">import</span> <span class="n">PositionAllocator</span>
+
+<div class="viewcode-block" id="Slot">
+<a class="viewcode-back" href="../../../api.html#biohit_pipettor_plus.deck_structure.Slot">[docs]</a>
+<span class="nd">@register_class</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Slot</span><span class="p">(</span><span class="n">Serializable</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Represents a single slot on a Deck. A slot can hold multiple Labware objects stacked</span>
+<span class="sd">    vertically with specified Z-ranges</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ---------</span>
+<span class="sd">    range_x : tuple[float, float]</span>
+<span class="sd">        Minimum and maximum x coordinates of the slot.</span>
+<span class="sd">    range_y : tuple[float, float]</span>
+<span class="sd">        Minimum and maximum y coordinates of the slot.</span>
+<span class="sd">    range_z : float</span>
+<span class="sd">        Maximum height of the slot.</span>
+<span class="sd">    slot_id : str</span>
+<span class="sd">        Unique identifier for the slot.</span>
+<span class="sd">    labware_stack : dict[str, list[Labware, tuple[float, float]]]</span>
+<span class="sd">        Dictionary mapping Labware IDs to a list containing the Labware object and its Z-range</span>
+<span class="sd">        (min_z, max_z) within the slot.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">range_x</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="n">range_y</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
+                 <span class="n">range_z</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">slot_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">range_x</span> <span class="o">=</span> <span class="n">range_x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">range_y</span> <span class="o">=</span> <span class="n">range_y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">range_z</span> <span class="o">=</span> <span class="n">range_z</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slot_id</span> <span class="o">=</span> <span class="n">slot_id</span>
+
+        <span class="c1"># Dictionary storing stacked labware: {labware_id: [Labware, (min_z, max_z)]}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">labware_stack</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Labware</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_place_labware</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lw</span><span class="p">:</span> <span class="n">Labware</span><span class="p">,</span> <span class="n">min_z</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a Labware object to the slot at a specific Z-range.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        lw : Labware</span>
+<span class="sd">            Labware object to place.</span>
+<span class="sd">        min_z : float</span>
+<span class="sd">            Minimum Z coordinate within the slot for this Labware.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the Labware exceeds the slot&#39;s Z range.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_compatible_labware</span><span class="p">(</span><span class="n">lw</span><span class="o">=</span><span class="n">lw</span><span class="p">,</span> <span class="n">min_z</span><span class="o">=</span><span class="n">min_z</span><span class="p">)</span>
+        <span class="n">max_z</span> <span class="o">=</span> <span class="n">min_z</span> <span class="o">+</span> <span class="n">lw</span><span class="o">.</span><span class="n">size_z</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">labware_stack</span><span class="p">[</span><span class="n">lw</span><span class="o">.</span><span class="n">labware_id</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">lw</span><span class="p">,</span> <span class="p">(</span><span class="n">min_z</span><span class="p">,</span> <span class="n">max_z</span><span class="p">)]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_remove_labware</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">labware_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove a specific Labware from the stack.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        labware_id : str</span>
+<span class="sd">            ID of the Labware to remove.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">labware_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">labware_stack</span><span class="p">:</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">labware_stack</span><span class="p">[</span><span class="n">labware_id</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_allocate_position</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">lw</span><span class="p">:</span> <span class="n">Labware</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        if labware is placed in slot, x &amp; y coordinates of the labware + offset is slot.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">lw</span><span class="o">.</span><span class="n">labware_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">labware_stack</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Labware not in labware stack&quot;</span><span class="p">)</span>
+
+        <span class="n">offset_x</span><span class="p">,</span> <span class="n">offset_y</span> <span class="o">=</span> <span class="n">lw</span><span class="o">.</span><span class="n">offset</span>
+        <span class="n">x_corner</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">range_x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">range_x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="n">offset_x</span>
+        <span class="n">y_corner</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">range_y</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">range_y</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">offset_y</span>
+
+        <span class="c1">#position is slot corner + offset of the labware.</span>
+        <span class="n">lw</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="p">(</span><span class="n">x_corner</span><span class="p">,</span> <span class="n">y_corner</span><span class="p">)</span>
+
+        <span class="c1">#if not none, then labware contains labware within them. Like ReservoirHolder - reservoirs, Plate - wells, pipetteHolder -IndividualPipetteHolder</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">lw</span><span class="p">,</span> <span class="s2">&quot;_rows&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">lw</span><span class="p">,</span> <span class="s2">&quot;_columns&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">lw</span><span class="p">,</span> <span class="p">(</span><span class="n">Plate</span><span class="p">,</span> <span class="n">ReservoirHolder</span><span class="p">,</span> <span class="n">PipetteHolder</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Only (plate, reservoir, pipetteHolder) contain labware within them (wells, reservoirs, zone). Update the code for your labware&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">position_allocator</span> <span class="o">=</span> <span class="n">PositionAllocator</span><span class="p">()</span>
+                <span class="n">position_allocator</span><span class="o">.</span><span class="n">calculate_multi</span><span class="p">(</span>
+                    <span class="n">lw</span><span class="p">,</span>
+                    <span class="n">lw</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                    <span class="n">lw</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="n">lw</span><span class="o">.</span><span class="n">_rows</span><span class="p">,</span>
+                    <span class="n">lw</span><span class="o">.</span><span class="n">_columns</span><span class="p">,</span>
+                <span class="p">)</span>
+
+<div class="viewcode-block" id="Slot.is_compatible_labware">
+<a class="viewcode-back" href="../../../api.html#biohit_pipettor_plus.deck_structure.Slot.is_compatible_labware">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_compatible_labware</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lw</span><span class="p">:</span> <span class="n">Labware</span><span class="p">,</span> <span class="n">min_z</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Checks if a Labware object can be placed at the given Z position, raising</span>
+<span class="sd">        a ValueError if any constraint (XY fit, Z range, stacking, or overlap) is violated.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">slot_width</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">range_x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">range_x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">slot_depth</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">range_y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">range_y</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">max_z_new</span> <span class="o">=</span> <span class="n">min_z</span> <span class="o">+</span> <span class="n">lw</span><span class="o">.</span><span class="n">size_z</span>
+
+        <span class="c1"># --- 1 &amp; 2. Basic XY Fit &amp; Z-Range Check (Remains the same) ---</span>
+        <span class="k">if</span> <span class="n">lw</span><span class="o">.</span><span class="n">size_x</span> <span class="o">&gt;</span> <span class="n">slot_width</span> <span class="ow">or</span> <span class="n">lw</span><span class="o">.</span><span class="n">size_y</span> <span class="o">&gt;</span> <span class="n">slot_depth</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Labware &#39;</span><span class="si">{</span><span class="n">lw</span><span class="o">.</span><span class="n">labware_id</span><span class="si">}</span><span class="s2">&#39; (Size X:</span><span class="si">{</span><span class="n">lw</span><span class="o">.</span><span class="n">size_x</span><span class="si">}</span><span class="s2">, Y:</span><span class="si">{</span><span class="n">lw</span><span class="o">.</span><span class="n">size_y</span><span class="si">}</span><span class="s2">) &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;is too large for slot &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">slot_id</span><span class="si">}</span><span class="s2">&#39; (Size X:</span><span class="si">{</span><span class="n">slot_width</span><span class="si">}</span><span class="s2">, Y:</span><span class="si">{</span><span class="n">slot_depth</span><span class="si">}</span><span class="s2">).&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">max_z_new</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">range_z</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Placement of Labware &#39;</span><span class="si">{</span><span class="n">lw</span><span class="o">.</span><span class="n">labware_id</span><span class="si">}</span><span class="s2">&#39; at min_z=</span><span class="si">{</span><span class="n">min_z</span><span class="si">}</span><span class="s2"> &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;exceeds the slot&#39;s total height capacity (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">range_z</span><span class="si">}</span><span class="s2">).&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># --- 3. Stacking Constraint Check (UPDATED LOGIC) ---</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">labware_stack</span><span class="p">:</span>
+            <span class="n">top_lw</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">max_z_seen</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>
+
+            <span class="c1"># Find the existing labware that occupies the highest Z-level.</span>
+            <span class="k">for</span> <span class="n">existing_lw</span><span class="p">,</span> <span class="p">(</span><span class="n">min_z_exist</span><span class="p">,</span> <span class="n">max_z_exist</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">labware_stack</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">max_z_exist</span> <span class="o">&gt;</span> <span class="n">max_z_seen</span><span class="p">:</span>
+                    <span class="n">max_z_seen</span> <span class="o">=</span> <span class="n">max_z_exist</span>
+                    <span class="n">top_lw</span> <span class="o">=</span> <span class="n">existing_lw</span>
+
+            <span class="c1"># Use getattr to safely check the property, defaulting to False</span>
+            <span class="c1"># if the attribute is missing (which matches the default behavior of blocking stacking).</span>
+            <span class="n">can_stack_upon</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">top_lw</span><span class="p">,</span> <span class="s1">&#39;can_be_stacked_upon&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">can_stack_upon</span><span class="p">:</span>
+                <span class="c1"># If can_be_stacked_upon is False, raise an error.</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Stacking error in slot &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">slot_id</span><span class="si">}</span><span class="s2">&#39;: Labware &#39;</span><span class="si">{</span><span class="n">top_lw</span><span class="o">.</span><span class="n">labware_id</span><span class="si">}</span><span class="s2">&#39; &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;is not designed to have other labware placed on top of it (can_be_stacked_upon=False).&quot;</span>
+                <span class="p">)</span>
+
+            <span class="c1"># --- 4. Z-Overlap Check (Remains the same) ---</span>
+            <span class="k">for</span> <span class="n">existing_lw</span><span class="p">,</span> <span class="p">(</span><span class="n">min_z_exist</span><span class="p">,</span> <span class="n">max_z_exist</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">labware_stack</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">max_z_exist</span> <span class="o">&gt;</span> <span class="n">min_z</span> <span class="ow">and</span> <span class="n">min_z_exist</span> <span class="o">&lt;</span> <span class="n">max_z_new</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Z-Overlap error in slot &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">slot_id</span><span class="si">}</span><span class="s2">&#39;: Placement range Z:[</span><span class="si">{</span><span class="n">min_z</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">max_z_new</span><span class="si">}</span><span class="s2">] &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;overlaps with existing labware &#39;</span><span class="si">{</span><span class="n">existing_lw</span><span class="o">.</span><span class="n">labware_id</span><span class="si">}</span><span class="s2">&#39; Z-range:[</span><span class="si">{</span><span class="n">min_z_exist</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">max_z_exist</span><span class="si">}</span><span class="s2">].&quot;</span>
+                    <span class="p">)</span>
+
+        <span class="c1"># If all checks pass, the function returns silently (None).</span>
+        <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="Slot.get_highest_z">
+<a class="viewcode-back" href="../../../api.html#biohit_pipettor_plus.deck_structure.Slot.get_highest_z">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_highest_z</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the maximum Z coordinate currently occupied in this slot.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">labware_stack</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mf">0.0</span>
+
+        <span class="c1"># Extract the max_z (index 1 of the tuple) from all items in the stack</span>
+        <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="n">zr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">zr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">labware_stack</span><span class="o">.</span><span class="n">values</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="Slot.to_dict">
+<a class="viewcode-back" href="../../../api.html#biohit_pipettor_plus.deck_structure.Slot.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Serialize the Slot instance to a dictionary, including stacked labware and their Z-ranges.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            Dictionary representation of the slot.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;class&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+            <span class="s2">&quot;slot_id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">slot_id</span><span class="p">,</span>
+            <span class="s2">&quot;range_x&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">range_x</span><span class="p">),</span>
+            <span class="s2">&quot;range_y&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">range_y</span><span class="p">),</span>
+            <span class="s2">&quot;range_z&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">range_z</span><span class="p">,</span>
+            <span class="s2">&quot;labware_stack&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="n">lw_id</span><span class="p">:</span> <span class="p">[</span><span class="n">lw</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(),</span> <span class="n">zr</span><span class="p">]</span> <span class="k">for</span> <span class="n">lw_id</span><span class="p">,</span> <span class="p">(</span><span class="n">lw</span><span class="p">,</span> <span class="n">zr</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">labware_stack</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="p">}</span>
+        <span class="p">}</span></div>
+
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Slot&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Deserialize a Slot instance from a dictionary.</span>
+
+<span class="sd">        Note: Labware objects should be populated by Deck after all labware is created.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">slot</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">range_x</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;range_x&quot;</span><span class="p">]),</span>
+            <span class="n">range_y</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;range_y&quot;</span><span class="p">]),</span>
+            <span class="n">range_z</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;range_z&quot;</span><span class="p">],</span>
+            <span class="n">slot_id</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;slot_id&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="c1"># ✅ Don&#39;t create labware here - just store the raw data temporarily</span>
+        <span class="n">slot</span><span class="o">.</span><span class="n">_pending_labware_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;labware_stack&quot;</span><span class="p">,</span> <span class="p">{})</span>
+
+        <span class="k">return</span> <span class="n">slot</span></div>
+
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">biohit_pipettor_plus.deck_structure.slot</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2026, Advait Lath.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.7.
+    </div>
+  </body>
+</html>

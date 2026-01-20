@@ -14,7 +14,7 @@
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Pipettor" href="pipettor.html" />
+    <link rel="next" title="How to create a deck" href="howtocreateadeck.html" />
     <link rel="prev" title="Biohit Pipettor Plus Documentation" href="index.html" /> 
   </head><body>
     <div class="related" role="navigation" aria-label="Related">
@@ -27,7 +27,7 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="pipettor.html" title="Pipettor"
+          <a href="howtocreateadeck.html" title="How to create a deck"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="index.html" title="Biohit Pipettor Plus Documentation"
@@ -44,7 +44,72 @@
             
   <section id="deck-slot-and-labware">
 <h1>Deck, Slot, and Labware<a class="headerlink" href="#deck-slot-and-labware" title="Link to this heading">¶</a></h1>
-<p>coming soon</p>
+<p>This section explains the core components for defining and managing the physical layout
+of your automated pipetting system through the GUI interface.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
+<p>The deck-slot-labware system creates a hierarchical structure that you interact with through the GUI:</p>
+<ul class="simple">
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Deck</span></code>
+- The main working surface that contains all slots</p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Slot</span></code>
+- Individual positions on the deck that hold labware</p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Labware</span></code>
+- Physical items like tip racks, well plates, and reservoirs</p></li>
+</ul>
+<p>This hierarchical organization allows for precise positioning and tracking of all components
+during automated pipetting operations. Each item has a unique id.</p>
+</section>
+<section id="labware-types">
+<h2>Labware Types<a class="headerlink" href="#labware-types" title="Link to this heading">¶</a></h2>
+<section id="low-level-labware-lll">
+<h3>Low level labware (LLL)<a class="headerlink" href="#low-level-labware-lll" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Well</span></code></p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">IndividualPipetteHolder</span></code></p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Reservoirs</span></code></p></li>
+</ul>
+</section>
+<section id="lll-parameters">
+<h3>LLL Parameters<a class="headerlink" href="#lll-parameters" title="Link to this heading">¶</a></h3>
+<p>All three Low level labware require size x,y,z dimensions alongside offset x and offset y values.</p>
+<ul class="simple">
+<li><p>Offset is distance from the center of the object at which the pipettor should access the labware.</p></li>
+<li><p>Well and Reservoir has <strong>content</strong> attribute, a dictionary mapping content types to volumes.</p></li>
+<li><p>IndividualPipetteHolder has <strong>has_tip</strong> attribute that signify if tips are present or not.</p></li>
+</ul>
+</section>
+<section id="high-level-labware-hll">
+<h3>High level labware (HLL)<a class="headerlink" href="#high-level-labware-hll" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Plate</span></code>  – contain wells (e.g. 48-well plate)</p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">PipetteHolder</span></code> -  contain IndividualPipetteHolders (individual tips)</p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ReservoirHolder</span></code> – contain Reservoirs (30ml reservoir,100ml reservoirs, 2ml tubes)</p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Stack</span></code> -  a minimal labware intended to let other labware stack on top of it</p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">TipDropzone</span></code> - An open box where tips can be discarded</p></li>
+</ul>
+</section>
+<section id="hll-parameters">
+<h3>HLL parameters<a class="headerlink" href="#hll-parameters" title="Link to this heading">¶</a></h3>
+<p>All HLL share a few common attributes. This includes dimensions(size_x,y,z), offset(x &amp; y), and stackable(True or False)
+- offset values is the distance (mm) of the first object in the labware from slot corner (top left)
+- stackable property allow other labware to be placed on top of them.</p>
+<p>TipDropzone includes a drop height parameter, which specifies the distance above the labware bottom
+where the pipettor should release (discard) tips.
+Unique parameters for PipetteHolder, ReservoirHolder, and Plate include:</p>
+<ul class="simple">
+<li><p>Rows</p></li>
+<li><p>Columns</p></li>
+<li><p>Add height: height from the specific LLL bottom at which <code class="docutils literal notranslate"><span class="pre">eject_tip</span></code> / <code class="docutils literal notranslate"><span class="pre">dispense</span></code> is performed</p></li>
+<li><p>Remove height: height from the specific LLL bottom at which <code class="docutils literal notranslate"><span class="pre">pick_tip</span></code> / <code class="docutils literal notranslate"><span class="pre">aspirate</span></code> is performed</p></li>
+<li><p>X spacing: distance between adjacent LLLs along the X dimension</p></li>
+<li><p>Y spacing: distance between adjacent LLLs along the Y dimension</p></li>
+<li><p>LLL template: create or select the LLL</p></li>
+</ul>
+<p>Since reservoir can be big enough to accommodate all tips of multipipettor or just one, ReservoirHolder has another
+parameter called as <code class="docutils literal notranslate"><span class="pre">one</span> <span class="pre">reservoir</span> <span class="pre">per</span> <span class="pre">tip</span></code>. When ticked, the pipettor will expect unique reservoir for all the tips</p>
+</section>
+</section>
 </section>
 
 
@@ -55,14 +120,31 @@
       <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
   <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">Deck, Slot, and Labware</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#labware-types">Labware Types</a><ul>
+<li><a class="reference internal" href="#low-level-labware-lll">Low level labware (LLL)</a></li>
+<li><a class="reference internal" href="#lll-parameters">LLL Parameters</a></li>
+<li><a class="reference internal" href="#high-level-labware-hll">High level labware (HLL)</a></li>
+<li><a class="reference internal" href="#hll-parameters">HLL parameters</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
     <h4>Previous topic</h4>
     <p class="topless"><a href="index.html"
                           title="previous chapter">Biohit Pipettor Plus Documentation</a></p>
   </div>
   <div>
     <h4>Next topic</h4>
-    <p class="topless"><a href="pipettor.html"
-                          title="next chapter">Pipettor</a></p>
+    <p class="topless"><a href="howtocreateadeck.html"
+                          title="next chapter">How to create a deck</a></p>
   </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
@@ -95,7 +177,7 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="pipettor.html" title="Pipettor"
+          <a href="howtocreateadeck.html" title="How to create a deck"
              >next</a> |</li>
         <li class="right" >
           <a href="index.html" title="Biohit Pipettor Plus Documentation"

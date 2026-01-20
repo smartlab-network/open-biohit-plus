@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>How to create a deck &#8212; biohit-pipettor-plus  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/nature.css?v=0f882399" />
+    <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=a9d2d1f6" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Configuring the Pipettor" href="pipettor.html" />
+    <link rel="prev" title="Deck, Slot, and Labware" href="deck_slot_labware.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pipettor.html" title="Configuring the Pipettor"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="deck_slot_labware.html" title="Deck, Slot, and Labware"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">How to create a deck</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="how-to-create-a-deck">
+<h1>How to create a deck<a class="headerlink" href="#how-to-create-a-deck" title="Link to this heading">¶</a></h1>
+<p>“Deck_Editor” and “Low Level Parameter” tab of GUI are involved in creating and setting up deck for pipetting operations.</p>
+<section id="defining-a-new-deck">
+<h2>Defining a new Deck<a class="headerlink" href="#defining-a-new-deck" title="Link to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Open the <strong>File</strong> menu in the top menu bar.</p></li>
+<li><p>Select <strong>New Deck</strong> and enter desired parameters.</p></li>
+<li><p>A new, empty deck will be created and displayed in the <strong>Deck_Editor</strong> tab.</p></li>
+</ol>
+<p>At this stage, the deck contains no slots or labware. The current deck info can be seen in the <strong>Deck_Editor</strong> tab.</p>
+</section>
+<section id="working-with-slot">
+<h2>Working with Slot<a class="headerlink" href="#working-with-slot" title="Link to this heading">¶</a></h2>
+<p>To create a slot:</p>
+<ol class="arabic simple">
+<li><p>Navigate to the <strong>Deck_Editor</strong> tab.</p></li>
+<li><p>Click <strong>Create Slot</strong> and enter desired parameters.</p></li>
+<li><p>The slot now exists in <strong>unplaced state</strong> and should be seen in the selection box.</p></li>
+<li><p>Unplaced slot can be placed, edited, or deleted. <strong>Double click</strong> on the slot also places the slot on deck</p></li>
+<li><p>To unplace a slot — <strong>Triple click</strong> the slot or click on <strong>Unplace slot</strong> button</p></li>
+</ol>
+</section>
+<section id="working-with-labware">
+<h2>Working with Labware<a class="headerlink" href="#working-with-labware" title="Link to this heading">¶</a></h2>
+<p>Creating a labware is slightly more complex because of various types of labware.</p>
+<ol class="arabic simple">
+<li><dl class="simple">
+<dt>Low level labware can be created by clicking on <strong>Create LLL</strong> in the <strong>Low level parameter</strong> tab.</dt><dd><p>List of available LLL can also be seen there.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>High level labware can be created by clicking on <strong>Create labware</strong> in the <strong>Deck_Editor</strong> tab.</dt><dd><p>If LLL for the HLL does not exist, the required LLL can also be created when creating a HLL.</p>
+</dd>
+</dl>
+</li>
+</ol>
+<p>Labware placement and editing:</p>
+<ul class="simple">
+<li><p>After creation, HLL can be placed on slot by clicking on <strong>Place on Slot on Deck</strong>. Double clicking does the same job</p></li>
+<li><p>Triple click removes placed labware from deck</p></li>
+<li><p>Physical attributes (such as size, offset, stackable) are editable for a HLL</p></li>
+<li><p>Physical attribute of the LLL used in HLL creation is not editable</p></li>
+<li><p>Some properties of the LLL (like has_tips/ content) is however editable</p></li>
+<li><p>Note - For ReservoirHolder, LLL can be removed and custom reservoir spanning (more than one row/column) can be used</p></li>
+</ul>
+</section>
+<section id="after-labware-is-placed">
+<h2>After Labware is placed<a class="headerlink" href="#after-labware-is-placed" title="Link to this heading">¶</a></h2>
+<p>It is important to validate a labware parameters at least once. This can be done once the labware is placed.</p>
+<p>Click on <strong>Edit children lw</strong> button in Deck editor tab and test out position, add, and remove height for the labware.
+These values are passed on to the pipettor during operations and hence it is important to confirm them. Adjustment to
+the parameters have to be made to get desired positions and z values.</p>
+</section>
+<section id="saving-and-loading-decks">
+<h2>Saving and Loading Decks<a class="headerlink" href="#saving-and-loading-decks" title="Link to this heading">¶</a></h2>
+<p>Deck configurations can be saved and reused.</p>
+<p>To save a deck:</p>
+<ol class="arabic simple">
+<li><p>Open the <strong>File</strong> menu.</p></li>
+<li><p>Select <strong>Save Deck</strong>.</p></li>
+</ol>
+<p>To load an existing deck:</p>
+<ol class="arabic simple">
+<li><p>Open the <strong>File</strong> menu.</p></li>
+<li><p>Select <strong>Load Deck</strong>.</p></li>
+<li><p>Choose a previously saved deck configuration.</p></li>
+</ol>
+<section id="important-notes">
+<h3>Important Notes<a class="headerlink" href="#important-notes" title="Link to this heading">¶</a></h3>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>If a deck is created or modified during an active session, the pipettor must
+be reconnected. The pipettor connection requires a valid deck reference, which
+changes whenever the deck is updated.</p>
+</div>
+<p>Always ensure that the virtual deck layout matches the physical setup of the
+instrument to avoid incorrect pipetting behavior or hardware collisions.</p>
+</section>
+<section id="next-steps">
+<h3>Next Steps<a class="headerlink" href="#next-steps" title="Link to this heading">¶</a></h3>
+<p>Once the deck has been created and validated, you can proceed to:</p>
+<ul class="simple">
+<li><p>Configure pipettor</p></li>
+<li><p>Build workflows</p></li>
+<li><p>Execute pipetting operations</p></li>
+</ul>
+</section>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">How to create a deck</a><ul>
+<li><a class="reference internal" href="#defining-a-new-deck">Defining a new Deck</a></li>
+<li><a class="reference internal" href="#working-with-slot">Working with Slot</a></li>
+<li><a class="reference internal" href="#working-with-labware">Working with Labware</a></li>
+<li><a class="reference internal" href="#after-labware-is-placed">After Labware is placed</a></li>
+<li><a class="reference internal" href="#saving-and-loading-decks">Saving and Loading Decks</a><ul>
+<li><a class="reference internal" href="#important-notes">Important Notes</a></li>
+<li><a class="reference internal" href="#next-steps">Next Steps</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="deck_slot_labware.html"
+                          title="previous chapter">Deck, Slot, and Labware</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="pipettor.html"
+                          title="next chapter">Configuring the Pipettor</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/howtocreateadeck.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pipettor.html" title="Configuring the Pipettor"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="deck_slot_labware.html" title="Deck, Slot, and Labware"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">biohit-pipettor-plus  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">How to create a deck</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2026, Advait Lath.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.7.
+    </div>
+  </body>
+</html>
