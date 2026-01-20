@@ -16,13 +16,15 @@ See more in documentation
 ## Download
 [Download Latest Release (v1.0.2)](https://github.com/smartlab-network/open-biohit-plus/releases/latest)
 
-
 ## Installation
 1. Download `BiohitPipettorPlus-Windows.zip` from the [Releases](https://github.com/smartlab-network/open-biohit-plus/releases) page
 2. Extract the zip file to any folder on your computer
 3. Run `BiohitPipettorPlus.exe`
 4. Build deck and workflows 
 
+## Working Tutorial
+To see the Biohit Pipettor Plus in action, watch the full walkthrough below:
+[![Biohit Pipettor Plus Tutorial](https://img.youtube.com/vi/gM6Kxg_iGMc/0.jpg)](https://www.youtube.com/watch?v=gM6Kxg_iGMc)
 
 ## Development
 Built with:

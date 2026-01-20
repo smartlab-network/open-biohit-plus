@@ -10,8 +10,8 @@ Quick Links
 * `Download Latest Release (v1.0.2) <https://github.com/smartlab-network/open-biohit-plus/releases/latest>`_
 * `GitHub Repository <https://github.com/smartlab-network/open-biohit-plus>`_
 
-Demo Video
-----------
+Working Tutorial
+------------------
 
 .. youtube:: gM6Kxg_iGMc
    :width: 800
