@@ -22,6 +22,11 @@ autoclass_content = "both"
 autodoc_default_options = {
     "inherited-members": True,
 }
+autodoc_mock_imports = [
+    "clr",
+    "pythonnet",
+    "biohit_pipettor",
+]
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
