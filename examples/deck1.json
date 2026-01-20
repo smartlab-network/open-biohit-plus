@@ -1,0 +1,6731 @@
+{
+  "deck": {
+    "class": "Deck",
+    "deck_id": "deck",
+    "range_x": [
+      0,
+      265
+    ],
+    "range_y": [
+      0,
+      244
+    ],
+    "range_z": 209,
+    "slots": {
+      "slot1": {
+        "class": "Slot",
+        "slot_id": "slot1",
+        "range_x": [
+          0,
+          118.25
+        ],
+        "range_y": [
+          0,
+          36.75
+        ],
+        "range_z": 209,
+        "labware_stack": {
+          "dropzone_1": [
+            {
+              "class": "TipDropzone",
+              "labware_id": "dropzone_1",
+              "size_x": 40,
+              "size_y": 30,
+              "size_z": 60,
+              "offset": [
+                10,
+                5
+              ],
+              "can_be_stacked_upon": false,
+              "position": [
+                108.25,
+                5
+              ],
+              "drop_height_relative": 60
+            },
+            [
+              0,
+              60
+            ]
+          ]
+        }
+      },
+      "slot2": {
+        "class": "Slot",
+        "slot_id": "slot2",
+        "range_x": [
+          128,
+          246.25
+        ],
+        "range_y": [
+          0,
+          36.75
+        ],
+        "range_z": 209,
+        "labware_stack": {}
+      },
+      "slot3": {
+        "class": "Slot",
+        "slot_id": "slot3",
+        "range_x": [
+          0,
+          118.25
+        ],
+        "range_y": [
+          46,
+          125.75
+        ],
+        "range_z": 209,
+        "labware_stack": {
+          "pip_stack1": [
+            {
+              "class": "Stack",
+              "labware_id": "pip_stack1",
+              "size_x": 102,
+              "size_y": 65,
+              "size_z": 79,
+              "offset": [
+                12.85,
+                6.1
+              ],
+              "can_be_stacked_upon": true,
+              "position": [
+                105.4,
+                52.1
+              ]
+            },
+            [
+              0,
+              79
+            ]
+          ],
+          "labware_b344998c": [
+            {
+              "class": "PipetteHolder",
+              "labware_id": "labware_b344998c",
+              "size_x": 102,
+              "size_y": 65,
+              "size_z": 55,
+              "offset": [
+                12.85,
+                6.1
+              ],
+              "can_be_stacked_upon": false,
+              "position": [
+                105.4,
+                52.1
+              ],
+              "add_height": -14,
+              "remove_height": 0,
+              "holders_across_x": 12,
+              "holders_across_y": 8,
+              "x_spacing": 9,
+              "y_spacing": 9,
+              "individual_holders": {
+                "0:0": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_0:0",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    105.0,
+                    52.5
+                  ],
+                  "is_occupied": true,
+                  "row": 0,
+                  "column": 0
+                },
+                "0:1": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_0:1",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    105.0,
+                    61.5
+                  ],
+                  "is_occupied": true,
+                  "row": 1,
+                  "column": 0
+                },
+                "0:2": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_0:2",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    105.0,
+                    70.5
+                  ],
+                  "is_occupied": true,
+                  "row": 2,
+                  "column": 0
+                },
+                "0:3": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_0:3",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    105.0,
+                    79.5
+                  ],
+                  "is_occupied": true,
+                  "row": 3,
+                  "column": 0
+                },
+                "0:4": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_0:4",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    105.0,
+                    88.5
+                  ],
+                  "is_occupied": true,
+                  "row": 4,
+                  "column": 0
+                },
+                "0:5": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_0:5",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    105.0,
+                    97.5
+                  ],
+                  "is_occupied": true,
+                  "row": 5,
+                  "column": 0
+                },
+                "0:6": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_0:6",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    105.0,
+                    106.5
+                  ],
+                  "is_occupied": true,
+                  "row": 6,
+                  "column": 0
+                },
+                "0:7": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_0:7",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    105.0,
+                    115.5
+                  ],
+                  "is_occupied": true,
+                  "row": 7,
+                  "column": 0
+                },
+                "1:0": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_1:0",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    96.0,
+                    52.5
+                  ],
+                  "is_occupied": true,
+                  "row": 0,
+                  "column": 1
+                },
+                "1:1": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_1:1",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    96.0,
+                    61.5
+                  ],
+                  "is_occupied": true,
+                  "row": 1,
+                  "column": 1
+                },
+                "1:2": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_1:2",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    96.0,
+                    70.5
+                  ],
+                  "is_occupied": true,
+                  "row": 2,
+                  "column": 1
+                },
+                "1:3": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_1:3",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    96.0,
+                    79.5
+                  ],
+                  "is_occupied": true,
+                  "row": 3,
+                  "column": 1
+                },
+                "1:4": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_1:4",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    96.0,
+                    88.5
+                  ],
+                  "is_occupied": true,
+                  "row": 4,
+                  "column": 1
+                },
+                "1:5": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_1:5",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    96.0,
+                    97.5
+                  ],
+                  "is_occupied": true,
+                  "row": 5,
+                  "column": 1
+                },
+                "1:6": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_1:6",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    96.0,
+                    106.5
+                  ],
+                  "is_occupied": true,
+                  "row": 6,
+                  "column": 1
+                },
+                "1:7": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_1:7",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    96.0,
+                    115.5
+                  ],
+                  "is_occupied": true,
+                  "row": 7,
+                  "column": 1
+                },
+                "2:0": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_2:0",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    87.0,
+                    52.5
+                  ],
+                  "is_occupied": true,
+                  "row": 0,
+                  "column": 2
+                },
+                "2:1": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_2:1",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    87.0,
+                    61.5
+                  ],
+                  "is_occupied": true,
+                  "row": 1,
+                  "column": 2
+                },
+                "2:2": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_2:2",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    87.0,
+                    70.5
+                  ],
+                  "is_occupied": true,
+                  "row": 2,
+                  "column": 2
+                },
+                "2:3": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_2:3",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    87.0,
+                    79.5
+                  ],
+                  "is_occupied": true,
+                  "row": 3,
+                  "column": 2
+                },
+                "2:4": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_2:4",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    87.0,
+                    88.5
+                  ],
+                  "is_occupied": true,
+                  "row": 4,
+                  "column": 2
+                },
+                "2:5": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_2:5",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    87.0,
+                    97.5
+                  ],
+                  "is_occupied": true,
+                  "row": 5,
+                  "column": 2
+                },
+                "2:6": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_2:6",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    87.0,
+                    106.5
+                  ],
+                  "is_occupied": true,
+                  "row": 6,
+                  "column": 2
+                },
+                "2:7": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_2:7",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    87.0,
+                    115.5
+                  ],
+                  "is_occupied": true,
+                  "row": 7,
+                  "column": 2
+                },
+                "3:0": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_3:0",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    78.0,
+                    52.5
+                  ],
+                  "is_occupied": true,
+                  "row": 0,
+                  "column": 3
+                },
+                "3:1": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_3:1",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    78.0,
+                    61.5
+                  ],
+                  "is_occupied": true,
+                  "row": 1,
+                  "column": 3
+                },
+                "3:2": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_3:2",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    78.0,
+                    70.5
+                  ],
+                  "is_occupied": true,
+                  "row": 2,
+                  "column": 3
+                },
+                "3:3": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_3:3",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    78.0,
+                    79.5
+                  ],
+                  "is_occupied": true,
+                  "row": 3,
+                  "column": 3
+                },
+                "3:4": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_3:4",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    78.0,
+                    88.5
+                  ],
+                  "is_occupied": true,
+                  "row": 4,
+                  "column": 3
+                },
+                "3:5": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_3:5",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    78.0,
+                    97.5
+                  ],
+                  "is_occupied": true,
+                  "row": 5,
+                  "column": 3
+                },
+                "3:6": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_3:6",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    78.0,
+                    106.5
+                  ],
+                  "is_occupied": true,
+                  "row": 6,
+                  "column": 3
+                },
+                "3:7": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_3:7",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    78.0,
+                    115.5
+                  ],
+                  "is_occupied": true,
+                  "row": 7,
+                  "column": 3
+                },
+                "4:0": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_4:0",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    69.0,
+                    52.5
+                  ],
+                  "is_occupied": true,
+                  "row": 0,
+                  "column": 4
+                },
+                "4:1": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_4:1",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    69.0,
+                    61.5
+                  ],
+                  "is_occupied": true,
+                  "row": 1,
+                  "column": 4
+                },
+                "4:2": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_4:2",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    69.0,
+                    70.5
+                  ],
+                  "is_occupied": true,
+                  "row": 2,
+                  "column": 4
+                },
+                "4:3": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_4:3",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    69.0,
+                    79.5
+                  ],
+                  "is_occupied": true,
+                  "row": 3,
+                  "column": 4
+                },
+                "4:4": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_4:4",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    69.0,
+                    88.5
+                  ],
+                  "is_occupied": true,
+                  "row": 4,
+                  "column": 4
+                },
+                "4:5": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_4:5",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    69.0,
+                    97.5
+                  ],
+                  "is_occupied": true,
+                  "row": 5,
+                  "column": 4
+                },
+                "4:6": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_4:6",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    69.0,
+                    106.5
+                  ],
+                  "is_occupied": true,
+                  "row": 6,
+                  "column": 4
+                },
+                "4:7": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_4:7",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    69.0,
+                    115.5
+                  ],
+                  "is_occupied": true,
+                  "row": 7,
+                  "column": 4
+                },
+                "5:0": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_5:0",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    60.0,
+                    52.5
+                  ],
+                  "is_occupied": true,
+                  "row": 0,
+                  "column": 5
+                },
+                "5:1": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_5:1",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    60.0,
+                    61.5
+                  ],
+                  "is_occupied": true,
+                  "row": 1,
+                  "column": 5
+                },
+                "5:2": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_5:2",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    60.0,
+                    70.5
+                  ],
+                  "is_occupied": true,
+                  "row": 2,
+                  "column": 5
+                },
+                "5:3": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_5:3",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    60.0,
+                    79.5
+                  ],
+                  "is_occupied": true,
+                  "row": 3,
+                  "column": 5
+                },
+                "5:4": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_5:4",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    60.0,
+                    88.5
+                  ],
+                  "is_occupied": true,
+                  "row": 4,
+                  "column": 5
+                },
+                "5:5": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_5:5",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    60.0,
+                    97.5
+                  ],
+                  "is_occupied": true,
+                  "row": 5,
+                  "column": 5
+                },
+                "5:6": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_5:6",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    60.0,
+                    106.5
+                  ],
+                  "is_occupied": true,
+                  "row": 6,
+                  "column": 5
+                },
+                "5:7": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_5:7",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    60.0,
+                    115.5
+                  ],
+                  "is_occupied": true,
+                  "row": 7,
+                  "column": 5
+                },
+                "6:0": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_6:0",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    51.0,
+                    52.5
+                  ],
+                  "is_occupied": true,
+                  "row": 0,
+                  "column": 6
+                },
+                "6:1": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_6:1",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    51.0,
+                    61.5
+                  ],
+                  "is_occupied": true,
+                  "row": 1,
+                  "column": 6
+                },
+                "6:2": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_6:2",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    51.0,
+                    70.5
+                  ],
+                  "is_occupied": true,
+                  "row": 2,
+                  "column": 6
+                },
+                "6:3": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_6:3",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    51.0,
+                    79.5
+                  ],
+                  "is_occupied": true,
+                  "row": 3,
+                  "column": 6
+                },
+                "6:4": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_6:4",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    51.0,
+                    88.5
+                  ],
+                  "is_occupied": true,
+                  "row": 4,
+                  "column": 6
+                },
+                "6:5": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_6:5",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    51.0,
+                    97.5
+                  ],
+                  "is_occupied": true,
+                  "row": 5,
+                  "column": 6
+                },
+                "6:6": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_6:6",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    51.0,
+                    106.5
+                  ],
+                  "is_occupied": true,
+                  "row": 6,
+                  "column": 6
+                },
+                "6:7": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_6:7",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    51.0,
+                    115.5
+                  ],
+                  "is_occupied": true,
+                  "row": 7,
+                  "column": 6
+                },
+                "7:0": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_7:0",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    42.0,
+                    52.5
+                  ],
+                  "is_occupied": true,
+                  "row": 0,
+                  "column": 7
+                },
+                "7:1": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_7:1",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    42.0,
+                    61.5
+                  ],
+                  "is_occupied": true,
+                  "row": 1,
+                  "column": 7
+                },
+                "7:2": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_7:2",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    42.0,
+                    70.5
+                  ],
+                  "is_occupied": true,
+                  "row": 2,
+                  "column": 7
+                },
+                "7:3": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_7:3",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    42.0,
+                    79.5
+                  ],
+                  "is_occupied": true,
+                  "row": 3,
+                  "column": 7
+                },
+                "7:4": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_7:4",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    42.0,
+                    88.5
+                  ],
+                  "is_occupied": true,
+                  "row": 4,
+                  "column": 7
+                },
+                "7:5": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_7:5",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    42.0,
+                    97.5
+                  ],
+                  "is_occupied": true,
+                  "row": 5,
+                  "column": 7
+                },
+                "7:6": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_7:6",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    42.0,
+                    106.5
+                  ],
+                  "is_occupied": true,
+                  "row": 6,
+                  "column": 7
+                },
+                "7:7": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_7:7",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    42.0,
+                    115.5
+                  ],
+                  "is_occupied": true,
+                  "row": 7,
+                  "column": 7
+                },
+                "8:0": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_8:0",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    33.0,
+                    52.5
+                  ],
+                  "is_occupied": true,
+                  "row": 0,
+                  "column": 8
+                },
+                "8:1": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_8:1",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    33.0,
+                    61.5
+                  ],
+                  "is_occupied": true,
+                  "row": 1,
+                  "column": 8
+                },
+                "8:2": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_8:2",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    33.0,
+                    70.5
+                  ],
+                  "is_occupied": true,
+                  "row": 2,
+                  "column": 8
+                },
+                "8:3": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_8:3",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    33.0,
+                    79.5
+                  ],
+                  "is_occupied": true,
+                  "row": 3,
+                  "column": 8
+                },
+                "8:4": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_8:4",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    33.0,
+                    88.5
+                  ],
+                  "is_occupied": true,
+                  "row": 4,
+                  "column": 8
+                },
+                "8:5": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_8:5",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    33.0,
+                    97.5
+                  ],
+                  "is_occupied": true,
+                  "row": 5,
+                  "column": 8
+                },
+                "8:6": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_8:6",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    33.0,
+                    106.5
+                  ],
+                  "is_occupied": true,
+                  "row": 6,
+                  "column": 8
+                },
+                "8:7": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_8:7",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    33.0,
+                    115.5
+                  ],
+                  "is_occupied": true,
+                  "row": 7,
+                  "column": 8
+                },
+                "9:0": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_9:0",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    24.0,
+                    52.5
+                  ],
+                  "is_occupied": true,
+                  "row": 0,
+                  "column": 9
+                },
+                "9:1": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_9:1",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    24.0,
+                    61.5
+                  ],
+                  "is_occupied": true,
+                  "row": 1,
+                  "column": 9
+                },
+                "9:2": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_9:2",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    24.0,
+                    70.5
+                  ],
+                  "is_occupied": true,
+                  "row": 2,
+                  "column": 9
+                },
+                "9:3": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_9:3",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    24.0,
+                    79.5
+                  ],
+                  "is_occupied": true,
+                  "row": 3,
+                  "column": 9
+                },
+                "9:4": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_9:4",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    24.0,
+                    88.5
+                  ],
+                  "is_occupied": true,
+                  "row": 4,
+                  "column": 9
+                },
+                "9:5": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_9:5",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    24.0,
+                    97.5
+                  ],
+                  "is_occupied": true,
+                  "row": 5,
+                  "column": 9
+                },
+                "9:6": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_9:6",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    24.0,
+                    106.5
+                  ],
+                  "is_occupied": true,
+                  "row": 6,
+                  "column": 9
+                },
+                "9:7": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_9:7",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    24.0,
+                    115.5
+                  ],
+                  "is_occupied": true,
+                  "row": 7,
+                  "column": 9
+                },
+                "10:0": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_10:0",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    15.0,
+                    52.5
+                  ],
+                  "is_occupied": true,
+                  "row": 0,
+                  "column": 10
+                },
+                "10:1": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_10:1",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    15.0,
+                    61.5
+                  ],
+                  "is_occupied": true,
+                  "row": 1,
+                  "column": 10
+                },
+                "10:2": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_10:2",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    15.0,
+                    70.5
+                  ],
+                  "is_occupied": true,
+                  "row": 2,
+                  "column": 10
+                },
+                "10:3": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_10:3",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    15.0,
+                    79.5
+                  ],
+                  "is_occupied": true,
+                  "row": 3,
+                  "column": 10
+                },
+                "10:4": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_10:4",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    15.0,
+                    88.5
+                  ],
+                  "is_occupied": true,
+                  "row": 4,
+                  "column": 10
+                },
+                "10:5": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_10:5",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    15.0,
+                    97.5
+                  ],
+                  "is_occupied": true,
+                  "row": 5,
+                  "column": 10
+                },
+                "10:6": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_10:6",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    15.0,
+                    106.5
+                  ],
+                  "is_occupied": true,
+                  "row": 6,
+                  "column": 10
+                },
+                "10:7": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_10:7",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    15.0,
+                    115.5
+                  ],
+                  "is_occupied": true,
+                  "row": 7,
+                  "column": 10
+                },
+                "11:0": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_11:0",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    6.0,
+                    52.5
+                  ],
+                  "is_occupied": true,
+                  "row": 0,
+                  "column": 11
+                },
+                "11:1": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_11:1",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    6.0,
+                    61.5
+                  ],
+                  "is_occupied": true,
+                  "row": 1,
+                  "column": 11
+                },
+                "11:2": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_11:2",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    6.0,
+                    70.5
+                  ],
+                  "is_occupied": true,
+                  "row": 2,
+                  "column": 11
+                },
+                "11:3": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_11:3",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    6.0,
+                    79.5
+                  ],
+                  "is_occupied": true,
+                  "row": 3,
+                  "column": 11
+                },
+                "11:4": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_11:4",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    6.0,
+                    88.5
+                  ],
+                  "is_occupied": true,
+                  "row": 4,
+                  "column": 11
+                },
+                "11:5": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_11:5",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    6.0,
+                    97.5
+                  ],
+                  "is_occupied": true,
+                  "row": 5,
+                  "column": 11
+                },
+                "11:6": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_11:6",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    6.0,
+                    106.5
+                  ],
+                  "is_occupied": true,
+                  "row": 6,
+                  "column": 11
+                },
+                "11:7": {
+                  "class": "IndividualPipetteHolder",
+                  "labware_id": "labware_b344998c_11:7",
+                  "size_x": 0.8,
+                  "size_y": 0.8,
+                  "size_z": 1,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    6.0,
+                    115.5
+                  ],
+                  "is_occupied": true,
+                  "row": 7,
+                  "column": 11
+                }
+              }
+            },
+            [
+              79,
+              134
+            ]
+          ]
+        }
+      },
+      "slot4": {
+        "class": "Slot",
+        "slot_id": "slot4",
+        "range_x": [
+          128,
+          246.25
+        ],
+        "range_y": [
+          46,
+          125.75
+        ],
+        "range_z": 209,
+        "labware_stack": {
+          "platestack1": [
+            {
+              "class": "Stack",
+              "labware_id": "platestack1",
+              "size_x": 113.4,
+              "size_y": 65,
+              "size_z": 45,
+              "offset": [
+                13.8,
+                1
+              ],
+              "can_be_stacked_upon": true,
+              "position": [
+                232.45,
+                47
+              ]
+            },
+            [
+              0,
+              45
+            ]
+          ],
+          "labware_787270fd": [
+            {
+              "class": "Plate",
+              "labware_id": "labware_787270fd",
+              "size_x": 113.4,
+              "size_y": 65,
+              "size_z": 53,
+              "offset": [
+                13.8,
+                1
+              ],
+              "can_be_stacked_upon": false,
+              "position": [
+                232.45,
+                47
+              ],
+              "add_height": 5,
+              "remove_height": 1,
+              "x_spacing": 18,
+              "y_spacing": 9,
+              "wells_x": 6,
+              "wells_y": 8,
+              "wells": {
+                "0:0": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_0:0",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    231.5,
+                    51.25
+                  ],
+                  "row": 0,
+                  "column": 0,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "0:1": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_0:1",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    231.5,
+                    60.25
+                  ],
+                  "row": 1,
+                  "column": 0,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "0:2": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_0:2",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    231.5,
+                    69.25
+                  ],
+                  "row": 2,
+                  "column": 0,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "0:3": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_0:3",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    231.5,
+                    78.25
+                  ],
+                  "row": 3,
+                  "column": 0,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "0:4": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_0:4",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    231.5,
+                    87.25
+                  ],
+                  "row": 4,
+                  "column": 0,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "0:5": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_0:5",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    231.5,
+                    96.25
+                  ],
+                  "row": 5,
+                  "column": 0,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "0:6": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_0:6",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    231.5,
+                    105.25
+                  ],
+                  "row": 6,
+                  "column": 0,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "0:7": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_0:7",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    231.5,
+                    114.25
+                  ],
+                  "row": 7,
+                  "column": 0,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "1:0": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_1:0",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    213.5,
+                    51.25
+                  ],
+                  "row": 0,
+                  "column": 1,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "1:1": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_1:1",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    213.5,
+                    60.25
+                  ],
+                  "row": 1,
+                  "column": 1,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "1:2": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_1:2",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    213.5,
+                    69.25
+                  ],
+                  "row": 2,
+                  "column": 1,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "1:3": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_1:3",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    213.5,
+                    78.25
+                  ],
+                  "row": 3,
+                  "column": 1,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "1:4": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_1:4",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    213.5,
+                    87.25
+                  ],
+                  "row": 4,
+                  "column": 1,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "1:5": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_1:5",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    213.5,
+                    96.25
+                  ],
+                  "row": 5,
+                  "column": 1,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "1:6": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_1:6",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    213.5,
+                    105.25
+                  ],
+                  "row": 6,
+                  "column": 1,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "1:7": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_1:7",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    213.5,
+                    114.25
+                  ],
+                  "row": 7,
+                  "column": 1,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "2:0": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_2:0",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    195.5,
+                    51.25
+                  ],
+                  "row": 0,
+                  "column": 2,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "2:1": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_2:1",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    195.5,
+                    60.25
+                  ],
+                  "row": 1,
+                  "column": 2,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "2:2": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_2:2",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    195.5,
+                    69.25
+                  ],
+                  "row": 2,
+                  "column": 2,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "2:3": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_2:3",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    195.5,
+                    78.25
+                  ],
+                  "row": 3,
+                  "column": 2,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "2:4": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_2:4",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    195.5,
+                    87.25
+                  ],
+                  "row": 4,
+                  "column": 2,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "2:5": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_2:5",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    195.5,
+                    96.25
+                  ],
+                  "row": 5,
+                  "column": 2,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "2:6": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_2:6",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    195.5,
+                    105.25
+                  ],
+                  "row": 6,
+                  "column": 2,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "2:7": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_2:7",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    195.5,
+                    114.25
+                  ],
+                  "row": 7,
+                  "column": 2,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "3:0": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_3:0",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    177.5,
+                    51.25
+                  ],
+                  "row": 0,
+                  "column": 3,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "3:1": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_3:1",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    177.5,
+                    60.25
+                  ],
+                  "row": 1,
+                  "column": 3,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "3:2": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_3:2",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    177.5,
+                    69.25
+                  ],
+                  "row": 2,
+                  "column": 3,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "3:3": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_3:3",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    177.5,
+                    78.25
+                  ],
+                  "row": 3,
+                  "column": 3,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "3:4": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_3:4",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    177.5,
+                    87.25
+                  ],
+                  "row": 4,
+                  "column": 3,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "3:5": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_3:5",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    177.5,
+                    96.25
+                  ],
+                  "row": 5,
+                  "column": 3,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "3:6": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_3:6",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    177.5,
+                    105.25
+                  ],
+                  "row": 6,
+                  "column": 3,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "3:7": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_3:7",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    177.5,
+                    114.25
+                  ],
+                  "row": 7,
+                  "column": 3,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "4:0": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_4:0",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    159.5,
+                    51.25
+                  ],
+                  "row": 0,
+                  "column": 4,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "4:1": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_4:1",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    159.5,
+                    60.25
+                  ],
+                  "row": 1,
+                  "column": 4,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "4:2": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_4:2",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    159.5,
+                    69.25
+                  ],
+                  "row": 2,
+                  "column": 4,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "4:3": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_4:3",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    159.5,
+                    78.25
+                  ],
+                  "row": 3,
+                  "column": 4,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "4:4": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_4:4",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    159.5,
+                    87.25
+                  ],
+                  "row": 4,
+                  "column": 4,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "4:5": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_4:5",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    159.5,
+                    96.25
+                  ],
+                  "row": 5,
+                  "column": 4,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "4:6": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_4:6",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    159.5,
+                    105.25
+                  ],
+                  "row": 6,
+                  "column": 4,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "4:7": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_4:7",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    159.5,
+                    114.25
+                  ],
+                  "row": 7,
+                  "column": 4,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "5:0": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_5:0",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    141.5,
+                    51.25
+                  ],
+                  "row": 0,
+                  "column": 5,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "5:1": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_5:1",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    141.5,
+                    60.25
+                  ],
+                  "row": 1,
+                  "column": 5,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "5:2": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_5:2",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    141.5,
+                    69.25
+                  ],
+                  "row": 2,
+                  "column": 5,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "5:3": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_5:3",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    141.5,
+                    78.25
+                  ],
+                  "row": 3,
+                  "column": 5,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "5:4": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_5:4",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    141.5,
+                    87.25
+                  ],
+                  "row": 4,
+                  "column": 5,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "5:5": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_5:5",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    141.5,
+                    96.25
+                  ],
+                  "row": 5,
+                  "column": 5,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "5:6": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_5:6",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    141.5,
+                    105.25
+                  ],
+                  "row": 6,
+                  "column": 5,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                },
+                "5:7": {
+                  "class": "Well",
+                  "labware_id": "labware_787270fd_5:7",
+                  "size_x": 18.9,
+                  "size_y": 7.5,
+                  "size_z": 10,
+                  "offset": [
+                    -8.5,
+                    0.5
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    141.5,
+                    114.25
+                  ],
+                  "row": 7,
+                  "column": 5,
+                  "content": {
+                    "water": 500
+                  },
+                  "capacity": 1000,
+                  "shape": null
+                }
+              }
+            },
+            [
+              45,
+              98
+            ]
+          ]
+        }
+      },
+      "slot5": {
+        "class": "Slot",
+        "slot_id": "slot5",
+        "range_x": [
+          0,
+          118.25
+        ],
+        "range_y": [
+          135,
+          214.75
+        ],
+        "range_z": 209,
+        "labware_stack": {
+          "resstack1": [
+            {
+              "class": "Stack",
+              "labware_id": "resstack1",
+              "size_x": 115.5,
+              "size_y": 79,
+              "size_z": 40,
+              "offset": [
+                2,
+                0
+              ],
+              "can_be_stacked_upon": true,
+              "position": [
+                116.25,
+                135
+              ]
+            },
+            [
+              0,
+              40
+            ]
+          ],
+          "labware_ab0df754": [
+            {
+              "class": "ReservoirHolder",
+              "labware_id": "labware_ab0df754",
+              "size_x": 115.5,
+              "size_y": 79,
+              "size_z": 90,
+              "offset": [
+                2,
+                0
+              ],
+              "can_be_stacked_upon": false,
+              "position": [
+                116.25,
+                135
+              ],
+              "add_height": 80,
+              "remove_height": 20,
+              "hooks_across_x": 7,
+              "hooks_across_y": 1,
+              "each_tip_needs_separate_item": false,
+              "reservoirs": {
+                "0:0": {
+                  "class": "Reservoir",
+                  "labware_id": "labware_ab0df754_0:0",
+                  "size_x": 16.5,
+                  "size_y": 79,
+                  "size_z": 90,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    108.0,
+                    174.5
+                  ],
+                  "hook_ids": [
+                    1
+                  ],
+                  "capacity": 100000,
+                  "content": {
+                    "water": 100000
+                  },
+                  "row": 0,
+                  "column": 0,
+                  "shape": "rectangular"
+                },
+                "1:0": {
+                  "class": "Reservoir",
+                  "labware_id": "labware_ab0df754_1:0",
+                  "size_x": 16.5,
+                  "size_y": 79,
+                  "size_z": 90,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    90.75,
+                    174.5
+                  ],
+                  "hook_ids": [
+                    2
+                  ],
+                  "capacity": 100000,
+                  "content": {
+                    "water": 100000
+                  },
+                  "row": 0,
+                  "column": 1,
+                  "shape": "rectangular"
+                },
+                "2:0": {
+                  "class": "Reservoir",
+                  "labware_id": "labware_ab0df754_2:0",
+                  "size_x": 16.5,
+                  "size_y": 79,
+                  "size_z": 90,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    73.5,
+                    174.5
+                  ],
+                  "hook_ids": [
+                    3
+                  ],
+                  "capacity": 100000,
+                  "content": {
+                    "water": 100000
+                  },
+                  "row": 0,
+                  "column": 2,
+                  "shape": "rectangular"
+                },
+                "3:0": {
+                  "class": "Reservoir",
+                  "labware_id": "labware_ab0df754_3:0",
+                  "size_x": 16.5,
+                  "size_y": 79,
+                  "size_z": 90,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    56.25,
+                    174.5
+                  ],
+                  "hook_ids": [
+                    4
+                  ],
+                  "capacity": 100000,
+                  "content": {
+                    "water": 100000
+                  },
+                  "row": 0,
+                  "column": 3,
+                  "shape": "rectangular"
+                },
+                "4:0": {
+                  "class": "Reservoir",
+                  "labware_id": "labware_ab0df754_4:0",
+                  "size_x": 16.5,
+                  "size_y": 79,
+                  "size_z": 90,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    39.0,
+                    174.5
+                  ],
+                  "hook_ids": [
+                    5
+                  ],
+                  "capacity": 100000,
+                  "content": {
+                    "water": 100000
+                  },
+                  "row": 0,
+                  "column": 4,
+                  "shape": "rectangular"
+                },
+                "5:0": {
+                  "class": "Reservoir",
+                  "labware_id": "labware_ab0df754_5:0",
+                  "size_x": 16.5,
+                  "size_y": 79,
+                  "size_z": 90,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    21.75,
+                    174.5
+                  ],
+                  "hook_ids": [
+                    6
+                  ],
+                  "capacity": 100000,
+                  "content": {
+                    "water": 100000
+                  },
+                  "row": 0,
+                  "column": 5,
+                  "shape": "rectangular"
+                },
+                "6:0": {
+                  "class": "Reservoir",
+                  "labware_id": "labware_ab0df754_6:0",
+                  "size_x": 16.5,
+                  "size_y": 79,
+                  "size_z": 90,
+                  "offset": [
+                    0,
+                    0
+                  ],
+                  "can_be_stacked_upon": false,
+                  "position": [
+                    4.5,
+                    174.5
+                  ],
+                  "hook_ids": [
+                    7
+                  ],
+                  "capacity": 100000,
+                  "content": {
+                    "water": 100000
+                  },
+                  "row": 0,
+                  "column": 6,
+                  "shape": "rectangular"
+                }
+              },
+              "x_spacing": 17.25,
+              "y_spacing": 0
+            },
+            [
+              40,
+              130
+            ]
+          ]
+        }
+      },
+      "slot6": {
+        "class": "Slot",
+        "slot_id": "slot6",
+        "range_x": [
+          128,
+          246.25
+        ],
+        "range_y": [
+          135,
+          214.75
+        ],
+        "range_z": 209,
+        "labware_stack": {}
+      }
+    },
+    "labware": {
+      "platestack1": {
+        "class": "Stack",
+        "labware_id": "platestack1",
+        "size_x": 113.4,
+        "size_y": 65,
+        "size_z": 45,
+        "offset": [
+          13.8,
+          1
+        ],
+        "can_be_stacked_upon": true,
+        "position": [
+          232.45,
+          47
+        ]
+      },
+      "labware_787270fd": {
+        "class": "Plate",
+        "labware_id": "labware_787270fd",
+        "size_x": 113.4,
+        "size_y": 65,
+        "size_z": 53,
+        "offset": [
+          13.8,
+          1
+        ],
+        "can_be_stacked_upon": false,
+        "position": [
+          232.45,
+          47
+        ],
+        "add_height": 5,
+        "remove_height": 1,
+        "x_spacing": 18,
+        "y_spacing": 9,
+        "wells_x": 6,
+        "wells_y": 8,
+        "wells": {
+          "0:0": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_0:0",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              231.5,
+              51.25
+            ],
+            "row": 0,
+            "column": 0,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "0:1": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_0:1",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              231.5,
+              60.25
+            ],
+            "row": 1,
+            "column": 0,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "0:2": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_0:2",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              231.5,
+              69.25
+            ],
+            "row": 2,
+            "column": 0,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "0:3": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_0:3",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              231.5,
+              78.25
+            ],
+            "row": 3,
+            "column": 0,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "0:4": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_0:4",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              231.5,
+              87.25
+            ],
+            "row": 4,
+            "column": 0,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "0:5": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_0:5",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              231.5,
+              96.25
+            ],
+            "row": 5,
+            "column": 0,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "0:6": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_0:6",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              231.5,
+              105.25
+            ],
+            "row": 6,
+            "column": 0,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "0:7": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_0:7",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              231.5,
+              114.25
+            ],
+            "row": 7,
+            "column": 0,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "1:0": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_1:0",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              213.5,
+              51.25
+            ],
+            "row": 0,
+            "column": 1,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "1:1": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_1:1",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              213.5,
+              60.25
+            ],
+            "row": 1,
+            "column": 1,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "1:2": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_1:2",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              213.5,
+              69.25
+            ],
+            "row": 2,
+            "column": 1,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "1:3": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_1:3",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              213.5,
+              78.25
+            ],
+            "row": 3,
+            "column": 1,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "1:4": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_1:4",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              213.5,
+              87.25
+            ],
+            "row": 4,
+            "column": 1,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "1:5": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_1:5",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              213.5,
+              96.25
+            ],
+            "row": 5,
+            "column": 1,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "1:6": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_1:6",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              213.5,
+              105.25
+            ],
+            "row": 6,
+            "column": 1,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "1:7": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_1:7",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              213.5,
+              114.25
+            ],
+            "row": 7,
+            "column": 1,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "2:0": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_2:0",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              195.5,
+              51.25
+            ],
+            "row": 0,
+            "column": 2,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "2:1": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_2:1",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              195.5,
+              60.25
+            ],
+            "row": 1,
+            "column": 2,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "2:2": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_2:2",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              195.5,
+              69.25
+            ],
+            "row": 2,
+            "column": 2,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "2:3": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_2:3",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              195.5,
+              78.25
+            ],
+            "row": 3,
+            "column": 2,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "2:4": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_2:4",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              195.5,
+              87.25
+            ],
+            "row": 4,
+            "column": 2,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "2:5": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_2:5",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              195.5,
+              96.25
+            ],
+            "row": 5,
+            "column": 2,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "2:6": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_2:6",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              195.5,
+              105.25
+            ],
+            "row": 6,
+            "column": 2,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "2:7": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_2:7",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              195.5,
+              114.25
+            ],
+            "row": 7,
+            "column": 2,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "3:0": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_3:0",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              177.5,
+              51.25
+            ],
+            "row": 0,
+            "column": 3,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "3:1": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_3:1",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              177.5,
+              60.25
+            ],
+            "row": 1,
+            "column": 3,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "3:2": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_3:2",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              177.5,
+              69.25
+            ],
+            "row": 2,
+            "column": 3,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "3:3": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_3:3",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              177.5,
+              78.25
+            ],
+            "row": 3,
+            "column": 3,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "3:4": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_3:4",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              177.5,
+              87.25
+            ],
+            "row": 4,
+            "column": 3,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "3:5": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_3:5",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              177.5,
+              96.25
+            ],
+            "row": 5,
+            "column": 3,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "3:6": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_3:6",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              177.5,
+              105.25
+            ],
+            "row": 6,
+            "column": 3,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "3:7": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_3:7",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              177.5,
+              114.25
+            ],
+            "row": 7,
+            "column": 3,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "4:0": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_4:0",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              159.5,
+              51.25
+            ],
+            "row": 0,
+            "column": 4,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "4:1": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_4:1",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              159.5,
+              60.25
+            ],
+            "row": 1,
+            "column": 4,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "4:2": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_4:2",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              159.5,
+              69.25
+            ],
+            "row": 2,
+            "column": 4,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "4:3": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_4:3",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              159.5,
+              78.25
+            ],
+            "row": 3,
+            "column": 4,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "4:4": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_4:4",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              159.5,
+              87.25
+            ],
+            "row": 4,
+            "column": 4,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "4:5": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_4:5",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              159.5,
+              96.25
+            ],
+            "row": 5,
+            "column": 4,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "4:6": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_4:6",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              159.5,
+              105.25
+            ],
+            "row": 6,
+            "column": 4,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "4:7": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_4:7",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              159.5,
+              114.25
+            ],
+            "row": 7,
+            "column": 4,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "5:0": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_5:0",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              141.5,
+              51.25
+            ],
+            "row": 0,
+            "column": 5,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "5:1": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_5:1",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              141.5,
+              60.25
+            ],
+            "row": 1,
+            "column": 5,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "5:2": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_5:2",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              141.5,
+              69.25
+            ],
+            "row": 2,
+            "column": 5,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "5:3": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_5:3",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              141.5,
+              78.25
+            ],
+            "row": 3,
+            "column": 5,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "5:4": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_5:4",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              141.5,
+              87.25
+            ],
+            "row": 4,
+            "column": 5,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "5:5": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_5:5",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              141.5,
+              96.25
+            ],
+            "row": 5,
+            "column": 5,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "5:6": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_5:6",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              141.5,
+              105.25
+            ],
+            "row": 6,
+            "column": 5,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          },
+          "5:7": {
+            "class": "Well",
+            "labware_id": "labware_787270fd_5:7",
+            "size_x": 18.9,
+            "size_y": 7.5,
+            "size_z": 10,
+            "offset": [
+              -8.5,
+              0.5
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              141.5,
+              114.25
+            ],
+            "row": 7,
+            "column": 5,
+            "content": {
+              "water": 500
+            },
+            "capacity": 1000,
+            "shape": null
+          }
+        }
+      },
+      "resstack1": {
+        "class": "Stack",
+        "labware_id": "resstack1",
+        "size_x": 115.5,
+        "size_y": 79,
+        "size_z": 40,
+        "offset": [
+          2,
+          0
+        ],
+        "can_be_stacked_upon": true,
+        "position": [
+          116.25,
+          135
+        ]
+      },
+      "labware_ab0df754": {
+        "class": "ReservoirHolder",
+        "labware_id": "labware_ab0df754",
+        "size_x": 115.5,
+        "size_y": 79,
+        "size_z": 90,
+        "offset": [
+          2,
+          0
+        ],
+        "can_be_stacked_upon": false,
+        "position": [
+          116.25,
+          135
+        ],
+        "add_height": 80,
+        "remove_height": 20,
+        "hooks_across_x": 7,
+        "hooks_across_y": 1,
+        "each_tip_needs_separate_item": false,
+        "reservoirs": {
+          "0:0": {
+            "class": "Reservoir",
+            "labware_id": "labware_ab0df754_0:0",
+            "size_x": 16.5,
+            "size_y": 79,
+            "size_z": 90,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              108.0,
+              174.5
+            ],
+            "hook_ids": [
+              1
+            ],
+            "capacity": 100000,
+            "content": {
+              "water": 100000
+            },
+            "row": 0,
+            "column": 0,
+            "shape": "rectangular"
+          },
+          "1:0": {
+            "class": "Reservoir",
+            "labware_id": "labware_ab0df754_1:0",
+            "size_x": 16.5,
+            "size_y": 79,
+            "size_z": 90,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              90.75,
+              174.5
+            ],
+            "hook_ids": [
+              2
+            ],
+            "capacity": 100000,
+            "content": {
+              "water": 100000
+            },
+            "row": 0,
+            "column": 1,
+            "shape": "rectangular"
+          },
+          "2:0": {
+            "class": "Reservoir",
+            "labware_id": "labware_ab0df754_2:0",
+            "size_x": 16.5,
+            "size_y": 79,
+            "size_z": 90,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              73.5,
+              174.5
+            ],
+            "hook_ids": [
+              3
+            ],
+            "capacity": 100000,
+            "content": {
+              "water": 100000
+            },
+            "row": 0,
+            "column": 2,
+            "shape": "rectangular"
+          },
+          "3:0": {
+            "class": "Reservoir",
+            "labware_id": "labware_ab0df754_3:0",
+            "size_x": 16.5,
+            "size_y": 79,
+            "size_z": 90,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              56.25,
+              174.5
+            ],
+            "hook_ids": [
+              4
+            ],
+            "capacity": 100000,
+            "content": {
+              "water": 100000
+            },
+            "row": 0,
+            "column": 3,
+            "shape": "rectangular"
+          },
+          "4:0": {
+            "class": "Reservoir",
+            "labware_id": "labware_ab0df754_4:0",
+            "size_x": 16.5,
+            "size_y": 79,
+            "size_z": 90,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              39.0,
+              174.5
+            ],
+            "hook_ids": [
+              5
+            ],
+            "capacity": 100000,
+            "content": {
+              "water": 100000
+            },
+            "row": 0,
+            "column": 4,
+            "shape": "rectangular"
+          },
+          "5:0": {
+            "class": "Reservoir",
+            "labware_id": "labware_ab0df754_5:0",
+            "size_x": 16.5,
+            "size_y": 79,
+            "size_z": 90,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              21.75,
+              174.5
+            ],
+            "hook_ids": [
+              6
+            ],
+            "capacity": 100000,
+            "content": {
+              "water": 100000
+            },
+            "row": 0,
+            "column": 5,
+            "shape": "rectangular"
+          },
+          "6:0": {
+            "class": "Reservoir",
+            "labware_id": "labware_ab0df754_6:0",
+            "size_x": 16.5,
+            "size_y": 79,
+            "size_z": 90,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              4.5,
+              174.5
+            ],
+            "hook_ids": [
+              7
+            ],
+            "capacity": 100000,
+            "content": {
+              "water": 100000
+            },
+            "row": 0,
+            "column": 6,
+            "shape": "rectangular"
+          }
+        },
+        "x_spacing": 17.25,
+        "y_spacing": 0
+      },
+      "pip_stack1": {
+        "class": "Stack",
+        "labware_id": "pip_stack1",
+        "size_x": 102,
+        "size_y": 65,
+        "size_z": 79,
+        "offset": [
+          12.85,
+          6.1
+        ],
+        "can_be_stacked_upon": true,
+        "position": [
+          105.4,
+          52.1
+        ]
+      },
+      "labware_b344998c": {
+        "class": "PipetteHolder",
+        "labware_id": "labware_b344998c",
+        "size_x": 102,
+        "size_y": 65,
+        "size_z": 55,
+        "offset": [
+          12.85,
+          6.1
+        ],
+        "can_be_stacked_upon": false,
+        "position": [
+          105.4,
+          52.1
+        ],
+        "add_height": -14,
+        "remove_height": 0,
+        "holders_across_x": 12,
+        "holders_across_y": 8,
+        "x_spacing": 9,
+        "y_spacing": 9,
+        "individual_holders": {
+          "0:0": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_0:0",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              105.0,
+              52.5
+            ],
+            "is_occupied": true,
+            "row": 0,
+            "column": 0
+          },
+          "0:1": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_0:1",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              105.0,
+              61.5
+            ],
+            "is_occupied": true,
+            "row": 1,
+            "column": 0
+          },
+          "0:2": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_0:2",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              105.0,
+              70.5
+            ],
+            "is_occupied": true,
+            "row": 2,
+            "column": 0
+          },
+          "0:3": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_0:3",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              105.0,
+              79.5
+            ],
+            "is_occupied": true,
+            "row": 3,
+            "column": 0
+          },
+          "0:4": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_0:4",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              105.0,
+              88.5
+            ],
+            "is_occupied": true,
+            "row": 4,
+            "column": 0
+          },
+          "0:5": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_0:5",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              105.0,
+              97.5
+            ],
+            "is_occupied": true,
+            "row": 5,
+            "column": 0
+          },
+          "0:6": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_0:6",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              105.0,
+              106.5
+            ],
+            "is_occupied": true,
+            "row": 6,
+            "column": 0
+          },
+          "0:7": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_0:7",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              105.0,
+              115.5
+            ],
+            "is_occupied": true,
+            "row": 7,
+            "column": 0
+          },
+          "1:0": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_1:0",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              96.0,
+              52.5
+            ],
+            "is_occupied": true,
+            "row": 0,
+            "column": 1
+          },
+          "1:1": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_1:1",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              96.0,
+              61.5
+            ],
+            "is_occupied": true,
+            "row": 1,
+            "column": 1
+          },
+          "1:2": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_1:2",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              96.0,
+              70.5
+            ],
+            "is_occupied": true,
+            "row": 2,
+            "column": 1
+          },
+          "1:3": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_1:3",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              96.0,
+              79.5
+            ],
+            "is_occupied": true,
+            "row": 3,
+            "column": 1
+          },
+          "1:4": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_1:4",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              96.0,
+              88.5
+            ],
+            "is_occupied": true,
+            "row": 4,
+            "column": 1
+          },
+          "1:5": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_1:5",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              96.0,
+              97.5
+            ],
+            "is_occupied": true,
+            "row": 5,
+            "column": 1
+          },
+          "1:6": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_1:6",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              96.0,
+              106.5
+            ],
+            "is_occupied": true,
+            "row": 6,
+            "column": 1
+          },
+          "1:7": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_1:7",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              96.0,
+              115.5
+            ],
+            "is_occupied": true,
+            "row": 7,
+            "column": 1
+          },
+          "2:0": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_2:0",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              87.0,
+              52.5
+            ],
+            "is_occupied": true,
+            "row": 0,
+            "column": 2
+          },
+          "2:1": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_2:1",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              87.0,
+              61.5
+            ],
+            "is_occupied": true,
+            "row": 1,
+            "column": 2
+          },
+          "2:2": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_2:2",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              87.0,
+              70.5
+            ],
+            "is_occupied": true,
+            "row": 2,
+            "column": 2
+          },
+          "2:3": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_2:3",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              87.0,
+              79.5
+            ],
+            "is_occupied": true,
+            "row": 3,
+            "column": 2
+          },
+          "2:4": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_2:4",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              87.0,
+              88.5
+            ],
+            "is_occupied": true,
+            "row": 4,
+            "column": 2
+          },
+          "2:5": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_2:5",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              87.0,
+              97.5
+            ],
+            "is_occupied": true,
+            "row": 5,
+            "column": 2
+          },
+          "2:6": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_2:6",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              87.0,
+              106.5
+            ],
+            "is_occupied": true,
+            "row": 6,
+            "column": 2
+          },
+          "2:7": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_2:7",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              87.0,
+              115.5
+            ],
+            "is_occupied": true,
+            "row": 7,
+            "column": 2
+          },
+          "3:0": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_3:0",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              78.0,
+              52.5
+            ],
+            "is_occupied": true,
+            "row": 0,
+            "column": 3
+          },
+          "3:1": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_3:1",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              78.0,
+              61.5
+            ],
+            "is_occupied": true,
+            "row": 1,
+            "column": 3
+          },
+          "3:2": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_3:2",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              78.0,
+              70.5
+            ],
+            "is_occupied": true,
+            "row": 2,
+            "column": 3
+          },
+          "3:3": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_3:3",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              78.0,
+              79.5
+            ],
+            "is_occupied": true,
+            "row": 3,
+            "column": 3
+          },
+          "3:4": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_3:4",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              78.0,
+              88.5
+            ],
+            "is_occupied": true,
+            "row": 4,
+            "column": 3
+          },
+          "3:5": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_3:5",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              78.0,
+              97.5
+            ],
+            "is_occupied": true,
+            "row": 5,
+            "column": 3
+          },
+          "3:6": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_3:6",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              78.0,
+              106.5
+            ],
+            "is_occupied": true,
+            "row": 6,
+            "column": 3
+          },
+          "3:7": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_3:7",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              78.0,
+              115.5
+            ],
+            "is_occupied": true,
+            "row": 7,
+            "column": 3
+          },
+          "4:0": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_4:0",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              69.0,
+              52.5
+            ],
+            "is_occupied": true,
+            "row": 0,
+            "column": 4
+          },
+          "4:1": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_4:1",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              69.0,
+              61.5
+            ],
+            "is_occupied": true,
+            "row": 1,
+            "column": 4
+          },
+          "4:2": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_4:2",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              69.0,
+              70.5
+            ],
+            "is_occupied": true,
+            "row": 2,
+            "column": 4
+          },
+          "4:3": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_4:3",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              69.0,
+              79.5
+            ],
+            "is_occupied": true,
+            "row": 3,
+            "column": 4
+          },
+          "4:4": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_4:4",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              69.0,
+              88.5
+            ],
+            "is_occupied": true,
+            "row": 4,
+            "column": 4
+          },
+          "4:5": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_4:5",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              69.0,
+              97.5
+            ],
+            "is_occupied": true,
+            "row": 5,
+            "column": 4
+          },
+          "4:6": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_4:6",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              69.0,
+              106.5
+            ],
+            "is_occupied": true,
+            "row": 6,
+            "column": 4
+          },
+          "4:7": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_4:7",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              69.0,
+              115.5
+            ],
+            "is_occupied": true,
+            "row": 7,
+            "column": 4
+          },
+          "5:0": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_5:0",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              60.0,
+              52.5
+            ],
+            "is_occupied": true,
+            "row": 0,
+            "column": 5
+          },
+          "5:1": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_5:1",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              60.0,
+              61.5
+            ],
+            "is_occupied": true,
+            "row": 1,
+            "column": 5
+          },
+          "5:2": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_5:2",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              60.0,
+              70.5
+            ],
+            "is_occupied": true,
+            "row": 2,
+            "column": 5
+          },
+          "5:3": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_5:3",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              60.0,
+              79.5
+            ],
+            "is_occupied": true,
+            "row": 3,
+            "column": 5
+          },
+          "5:4": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_5:4",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              60.0,
+              88.5
+            ],
+            "is_occupied": true,
+            "row": 4,
+            "column": 5
+          },
+          "5:5": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_5:5",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              60.0,
+              97.5
+            ],
+            "is_occupied": true,
+            "row": 5,
+            "column": 5
+          },
+          "5:6": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_5:6",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              60.0,
+              106.5
+            ],
+            "is_occupied": true,
+            "row": 6,
+            "column": 5
+          },
+          "5:7": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_5:7",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              60.0,
+              115.5
+            ],
+            "is_occupied": true,
+            "row": 7,
+            "column": 5
+          },
+          "6:0": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_6:0",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              51.0,
+              52.5
+            ],
+            "is_occupied": true,
+            "row": 0,
+            "column": 6
+          },
+          "6:1": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_6:1",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              51.0,
+              61.5
+            ],
+            "is_occupied": true,
+            "row": 1,
+            "column": 6
+          },
+          "6:2": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_6:2",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              51.0,
+              70.5
+            ],
+            "is_occupied": true,
+            "row": 2,
+            "column": 6
+          },
+          "6:3": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_6:3",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              51.0,
+              79.5
+            ],
+            "is_occupied": true,
+            "row": 3,
+            "column": 6
+          },
+          "6:4": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_6:4",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              51.0,
+              88.5
+            ],
+            "is_occupied": true,
+            "row": 4,
+            "column": 6
+          },
+          "6:5": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_6:5",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              51.0,
+              97.5
+            ],
+            "is_occupied": true,
+            "row": 5,
+            "column": 6
+          },
+          "6:6": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_6:6",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              51.0,
+              106.5
+            ],
+            "is_occupied": true,
+            "row": 6,
+            "column": 6
+          },
+          "6:7": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_6:7",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              51.0,
+              115.5
+            ],
+            "is_occupied": true,
+            "row": 7,
+            "column": 6
+          },
+          "7:0": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_7:0",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              42.0,
+              52.5
+            ],
+            "is_occupied": true,
+            "row": 0,
+            "column": 7
+          },
+          "7:1": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_7:1",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              42.0,
+              61.5
+            ],
+            "is_occupied": true,
+            "row": 1,
+            "column": 7
+          },
+          "7:2": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_7:2",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              42.0,
+              70.5
+            ],
+            "is_occupied": true,
+            "row": 2,
+            "column": 7
+          },
+          "7:3": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_7:3",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              42.0,
+              79.5
+            ],
+            "is_occupied": true,
+            "row": 3,
+            "column": 7
+          },
+          "7:4": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_7:4",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              42.0,
+              88.5
+            ],
+            "is_occupied": true,
+            "row": 4,
+            "column": 7
+          },
+          "7:5": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_7:5",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              42.0,
+              97.5
+            ],
+            "is_occupied": true,
+            "row": 5,
+            "column": 7
+          },
+          "7:6": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_7:6",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              42.0,
+              106.5
+            ],
+            "is_occupied": true,
+            "row": 6,
+            "column": 7
+          },
+          "7:7": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_7:7",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              42.0,
+              115.5
+            ],
+            "is_occupied": true,
+            "row": 7,
+            "column": 7
+          },
+          "8:0": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_8:0",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              33.0,
+              52.5
+            ],
+            "is_occupied": true,
+            "row": 0,
+            "column": 8
+          },
+          "8:1": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_8:1",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              33.0,
+              61.5
+            ],
+            "is_occupied": true,
+            "row": 1,
+            "column": 8
+          },
+          "8:2": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_8:2",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              33.0,
+              70.5
+            ],
+            "is_occupied": true,
+            "row": 2,
+            "column": 8
+          },
+          "8:3": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_8:3",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              33.0,
+              79.5
+            ],
+            "is_occupied": true,
+            "row": 3,
+            "column": 8
+          },
+          "8:4": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_8:4",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              33.0,
+              88.5
+            ],
+            "is_occupied": true,
+            "row": 4,
+            "column": 8
+          },
+          "8:5": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_8:5",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              33.0,
+              97.5
+            ],
+            "is_occupied": true,
+            "row": 5,
+            "column": 8
+          },
+          "8:6": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_8:6",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              33.0,
+              106.5
+            ],
+            "is_occupied": true,
+            "row": 6,
+            "column": 8
+          },
+          "8:7": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_8:7",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              33.0,
+              115.5
+            ],
+            "is_occupied": true,
+            "row": 7,
+            "column": 8
+          },
+          "9:0": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_9:0",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              24.0,
+              52.5
+            ],
+            "is_occupied": true,
+            "row": 0,
+            "column": 9
+          },
+          "9:1": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_9:1",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              24.0,
+              61.5
+            ],
+            "is_occupied": true,
+            "row": 1,
+            "column": 9
+          },
+          "9:2": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_9:2",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              24.0,
+              70.5
+            ],
+            "is_occupied": true,
+            "row": 2,
+            "column": 9
+          },
+          "9:3": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_9:3",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              24.0,
+              79.5
+            ],
+            "is_occupied": true,
+            "row": 3,
+            "column": 9
+          },
+          "9:4": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_9:4",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              24.0,
+              88.5
+            ],
+            "is_occupied": true,
+            "row": 4,
+            "column": 9
+          },
+          "9:5": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_9:5",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              24.0,
+              97.5
+            ],
+            "is_occupied": true,
+            "row": 5,
+            "column": 9
+          },
+          "9:6": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_9:6",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              24.0,
+              106.5
+            ],
+            "is_occupied": true,
+            "row": 6,
+            "column": 9
+          },
+          "9:7": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_9:7",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              24.0,
+              115.5
+            ],
+            "is_occupied": true,
+            "row": 7,
+            "column": 9
+          },
+          "10:0": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_10:0",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              15.0,
+              52.5
+            ],
+            "is_occupied": true,
+            "row": 0,
+            "column": 10
+          },
+          "10:1": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_10:1",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              15.0,
+              61.5
+            ],
+            "is_occupied": true,
+            "row": 1,
+            "column": 10
+          },
+          "10:2": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_10:2",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              15.0,
+              70.5
+            ],
+            "is_occupied": true,
+            "row": 2,
+            "column": 10
+          },
+          "10:3": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_10:3",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              15.0,
+              79.5
+            ],
+            "is_occupied": true,
+            "row": 3,
+            "column": 10
+          },
+          "10:4": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_10:4",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              15.0,
+              88.5
+            ],
+            "is_occupied": true,
+            "row": 4,
+            "column": 10
+          },
+          "10:5": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_10:5",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              15.0,
+              97.5
+            ],
+            "is_occupied": true,
+            "row": 5,
+            "column": 10
+          },
+          "10:6": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_10:6",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              15.0,
+              106.5
+            ],
+            "is_occupied": true,
+            "row": 6,
+            "column": 10
+          },
+          "10:7": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_10:7",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              15.0,
+              115.5
+            ],
+            "is_occupied": true,
+            "row": 7,
+            "column": 10
+          },
+          "11:0": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_11:0",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              6.0,
+              52.5
+            ],
+            "is_occupied": true,
+            "row": 0,
+            "column": 11
+          },
+          "11:1": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_11:1",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              6.0,
+              61.5
+            ],
+            "is_occupied": true,
+            "row": 1,
+            "column": 11
+          },
+          "11:2": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_11:2",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              6.0,
+              70.5
+            ],
+            "is_occupied": true,
+            "row": 2,
+            "column": 11
+          },
+          "11:3": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_11:3",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              6.0,
+              79.5
+            ],
+            "is_occupied": true,
+            "row": 3,
+            "column": 11
+          },
+          "11:4": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_11:4",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              6.0,
+              88.5
+            ],
+            "is_occupied": true,
+            "row": 4,
+            "column": 11
+          },
+          "11:5": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_11:5",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              6.0,
+              97.5
+            ],
+            "is_occupied": true,
+            "row": 5,
+            "column": 11
+          },
+          "11:6": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_11:6",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              6.0,
+              106.5
+            ],
+            "is_occupied": true,
+            "row": 6,
+            "column": 11
+          },
+          "11:7": {
+            "class": "IndividualPipetteHolder",
+            "labware_id": "labware_b344998c_11:7",
+            "size_x": 0.8,
+            "size_y": 0.8,
+            "size_z": 1,
+            "offset": [
+              0,
+              0
+            ],
+            "can_be_stacked_upon": false,
+            "position": [
+              6.0,
+              115.5
+            ],
+            "is_occupied": true,
+            "row": 7,
+            "column": 11
+          }
+        }
+      },
+      "dropzone_1": {
+        "class": "TipDropzone",
+        "labware_id": "dropzone_1",
+        "size_x": 40,
+        "size_y": 30,
+        "size_z": 60,
+        "offset": [
+          10,
+          5
+        ],
+        "can_be_stacked_upon": false,
+        "position": [
+          108.25,
+          5
+        ],
+        "drop_height_relative": 60
+      }
+    }
+  },
+  "unplaced_labware": [],
+  "unplaced_slots": [],
+  "available_wells": [
+    {
+      "class": "Well",
+      "labware_id": "labware_df588db1",
+      "size_x": 18.9,
+      "size_y": 7.5,
+      "size_z": 10,
+      "offset": [
+        -8.5,
+        0.5
+      ],
+      "can_be_stacked_upon": false,
+      "position": null,
+      "row": null,
+      "column": null,
+      "content": {
+        "water": 500
+      },
+      "capacity": 1000,
+      "shape": null
+    }
+  ],
+  "available_reservoirs": [
+    {
+      "class": "Reservoir",
+      "labware_id": "labware_cd46ecce",
+      "size_x": 16.5,
+      "size_y": 79,
+      "size_z": 45,
+      "offset": [
+        0,
+        0
+      ],
+      "can_be_stacked_upon": false,
+      "position": null,
+      "hook_ids": [],
+      "capacity": 30000,
+      "content": {
+        "water": 20000
+      },
+      "row": null,
+      "column": null,
+      "shape": null
+    },
+    {
+      "class": "Reservoir",
+      "labware_id": "labware_386245af",
+      "size_x": 16.5,
+      "size_y": 79,
+      "size_z": 90,
+      "offset": [
+        0,
+        0
+      ],
+      "can_be_stacked_upon": false,
+      "position": null,
+      "hook_ids": [],
+      "capacity": 100000,
+      "content": {
+        "water": 100000
+      },
+      "row": null,
+      "column": null,
+      "shape": "rectangular"
+    }
+  ],
+  "available_individual_holders": [
+    {
+      "class": "IndividualPipetteHolder",
+      "labware_id": "labware_c3d423a7",
+      "size_x": 0.8,
+      "size_y": 0.8,
+      "size_z": 1,
+      "offset": [
+        0,
+        0
+      ],
+      "can_be_stacked_upon": false,
+      "position": null,
+      "is_occupied": true,
+      "row": null,
+      "column": null
+    }
+  ]
+}

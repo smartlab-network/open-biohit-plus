@@ -26,7 +26,7 @@ example_well = Well(
     size_y=7.5,
     size_z=10,
     offset=(-8.5, 0.5),
-    content={"water": 500},
+    content={"EHMM": 500},
     capacity=1000,
 )
 
@@ -103,11 +103,6 @@ write_json(deck1)
 # Load back to verify
 print("📂 Loading deck...")
 loaded_deck = read_json("deck")
-
-
-print("\nSaving deck to gui-compatible file...")
-output_filename = "deck1_for_gui.json"
-save_deck_for_gui(deck1, "deck1")
 
 save_deck_for_gui(
     deck1,

@@ -98,21 +98,20 @@ tip_dropzone = TipDropzone(
 deck1.add_labware(tip_dropzone, slot_id="slot1", min_z=0)
 
 # Save and verify
-print("📦 Saving deck...")
-write_json(deck1)
+    #print("📦 Saving deck...")
+    #write_json(deck1)
 
 # Load back to verify
-print("📂 Loading deck...")
-loaded_deck = read_json("deck")
+    #print("📂 Loading deck...")
+    #loaded_deck = read_json("deck")
 
 
-print("\nSaving deck to gui-compatible file...")
-output_filename = "deck1_for_gui.json"
-save_deck_for_gui(deck1, "deck1")
+#print("\nSaving deck to gui-compatible file...")
+#save_deck_for_gui(deck1, "deck1")
 
 save_deck_for_gui(
     deck1,
-    "deck2",
+    "deck1",
     available_wells=[example_well],
     available_reservoirs=[thirty_ml_res, hundred_ml_res],
     available_individual_holders=[ExamplePipetteHolder],

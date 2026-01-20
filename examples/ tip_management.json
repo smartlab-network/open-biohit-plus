@@ -1,0 +1,75 @@
+{
+  "name": "tip_management",
+  "workflow_id": "66c1317e-8d9f-4a17-8a4a-f2098bfd50ca",
+  "description": "",
+  "operations": [
+    {
+      "operation_type": "pick_tips",
+      "operation_id": "71947f59-2f39-4e61-b512-d8922a88fa17",
+      "parameters": {
+        "labware": {
+          "id": "labware_b344998c",
+          "type": "PipetteHolder"
+        },
+        "positions": null,
+        "channels": 1
+      },
+      "description": "Pick tips from labware_b344998c at None"
+    },
+    {
+      "operation_type": "replace_tips",
+      "operation_id": "554de414-08f4-4cf3-b04c-b63f5c75db39",
+      "parameters": {
+        "return_labware": {
+          "id": "labware_b344998c",
+          "type": "PipetteHolder"
+        },
+        "return_positions": null,
+        "pick_labware": {
+          "id": "labware_b344998c",
+          "type": "PipetteHolder"
+        },
+        "pick_positions": null,
+        "channels": 1
+      },
+      "description": "Replace tips: return to labware_b344998c at None & pick from labware_b344998c at None"
+    },
+    {
+      "operation_type": "return_tips",
+      "operation_id": "d419294a-be72-4a34-91df-f11d56e2c29a",
+      "parameters": {
+        "labware": {
+          "id": "labware_b344998c",
+          "type": "PipetteHolder"
+        },
+        "positions": null,
+        "channels": 1
+      },
+      "description": "Return tips to labware_b344998c at None"
+    },
+    {
+      "operation_type": "pick_tips",
+      "operation_id": "c4feef43-73eb-43f5-bc3a-0abe199553c6",
+      "parameters": {
+        "labware": {
+          "id": "labware_b344998c",
+          "type": "PipetteHolder"
+        },
+        "positions": null,
+        "channels": 1
+      },
+      "description": "Pick tips from labware_b344998c at None"
+    },
+    {
+      "operation_type": "discard_tips",
+      "operation_id": "c4ed471d-7aaf-4e54-811a-533968ba76c7",
+      "parameters": {
+        "labware": {
+          "id": "dropzone_1",
+          "type": "TipDropzone"
+        }
+      },
+      "description": "Discard tips to dropzone_1"
+    }
+  ]
+}
