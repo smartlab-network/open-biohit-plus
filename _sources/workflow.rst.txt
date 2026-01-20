@@ -41,6 +41,11 @@ entire workflow, making workflows reusable between different deck layouts.
 
    Remap dialog box showing missing and present labware id. Both could be refactored
 
+Reusing a workflow between different PipettorMode
+----------------------------------------------------
+
+It is currently not possible to use the same workflow for both single and multi-pipettor. Hence a new workflow must be
+made
 
 Creating a workflow
 --------------------
