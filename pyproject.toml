@@ -30,5 +30,5 @@ isort = "^5.13.0"           # Organizes your import statements
 mypy = "^1.8.0"             # Checks type hints for bugs
 pyproject-flake8 = "^7.0.0" # Lints code (finds style issues, unused vars)
 sphinx = "^7.0.0"           # Generates HTML documentation
-
+sphinxcontrib-youtube = "^1.4.1"
 

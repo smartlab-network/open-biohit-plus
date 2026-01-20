@@ -17,7 +17,7 @@ basic pipetting commands such as move_x, move_y, pick_tip, aspirate: Notes from 
 * It supports tips of **200 µL** and **1000 µL**.
 * The connection is handled through a **context manager** to prevent errors affecting future workflows.
 * The pipettor can be **initialized on connect**, resetting it to its default state.
-* A **mock pipettor** connection is available:
+* A **mock pipettor** connection can be made with initialized parameter set as true:
 
   * A plot of pipettor calls is generated using ``matplotlib`` when mock connection ends.
 

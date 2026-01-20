@@ -1,7 +1,7 @@
 How to create a deck
 ========================
 
-"Deck_Editor" and "Low Level Parameter" tab of GUI are involoved in creating and setting up deck for pipetting operations.
+"Deck_Editor" and "Low Level Parameter" tab of GUI are involved in creating and setting up deck for pipetting operations.
 
 Defining a new Deck
 --------------------
@@ -28,24 +28,24 @@ Working with Labware
 
 Creating a labware is slightly more complex because of various types of labware.
 
-1. Low level labware can be created by clicking on **Create lll** in the **Low level parameter** tab.
-    List of available lll can also be seen there.
+1. Low level labware can be created by clicking on **Create LLL** in the **Low level parameter** tab.
+    List of available LLL can also be seen there.
 
 2. High level labware can be created by clicking on **Create labware** in the **Deck_Editor** tab.
-    If lll for the hll does not exist, the required lll can also be created when creating a hll.
+    If LLL for the HLL does not exist, the required LLL can also be created when creating a HLL.
 
 Labware placement and editing:
 
-* After creation, hll can be placed on slot by clicking on **Place on Slot on Deck**. Double clicking does the same job
+* After creation, HLL can be placed on slot by clicking on **Place on Slot on Deck**. Double clicking does the same job
 * Triple click removes placed labware from deck
-* Physical attributes (such as size, offset, stackable) are editable for a hll
-* Physical attribute of the lll used in hll creation is not editable
-* Some properties of the lll (like has_tips/ content) is however editable
-* Note - For ReservoirHolder, lll can be removed and custom reservoir spanning (more than one row/column) can be used
+* Physical attributes (such as size, offset, stackable) are editable for a HLL
+* Physical attribute of the LLL used in HLL creation is not editable
+* Some properties of the LLL (like has_tips/ content) is however editable
+* Note - For ReservoirHolder, LLL can be removed and custom reservoir spanning (more than one row/column) can be used
 
 After Labware is placed
 ------------------------------
-It is important to validate a labware paramters atleast once. This can be done once the labware is placed.
+It is important to validate a labware parameters at least once. This can be done once the labware is placed.
 
 Click on **Edit children lw** button in Deck editor tab and test out position, add, and remove height for the labware.
 These values are passed on to the pipettor during operations and hence it is important to confirm them. Adjustment to

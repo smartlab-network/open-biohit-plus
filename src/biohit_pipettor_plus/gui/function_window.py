@@ -618,8 +618,7 @@ class FunctionWindow:
             if multichannel_mode:
                 positions = [(c, r) for r, c in window.get_start_positions()]
             else:
-                positions = [(c, r) for r, row in enumerate(window.well_state)
-                             for c, v in enumerate(row) if v]
+                positions = [(c, r) for r, c in window.selected_queue]
         else:
             # User cancelled
             self.current_session = None  # ← ADD THIS: Clear the session
@@ -1767,6 +1766,10 @@ class FunctionWindow:
                 if isinstance(param_value, dict) and 'id' in param_value:
                     if param_value['id'] in mapping:
                         param_value['id'] = mapping[param_value['id']]
+
+            #update description
+            for old_id, new_id in mapping.items():
+                op.description = op.description.replace(old_id, new_id)
 
         self.workflow_modified = True
         self.workflow_validated = False

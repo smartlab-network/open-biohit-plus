@@ -12,7 +12,7 @@ class LabwareDialog(ScrollableDialog):
     """Refactored Manager Dialog for all Labware types."""
 
     def __init__(self, parent, available_wells, available_reservoirs, available_individual_holders):
-        super().__init__(parent, title="Create New Labware", size="700x750")
+        super().__init__(parent, title="Create New Labware", size="700x900")
 
         self.repo = {
             "Well": available_wells,
@@ -81,8 +81,8 @@ class LabwareDialog(ScrollableDialog):
 
         elif lw_type == "ReservoirHolder":
             self.spec_inputs = create_form(spec_frame, [
-                ("Hooks X:", "hx", "entry", "7", None, "numeric"),
-                ("Hooks Y:", "hy", "entry", "1", None, "numeric"),
+                ("Hooks X (column):", "hx", "entry", "7", None, "numeric"),
+                ("Hooks Y (rows) :", "hy", "entry", "1", None, "numeric"),
                 ("Add Height:", "add", "entry", "0.0", None, "numeric"),
                 ("Rem Height:", "rem", "entry", "20.0", None, "numeric"),
                 ("One reservoir per tip :", "sep_item", "checkbox", False, None, None),
@@ -93,8 +93,8 @@ class LabwareDialog(ScrollableDialog):
 
         elif lw_type == "PipetteHolder":
             self.spec_inputs = create_form(spec_frame, [
-                ("Holders X:", "hx", "entry", "1", None, "numeric"),
-                ("Holders Y:", "hy", "entry", "1", None, "numeric"),
+                ("Columns:", "hx", "entry", "1", None, "numeric"),
+                ("Rows:", "hy", "entry", "1", None, "numeric"),
                 ("Add Height:", "add", "entry", "0.0", None, "numeric"),
                 ("Rem Height:", "rem", "entry", "0.0", None, "numeric"),
                 ("X_spacing:", "x_sp", "entry", "0.0", None, "numeric"),
@@ -319,7 +319,7 @@ class EditLabwareDialog(ScrollableDialog):
                         variable=self.can_be_stacked_upon_var).grid(row=5, column=0, columnspan=2, pady=10, sticky='w')
 
         # --- Specialized Heights ---
-        self.add_height_var = self.remove_height_var = self.drop_height_var = None
+        self.add_height_var = self.remove_height_var = self.drop_height_var = self.x_spacing_var = self.y_spacing_var = None
 
         if any(hasattr(self.labware, attr) for attr in ['add_height', 'remove_height', 'drop_height', 'x_spacing', 'y_spacing']):
             h_frame = ttk.Labelframe(tab, text="Process Heights", padding=10)

@@ -195,7 +195,6 @@ class Plate(Labware):
         first_well_data = next(iter(wells_data.values()))
         template_well = Serializable.from_dict(first_well_data)
 
-        # ADD: Pass well parameter!
         plate = cls(
             size_x=data["size_x"],
             size_y=data["size_y"],

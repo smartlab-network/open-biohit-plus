@@ -1,10 +1,10 @@
 Direct Operation
 ==================
 
-Operations on the pipettor can be executed directly or thorugh a wrokflow. Both are availiable once the pipettor is connected.
+Operations on the pipettor can be executed directly or through a wrokflow. Both are available once the pipettor is connected.
 
 Before running an operation/workflwo, they are validated to ensure they can be run. For eg,
-if user select inidivualpipietteholders with no tips for pick tip operation, then the validation will fail. Similarly,
+if user select IndividualPipetteHolders with no tips for pick tip operation, then the validation will fail. Similarly,
 aspirating more volume than available or filling more than capacity will lead to failure.
 
 The most basic list of operation are available under system heading. This include
@@ -30,6 +30,9 @@ Since IndividualPipetteHolder contains pick_tip attribute, a simple autoselect f
 without selecting any individualHolder. For Pick_tips operation, holder with has_tip = TRUE are selected and opposite
 for Return_tips. To assist the user, non-usable holders for the operation are automatically disabled.
 
+**For some reason for Pick Tip operation, the biohit pipettor only detects tips if i pass 50 as pick height**
+The use of actual height is thus commented out in the code
+
 .. _liquid_handling_operation:
 
 Liquid handling operations
@@ -39,17 +42,16 @@ is essential for the pipettor to have tips to commence these operations.
 
 The four operations are -:
 
-**Add medium** - Transfer medium from Reservoir to Wells. One to many.
-**Remove medium** - Transfer medium from Wells to Resrevoir. Many to One.
-**Transfer Plate** to Plate - Transfer medium from Wells to Wells. One to One.
-**Remove and Add** - runs Remove medium and Add medium in batches of well. This is ideal for long operation if well must
-not be without liquid for a long time
+- **Add medium** - Transfer medium from Reservoir to Wells. One to many.
+- **Remove medium** - Transfer medium from Wells to Resrevoir. Many to One.
+- **Transfer Plate** - to Plate - Transfer medium from Wells to Wells. One to One.
+- **Remove and Add** - runs Remove medium and Add medium in batches of well. This is ideal for long operation if well must not be without liquid for a long time
 
 Key feature of the operations -:
 
 **Batch_mode_transfer** - This ensure efficiency in one to many operation or many to one operation. For example, if 190ul is to be
 added to 10 well and tip_volume is 1000ul, the pipettor will aspirate 950ul and dispense 190ul to 5 wells and do same
-for remaining 5. Not applicable for one to one operation. Batch size is capped by Maximum_Batch_Size.
+for remaining 5. Not applicable for one to one operation. Batch size is capped by Maximum_Batch_Size parameter in settings.
 
 **Multi_trip_transfer** - If working volume exceeds max tip_volume, then each labware item gets accessed the
 required number of times to fulfil the volume.

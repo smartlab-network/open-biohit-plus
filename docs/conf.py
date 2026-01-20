@@ -27,6 +27,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
+    "sphinxcontrib.youtube",
 ]
 autodoc_member_order = "groupwise"
 intersphinx_mapping = {

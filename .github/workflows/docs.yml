@@ -30,7 +30,7 @@ jobs:
     - name: Build documentation
       run: |
         cd docs
-        poetry run make html
+         poetry run make -C docs html
 
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3

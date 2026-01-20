@@ -44,10 +44,10 @@ entire workflow, making workflows reusable between different deck layouts.
 
 Creating a workflow
 --------------------
-Custom workflow section in operation tab is reponsible for all workflow related tasks.
+Custom workflow section in operation tab is responsible for all workflow related tasks.
 
-Create button is used to create a new workflow. Opens Workflow buildeer
-Open button opens the selected workflow from listbox. Opens Workflow buildeer
+Create button is used to create a new workflow. Opens Workflow builder
+Open button opens the selected workflow from listbox. Opens Workflow builder
 Delete button - removes the workflow from listbox
 Save to File and Load from file - responsible from saving and loading a wrokflow respectively
 
