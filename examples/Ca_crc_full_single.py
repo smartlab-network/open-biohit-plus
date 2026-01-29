@@ -4,13 +4,12 @@ import time
 
 import sys
 
-from ..src.action import EHMPlatePos, Reservoirs, PipetteTips, TipDropzone, dilute_multi, \
-    remove_multi, fill_multi, discard_tips, home, pick_tip_multi, return_tip_multi
 
-#sys.path.append(r"C:\Labhub\Repos\smartlab-network\contractiondb-python")
-#from examples import upload_myrimager, analyzeMeasurement
+#sys.path.append(r"C:\labhub\Repos\smartlab-network\open-biohit-plus\src")
 
-from ..src.deck import Deck
+
+from ..src.action import EHMPlatePos, Reservoirs, PipetteTips, TipDropzone,  \
+    discard_tips, home
 
 # on bottom plate with thin wells towards back, top right corner of each lot
 A1 = (130.5,   0)
@@ -94,8 +93,8 @@ fill_multi(p, ehm_plate, containers, pipette_tips, calcium_0_mM, cols, 450)  # 1
 
     
 for volume in [50]:  # 0.2- 1mM
-    remove_multi(p, ehm_plate, containers, pipette_tips, cols, volume)
-    fill_multi(p, ehm_plate, containers, pipette_tips, containers.well5_x, cols, volume)  # 1.973mM
+    remove_multi(p, ehm_plate, containers, pipette_tips, 6, volume)
+    fill_multi(p, ehm_plate, containers, pipette_tips, containers.well5_x, 6, volume)  # 1.973mM
 
     print(f"Filled well with {volume} medium")
     if bDoFoc:

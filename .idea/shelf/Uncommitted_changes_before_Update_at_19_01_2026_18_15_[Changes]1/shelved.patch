@@ -1,9 +1,0 @@
-Index: src/biohit_pipettor_plus/generate_db.py
-===================================================================
-diff --git a/src/biohit_pipettor_plus/generate_db.py b/src/biohit_pipettor_plus/generate_db.py
-deleted file mode 100644
---- a/src/biohit_pipettor_plus/generate_db.py	(revision 76bf0dec9bb0a9f3fc91693307b0b32b5a5e0602)
-+++ /dev/null	(revision 76bf0dec9bb0a9f3fc91693307b0b32b5a5e0602)
-@@ -1,2 +0,0 @@
--import sqlite3
--

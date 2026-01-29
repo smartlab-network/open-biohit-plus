@@ -9,6 +9,8 @@ from biohit_pipettor import Pipettor
 from biohit_pipettor.errors import CommandFailed
 
 
+
+
 class EHMPlatePos:
     def __init__(self, x_corner, y_corner):
         self.x_corner = x_corner + 13.5
@@ -69,7 +71,7 @@ class TipDropzone:
 """Functions"""
 
 
-def pick_multi_tips(p: Pipettor, pipette_tips):
+def pick_tip_multi(p: Pipettor, pipette_tips):
     """
     Picks tips going through tip box left to right
     :param p: Pipettor, multichannel = True
@@ -92,7 +94,7 @@ def pick_multi_tips(p: Pipettor, pipette_tips):
     else:
         raise RuntimeError(f"Failed to pick tips from {i} pipette box columns")
 
-def return_multi_tips(p: Pipettor, pipette_tips):
+def return_tip_multi(p: Pipettor, pipette_tips):
     """
     Return Tips to tip box left to right
     :param p: Pipettor, multichannel = True
@@ -145,6 +147,10 @@ def remove_medium(p: Pipettor, ehm_plate: EHMPlatePos, containers, pipette_tips,
                 volume: float, height: float, start_x=None, start_y=None):
     """Removes medium from whole 48well plate
     Adjustments possible by altering total number of columns and rows
+    :param p: Pipettor Object
+    :param ehm_plate: Position of ehmPlate
+    :param containers: Position of container rack
+    :param pipette_tips: Position of Pipette Tops on Deck
     :param total_row: total length of a row (in wells)
     :param total_column: total length of a column (in wells)
     :param height: height of EHM plate, mind sufficient distance from plate floor
@@ -351,6 +357,8 @@ def dilute_multi(p: Pipettor, ehm_plate, containers, pipette_tips, tip_dropzone,
     Replaces set volume in a well with medium from any container type with medium_x
     Changes tips between operations
     :param p: Pipettor, multichannel= True
+    :param ehm_plate: Position of ehmPlate
+    :param containers: Position of container rack
     :param volume: volume to be exchanged
     :param height: height of EHM plate
     :param bChangeTips: default = TRUE, Keep Tips or not
@@ -395,6 +403,7 @@ def fill_multi(p: Pipettor, ehm_plate: EHMPlatePos, containers: Reservoirs, pipe
     """
     Using multichannel ,fills specified amount of volume into specified columns at desired height
     :param p: Pipettor, multichannel
+
     :param stock_x: location of stock, give full location of reservoir
     :param total_row: total length of column (nr in wells)
     :param volume:

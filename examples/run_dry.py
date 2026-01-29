@@ -26,5 +26,5 @@ sFile : str=os.sep.join([labware_folder, prot_filename])
 prot_data=json.load(open(sFile))
 
 
-prot_data
+
 

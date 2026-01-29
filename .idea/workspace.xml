@@ -5,8 +5,23 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="152e7848-c2b8-42cd-9b50-7e0ee0b10b09" name="Changes" comment="changed plate, added Wells">
-      <change beforePath="$PROJECT_DIR$/src/tests/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/tests/test_gui.py" beforeDir="false" />
+      <change afterPath="$PROJECT_DIR$/examples/Ca_crc_full_single.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_19_01_2026_18_15_[Changes]1/shelved.patch" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_19_01_2026_18_15__Changes_1.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/Ca_crc_full_multi.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/Ca_crc_full_multi.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/analyzeMeasurement.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/analyzeMeasurement.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Modul1.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/deck.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/deck.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/errors.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/function_set_single.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/function_sets.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/action.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/function_sets_multi_old.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/no__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pipettor.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/run_dry.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/run_dry.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -42,7 +57,7 @@
   <component name="GithubPullRequestsUISettings">{
   &quot;selectedUrlAndAccountId&quot;: {
     &quot;url&quot;: &quot;https://github.com/smartlab-network/open-biohit-plus.git&quot;,
-    &quot;accountId&quot;: &quot;7279777c-1599-48a3-b55b-1a8cba6ff0b6&quot;
+    &quot;accountId&quot;: &quot;242d0e81-120b-4c99-8b43-328c67a3ec7a&quot;
   }
 }</component>
   <component name="ProjectColorInfo">{
@@ -62,9 +77,9 @@
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;dev__advait&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/labhub/Repos/smartlab-network/open-biohit-plus&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/labhub/Repos/smartlab-network/open-biohit-plus/examples&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -79,15 +94,19 @@
       <recent name="C:\labhub\Repos\smartlab-network\open-biohit-plus\examples" />
       <recent name="E:\Labhub\Repos\smartlab-network\open-biohit-plus\src" />
     </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\labhub\Repos\smartlab-network\open-biohit-plus\examples" />
+    </key>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-b26f3e71634d-JavaScript-PY-251.26094.141" />
-        <option value="bundled-python-sdk-9f8e2b94138c-36ea0e71a18c-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-251.26094.141" />
+        <option value="bundled-js-predefined-d6986cc7102b-1632447f56bf-JavaScript-PY-243.26053.29" />
+        <option value="bundled-python-sdk-b1dbf8ef85a6-4df51de95216-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-243.26053.29" />
       </set>
     </attachedChunks>
   </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="152e7848-c2b8-42cd-9b50-7e0ee0b10b09" name="Changes" comment="" />
@@ -103,6 +122,10 @@
       <workItem from="1768842359167" duration="1228000" />
       <workItem from="1768843667781" duration="84000" />
       <workItem from="1768843768800" duration="1451000" />
+      <workItem from="1769720801434" duration="161000" />
+      <workItem from="1769720964981" duration="4162000" />
+      <workItem from="1769725182825" duration="10000" />
+      <workItem from="1769725620994" duration="126000" />
     </task>
     <task id="LOCAL-00001" summary="create function_sets_multi">
       <option name="closed" value="true" />
@@ -177,5 +200,15 @@
     <MESSAGE value="changed plate" />
     <MESSAGE value="changed plate, added Wells" />
     <option name="LAST_COMMIT_MESSAGE" value="changed plate, added Wells" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/examples/run_dry.py</url>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

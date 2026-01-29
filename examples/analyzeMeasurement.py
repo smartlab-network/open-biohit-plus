@@ -6,7 +6,7 @@ def main():
     print(f"name of package {__name__}")
     print(f"file  {__file__}")
 
-    sys.path.append(r"E:\Labhub\Repos\smartlab-network\contractiondb-python\src")
+    sys.path.append(r"C:\Labhub\Repos\smartlab-network\contractiondb-python\src")
     from contractiondb import ContractionDB
     from contractiondb.regex import parse_args
     from matplotlib import pyplot as plt
