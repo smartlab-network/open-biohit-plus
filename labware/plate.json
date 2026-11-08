@@ -1,0 +1,29 @@
+{
+    "type": "plate",
+    "labware_name": "Generic Plate",
+    "description": "Generic SBS-footprint multi-well plate definition (default attributes for the Plate class)",
+    "footprint": "sbs",
+    "z_height_mm": 14.35,
+    "grid": {
+        "rows": 8,
+        "columns": 12
+    },
+    "well_a1_offset": {
+        "x": 14.38,
+        "y": 11.24
+    },
+    "spacing": {
+        "x": 9.0,
+        "y": 9.0
+    },
+    "well_properties": {
+        "depth_mm": 10.8,
+        "radius_mm": 3.43,
+        "max_volume_ul": 360.0
+    },
+    "z_limits": {
+        "recommended_aspirate_z": 98.0,
+        "recommended_dispense_z": 95.0,
+        "max_safe_bottom_z": 100.0
+    }
+}

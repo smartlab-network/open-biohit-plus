@@ -1,0 +1,10 @@
+{
+    "type": "tip",
+    "tip_id": "A1",
+    "x_rel": 6.0,
+    "y_rel": 6.0,
+    "max_volume_ul": 1000.0,
+    "pick_z": 92.0,
+    "state": "available",
+    "description": "Descriptive attributes of a single tip (Tip class), as stored in a TipRack well"
+}

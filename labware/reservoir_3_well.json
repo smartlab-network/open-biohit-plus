@@ -1,0 +1,27 @@
+{
+    "type": "reservoir",
+    "labware_name": "3-Well Reagent Reservoir",
+    "z_height_mm": 35.0,
+    "grid": {
+        "rows": 1,
+        "columns": 3
+    },
+    "well_a1_offset": {
+        "x": 21.3,
+        "y": 17.5
+    },
+    "spacing": {
+        "x": 42.6,
+        "y": 0.0
+    },
+    "well_properties": {
+        "depth_mm": 32.0,
+        "radius_mm": 12.0,
+        "max_volume_ul": 40000.0
+    },
+    "z_limits": {
+        "recommended_aspirate_z": 52.0,
+        "recommended_dispense_z": 45.0,
+        "max_safe_bottom_z": 60.0
+    }
+}

@@ -1,0 +1,96 @@
+{
+    "deck_name": "Biohit Roboline deck",
+    "deck_type": "biohit_roboline",
+    "description": "Back row: two half-SBS slots (Slot_1, Slot_2). Front: 2x2 SBS slots (Slot_3..Slot_6).",
+    "machine": {
+        "brand": "Biohit / Custom",
+        "max_x_mm": 300.0,
+        "max_y_mm": 300.0,
+        "max_z_mm": 310.0,
+        "tip_length_mm": 50.89
+    },
+    "slots": {
+        "Slot_1": {
+            "x_abs": 265.60,
+            "y_abs": 0.09,
+            "width_mm": 127.76,
+            "height_mm": 42.74,
+            "z_offset": 0.0,
+            "slot_type": "half_sbs",
+            "position": "back",
+            "row": 1,
+            "column": 1,
+            "labware_file": "ehm_42_well.json",
+            "description": "EHM plate (42 well)"
+        },
+        "Slot_2": {
+            "x_abs": 127.80,
+            "y_abs": 0.00,
+            "width_mm": 127.76,
+            "height_mm": 42.74,
+            "z_offset": 0.0,
+            "slot_type": "half_sbs",
+            "position": "back",
+            "row": 1,
+            "column": 2,
+            "labware_file": "reservoir_3_well.json",
+            "description": "3-well reagent reservoir"
+        },
+        "Slot_3": {
+            "x_abs": 265.60,
+            "y_abs": 52.75,
+            "width_mm": 127.76,
+            "height_mm": 85.48,
+            "z_offset": 0.0,
+            "slot_type": "sbs",
+            "position": "front",
+            "row": 2,
+            "column": 1,
+            "labware_file": "plate_adapter.json",
+            "description": "96-well plate on raised adapter"
+        },
+        "Slot_4": {
+            "x_abs": 127.80,
+            "y_abs": 52.75,
+            "width_mm": 127.76,
+            "height_mm": 85.48,
+            "z_offset": 0.0,
+            "slot_type": "sbs",
+            "position": "front",
+            "row": 2,
+            "column": 2,
+            "labware_file": "tip_rack_1000ul.json",
+            "description": "1000 uL tip rack"
+        },
+        "Slot_5": {
+            "x_abs": 265.60,
+            "y_abs": 148.25,
+            "width_mm": 127.76,
+            "height_mm": 85.48,
+            "z_offset": 0.0,
+            "slot_type": "sbs",
+            "position": "front",
+            "row": 3,
+            "column": 1,
+            "description": "free SBS slot"
+        },
+        "Slot_6": {
+            "x_abs": 127.80,
+            "y_abs": 148.25,
+            "width_mm": 127.76,
+            "height_mm": 85.48,
+            "z_offset": 0.0,
+            "slot_type": "sbs",
+            "position": "front",
+            "row": 3,
+            "column": 2,
+            "description": "free SBS slot"
+        }
+    },
+    "_tip_slot": "Slot_4",
+    "_ref_points": {
+        "P1": [239.49, 43.00, 6.80],
+        "P2": [26.11, 43.00, 6.80],
+        "P3": [132.80, 170.50, 41.40]
+    }
+}

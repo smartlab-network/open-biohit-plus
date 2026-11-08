@@ -1,0 +1,21 @@
+{
+    "type": "plate",
+    "labware_name": "42 Well EHM Plate",
+    "z_height_mm": 78.42,
+    "grid": {
+        "rows": 8,
+        "columns": 6
+    },
+    "col_x": [89.40, 70.62, 53.28, 35.94, 18.60, 0.00],
+    "row_y": [0.00, 7.32, 21.69, 29.28, 36.60, 43.92, 51.24, 58.56],
+    "well_properties": {
+        "depth_mm": 16.90,
+        "radius_mm": 3.0,
+        "max_volume_ul": 750.0
+    },
+    "z_limits": {
+        "recommended_aspirate_z": 98.0,
+        "recommended_dispense_z": 88.0,
+        "max_safe_bottom_z": 100.0
+    }
+}

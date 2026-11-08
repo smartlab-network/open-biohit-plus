@@ -1,0 +1,29 @@
+{
+    "type": "reservoir",
+    "labware_name": "Generic Reagent Reservoir",
+    "description": "Generic 8-column reagent trough (default attributes for the Reservoir class)",
+    "footprint": "sbs",
+    "z_height_mm": 45.0,
+    "grid": {
+        "rows": 1,
+        "columns": 8
+    },
+    "well_a1_offset": {
+        "x": 9.0,
+        "y": 20.0
+    },
+    "spacing": {
+        "x": 18.0,
+        "y": 0.0
+    },
+    "well_properties": {
+        "depth_mm": 40.0,
+        "radius_mm": 8.5,
+        "max_volume_ul": 20000.0
+    },
+    "z_limits": {
+        "recommended_aspirate_z": 60.0,
+        "recommended_dispense_z": 50.0,
+        "max_safe_bottom_z": 80.0
+    }
+}

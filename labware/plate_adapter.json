@@ -1,0 +1,15 @@
+{
+    "type": "adapter",
+    "labware_name": "Raised Plate Adapter",
+    "z_height_mm": 20.0,
+    "child": {
+        "labware_file": "corning_96_flat.json",
+        "x_offset": 10.0,
+        "y_offset": 5.0
+    },
+    "z_limits": {
+        "recommended_aspirate_z": 98.0,
+        "recommended_dispense_z": 95.0,
+        "max_safe_bottom_z": 100.0
+    }
+}

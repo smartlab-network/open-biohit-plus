@@ -1,0 +1,31 @@
+{
+    "type": "tip_rack",
+    "labware_name": "Generic Tip Rack (300 uL)",
+    "description": "Generic 96-position tip rack (default attributes for the TipRack class)",
+    "footprint": "sbs",
+    "tip_volume_ul": 300.0,
+    "z_height_mm": 78.18,
+    "grid": {
+        "rows": 8,
+        "columns": 12
+    },
+    "well_a1_offset": {
+        "x": 6.0,
+        "y": 6.0
+    },
+    "spacing": {
+        "x": 9.0,
+        "y": 9.0
+    },
+    "well_properties": {
+        "depth_mm": 9.65,
+        "radius_mm": 3.0
+    },
+    "z_limits": {
+        "tip_collar_entry_z": 86.36,
+        "recommended_pickup_z": 86.0,
+        "pickup_limit_z": 87.0,
+        "recommended_discard_z": 40.5,
+        "max_safe_bottom_z": 90.0
+    }
+}
