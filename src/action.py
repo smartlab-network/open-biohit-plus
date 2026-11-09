@@ -1,85 +1,44 @@
 """
-Classes and functions to be used with biohit_pipettor
-p = Pipettor() in all cases
+Action functions to be used with biohit_pipettor (p = Pipettor() in all cases).
+
+This module contains only actions: functions that move the pipettor and
+aspirate / dispense / pick / eject tips. Labware and deck geometry classes
+live in their own files (one per class): Labware.py, Plate.py, Reservoir.py,
+TipRack.py, Tip.py, Adapter.py, deck.py.
+
+The labware arguments of the functions are duck-typed: any object exposing the
+required attributes (e.g. ``x_corner``, ``y_corner_multi``, ``waste_x``,
+``pick_height``, ``change_tips`` ...) can be passed.
 """
+
 import time
 from typing import List
 
 from biohit_pipettor import Pipettor
 from biohit_pipettor.errors import CommandFailed
 
+try:  # imported as part of the ``src`` package
+    from .Plate import Plate
+    from .Reservoir import Reservoir
+    from .TipRack import TipRack
+except ImportError:  # src/ itself is on sys.path
+    from Plate import Plate  # type: ignore
+    from Reservoir import Reservoir  # type: ignore
+    from TipRack import TipRack  # type: ignore
 
 
-
-class EHMPlatePos:
-    def __init__(self, x_corner, y_corner):
-        self.x_corner = x_corner + 13.5
-        self.y_corner = y_corner + 9.5
-        self.x_step = 18
-        self.y_step = 9
-        self.x_tight = x_corner + 11
-        self.y_tight = y_corner + 8
-        self.x_corner_multi = x_corner + 12
-        self.y_corner_multi = y_corner + 43
-        self.add_height = 30
-        self.remove_height = 38
-        self.cols = 6
+# ------------------------------------------------------------------ actions
 
 
-class Reservoirs:
-    def __init__(self, x_corner, y_corner):
-        self.well1_x  = x_corner + 6 * 18 + 3    #1
-        self.medium_x = x_corner + 5 * 18 + 3    #2
-        self.waste_x  = x_corner + 4 * 18 + 3    #3
-        self.well4_x  = x_corner + 3 * 18 + 3    #4
-        self.well5_x  = x_corner + 2 * 18 + 3
-        self.well6_x  = x_corner + 1 * 18 + 3
-        self.well7_x  = x_corner  + 3
-        self.y_corner = y_corner + 40
-        self.add_height = 65
-        self.remove_height = 90
-
-
-class RoundContainers:  # TODO: adjust to 6-well setup once that�s printed
-    def __init__(self, x_corner, y_corner):
-        self.medium_x = x_corner + 104.5
-        self.waste_x = x_corner + 62.5
-        self.well3_x = x_corner + 20.5
-        self.y_corner = y_corner + 15
-
-
-class PipetteTips:
-    def __init__(self, x_corner, y_corner, x_drop, y_drop):
-        self.x_corner = x_corner + 105
-        self.y_corner = y_corner + 10.5
-        self.x_corner_multi = x_corner + 105
-        self.y_corner_multi = y_corner + 42
-        self.x_step = 9
-        self.change_tips = 1
-        self.return_height = 85
-        self.pick_height   = 75
-        self.x_drop   = x_drop+50
-        self.y_drop   = y_drop+50
-
-
-class TipDropzone:
-    def __init__(self, x_corner, y_corner):
-        self.x_corner = x_corner + 50
-        self.y_corner = y_corner + 40
-
-
-"""Functions"""
-
-
-def pick_tip_multi(p: Pipettor, pipette_tips):
+def pick_multi_tips(p: Pipettor, pipette_tips):
     """
     Picks tips going through tip box left to right
     :param p: Pipettor, multichannel = True
     :param pipette_tips:
     """
     print("pick_multi_tips: start")
-    p.move_xy(pipette_tips.x_corner_multi, pipette_tips.y_corner_multi)    
-    
+    p.move_xy(pipette_tips.x_corner_multi, pipette_tips.y_corner_multi)
+
     for i in range(1, 13, 1):
         try:
             p.pick_tip(pipette_tips.pick_height)
@@ -94,22 +53,26 @@ def pick_tip_multi(p: Pipettor, pipette_tips):
     else:
         raise RuntimeError(f"Failed to pick tips from {i} pipette box columns")
 
+
+pick_tip_multi = pick_multi_tips  # legacy alias
+
+
 def return_tip_multi(p: Pipettor, pipette_tips):
     """
     Return Tips to tip box left to right
     :param p: Pipettor, multichannel = True
     :param pipette_tips:
     """
-    p.move_xy(pipette_tips.x_corner_multi,pipette_tips.y_corner_multi)    
+    p.move_xy(pipette_tips.x_corner_multi, pipette_tips.y_corner_multi)
     p.move_z(85)
     p.eject_tip()
     p.move_z(0)
-    
-    
+
+
 def pick_next_tip(p: Pipettor, pipette_tips):
     """
     :param p: Pipettor, multichannel= False
-    :param pipette_tips: location of tip box, PipetteTips class
+    :param pipette_tips: location of tip box (TipRack)
     Picks up a tip going through whole box starting top left corner
     """
     for column in reversed(range(12)):
@@ -143,8 +106,18 @@ def discard_tips(p: Pipettor, containers, tip_dropzone):
     p.move_z(0)
 
 
-def remove_medium(p: Pipettor, ehm_plate: EHMPlatePos, containers, pipette_tips,  total_row: float, total_column: float,
-                volume: float, height: float, start_x=None, start_y=None):
+def remove_medium(
+    p: Pipettor,
+    ehm_plate: Plate,
+    containers,
+    pipette_tips,
+    total_row: float,
+    total_column: float,
+    volume: float,
+    height: float,
+    start_x=None,
+    start_y=None,
+):
     """Removes medium from whole 48well plate
     Adjustments possible by altering total number of columns and rows
     :param p: Pipettor Object
@@ -184,8 +157,9 @@ def remove_medium(p: Pipettor, ehm_plate: EHMPlatePos, containers, pipette_tips,
     print(f"Removed {volume} ul medium from plate")
 
 
-def fill_medium(p: Pipettor, ehm_plate: EHMPlatePos, containers, total_row: float, total_column: float,
-                volume: float, fill_height: float):
+def fill_medium(
+    p: Pipettor, ehm_plate: Plate, containers, total_row: float, total_column: float, volume: float, fill_height: float
+):
     """
     Fills medium of specified volume to all wells on 48well plate, right to left
     Requires variables total_row and total_column to be set up
@@ -213,8 +187,20 @@ def fill_medium(p: Pipettor, ehm_plate: EHMPlatePos, containers, total_row: floa
     print("Filled all wells with medium")
 
 
-def fill(p: Pipettor, ehm_plate, containers, pipette_tips, tip_dropzone, stock_x, total_row: float, total_column: float,
-         volume: float, fill_height: float, start_x=None, start_y=None):
+def fill(
+    p: Pipettor,
+    ehm_plate,
+    containers,
+    pipette_tips,
+    tip_dropzone,
+    stock_x,
+    total_row: float,
+    total_column: float,
+    volume: float,
+    fill_height: float,
+    start_x=None,
+    start_y=None,
+):
     """
     Fills medium of specified volume to all wells on 48well plate, right to left; includes tip drop at end
     ehm_plate.x_corner and y_corner need to be reset after use of function
@@ -229,7 +215,7 @@ def fill(p: Pipettor, ehm_plate, containers, pipette_tips, tip_dropzone, stock_x
     column = 0
     row = 0
     tip_content = 0
-    start_x = start_x or ehm_plate.x_corner 
+    start_x = start_x or ehm_plate.x_corner
     start_y = start_y or ehm_plate.y_corner
     pick_next_tip(p, pipette_tips)
     while row < total_row:
@@ -255,8 +241,17 @@ def fill(p: Pipettor, ehm_plate, containers, pipette_tips, tip_dropzone, stock_x
     print(f"Filled all wells with {volume} ul medium")
 
 
-def dilute(p: Pipettor, ehm_plate, containers, pipette_tips, tip_dropzone, total_row: float, total_column: float,
-           volume: float, fill_height: float):
+def dilute(
+    p: Pipettor,
+    ehm_plate,
+    containers,
+    pipette_tips,
+    tip_dropzone,
+    total_row: float,
+    total_column: float,
+    volume: float,
+    fill_height: float,
+):
     """
     Single channel, removes specified volume and replaces it with the same amount from the medium container
     Calibrated onto corner ledge of EHM plate to leave 200ul liquid behind
@@ -315,8 +310,9 @@ def dilute(p: Pipettor, ehm_plate, containers, pipette_tips, tip_dropzone, total
     print(f"Diluted medium in wells {volume}ul to 200ul remaining")
 
 
-def change_medium_multi(p: Pipettor, ehm_plate, containers, pipette_tips, tip_dropzone,
-                        volume: float, height: float, bChangeTips=1):
+def change_medium_multi(
+    p: Pipettor, ehm_plate, containers, pipette_tips, tip_dropzone, volume: float, height: float, bChangeTips=1
+):
     """
     :param p: Pipettor, multichannel= True
     :param volume: the volume to change per well
@@ -351,8 +347,9 @@ def change_medium_multi(p: Pipettor, ehm_plate, containers, pipette_tips, tip_dr
     print("Finished medium change")
 
 
-def dilute_multi(p: Pipettor, ehm_plate, containers, pipette_tips, tip_dropzone, 
-                volume: float, height: float, bChangeTips=1):
+def dilute_multi(
+    p: Pipettor, ehm_plate, containers, pipette_tips, tip_dropzone, volume: float, height: float, bChangeTips=1
+):
     """
     Replaces set volume in a well with medium from any container type with medium_x
     Changes tips between operations
@@ -367,7 +364,7 @@ def dilute_multi(p: Pipettor, ehm_plate, containers, pipette_tips, tip_dropzone,
     if bChangeTips:
         p.move_y(pipette_tips.y_corner_multi)
         pick_multi_tips(p, pipette_tips)
-        
+
     p.move_y(ehm_plate.y_corner_multi)
     for i in range(6):
         if 1000 - tip_content < volume:
@@ -379,10 +376,10 @@ def dilute_multi(p: Pipettor, ehm_plate, containers, pipette_tips, tip_dropzone,
         p.move_xy(ehm_plate.x_corner + i * ehm_plate.x_step, ehm_plate.y_corner_multi)
         suck(p, volume, height)  # 62 on low deck
         tip_content = tip_content + volume
-    
+
     if bChangeTips:
         discard_tips(p, containers, tip_dropzone)
-    
+
     for i in range(6):
         if bChangeTips:
             p.move_y(pipette_tips.y_corner_multi)
@@ -390,16 +387,24 @@ def dilute_multi(p: Pipettor, ehm_plate, containers, pipette_tips, tip_dropzone,
         p.move_xy(containers.medium_x, containers.y_corner)
         suck(p, volume, 100)
         p.move_xy(ehm_plate.x_corner + i * ehm_plate.x_step, ehm_plate.y_corner_multi)
-        spit(p, volume, height - 2) 
+        spit(p, volume, height - 2)
         if bChangeTips:
             discard_tips(p, containers, tip_dropzone)
     p.move_z(0)
     print(f"Filled all columns with {volume}ul medium ti 200ul remaining")
 
 
-#fill_multi(p, ehm_plate, containers, pipette_tips, tip_dropzone, containers.well5_x, 6, 
+# fill_multi(p, ehm_plate, containers, pipette_tips, tip_dropzone, containers.well5_x, 6,
 #            volume, 48, None, None, bChangeTips)  # 1.973mM
-def fill_multi(p: Pipettor, ehm_plate: EHMPlatePos, containers: Reservoirs, pipette_tips, stock_x, cols: List[float], volume: float):
+def fill_multi(
+    p: Pipettor,
+    ehm_plate: Plate,
+    containers: Reservoir,
+    pipette_tips: TipRack,
+    stock_x,
+    cols: List[float],
+    volume: float,
+):
     """
     Using multichannel ,fills specified amount of volume into specified columns at desired height
     :param p: Pipettor, multichannel
@@ -415,9 +420,9 @@ def fill_multi(p: Pipettor, ehm_plate: EHMPlatePos, containers: Reservoirs, pipe
     """
     tip_content = 0
 
-    if pipette_tips.change_tips :
+    if pipette_tips.change_tips:
         pick_multi_tips(p, pipette_tips)
-        
+
     for col in cols:
         if tip_content < volume:
             p.move_x(stock_x)
@@ -438,7 +443,9 @@ def fill_multi(p: Pipettor, ehm_plate: EHMPlatePos, containers: Reservoirs, pipe
     p.move_z(0)
 
 
-def remove_multi(p: Pipettor, ehm_plate: EHMPlatePos, containers: Reservoirs, pipette_tips,  cols: List[float] , volume: float):
+def remove_multi(
+    p: Pipettor, ehm_plate: Plate, containers: Reservoir, pipette_tips: TipRack, cols: List[float], volume: float
+):
     """Removes medium from whole 48well plate
     Adjustments possible by altering total number of columns and rows
     :param total_row: total length of a row (in wells)
@@ -457,13 +464,11 @@ def remove_multi(p: Pipettor, ehm_plate: EHMPlatePos, containers: Reservoirs, pi
         x_pos = ehm_plate.x_corner + (x_col * ehm_plate.x_step)
         print(f"move to col {x_col} of {ehm_plate.cols} mm {x_pos} and y_mm{ehm_plate.y_corner_multi}")
 
-
-
     tip_content = 0
 
     if pipette_tips.change_tips:
         pick_multi_tips(p, pipette_tips)
-    
+
     for col in cols:
         if 1000 - tip_content < volume:
             p.move_xy(containers.waste_x, containers.y_corner)
@@ -472,8 +477,8 @@ def remove_multi(p: Pipettor, ehm_plate: EHMPlatePos, containers: Reservoirs, pi
         else:
             pass
         p.move_z(0)
-        x_col =ehm_plate.cols - col
-        x_pos =ehm_plate.x_corner + (x_col * ehm_plate.x_step)
+        x_col = ehm_plate.cols - col
+        x_pos = ehm_plate.x_corner + (x_col * ehm_plate.x_step)
         print(f"move to col {x_col} of {ehm_plate.cols} mm {x_pos} and y_mm{ehm_plate.y_corner_multi}")
         p.move_xy(x_pos, ehm_plate.y_corner_multi)
         suck(p, volume, ehm_plate.remove_height)
@@ -481,18 +486,21 @@ def remove_multi(p: Pipettor, ehm_plate: EHMPlatePos, containers: Reservoirs, pi
 
     p.move_z(0)
     p.move_xy(containers.waste_x, containers.y_corner)
-    spit(p, tip_content, containers.add_height)    
+    spit(p, tip_content, containers.add_height)
     print(f"Removed {volume} ul medium from plate")
     if pipette_tips.change_tips:
-        drop_multi_tips(p,pipette_tips)
-        
-    
-def drop_multi_tips(p: Pipettor, pipette_tips: PipetteTips):
+        drop_multi_tips(p, pipette_tips)
+
+
+def drop_multi_tips(p: Pipettor, pipette_tips: TipRack):
     p.move_z(0)
     p.move_xy(pipette_tips.drop_x, pipette_tips.drop_y)
     p.eject_tip()
-       
-def replace_multi(p: Pipettor, ehm_plate, reservoirs, pipette_tips, tip_dropzone, stock, volume, height=58):
+
+
+def replace_multi(
+    p: Pipettor, ehm_plate, reservoirs, pipette_tips, tip_dropzone, stock, volume, height=58, bChangeTips: bool = True
+):
     """
     replacing given volumes in a well using the multichannel head
     :param p: Pipettor parent class
@@ -501,35 +509,35 @@ def replace_multi(p: Pipettor, ehm_plate, reservoirs, pipette_tips, tip_dropzone
     needs list supplying volumes to exchange
     includes 2min waiting time
     """
-    
+
     if pipette_tips.change_tips:
         pick_multi_tips(p, pipette_tips)
-    
-    p.move_y(ehm_plate.y_corner)          
-        
+
+    p.move_y(ehm_plate.y_corner)
+
     for i in range(6):
         p.move_x(ehm_plate.x_corner + i * ehm_plate.x_step)
         suck(p, volume, ehm_plate.remove_height)
         p.move_x(reservoirs.waste_x)
         spit_all(p, 60)
-    
+
     if bChangeTips:
         p.move_xy(tip_dropzone.x_corner, tip_dropzone.y_corner)
         p.eject_tip()
         p.move_y(pipette_tips.y_corner)
         pick_multi_tips(p, pipette_tips)
-    
+
     for i in range(6):
         p.move_xy(stock, reservoirs.y_corner)
         suck(p, volume, 85)
         p.move_x(ehm_plate.x_corner + i * ehm_plate.x_step)
         spit(p, volume, 58)
-    
+
     if pipette_tips.change_tips:
         p.move_xy(tip_dropzone.x_corner, tip_dropzone.y_corner)
-        p.move_z(70)    
+        p.move_z(70)
         p.eject_tip()
-        
+
     time.sleep(120)
 
 
